@@ -53,7 +53,6 @@ void Skeleton(double *C, int *P, int *G, double *Th, int *l, int *maxlevel, doub
     HANDLE_ERROR(cudaMemset(mutex_cuda, 0, n * n * sizeof(int)));
 
     CudaCheckError();
-    std::cout << "finished Skeleton cuda error check" << std::endl;
     //----------------------------------------------------------
     for (*l = 0; *l <= ML && !FinishFlag && *l <= *maxlevel; *l = *l + 1) {
         if (*l == 0) {
