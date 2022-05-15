@@ -1,6 +1,7 @@
 #include <array>
 #include <boost/math/distributions/normal.hpp>
 #include <cmath>
+#include <iostream>
 
 #include "cuPC-S.h"
 
@@ -26,6 +27,7 @@ auto threshold_array(const int n, const double alpha) -> std::array<double, NUMB
 
 void call_skeleton()
 {
+    std::cout << "starting `call skeleton`" << std::endl;
     const int n = 10;
     int p = 2;
     const double alpha = 0.05;
@@ -37,7 +39,9 @@ void call_skeleton()
     std::array<double, NUMBER_OF_LEVELS> Th = threshold_array(n, alpha);
     int sepset[sepset_size];
     memset(sepset, 0, sizeof sepset);  // but using memset is easy
+    std::cout << "calling Skeleton" << std::endl;
     Skeleton(C.data(), &p, G.data(), Th.data(), 0, &max_level, pmax.data(), sepset);
+    std::cout << "done with call" << std::endl;
 }
 
 auto main(int argc, char const *argv[]) -> int
