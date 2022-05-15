@@ -46,6 +46,7 @@ void call_skeleton()
 
 auto main(int argc, char const *argv[]) -> int
 {
+    std::cout << "entering `main`" << std::endl;
     call_skeleton();
     return 0;
 }
