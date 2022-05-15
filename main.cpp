@@ -3,7 +3,7 @@
 #include <cmath>
 #include <iostream>
 
-#include "cuPC-S.h"
+// #include "cuPC-S.h"
 
 const int NUMBER_OF_LEVELS = 50;
 
@@ -40,7 +40,7 @@ void call_skeleton()
     int sepset[sepset_size];
     memset(sepset, 0, sizeof sepset);  // but using memset is easy
     std::cout << "calling Skeleton" << std::endl;
-    Skeleton(C.data(), &p, G.data(), Th.data(), 0, &max_level, pmax.data(), sepset);
+    // Skeleton(C.data(), &p, G.data(), Th.data(), 0, &max_level, pmax.data(), sepset);
     std::cout << "done with call" << std::endl;
 }
 
