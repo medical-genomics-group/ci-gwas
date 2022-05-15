@@ -50,11 +50,16 @@ void Skeleton(double *C, int *P, int *G, double *Th, int *l, int *maxlevel, doub
     HANDLE_ERROR(cudaMalloc((void **)&C_cuda, n * n * sizeof(double)));
     HANDLE_ERROR(cudaMalloc((void **)&G_cuda, n * n * sizeof(int)));
     HANDLE_ERROR(cudaMalloc((void **)&pMax_cuda, n * n * sizeof(double)));
+
+    std::cout << "finished Skeleton mallocs" << std::endl;
     // copy correlation matrix from CPU to GPU
     HANDLE_ERROR(cudaMemcpy(C_cuda, C, n * n * sizeof(double), cudaMemcpyHostToDevice));
     // initialize a 0 matrix
     HANDLE_ERROR(cudaMemset(mutex_cuda, 0, n * n * sizeof(int)));
+    std::cout << "finished Skeleton memsets" << std::endl;
+
     CudaCheckError();
+    std::cout << "finished Skeleton cuda error check" << std::endl;
     //----------------------------------------------------------
     for (*l = 0; *l <= ML && !FinishFlag && *l <= *maxlevel; *l = *l + 1) {
         if (*l == 0) {
