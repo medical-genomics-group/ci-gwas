@@ -44,12 +44,19 @@ void Skeleton(double *C, int *P, int *G, double *Th, int *l, int *maxlevel, doub
 
     *l = 0;
     HANDLE_ERROR(cudaMalloc((void **)&mutex_cuda, n * n * sizeof(int)));
+    std::cout << "finished mutex_cuda malloc" << std::endl;
     HANDLE_ERROR(cudaMalloc((void **)&nprime_cuda, 1 * sizeof(int)));
+    std::cout << "finished nprime_cuda malloc" << std::endl;
     HANDLE_ERROR(cudaMalloc((void **)&SepSet_cuda, n * n * ML * sizeof(int)));
+    std::cout << "finished SepSet_cuda malloc" << std::endl;
     HANDLE_ERROR(cudaMalloc((void **)&GPrime_cuda, n * n * sizeof(int)));
+    std::cout << "finished GPrime_cuda malloc" << std::endl;
     HANDLE_ERROR(cudaMalloc((void **)&C_cuda, n * n * sizeof(double)));
+    std::cout << "finished C_cuda malloc" << std::endl;
     HANDLE_ERROR(cudaMalloc((void **)&G_cuda, n * n * sizeof(int)));
+    std::cout << "finished G_cuda malloc" << std::endl;
     HANDLE_ERROR(cudaMalloc((void **)&pMax_cuda, n * n * sizeof(double)));
+    std::cout << "finished pMax_cuda malloc" << std::endl;
 
     std::cout << "finished Skeleton mallocs" << std::endl;
     // copy correlation matrix from CPU to GPU
