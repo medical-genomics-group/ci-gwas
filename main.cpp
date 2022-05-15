@@ -27,7 +27,6 @@ auto threshold_array(const int n, const double alpha) -> std::array<double, NUMB
 
 void call_skeleton()
 {
-    std::cout << "starting `call skeleton`" << std::endl;
     const int n = 10;
     int p = 2;
     const double alpha = 0.05;
@@ -39,15 +38,13 @@ void call_skeleton()
     std::array<double, NUMBER_OF_LEVELS> Th = threshold_array(n, alpha);
     int sepset[sepset_size];
     memset(sepset, 0, sizeof sepset);
-    std::cout << "calling Skeleton" << std::endl;
     int l = 0;
     Skeleton(C.data(), &p, G.data(), Th.data(), &l, &max_level, pmax.data(), sepset);
-    std::cout << "done with call" << std::endl;
 }
 
 auto main(int argc, char const *argv[]) -> int
 {
-    std::cout << "entering `main`" << std::endl;
     call_skeleton();
+    std::cout << "All done!" << std::endl;
     return 0;
 }

@@ -23,8 +23,6 @@
 void Skeleton(double *C, int *P, int *G, double *Th, int *l, int *maxlevel, double *pMax,
               int *SepSet)
 {
-    std::cout << "entered Skeleton!" << std::endl;
-
     double *C_cuda;  // Copy of C array in GPU
     double *pMax_cuda;
     int *G_cuda;  // Copy of G Array in GPU
@@ -41,29 +39,18 @@ void Skeleton(double *C, int *P, int *G, double *Th, int *l, int *maxlevel, doub
     bool FinishFlag = false;
 
     *l = 0;
-    std::cout << "finished Skeleton declarations" << std::endl;
 
     HANDLE_ERROR(cudaMalloc((void **)&mutex_cuda, n * n * sizeof(int)));
-    std::cout << "finished mutex_cuda malloc" << std::endl;
     HANDLE_ERROR(cudaMalloc((void **)&nprime_cuda, 1 * sizeof(int)));
-    std::cout << "finished nprime_cuda malloc" << std::endl;
     HANDLE_ERROR(cudaMalloc((void **)&SepSet_cuda, n * n * ML * sizeof(int)));
-    std::cout << "finished SepSet_cuda malloc" << std::endl;
     HANDLE_ERROR(cudaMalloc((void **)&GPrime_cuda, n * n * sizeof(int)));
-    std::cout << "finished GPrime_cuda malloc" << std::endl;
     HANDLE_ERROR(cudaMalloc((void **)&C_cuda, n * n * sizeof(double)));
-    std::cout << "finished C_cuda malloc" << std::endl;
     HANDLE_ERROR(cudaMalloc((void **)&G_cuda, n * n * sizeof(int)));
-    std::cout << "finished G_cuda malloc" << std::endl;
     HANDLE_ERROR(cudaMalloc((void **)&pMax_cuda, n * n * sizeof(double)));
-    std::cout << "finished pMax_cuda malloc" << std::endl;
-
-    std::cout << "finished Skeleton mallocs" << std::endl;
     // copy correlation matrix from CPU to GPU
     HANDLE_ERROR(cudaMemcpy(C_cuda, C, n * n * sizeof(double), cudaMemcpyHostToDevice));
     // initialize a 0 matrix
     HANDLE_ERROR(cudaMemset(mutex_cuda, 0, n * n * sizeof(int)));
-    std::cout << "finished Skeleton memsets" << std::endl;
 
     CudaCheckError();
     std::cout << "finished Skeleton cuda error check" << std::endl;
