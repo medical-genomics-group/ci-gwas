@@ -40,9 +40,9 @@ void Skeleton(double *C, int *P, int *G, double *Th, int *l, int *maxlevel, doub
 
     bool FinishFlag = false;
 
+    *l = 0;
     std::cout << "finished Skeleton declarations" << std::endl;
 
-    *l = 0;
     HANDLE_ERROR(cudaMalloc((void **)&mutex_cuda, n * n * sizeof(int)));
     std::cout << "finished mutex_cuda malloc" << std::endl;
     HANDLE_ERROR(cudaMalloc((void **)&nprime_cuda, 1 * sizeof(int)));
