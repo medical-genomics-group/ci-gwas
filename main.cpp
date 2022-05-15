@@ -38,7 +38,7 @@ void call_skeleton()
     std::array<double, 4> C = {1.0, 0.4, 0.4, 1.0};
     std::array<double, NUMBER_OF_LEVELS> Th = threshold_array(n, alpha);
     int sepset[sepset_size];
-    memset(sepset, 0, sizeof sepset);  // but using memset is easy
+    memset(sepset, 0, sizeof sepset);
     std::cout << "calling Skeleton" << std::endl;
     Skeleton(C.data(), &p, G.data(), Th.data(), 0, &max_level, pmax.data(), sepset);
     std::cout << "done with call" << std::endl;
