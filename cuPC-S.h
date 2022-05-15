@@ -102,8 +102,8 @@ __device__ void pseudoinversel13(double M2[][13], double M2Inv[][13], double v[]
                                  double *w, double res1[][13]);
 __device__ void pseudoinversel14(double M2[][14], double M2Inv[][14], double v[][14], double *rv1,
                                  double *w, double res1[][14]);
-void Skeleton(double *C, int *P, int *G, double *Th, int *l, int *maxlevel, double *pMax,
-              int *SepSet);
+extern "C" void Skeleton(double *C, int *P, int *G, double *Th, int *l, int *maxlevel, double *pMax,
+                         int *SepSet);
 
 __global__ void Initialize(int *Mat, int n);
 __global__ void scan_compact(int *G_Compact, const int *G, const int n, int *nprime);
