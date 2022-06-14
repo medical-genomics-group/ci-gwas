@@ -23,7 +23,7 @@ void cu_corr_npn(const unsigned char *a, const size_t num_markers, const size_t 
     int blocks_per_grid = output_length;
 
     HANDLE_ERROR(cudaMalloc(&gpu_a, a_bytes));
-    HANDLE_ERROR(cudaMemcpy(gpu_a, a, a_bytes, cudaMemcpyHostToDevice));
+    HANDLE_ERROR(cudaMemcpy(gpu_a, a, a_bytes, CudaMemcpyHostToDevice));
     HANDLE_ERROR(cudaMalloc(&gpu_results, output_bytes));
 
     cu_marker_corr_npn<<<blocks_per_grid, threads_per_block>>>(gpu_a, num_markers, num_individuals,
@@ -49,12 +49,17 @@ __global__ void cu_marker_corr_npn(const unsigned char *a, const size_t num_mark
     size_t j;
     size_t tests;
     size_t tix = threadIdx.x;
-    // TODO: this assumes 2d grid, but I will 1d this.
-    // Will need the ix conversion scheme.
-    size_t col_ix_x = blockIdx.x;
-    size_t col_ix_y = blockIdx.y;
-    size_t col_start_x = col_ix_x * num_individuals;
-    size_t col_start_y = col_ix_y * num_individuals;
+
+    // convert linear indices into correlation matrix into (row, col) ix
+    float lin_ix = blockIdx.x;
+    float l = num_markers - 1;
+    float b = 2 * l - 1;
+    float c = 2 * (l - lin_ix);
+    size_t row = (size_t)std::floor((-b + (b * b + 4 * c)) / -2.0) + 1;
+    size_t h = -(row * row) + row * (2 * l + 1);
+    size_t col = lin_ix - h + row;
+    size_t col_start_x = row * num_individuals;
+    size_t col_start_y = col * num_individuals;
 
     // (0, 0) at 0
     // (0, 1) at 1
