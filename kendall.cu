@@ -49,6 +49,8 @@ __global__ void cu_marker_corr_npn(const unsigned char *a, const size_t num_mark
     float thread_sum[9] = {0.0};
     __shared__ float thread_sums[NUMTHREADS][9];
 
+    // TODO: it seems stupid to jump in memory, sequential reads are probably more efficient.
+    // should have ++ increment and adjust the start.
     for (i = tix; i < num_individuals; i += NUMTHREADS) {
         thread_sum[(3 * a[col_start_x + i]) + a[col_start_y + i]] += 1.f;
     }
