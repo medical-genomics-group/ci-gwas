@@ -2,6 +2,10 @@
 
 #define NUMTHREADS 256
 
+// this will need an extern "C" declaration in the header, like the cuPC thing (this would be the
+// Skeleton analogue I think) This computes correlations under the assumption that the final
+// correlation matrix fits into the GPU RAM in one piece.
+// This is unrealistic, but will be good for benchmarking and testing.
 void cu_corr_npn(const unsigned char *a, const size_t num_markers, const size_t num_individuals,
                  float *results)
 {
@@ -9,15 +13,14 @@ void cu_corr_npn(const unsigned char *a, const size_t num_markers, const size_t 
     float *gpu_a;
     float *gpu_results;
     int threads_per_block = NUMTHREADS;
-    dim3 grid(num_markers, num_markers);
+    // TODO: see if proper blocks give any performace increase
+    dim3 grid(num_markers * (num_markers - 1) / 2);
 
     cudaMalloc(&gpu_a, a_bytes);
-    // TODO: this is not going to work if a is larger than the device memory.
-    // If that is the case, we need to split up a into blocks in some clever way.
-    // This is what Mahdi said he solved in his R code, will look at that.
     cudaMemcpy(gpu_a, a, a_bytes, cudaMemcpyHostToDevice);
 }
 
+// TODO: this needs to be able to decode .bed binaries
 // A O(n) runtime Kendall implementation for genomic marker data.
 // I use unsigned char, because we will probably put bytes in here.
 // I assume no NAs, x col major, blocks are comparisons for pairs for columns (e.g. x1, x2).
