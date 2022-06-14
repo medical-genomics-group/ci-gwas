@@ -1,5 +1,7 @@
 #include <math.h>
 
+#include "gpuerrors.h"
+
 #define NUMTHREADS 256
 
 // this will need an extern "C" declaration in the header, like the cuPC thing (this would be the
@@ -9,15 +11,27 @@
 void cu_corr_npn(const unsigned char *a, const size_t num_markers, const size_t num_individuals,
                  float *results)
 {
+    // This here assumes a non compressed a.
     size_t a_bytes = num_markers * num_individuals * sizeof(float);
     float *gpu_a;
     float *gpu_results;
     int threads_per_block = NUMTHREADS;
-    // TODO: see if proper blocks give any performace increase
-    dim3 grid(num_markers * (num_markers - 1) / 2);
+    size_t output_length = num_markers * (num_markers - 1) / 2;
+    size_t output_bytes = output_length * sizeof(float);
 
-    cudaMalloc(&gpu_a, a_bytes);
-    cudaMemcpy(gpu_a, a, a_bytes, cudaMemcpyHostToDevice);
+    // TODO: see if proper blocks give any performace increase
+    int blocks_per_grid = output_length;
+
+    HANDLE_ERROR(cudaMalloc(&gpu_a, a_bytes));
+    HANDLE_ERROR(cudaMemcpy(gpu_a, a, a_bytes, cudaMemcpyHostToDevice));
+    HANDLE_ERROR(cudaMalloc(&gpu_results, output_bytes));
+
+    cu_marker_corr_npn<<<blocks_per_grid, threads_per_block>>>(gpu_a, num_markers, num_individuals,
+                                                               gpu_results);
+
+    HANDLE_ERROR(cudaMemcpy(results, gpu_results, output_bytes, CudaMemcpyDeviceToHost));
+    HANDLE_ERROR(cudaFree(gpu_a));
+    HANDLE_ERROR(cudaFree(gpu_results));
 }
 
 // TODO: this needs to be able to decode .bed binaries
@@ -35,6 +49,8 @@ __global__ void cu_marker_corr_npn(const unsigned char *a, const size_t num_mark
     size_t j;
     size_t tests;
     size_t tix = threadIdx.x;
+    // TODO: this assumes 2d grid, but I will 1d this.
+    // Will need the ix conversion scheme.
     size_t col_ix_x = blockIdx.x;
     size_t col_ix_y = blockIdx.y;
     size_t col_start_x = col_ix_x * num_individuals;
