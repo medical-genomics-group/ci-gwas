@@ -1,8 +1,7 @@
 #include <math.h>
 
 #include "gpuerrors.h"
-
-#define NUMTHREADS 256
+#include "kendall.h"
 
 // this will need an extern "C" declaration in the header, like the cuPC thing (this would be the
 // Skeleton analogue I think) This computes correlations under the assumption that the final
