@@ -52,10 +52,9 @@ __global__ void cu_marker_corr_npn(const unsigned char *a, const size_t num_mark
     float l = num_markers - 1;
     float b = 2 * l - 1;
     float c = 2 * (l - lin_ix_f);
-    float row_f = std::floor((-b + sqrt(b * b + 4 * c)) / -2.0) + 1.0;
-    size_t row = (size_t)row_f;
-    size_t h = -(row * row) + row * (2 * l + 1);
-    size_t col = lin_ix_f - h + row;
+    float row = std::floor((-b + sqrt(b * b + 4 * c)) / -2.0) + 1.0;
+    float h = -(row * row) + row * (2.0 * l + 1.0);
+    float col = lin_ix_f - h + row;
     size_t col_start_x = row * num_individuals;
     size_t col_start_y = col * num_individuals;
 
@@ -107,7 +106,7 @@ __global__ void cu_marker_corr_npn(const unsigned char *a, const size_t num_mark
         float kendall_corr = (concordant - discordant) / sqrt((concordant + discordant + ties_x) *
                                                               (concordant + discordant + ties_y));
 
-        printf("linear ix: %f, row: %u, col: %u, h: %u, l: %u corr result: %f \n", lin_ix_f, row,
+        printf("linear ix: %f, row: %f, col: %f, h: %f, l: %f, corr result: %f \n", lin_ix_f, row,
                col, h, l, kendall_corr);
 
         results[lin_ix] = sin(M_PI / 2 * kendall_corr);
