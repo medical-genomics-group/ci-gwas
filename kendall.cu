@@ -53,7 +53,7 @@ __global__ void cu_marker_corr_npn(const unsigned char *a, const size_t num_mark
     float b = 2 * l - 1;
     float c = 2 * (l - lin_ix_f);
     float row = std::floor((-b + sqrt(b * b + 4 * c)) / -2.0) + 1.0;
-    float h = -(row * row) + row * (2.0 * l + 1.0);
+    float h = (-(row * row) + row * (2.0 * l + 1.0)) / 2.0;
     float col = lin_ix_f - h + row;
     size_t col_start_x = row * num_individuals;
     size_t col_start_y = col * num_individuals;
