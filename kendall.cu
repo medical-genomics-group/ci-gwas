@@ -47,13 +47,14 @@ __global__ void cu_marker_corr_npn(const unsigned char *a, const size_t num_mark
     size_t tix = threadIdx.x;
 
     // convert linear indices into correlation matrix into (row, col) ix
-    float lin_ix = blockIdx.x;
+    size_t lin_ix = blockIdx.x;
+    float lin_ix_f = (size_t)lin_ix;
     float l = num_markers - 1;
     float b = 2 * l - 1;
-    float c = 2 * (l - lin_ix);
+    float c = 2 * (l - lin_ix_f);
     size_t row = (size_t)std::floor((-b + (b * b + 4 * c)) / -2.0) + 1;
     size_t h = -(row * row) + row * (2 * l + 1);
-    size_t col = lin_ix - h + row;
+    size_t col = lin_ix_f - h + row;
     size_t col_start_x = row * num_individuals;
     size_t col_start_y = col * num_individuals;
 
