@@ -52,11 +52,15 @@ void call_cu_corr()
     float marker_corr[corr_matrix_size];
     memset(marker_corr, 0.0, sizeof(marker_corr));
     cu_corr_npn(test_a, num_markers, num_individuals, marker_corr);
+
+    for (size_t i = 0; i < corr_matrix_size; i++) {
+        std::cout << marker_corr[i] << std::endl;
+    }
 }
 
 auto main(int argc, char const *argv[]) -> int
 {
-    call_skeleton();
+    call_cu_corr();
     std::cout << "All done!" << std::endl;
     return 0;
 }
