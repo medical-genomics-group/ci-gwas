@@ -21,9 +21,9 @@ void cu_corr_npn(const unsigned char *a, const size_t num_markers, const size_t 
     // TODO: see if proper blocks give any performace increase
     int blocks_per_grid = output_length;
 
-    HANDLE_ERROR(cudaMalloc(&gpu_a, a_bytes));
+    HANDLE_ERROR(cudaMalloc((void **)&gpu_a, a_bytes));
     HANDLE_ERROR(cudaMemcpy(gpu_a, a, a_bytes, cudaMemcpyHostToDevice));
-    HANDLE_ERROR(cudaMalloc(&gpu_results, output_bytes));
+    HANDLE_ERROR(cudaMalloc((void **)&gpu_results, output_bytes));
 
     cu_marker_corr_npn<<<blocks_per_grid, threads_per_block>>>(gpu_a, num_markers, num_individuals,
                                                                gpu_results);
@@ -44,9 +44,6 @@ void cu_corr_npn(const unsigned char *a, const size_t num_markers, const size_t 
 __global__ void cu_marker_corr_npn(const unsigned char *a, const size_t num_markers,
                                    const size_t num_individuals, float *results)
 {
-    size_t i;
-    size_t j;
-    size_t tests;
     size_t tix = threadIdx.x;
 
     // convert linear indices into correlation matrix into (row, col) ix
