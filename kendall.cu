@@ -12,7 +12,7 @@ void cu_corr_npn(const unsigned char *a, const size_t num_markers, const size_t 
 {
     // This here assumes a non compressed a.
     size_t a_bytes = num_markers * num_individuals * sizeof(float);
-    const unsigned char *gpu_a;
+    unsigned char *gpu_a;
     float *gpu_results;
     int threads_per_block = NUMTHREADS;
     size_t output_length = num_markers * (num_markers - 1) / 2;
@@ -21,9 +21,9 @@ void cu_corr_npn(const unsigned char *a, const size_t num_markers, const size_t 
     // TODO: see if proper blocks give any performace increase
     int blocks_per_grid = output_length;
 
-    HANDLE_ERROR(cudaMalloc((void **)&gpu_a, a_bytes));
-    HANDLE_ERROR(cudaMemcpy(gpu_a, &a, a_bytes, cudaMemcpyHostToDevice));
-    HANDLE_ERROR(cudaMalloc((void **)&gpu_results, output_bytes));
+    HANDLE_ERROR(cudaMalloc(gpu_a, a_bytes));
+    HANDLE_ERROR(cudaMemcpy(&gpu_a, &a, a_bytes, cudaMemcpyHostToDevice));
+    HANDLE_ERROR(cudaMalloc(gpu_results, output_bytes));
 
     cu_marker_corr_npn<<<blocks_per_grid, threads_per_block>>>(gpu_a, num_markers, num_individuals,
                                                                gpu_results);
