@@ -71,11 +71,11 @@ __global__ void cu_marker_corr_npn(const unsigned char *a, const size_t num_mark
 
     // TODO: it seems stupid to jump in memory, sequential reads are probably more efficient.
     // should have ++ increment and adjust the start.
-    for (i = tix; i < num_individuals; i += NUMTHREADS) {
+    for (size_t i = tix; i < num_individuals; i += NUMTHREADS) {
         thread_sum[(3 * a[col_start_x + i]) + a[col_start_y + i]] += 1.f;
     }
 
-    for (i = 0; i < 9; i++) {
+    for (size_t i = 0; i < 9; i++) {
         thread_sums[tix][i] = thread_sum[i];
     }
 
