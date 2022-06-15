@@ -10,6 +10,8 @@
 void cu_corr_npn(const unsigned char *a, const size_t num_markers, const size_t num_individuals,
                  float *results)
 {
+    printf("cu_corr_npn start!");
+
     // This here assumes a non compressed a.
     size_t a_bytes = num_markers * num_individuals * sizeof(float);
     unsigned char *gpu_a;
@@ -44,6 +46,7 @@ void cu_corr_npn(const unsigned char *a, const size_t num_markers, const size_t 
 __global__ void cu_marker_corr_npn(const unsigned char *a, const size_t num_markers,
                                    const size_t num_individuals, float *results)
 {
+    printf("cu_marker_corr_npn start!");
     size_t tix = threadIdx.x;
 
     // convert linear indices into correlation matrix into (row, col) ix
