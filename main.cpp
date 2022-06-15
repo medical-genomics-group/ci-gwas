@@ -3,7 +3,9 @@
 #include <cmath>
 #include <iostream>
 
+#include "corr_test_set.h"
 #include "cuPC-S.h"
+#include "kendall.h"
 
 const int NUMBER_OF_LEVELS = 50;
 
@@ -44,17 +46,12 @@ void call_skeleton()
 
 void call_cu_corr()
 {
-    const size_t num_markers = 3;
-    const size_t num_individuals = 10;
-    // this should be col-major
-    const float a[num_individuals * num_markers] = {0., 0., 1., 1., 1., 2., 2., 2., 0., 0.,
-                                                    1., 0., 0., 1., 1., 0., 0., 0., 1., 1.,
-                                                    0., 2., 2., 1., 0., 0., 2., 0., 1., 0.};
+    const size_t num_markers = TEST_NUM_MARKERS;
+    const size_t num_individuals = TEST_NUM_INDIVIDUALS;
     const size_t corr_matrix_size = num_markers * (num_markers - 1) / 2;
     float marker_corr[corr_matrix_size];
     memset(marker_corr, 0.0, sizeof(marker_corr));
-
-    // TODO: insert actuall call
+    cu_corr_npn(test_a, num_markers, num_individuals, marker_corr);
 }
 
 auto main(int argc, char const *argv[]) -> int
