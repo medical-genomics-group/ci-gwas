@@ -12,7 +12,7 @@ void cu_corr_npn(const unsigned char *a, const size_t num_markers, const size_t 
 {
     // This here assumes a non compressed a.
     size_t a_bytes = num_markers * num_individuals * sizeof(float);
-    float *gpu_a;
+    const unsigned char *gpu_a;
     float *gpu_results;
     int threads_per_block = NUMTHREADS;
     size_t output_length = num_markers * (num_markers - 1) / 2;
@@ -22,13 +22,13 @@ void cu_corr_npn(const unsigned char *a, const size_t num_markers, const size_t 
     int blocks_per_grid = output_length;
 
     HANDLE_ERROR(cudaMalloc(&gpu_a, a_bytes));
-    HANDLE_ERROR(cudaMemcpy(gpu_a, a, a_bytes, CudaMemcpyHostToDevice));
+    HANDLE_ERROR(cudaMemcpy(gpu_a, a, a_bytes, cudaMemcpyHostToDevice));
     HANDLE_ERROR(cudaMalloc(&gpu_results, output_bytes));
 
     cu_marker_corr_npn<<<blocks_per_grid, threads_per_block>>>(gpu_a, num_markers, num_individuals,
                                                                gpu_results);
 
-    HANDLE_ERROR(cudaMemcpy(results, gpu_results, output_bytes, CudaMemcpyDeviceToHost));
+    HANDLE_ERROR(cudaMemcpy(results, gpu_results, output_bytes, cudaMemcpyDeviceToHost));
     HANDLE_ERROR(cudaFree(gpu_a));
     HANDLE_ERROR(cudaFree(gpu_results));
 }
@@ -78,11 +78,13 @@ __global__ void cu_marker_corr_npn(const unsigned char *a, const size_t num_mark
         thread_sum[(3 * a[col_start_x + i]) + a[col_start_y + i]] += 1.f;
     }
 
-    thread_sums[tix] = thread_sum;
+    for (i = 0; i < 9; i++) {
+        thread_sums[tix][i] = thread_sum[i];
+    }
 
     // consolidate thread_sums
     __syncthreads();
-    if (tx == 0) {
+    if (tix == 0) {
         // produce single sum
         float sum[9] = {0.0};
         for (size_t i = 0; i < NUMTHREADS; i++) {
