@@ -103,8 +103,11 @@ __global__ void cu_marker_corr_npn(const unsigned char *a, const size_t num_mark
                        (sum[2] * (sum[5] + sum[8])) + (sum[3] * sum[6]) + (sum[4] + sum[7]) +
                        (sum[5] * sum[8]);
 
-        results[lin_ix] =
-            sin(M_PI / 2 * (concordant - discordant) /
-                sqrt((concordant + discordant + ties_x) * (concordant + discordant + ties_y)));
+        float kendall_corr = (concordant - discordant) / sqrt((concordant + discordant + ties_x) *
+                                                              (concordant + discordant + ties_y));
+
+        printf("linear ix: %f, x: %f, y: %f, corr result: %f \n", lin_ix_f, row, col, kendall_corr);
+
+        results[lin_ix] = sin(M_PI / 2 * kendall_corr);
     }
 }
