@@ -3,8 +3,7 @@
 #include "gpuerrors.h"
 #include "kendall.h"
 
-// this will need an extern "C" declaration in the header, like the cuPC thing (this would be the
-// Skeleton analogue I think) This computes correlations under the assumption that the final
+// This computes correlations under the assumption that the final
 // correlation matrix fits into the GPU RAM in one piece.
 // This is unrealistic, but will be good for benchmarking and testing.
 void cu_corr_npn(const unsigned char *a, const size_t num_markers, const size_t num_individuals,
@@ -54,7 +53,8 @@ __global__ void cu_marker_corr_npn(const unsigned char *a, const size_t num_mark
     float c = 2 * (l - lin_ix_f);
     float row = std::floor((-b + sqrt(b * b + 4 * c)) / -2.0) + 1.0;
     float h = (-(row * row) + row * (2.0 * l + 1.0)) / 2.0;
-    float col = lin_ix_f - h + row;
+    // offset of 1 because we don't compute the diagonal
+    float col = lin_ix_f - h + row + 1;
     size_t col_start_x = row * num_individuals;
     size_t col_start_y = col * num_individuals;
 
