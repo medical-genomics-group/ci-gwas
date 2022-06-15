@@ -107,7 +107,7 @@ __global__ void cu_marker_corr_npn(const unsigned char *a, const size_t num_mark
         float kendall_corr = (concordant - discordant) / sqrt((concordant + discordant + ties_x) *
                                                               (concordant + discordant + ties_y));
 
-        printf("linear ix: %f, row: %f, col: %zu, h: %zu, corr result: %f \n", lin_ix_f, row_f, col,
+        printf("linear ix: %f, row: %zu, col: %zu, h: %zu, corr result: %f \n", lin_ix_f, row, col,
                h, kendall_corr);
 
         results[lin_ix] = sin(M_PI / 2 * kendall_corr);
