@@ -1,5 +1,6 @@
 #include <math.h>
 
+#include "bed_lut.h"
 #include "gpuerrors.h"
 #include "kendall.h"
 
@@ -32,14 +33,7 @@ void cu_corr_npn(const unsigned char *a, const size_t num_markers, const size_t 
     HANDLE_ERROR(cudaFree(gpu_results));
 }
 
-// TODO: this needs to be able to decode .bed binaries
-// A O(n) runtime Kendall implementation for genomic marker data.
-// I use unsigned char, because we will probably put bytes in here.
-// I assume no NAs, x col major, blocks are comparisons for pairs for columns (e.g. x1, x2).
-// What this thing needs to do foreach pair is go through it and count
-// the number of occurrences of each pair.
-// Then sync.
-// Then compute the correlation with the counts.
+// A O(n) runtime Kendall implementation for uncompressed genomic marker data.
 __global__ void cu_marker_corr_npn(const unsigned char *a, const size_t num_markers,
                                    const size_t num_individuals, float *results)
 {
@@ -58,15 +52,6 @@ __global__ void cu_marker_corr_npn(const unsigned char *a, const size_t num_mark
     size_t col_start_x = row * num_individuals;
     size_t col_start_y = col * num_individuals;
 
-    // (0, 0) at 0
-    // (0, 1) at 1
-    // (0, 2) at 2
-    // (1, 0) at 3
-    // (1, 1) at 4
-    // (1, 2) at 5
-    // (2, 0) at 6
-    // (2, 1) at 7
-    // (2, 2) at 8
     float thread_sum[9] = {0.0};
     __shared__ float thread_sums[NUMTHREADS][9];
 
@@ -106,9 +91,98 @@ __global__ void cu_marker_corr_npn(const unsigned char *a, const size_t num_mark
         float kendall_corr = (concordant - discordant) / sqrt((concordant + discordant + ties_x) *
                                                               (concordant + discordant + ties_y));
 
-        printf("linear ix: %f, row: %f, col: %f, h: %f, l: %f, corr result: %f \n", lin_ix_f, row,
-               col, h, l, kendall_corr);
+        // printf("linear ix: %f, row: %f, col: %f, h: %f, l: %f, corr result: %f \n", lin_ix_f,
+        // row,
+        //        col, h, l, kendall_corr);
 
         results[lin_ix] = sin(M_PI / 2 * kendall_corr);
+    }
+}
+
+// A O(n) runtime Kendall implementation for compressed genomic marker data.
+// compression format is expected to be col-major .bed without NaN.
+// that means a should have dimensions ceil(num_individuals / 4) * num_markers
+__global__ void cu_bed_marker_corr_npn(const unsigned char *a, const size_t num_markers,
+                                       const size_t num_individuals, const size_t col_len_bytes,
+                                       float *results)
+{
+    size_t tix = threadIdx.x;
+
+    // convert linear indices into correlation matrix into (row, col) ix
+    size_t lin_ix = blockIdx.x;
+    float lin_ix_f = (size_t)lin_ix;
+    float l = num_markers - 1;
+    float b = 2 * l - 1;
+    float c = 2 * (l - lin_ix_f);
+    float row = std::floor((-b + sqrt(b * b + 4 * c)) / -2.0) + 1.0;
+    float h = (-(row * row) + row * (2.0 * l + 1.0)) / 2.0;
+    // offset of 1 because we don't compute the diagonal
+    float col = lin_ix_f - h + row + 1;
+    size_t col_start_x = row * col_len_bytes;
+    size_t col_start_y = col * col_len_bytes;
+
+    float thread_sum[9] = {0.0};
+    __shared__ float thread_sums[NUMTHREADS][9];
+
+    float bed_vals_x[4] = {0.0};
+    float bed_vals_y[4] = {0.0};
+    // TODO: it seems stupid to jump in memory, sequential reads are probably more efficient.
+    // should have ++ increment and adjust the start.
+    for (size_t i = tix; i < col_len_bytes; i += NUMTHREADS) {
+        // TODO: make sure that unpacking happens in correct order
+        unpack_bed_bytes(a[col_start_x + i], &bed_vals_x);
+        unpack_bed_bytes(a[col_start_y + i], &bed_vals_y);
+
+        for (size_t j = 0; j < 4; j++) {
+            if ((i * 4 + j) < num_individuals) {
+                thread_sum[(3 * bed_vals_x[j] + bed_vals_y[j])] += 1.f;
+            }
+        }
+    }
+
+    for (size_t i = 0; i < 9; i++) {
+        thread_sums[tix][i] = thread_sum[i];
+    }
+
+    // consolidate thread_sums
+    __syncthreads();
+    if (tix == 0) {
+        // produce single sum
+        float sum[9] = {0.0};
+        for (size_t i = 0; i < NUMTHREADS; i++) {
+            for (size_t j = 0; j < 9; j++) {
+                sum[j] += thread_sums[i][j];
+            }
+        }
+        float concordant = (sum[0] * (sum[4] + sum[5] + sum[7] + sum[8])) +
+                           (sum[1] * (sum[5] + sum[8])) + (sum[3] * (sum[7] + sum[8])) +
+                           (sum[4] * sum[8]);
+        float discordant = (sum[1] * (sum[3] + sum[6])) +
+                           (sum[2] * (sum[3] + sum[4] + sum[6] + sum[7])) + (sum[4] * sum[6]) +
+                           (sum[5] * (sum[6] + sum[7]));
+        float ties_x = (sum[0] * (sum[1] + sum[2])) + (sum[1] * sum[2]) +
+                       (sum[3] * (sum[4] + sum[5])) + (sum[4] * sum[5]) +
+                       (sum[6] * (sum[7] + sum[8]) + (sum[7] * sum[8]));
+        float ties_y = (sum[0] * (sum[3] + sum[6])) + (sum[1] * (sum[4] + sum[7])) +
+                       (sum[2] * (sum[5] + sum[8])) + (sum[3] * sum[6]) + (sum[4] + sum[7]) +
+                       (sum[5] * sum[8]);
+
+        float kendall_corr = (concordant - discordant) / sqrt((concordant + discordant + ties_x) *
+                                                              (concordant + discordant + ties_y));
+
+        // printf("linear ix: %f, row: %f, col: %f, h: %f, l: %f, corr result: %f \n", lin_ix_f,
+        // row,
+        //        col, h, l, kendall_corr);
+
+        results[lin_ix] = sin(M_PI / 2 * kendall_corr);
+    }
+}
+
+__device__ void unpack_bed_byte(const char b, float *dest)
+{
+    // TODO: make sure that the bytes are packed from the front,
+    // i.e. that the order is most significant -> least significant bits
+    for (size_t i = 0; i < 4; i++) {
+        dest[i] = bed_lut_a[b + i];
     }
 }
