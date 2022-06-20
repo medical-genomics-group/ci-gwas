@@ -149,7 +149,7 @@ __global__ void cu_bed_marker_corr_npn(const unsigned char *a, const size_t num_
 {
     size_t tix = threadIdx.x;
 
-    printf("starting corr kernel with id %d \n", tix);
+    // printf("starting corr kernel with id %d \n", tix);
 
     // convert linear indices into correlation matrix into (row, col) ix
     size_t lin_ix = blockIdx.x;
@@ -176,9 +176,13 @@ __global__ void cu_bed_marker_corr_npn(const unsigned char *a, const size_t num_
         unpack_bed_byte(a[col_start_x + i], bed_vals_x);
         unpack_bed_byte(a[col_start_y + i], bed_vals_y);
 
+        printf("block [x: %f; y: %f] thread %d: unpacked bytes at x: %d, y: %d.", row, col, tix,
+               col_start_x + i, col_start_y + i);
+
         for (size_t j = 0; j < 4; j++) {
             if ((i * 4 + j) < num_individuals) {
-                thread_sum[(size_t)((3 * bed_vals_x[j] + bed_vals_y[j]))] += 1.f;
+                size_t comp_ix = (size_t)((3 * bed_vals_x[j] + bed_vals_y[j]));
+                thread_sum[comp_ix] += 1.f;
             }
         }
     }
@@ -187,14 +191,12 @@ __global__ void cu_bed_marker_corr_npn(const unsigned char *a, const size_t num_
         thread_sums[tix][i] = thread_sum[i];
     }
 
-    printf("block [x: %f; y: %f] thread %d: finished.", row, col, tix);
+    // printf("block [x: %f; y: %f] thread %d: finished.", row, col, tix);
 
     // consolidate thread_sums
     __syncthreads();
-    printf("block [x: %f; y: %f] thread %d: waiting for sync.", row, col, tix);
-
     if (tix == 0) {
-        printf("block [x: %f; y: %f]: making single sum", row, col);
+        // printf("block [x: %f; y: %f]: making single sum", row, col);
 
         // produce single sum
         float sum[9] = {0.0};
@@ -219,8 +221,9 @@ __global__ void cu_bed_marker_corr_npn(const unsigned char *a, const size_t num_
         float kendall_corr = (concordant - discordant) / sqrt((concordant + discordant + ties_x) *
                                                               (concordant + discordant + ties_y));
 
-        printf("linear ix: %f, row: %f, col: %f, h: %f, l: %f, corr result: %f \n", lin_ix_f, row,
-               col, h, l, kendall_corr);
+        // printf("linear ix: %f, row: %f, col: %f, h: %f, l: %f, corr result: %f \n", lin_ix_f,
+        // row,
+        //    col, h, l, kendall_corr);
 
         results[lin_ix] = sin(M_PI / 2 * kendall_corr);
     }
