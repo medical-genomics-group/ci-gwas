@@ -131,21 +131,6 @@ void cu_bed_corr_npn(const unsigned char *a, const size_t num_markers, const siz
     HANDLE_ERROR(cudaFree(gpu_results));
 }
 
-// __device__ void unpack_bed_byte(const char b, float *dest)
-// {
-//     // TODO: make sure that the bytes are packed from the front,
-//     // i.e. that the order is most significant -> least significant bits
-//     // printf("unpacking! \n");
-//     size_t bix = (size_t)b;
-//     for (size_t i = 0; i < 4; i++) {
-//         // printf("in the loop! \n");
-//         // printf("%u \n", i);
-//         size_t lut_ix = (4 * bix) + i;
-//         // printf("bed value to write: %f", val);
-//         dest[i] = bed_lut_a[lut_ix];
-//     }
-// }
-
 // A O(n) runtime Kendall implementation for compressed genomic marker data.
 // compression format is expected to be col-major .bed without NaN.
 // that means a should have dimensions ceil(num_individuals / 4) * num_markers
@@ -173,24 +158,16 @@ __global__ void cu_bed_marker_corr_npn(const unsigned char *a, const size_t num_
     float thread_sum[9] = {0.0};
     __shared__ float thread_sums[NUMTHREADS][9];
 
-    float bed_vals_x[4] = {0.0};
-    float bed_vals_y[4] = {0.0};
     // TODO: it seems stupid to jump in memory, sequential reads are probably more efficient.
     // should have ++ increment and adjust the start.
     for (size_t i = tix; i < col_len_bytes; i += NUMTHREADS) {
-        size_t xix = (size_t)(a[col_start_x + i]);
-        size_t yix = (size_t)(a[col_start_y + i]);
-        for (size_t j = 0; j < 4; j++) {
-            bed_vals_x[j] = bed_lut_a[(4 * xix + j)];
-            bed_vals_y[j] = bed_lut_a[(4 * yix + j)];
-        }
-
-        // unpack_bed_byte(a[col_start_x + i], bed_vals_x);
-        // unpack_bed_byte(a[col_start_y + i], bed_vals_y);
-
+        size_t xix = 4 * (size_t)(a[col_start_x + i]);
+        size_t yix = 4 * (size_t)(a[col_start_y + i]);
         for (size_t j = 0; j < 4; j++) {
             if ((i * 4 + j) < num_individuals) {
-                size_t comp_ix = (size_t)((3 * bed_vals_x[j] + bed_vals_y[j]));
+                float val_x = bed_lut_a[(xix + j)];
+                float val_y = bed_lut_a[(yix + j)];
+                size_t comp_ix = (size_t)((3 * val_x + val_y));
                 thread_sum[comp_ix] += 1.f;
             }
         }
