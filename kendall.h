@@ -15,4 +15,4 @@ __global__ void cu_bed_marker_corr_npn(const unsigned char *a, const size_t num_
                                        const size_t num_individuals, const size_t col_len_bytes,
                                        float *results);
 
-__global__ void unpack_bed_byte(const char b, float *dest);
+__device__ void unpack_bed_byte(const char b, float *dest);

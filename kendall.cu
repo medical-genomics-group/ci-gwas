@@ -131,7 +131,7 @@ void cu_bed_corr_npn(const unsigned char *a, const size_t num_markers, const siz
     HANDLE_ERROR(cudaFree(gpu_results));
 }
 
-__global__ void unpack_bed_byte(const char b, float *dest)
+__device__ void unpack_bed_byte(const char b, float *dest)
 {
     // TODO: make sure that the bytes are packed from the front,
     // i.e. that the order is most significant -> least significant bits
