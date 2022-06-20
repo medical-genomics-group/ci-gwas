@@ -173,6 +173,8 @@ __global__ void cu_bed_marker_corr_npn(const unsigned char *a, const size_t num_
     // should have ++ increment and adjust the start.
     for (size_t i = tix; i < col_len_bytes; i += NUMTHREADS) {
         // TODO: make sure that unpacking happens in correct order
+        printf("block [x: %f; y: %f] thread %d: val of a at %llu: %u \n", col, row, tix,
+               col_start_x + i, a[col_start_x + i]);
         printf("block [x: %f; y: %f] thread %d: unpacking byte at x: %llu \n", col, row, tix,
                col_start_x + i);
         unpack_bed_byte(a[col_start_x + i], bed_vals_x);
