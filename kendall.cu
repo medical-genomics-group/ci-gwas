@@ -131,20 +131,20 @@ void cu_bed_corr_npn(const unsigned char *a, const size_t num_markers, const siz
     HANDLE_ERROR(cudaFree(gpu_results));
 }
 
-__device__ void unpack_bed_byte(const char b, float *dest)
-{
-    // TODO: make sure that the bytes are packed from the front,
-    // i.e. that the order is most significant -> least significant bits
-    // printf("unpacking! \n");
-    size_t bix = (size_t)b;
-    for (size_t i = 0; i < 4; i++) {
-        // printf("in the loop! \n");
-        // printf("%u \n", i);
-        size_t lut_ix = (4 * bix) + i;
-        // printf("bed value to write: %f", val);
-        dest[i] = bed_lut_a[lut_ix];
-    }
-}
+// __device__ void unpack_bed_byte(const char b, float *dest)
+// {
+//     // TODO: make sure that the bytes are packed from the front,
+//     // i.e. that the order is most significant -> least significant bits
+//     // printf("unpacking! \n");
+//     size_t bix = (size_t)b;
+//     for (size_t i = 0; i < 4; i++) {
+//         // printf("in the loop! \n");
+//         // printf("%u \n", i);
+//         size_t lut_ix = (4 * bix) + i;
+//         // printf("bed value to write: %f", val);
+//         dest[i] = bed_lut_a[lut_ix];
+//     }
+// }
 
 // A O(n) runtime Kendall implementation for compressed genomic marker data.
 // compression format is expected to be col-major .bed without NaN.
@@ -178,24 +178,15 @@ __global__ void cu_bed_marker_corr_npn(const unsigned char *a, const size_t num_
     // TODO: it seems stupid to jump in memory, sequential reads are probably more efficient.
     // should have ++ increment and adjust the start.
     for (size_t i = tix; i < col_len_bytes; i += NUMTHREADS) {
-        // TODO: make sure that unpacking happens in correct order
-        // printf("block [x: %f; y: %f] thread %d: val of a at %llu: %u \n", col, row, tix,
-        //        col_start_x + i, a[col_start_x + i]);
-        // printf("block [x: %f; y: %f] thread %d: base lut val: %f \n", col, row, tix,
-        //        bed_lut_a[4 * (size_t)a[col_start_x + i]]);
-        printf("block [x: %f; y: %f] thread %d: unpacking byte at x: %llu \n", col, row, tix,
-               col_start_x + i);
+        size_t xix = (size_t)(a[col_start_x + i]);
+        size_t yix = (size_t)(a[col_start_y + i]);
+        for (size_t j = 0; j < 4; j++) {
+            bed_vals_x[j] = bed_lut_a[(4 * xix + j)];
+            bed_vals_y[j] = bed_lut_a[(4 * yix + j)];
+        }
 
-        // size_t b = (size_t)(a[col_start_x + i]);
-        // for (size_t j = 0; j < 4; j++) {
-        //     size_t lut_ix = (4 * b) + j;
-        //     bed_vals_x[j] = bed_lut_a[lut_ix];
-        // }
-
-        unpack_bed_byte(a[col_start_x + i], bed_vals_x);
-        printf("block [x: %f; y: %f] thread %d: unpacking byte at y: %llu \n", col, row, tix,
-               col_start_y + i);
-        unpack_bed_byte(a[col_start_y + i], bed_vals_y);
+        // unpack_bed_byte(a[col_start_x + i], bed_vals_x);
+        // unpack_bed_byte(a[col_start_y + i], bed_vals_y);
 
         for (size_t j = 0; j < 4; j++) {
             if ((i * 4 + j) < num_individuals) {
