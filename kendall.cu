@@ -136,7 +136,8 @@ __device__ void unpack_bed_byte(const char b, float *dest)
     // TODO: make sure that the bytes are packed from the front,
     // i.e. that the order is most significant -> least significant bits
     for (size_t i = 0; i < 4; i++) {
-        dest[i] = bed_lut_a[(4 * (size_t)b) + i];
+        size_t lut_ix = (4 * (size_t)b) + i;
+        dest[i] = bed_lut_a[lut_ix];
     }
 }
 
@@ -175,6 +176,8 @@ __global__ void cu_bed_marker_corr_npn(const unsigned char *a, const size_t num_
         // TODO: make sure that unpacking happens in correct order
         printf("block [x: %f; y: %f] thread %d: val of a at %llu: %u \n", col, row, tix,
                col_start_x + i, a[col_start_x + i]);
+        printf("block [x: %f; y: %f] thread %d: base lut val: %u \n", col, row, tix,
+               bed_lut_a[4 * (size_t)a[col_start_x + i]]);
         printf("block [x: %f; y: %f] thread %d: unpacking byte at x: %llu \n", col, row, tix,
                col_start_x + i);
         unpack_bed_byte(a[col_start_x + i], bed_vals_x);
