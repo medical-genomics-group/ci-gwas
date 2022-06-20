@@ -186,10 +186,10 @@ __global__ void cu_bed_marker_corr_npn(const unsigned char *a, const size_t num_
         printf("block [x: %f; y: %f] thread %d: unpacking byte at x: %llu \n", col, row, tix,
                col_start_x + i);
 
-        size_t b = (size_t)(a[col_start_ix + i]);
+        size_t b = (size_t)(a[col_start_x + i]);
         for (size_t j = 0; j < 4; j++) {
             size_t lut_ix = (4 * b) + j;
-            dest[j] = bed_lut_a[lut_ix];
+            bed_vals_x[j] = bed_lut_a[lut_ix];
         }
 
         // unpack_bed_byte(a[col_start_x + i], bed_vals_x);
