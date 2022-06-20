@@ -124,6 +124,7 @@ void cu_bed_corr_npn(const unsigned char *a, const size_t num_markers, const siz
 
     cu_bed_marker_corr_npn<<<blocks_per_grid, threads_per_block>>>(
         gpu_a, num_markers, num_individuals, col_len_bytes, gpu_results);
+    CudaCheckError();
 
     HANDLE_ERROR(cudaMemcpy(results, gpu_results, output_bytes, cudaMemcpyDeviceToHost));
     HANDLE_ERROR(cudaFree(gpu_a));
