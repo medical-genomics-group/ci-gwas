@@ -3,6 +3,7 @@
 #include <cmath>
 #include <iostream>
 
+#include "bed_marker_test_set.h"
 #include "corr_test_set.h"
 #include "cuPC-S.h"
 #include "kendall.h"
@@ -44,16 +45,35 @@ void call_skeleton()
     Skeleton(C.data(), &p, G.data(), Th.data(), &l, &max_level, pmax.data(), sepset);
 }
 
+auto corr_matrix_size(size_t num_markers, size_t num_individuals) -> size_t
+{
+    return num_markers * (num_markers - 1) / 2;
+}
+
 void call_cu_corr()
 {
     const size_t num_markers = TEST_NUM_MARKERS;
     const size_t num_individuals = TEST_NUM_INDIVIDUALS;
-    const size_t corr_matrix_size = num_markers * (num_markers - 1) / 2;
-    float marker_corr[corr_matrix_size];
+    const size_t cm_size = corr_matrix_size(num_markers, num_individuals);
+    float marker_corr[cm_size];
     memset(marker_corr, 0.0, sizeof(marker_corr));
     cu_corr_npn(test_a, num_markers, num_individuals, marker_corr);
 
-    for (size_t i = 0; i < corr_matrix_size; i++) {
+    for (size_t i = 0; i < cm_size; i++) {
+        std::cout << marker_corr[i] << std::endl;
+    }
+}
+
+void call_cu_bed_corr()
+{
+    const size_t num_markers = BMT_NUM_MARKERS;
+    const size_t num_individuals = BMT_NUM_INDIVIDUALS;
+    const size_t cm_size = corr_matrix_size(num_markers, num_individuals);
+    float marker_corr[cm_size];
+    memset(marker_corr, 0.0, sizeof(marker_corr));
+    cu_bed_corr_npn(bmt_a, num_markers, num_individuals, marker_corr);
+
+    for (size_t i = 0; i < cm_size; i++) {
         std::cout << marker_corr[i] << std::endl;
     }
 }

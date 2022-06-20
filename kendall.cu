@@ -11,7 +11,7 @@ void cu_corr_npn(const unsigned char *a, const size_t num_markers, const size_t 
                  float *results)
 {
     // This here assumes a non compressed a.
-    size_t a_bytes = num_markers * num_individuals * sizeof(float);
+    size_t a_bytes = num_markers * num_individuals * sizeof(unsigned char);
     unsigned char *gpu_a;
     float *gpu_results;
     int threads_per_block = NUMTHREADS;
@@ -97,6 +97,35 @@ __global__ void cu_marker_corr_npn(const unsigned char *a, const size_t num_mark
 
         results[lin_ix] = sin(M_PI / 2 * kendall_corr);
     }
+}
+
+// Kendall correlation computation for pairs of markers compressed in .bed format
+// without leading magic numbers.
+void cu_bed_corr_npn(const unsigned char *a, const size_t num_markers, const size_t num_individuals,
+                     float *results)
+{
+    // this is ceil
+    size_t col_len_bytes = (num_individuals + 3) / 4 * sizezof(unsigned char);
+    size_t a_bytes = col_len_bytes * num_markers;
+    unsigned char *gpu_a;
+    float *gpu_results;
+    int threads_per_block = NUMTHREADS;
+    size_t output_length = num_markers * (num_markers - 1) / 2;
+    size_t output_bytes = output_length * sizeof(float);
+
+    // TODO: see if proper blocks give any performace increase
+    int blocks_per_grid = output_length;
+
+    HANDLE_ERROR(cudaMalloc(&gpu_a, a_bytes));
+    HANDLE_ERROR(cudaMemcpy(gpu_a, a, a_bytes, cudaMemcpyHostToDevice));
+    HANDLE_ERROR(cudaMalloc(&gpu_results, output_bytes));
+
+    cu_bed_marker_corr_npn<<<blocks_per_grid, threads_per_block>>>(
+        gpu_a, num_markers, num_individuals, col_len_bytes, gpu_results);
+
+    HANDLE_ERROR(cudaMemcpy(results, gpu_results, output_bytes, cudaMemcpyDeviceToHost));
+    HANDLE_ERROR(cudaFree(gpu_a));
+    HANDLE_ERROR(cudaFree(gpu_results));
 }
 
 // A O(n) runtime Kendall implementation for compressed genomic marker data.
