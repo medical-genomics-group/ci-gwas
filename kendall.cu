@@ -189,6 +189,8 @@ __global__ void cu_bed_marker_corr_npn(const unsigned char *a, const size_t num_
     // consolidate thread_sums
     __syncthreads();
     if (tix == 0) {
+        printf("block [x: %f; y: %f]: making single sum", row, col);
+
         // produce single sum
         float sum[9] = {0.0};
         for (size_t i = 0; i < NUMTHREADS; i++) {
