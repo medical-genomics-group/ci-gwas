@@ -140,8 +140,6 @@ __global__ void cu_bed_marker_corr_npn(const unsigned char *a, const size_t num_
 {
     size_t tix = threadIdx.x;
 
-    // printf("starting corr kernel with id %d \n", tix);
-
     // convert linear indices into correlation matrix into (row, col) ix
     size_t lin_ix = blockIdx.x;
     float lin_ix_f = (size_t)lin_ix;
@@ -210,6 +208,9 @@ __global__ void cu_bed_marker_corr_npn(const unsigned char *a, const size_t num_
         // printf("linear ix: %f, row: %f, col: %f, h: %f, l: %f, corr result: %f \n", lin_ix_f,
         // row,
         //    col, h, l, kendall_corr);
+
+        printf("block [x: %f; y: %f]: P: %f, Q: %f, T: %f, U: %f.", row, col, concordant,
+               discordant, ties_x, ties_y);
 
         results[lin_ix] = sin(M_PI / 2 * kendall_corr);
     }
