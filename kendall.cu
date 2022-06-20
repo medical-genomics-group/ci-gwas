@@ -68,28 +68,25 @@ __global__ void cu_marker_corr_npn(const unsigned char *a, const size_t num_mark
     // consolidate thread_sums
     __syncthreads();
     if (tix == 0) {
+        // printf("block [x: %f; y: %f]: making single sum", row, col);
+
         // produce single sum
-        float sum[9] = {0.0};
+        float s[9] = {0.0};
         for (size_t i = 0; i < NUMTHREADS; i++) {
             for (size_t j = 0; j < 9; j++) {
-                sum[j] += thread_sums[i][j];
+                s[j] += thread_sums[i][j];
             }
         }
-        float concordant = (sum[0] * (sum[4] + sum[5] + sum[7] + sum[8])) +
-                           (sum[1] * (sum[5] + sum[8])) + (sum[3] * (sum[7] + sum[8])) +
-                           (sum[4] * sum[8]);
-        float discordant = (sum[1] * (sum[3] + sum[6])) +
-                           (sum[2] * (sum[3] + sum[4] + sum[6] + sum[7])) + (sum[4] * sum[6]) +
-                           (sum[5] * (sum[6] + sum[7]));
-        float ties_x = (sum[0] * (sum[1] + sum[2])) + (sum[1] * sum[2]) +
-                       (sum[3] * (sum[4] + sum[5])) + (sum[4] * sum[5]) +
-                       (sum[6] * (sum[7] + sum[8]) + (sum[7] * sum[8]));
-        float ties_y = (sum[0] * (sum[3] + sum[6])) + (sum[1] * (sum[4] + sum[7])) +
-                       (sum[2] * (sum[5] + sum[8])) + (sum[3] * sum[6]) + (sum[4] + sum[7]) +
-                       (sum[5] * sum[8]);
+        float p = ((s[0] * (s[4] + s[5] + s[7] + s[8])) + (s[1] * (s[5] + s[8])) +
+                   (s[3] * (s[7] + s[8])) + (s[4] * s[8]));
+        float q = ((s[1] * (s[3] + s[6])) + (s[2] * (s[3] + s[4] + s[6] + s[7])) + (s[4] * s[6]) +
+                   (s[5] * (s[6] + s[7])));
+        float t = ((s[0] * (s[1] + s[2])) + (s[1] * s[2]) + (s[3] * (s[4] + s[5])) + (s[4] * s[5]) +
+                   (s[6] * (s[7] + s[8])) + (s[7] * s[8]));
+        float u = ((s[0] * (s[3] + s[6])) + (s[1] * (s[4] + s[7])) + (s[2] * (s[5] + s[8])) +
+                   (s[3] * s[6]) + (s[4] * s[7]) + (s[5] * s[8]));
 
-        float kendall_corr = (concordant - discordant) / sqrt((concordant + discordant + ties_x) *
-                                                              (concordant + discordant + ties_y));
+        float kendall_corr = (p - q) / sqrt((p + q + t) * (p + q + u));
 
         // printf("linear ix: %f, row: %f, col: %f, h: %f, l: %f, corr result: %f \n", lin_ix_f,
         // row,
@@ -199,13 +196,6 @@ __global__ void cu_bed_marker_corr_npn(const unsigned char *a, const size_t num_
                    (s[3] * s[6]) + (s[4] * s[7]) + (s[5] * s[8]));
 
         float kendall_corr = (p - q) / sqrt((p + q + t) * (p + q + u));
-
-        // printf("linear ix: %f, row: %f, col: %f, h: %f, l: %f, corr result: %f \n", lin_ix_f,
-        // row,
-        //    col, h, l, kendall_corr);
-
-        printf("block [x: %f; y: %f]: P: %f, Q: %f, T: %f, U: %f., corr: %f, \n", row, col, p, q, t,
-               u, kendall_corr);
 
         results[lin_ix] = sin(M_PI / 2 * kendall_corr);
     }
