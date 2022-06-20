@@ -208,9 +208,8 @@ __global__ void cu_bed_marker_corr_npn(const unsigned char *a, const size_t num_
         float kendall_corr = (concordant - discordant) / sqrt((concordant + discordant + ties_x) *
                                                               (concordant + discordant + ties_y));
 
-        // printf("linear ix: %f, row: %f, col: %f, h: %f, l: %f, corr result: %f \n", lin_ix_f,
-        // row,
-        //        col, h, l, kendall_corr);
+        printf("linear ix: %f, row: %f, col: %f, h: %f, l: %f, corr result: %f \n", lin_ix_f, row,
+               col, h, l, kendall_corr);
 
         results[lin_ix] = sin(M_PI / 2 * kendall_corr);
     }
