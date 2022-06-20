@@ -131,17 +131,17 @@ void cu_bed_corr_npn(const unsigned char *a, const size_t num_markers, const siz
     HANDLE_ERROR(cudaFree(gpu_results));
 }
 
-__device__ void unpack_bed_byte(const char b, float *dest)
+__global__ void unpack_bed_byte(const char b, float *dest)
 {
     // TODO: make sure that the bytes are packed from the front,
     // i.e. that the order is most significant -> least significant bits
-    printf("unpacking! \n");
+    // printf("unpacking! \n");
+    size_t bix = (size_t)b;
     for (size_t i = 0; i < 4; i++) {
-        printf("in the loop! \n");
-        printf("%u \n", i);
-        size_t lut_ix = (4 * (size_t)b) + i;
-        float val = bed_lut_a[lut_ix];
-        printf("bed value to write: %f", val);
+        // printf("in the loop! \n");
+        // printf("%u \n", i);
+        size_t lut_ix = (4 * bix) + i;
+        // printf("bed value to write: %f", val);
         dest[i] = bed_lut_a[lut_ix];
     }
 }
@@ -186,16 +186,16 @@ __global__ void cu_bed_marker_corr_npn(const unsigned char *a, const size_t num_
         printf("block [x: %f; y: %f] thread %d: unpacking byte at x: %llu \n", col, row, tix,
                col_start_x + i);
 
-        size_t b = (size_t)(a[col_start_x + i]);
-        for (size_t j = 0; j < 4; j++) {
-            size_t lut_ix = (4 * b) + j;
-            bed_vals_x[j] = bed_lut_a[lut_ix];
-        }
+        // size_t b = (size_t)(a[col_start_x + i]);
+        // for (size_t j = 0; j < 4; j++) {
+        //     size_t lut_ix = (4 * b) + j;
+        //     bed_vals_x[j] = bed_lut_a[lut_ix];
+        // }
 
-        // unpack_bed_byte(a[col_start_x + i], bed_vals_x);
+        unpack_bed_byte(a[col_start_x + i], bed_vals_x);
         printf("block [x: %f; y: %f] thread %d: unpacking byte at y: %llu \n", col, row, tix,
                col_start_y + i);
-        // unpack_bed_byte(a[col_start_y + i], bed_vals_y);
+        unpack_bed_byte(a[col_start_y + i], bed_vals_y);
 
         for (size_t j = 0; j < 4; j++) {
             if ((i * 4 + j) < num_individuals) {
