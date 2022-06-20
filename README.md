@@ -3,5 +3,5 @@
 Currently compiled as binary with
 
 ```bash
-nvcc -O3 -x cu -o main cuPC-S.cu main.cpp
+nvcc -O3 -x cu -o main cuPC-S.cu kendall.cu main.cpp
 ```
