@@ -136,6 +136,7 @@ __device__ void unpack_bed_byte(const char b, float *dest)
     // TODO: make sure that the bytes are packed from the front,
     // i.e. that the order is most significant -> least significant bits
     for (size_t i = 0; i < 4; i++) {
+        printf("%u", i);
         size_t lut_ix = (4 * (size_t)b) + i;
         dest[i] = bed_lut_a[lut_ix];
     }
