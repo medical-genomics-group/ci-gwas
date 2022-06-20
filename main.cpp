@@ -80,7 +80,7 @@ void call_cu_bed_corr()
 
 auto main(int argc, char const *argv[]) -> int
 {
-    call_cu_corr();
+    call_cu_bed_corr();
     std::cout << "All done!" << std::endl;
     return 0;
 }
