@@ -105,7 +105,7 @@ void cu_bed_corr_npn(const unsigned char *a, const size_t num_markers, const siz
                      float *results)
 {
     // this is ceil
-    size_t col_len_bytes = (num_individuals + 3) / 4 * sizezof(unsigned char);
+    size_t col_len_bytes = (num_individuals + 3) / 4 * sizeof(unsigned char);
     size_t a_bytes = col_len_bytes * num_markers;
     unsigned char *gpu_a;
     float *gpu_results;
@@ -126,6 +126,15 @@ void cu_bed_corr_npn(const unsigned char *a, const size_t num_markers, const siz
     HANDLE_ERROR(cudaMemcpy(results, gpu_results, output_bytes, cudaMemcpyDeviceToHost));
     HANDLE_ERROR(cudaFree(gpu_a));
     HANDLE_ERROR(cudaFree(gpu_results));
+}
+
+__device__ void unpack_bed_byte(const char b, float *dest)
+{
+    // TODO: make sure that the bytes are packed from the front,
+    // i.e. that the order is most significant -> least significant bits
+    for (size_t i = 0; i < 4; i++) {
+        dest[i] = bed_lut_a[b + i];
+    }
 }
 
 // A O(n) runtime Kendall implementation for compressed genomic marker data.
@@ -159,8 +168,8 @@ __global__ void cu_bed_marker_corr_npn(const unsigned char *a, const size_t num_
     // should have ++ increment and adjust the start.
     for (size_t i = tix; i < col_len_bytes; i += NUMTHREADS) {
         // TODO: make sure that unpacking happens in correct order
-        unpack_bed_bytes(a[col_start_x + i], &bed_vals_x);
-        unpack_bed_bytes(a[col_start_y + i], &bed_vals_y);
+        unpack_bed_byte(a[col_start_x + i], &bed_vals_x);
+        unpack_bed_byte(a[col_start_y + i], &bed_vals_y);
 
         for (size_t j = 0; j < 4; j++) {
             if ((i * 4 + j) < num_individuals) {
@@ -204,14 +213,5 @@ __global__ void cu_bed_marker_corr_npn(const unsigned char *a, const size_t num_
         //        col, h, l, kendall_corr);
 
         results[lin_ix] = sin(M_PI / 2 * kendall_corr);
-    }
-}
-
-__device__ void unpack_bed_byte(const char b, float *dest)
-{
-    // TODO: make sure that the bytes are packed from the front,
-    // i.e. that the order is most significant -> least significant bits
-    for (size_t i = 0; i < 4; i++) {
-        dest[i] = bed_lut_a[b + i];
     }
 }
