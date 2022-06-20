@@ -173,7 +173,7 @@ __global__ void cu_bed_marker_corr_npn(const unsigned char *a, const size_t num_
 
         for (size_t j = 0; j < 4; j++) {
             if ((i * 4 + j) < num_individuals) {
-                thread_sum[(3 * bed_vals_x[j] + bed_vals_y[j])] += 1.f;
+                thread_sum[(size_t)((3 * bed_vals_x[j] + bed_vals_y[j]))] += 1.f;
             }
         }
     }
