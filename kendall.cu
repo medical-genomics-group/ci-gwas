@@ -140,7 +140,8 @@ __device__ void unpack_bed_byte(const char b, float *dest)
         printf("in the loop! \n");
         printf("%u \n", i);
         size_t lut_ix = (4 * (size_t)b) + i;
-        printf("bed value to write: %u", bed_lut_a[lut_ix]);
+        float val = bed_lut_a[lut_ix];
+        printf("bed value to write: %f", val);
         dest[i] = bed_lut_a[lut_ix];
     }
 }
