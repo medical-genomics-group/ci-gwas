@@ -176,7 +176,7 @@ __global__ void cu_bed_marker_corr_npn(const unsigned char *a, const size_t num_
         // TODO: make sure that unpacking happens in correct order
         printf("block [x: %f; y: %f] thread %d: val of a at %llu: %u \n", col, row, tix,
                col_start_x + i, a[col_start_x + i]);
-        printf("block [x: %f; y: %f] thread %d: base lut val: %u \n", col, row, tix,
+        printf("block [x: %f; y: %f] thread %d: base lut val: %f \n", col, row, tix,
                bed_lut_a[4 * (size_t)a[col_start_x + i]]);
         printf("block [x: %f; y: %f] thread %d: unpacking byte at x: %llu \n", col, row, tix,
                col_start_x + i);
