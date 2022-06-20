@@ -168,8 +168,8 @@ __global__ void cu_bed_marker_corr_npn(const unsigned char *a, const size_t num_
     // should have ++ increment and adjust the start.
     for (size_t i = tix; i < col_len_bytes; i += NUMTHREADS) {
         // TODO: make sure that unpacking happens in correct order
-        unpack_bed_byte(a[col_start_x + i], &bed_vals_x);
-        unpack_bed_byte(a[col_start_y + i], &bed_vals_y);
+        unpack_bed_byte(a[col_start_x + i], bed_vals_x);
+        unpack_bed_byte(a[col_start_y + i], bed_vals_y);
 
         for (size_t j = 0; j < 4; j++) {
             if ((i * 4 + j) < num_individuals) {
