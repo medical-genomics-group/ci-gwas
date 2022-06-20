@@ -120,6 +120,8 @@ void cu_bed_corr_npn(const unsigned char *a, const size_t num_markers, const siz
     HANDLE_ERROR(cudaMemcpy(gpu_a, a, a_bytes, cudaMemcpyHostToDevice));
     HANDLE_ERROR(cudaMalloc(&gpu_results, output_bytes));
 
+    printf("starting corr kernels \n");
+
     cu_bed_marker_corr_npn<<<blocks_per_grid, threads_per_block>>>(
         gpu_a, num_markers, num_individuals, col_len_bytes, gpu_results);
 
@@ -145,6 +147,8 @@ __global__ void cu_bed_marker_corr_npn(const unsigned char *a, const size_t num_
                                        float *results)
 {
     size_t tix = threadIdx.x;
+
+    printf("starting corr kernel with id %d \n", tix);
 
     // convert linear indices into correlation matrix into (row, col) ix
     size_t lin_ix = blockIdx.x;
