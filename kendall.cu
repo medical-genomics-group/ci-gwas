@@ -186,8 +186,12 @@ __global__ void cu_bed_marker_corr_npn(const unsigned char *a, const size_t num_
         thread_sums[tix][i] = thread_sum[i];
     }
 
+    printf("block [x: %f; y: %f] thread %d: finished.", row, col, tix);
+
     // consolidate thread_sums
     __syncthreads();
+    printf("block [x: %f; y: %f] thread %d: waiting for sync.", row, col, tix);
+
     if (tix == 0) {
         printf("block [x: %f; y: %f]: making single sum", row, col);
 
