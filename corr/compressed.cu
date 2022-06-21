@@ -15,7 +15,7 @@ void cu_corr_npn(const unsigned char *marker_vals, const float *phen_vals, const
     // this is ceil
     size_t col_len_bytes = (num_individuals + 3) / 4 * sizeof(unsigned char);
     size_t marker_vals_bytes = col_len_bytes * num_markers;
-    size_t phen_vals_bytes = num_phen * sizeof(float);
+    size_t phen_vals_bytes = num_phen * num_individuals * sizeof(float);
 
     unsigned char *gpu_marker_vals;
     float *gpu_phen_vals;
@@ -112,8 +112,9 @@ __global__ void marker_phen_corr_pearson(const unsigned char *marker_vals, const
         size_t curr_mv_byte_ix = 4 * (size_t)(marker_vals[mv_start_ix + i]);
         for (size_t j = 0; (j < 4) && (i * 4 + j < num_individuals); j++) {
             float mv_val = bed_lut_a[(curr_mv_byte_ix + j)];
-            float phen_val = phen_vals[(phen_start_ix + i + j)];
-            thread_sum_mv_phen += mv_val * phen_val;
+            float phen_val = phen_vals[(phen_start_ix + (4 * i) + j)];
+
+	    thread_sum_mv_phen += (mv_val * phen_val);
             thread_sum_phen += phen_val;
         }
     }
@@ -131,7 +132,7 @@ __global__ void marker_phen_corr_pearson(const unsigned char *marker_vals, const
         }
 
         results[lin_ix] = (s_mv_phen - marker_mean[mv_ix] * s_phen) /
-                          ((float)(num_individuals - 1) * marker_std[mv_ix]);
+                          ((float)(num_individuals) * marker_std[mv_ix]);
     }
 }
 
@@ -170,8 +171,7 @@ __global__ void phen_corr_pearson(const float *phen_vals, const size_t num_indiv
         for (size_t i = 0; i < NUMTHREADS; i++) {
             s += thread_sums[i];
         }
-
-        results[lin_ix] = s / (float)(num_individuals - 1);
+        results[lin_ix] = s / (float)(num_individuals);
     }
 }
 
