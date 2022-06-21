@@ -3,8 +3,8 @@
 #define NUMTHREADS 16
 
 void cu_corr_npn(const unsigned char *marker_vals, const float *phen_vals, const size_t num_markers,
-                 const size_t num_individuals, const size_t num_phen, const float marker_mean,
-                 const float marker_std, float *marker_corrs, float *marker_phen_corrs,
+                 const size_t num_individuals, const size_t num_phen, const float *marker_mean,
+                 const float *marker_std, const float *marker_corrs, float *marker_phen_corrs,
                  float *phen_corrs);
 
 __global__ void marker_phen_corr_pearson(const unsigned char *marker_vals, const float *phen_vals,

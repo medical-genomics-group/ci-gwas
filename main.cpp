@@ -4,9 +4,9 @@
 #include <iostream>
 
 #include "bed_marker_test_set.h"
+#include "compressed.h"
 #include "corr_test_set.h"
 #include "cuPC-S.h"
-#include "kendall.h"
 
 const int NUMBER_OF_LEVELS = 50;
 
@@ -45,36 +45,54 @@ void call_skeleton()
     Skeleton(C.data(), &p, G.data(), Th.data(), &l, &max_level, pmax.data(), sepset);
 }
 
-auto corr_matrix_size(size_t num_markers, size_t num_individuals) -> size_t
-{
-    return num_markers * (num_markers - 1) / 2;
-}
+auto corr_matrix_size(size_t num_markers) -> size_t { return num_markers * (num_markers - 1) / 2; }
 
-void call_cu_corr()
-{
-    const size_t num_markers = TEST_NUM_MARKERS;
-    const size_t num_individuals = TEST_NUM_INDIVIDUALS;
-    const size_t cm_size = corr_matrix_size(num_markers, num_individuals);
-    float marker_corr[cm_size];
-    memset(marker_corr, 0.0, sizeof(marker_corr));
-    cu_corr_npn(test_a, num_markers, num_individuals, marker_corr);
+// void call_cu_corr()
+// {
+//     const size_t num_markers = TEST_NUM_MARKERS;
+//     const size_t num_individuals = TEST_NUM_INDIVIDUALS;
+//     const size_t cm_size = corr_matrix_size(num_markers, num_individuals);
+//     float marker_corr[cm_size];
+//     memset(marker_corr, 0.0, sizeof(marker_corr));
+//     cu_corr_npn(test_a, num_markers, num_individuals, marker_corr);
 
-    for (size_t i = 0; i < cm_size; i++) {
-        std::cout << marker_corr[i] << std::endl;
-    }
-}
+//     for (size_t i = 0; i < cm_size; i++) {
+//         std::cout << marker_corr[i] << std::endl;
+//     }
+// }
 
 void call_cu_bed_corr()
 {
     const size_t num_markers = BMT_NUM_MARKERS;
     const size_t num_individuals = BMT_NUM_INDIVIDUALS;
-    const size_t cm_size = corr_matrix_size(num_markers, num_individuals);
-    float marker_corr[cm_size];
-    memset(marker_corr, 0.0, sizeof(marker_corr));
-    cu_bed_corr_npn(bmt_a, num_markers, num_individuals, marker_corr);
+    const size_t num_phen = BMT_NUM_PHEN;
+    const size_t marker_cm_size = corr_matrix_size(num_markers);
+    const size_t marker_phen_cm_size = num_markers * num_phen;
+    const size_t phen_cm_size = corr_matrix_size(num_phen);
 
-    for (size_t i = 0; i < cm_size; i++) {
+    float marker_corr[marker_cm_size];
+    memset(marker_corr, 0.0, sizeof(marker_corr));
+    float marker_phen_corr[marker_phen_cm_size];
+    memset(marker_phen_corr, 0.0, sizeof(marker_phen_corr));
+    float phen_corr[phen_cm_size];
+    memset(phen_corr, 0.0, sizeof(phen_corr));
+
+    cu_corr_npn(bmt_marker_vals, bmt_phen_vals, num_markers, num_individuals, num_phen,
+                bmt_marker_mean, bmt_marker_std, marker_corr, marker_phen_corr, phen_corr);
+
+    printf("marker corrs: \n");
+    for (size_t i = 0; i < marker_cm_size; i++) {
         std::cout << marker_corr[i] << std::endl;
+    }
+
+    printf("phen marker corrs: \n");
+    for (size_t i = 0; i < marker_phen_cm_size; i++) {
+        std::cout << marker_phen_corr[i] << std::endl;
+    }
+
+    printf("phen corrs: \n");
+    for (size_t i = 0; i < phen_cm_size; i++) {
+        std::cout << phen_corr[i] << std::endl;
     }
 }
 
