@@ -4,7 +4,7 @@
 #include <iostream>
 
 #include "corr/compressed.h"
-#include "cuPC/cuPC-S.h"
+// #include "cuPC/cuPC-S.h"
 #include "test_data/bed_marker_test_set.h"
 #include "test_data/corr_test_set.h"
 
@@ -28,22 +28,22 @@ auto threshold_array(const int n, const double alpha) -> std::array<double, NUMB
     return thr;
 }
 
-void call_skeleton()
-{
-    const int n = 10;
-    int p = 2;
-    const double alpha = 0.05;
-    int max_level = 14;
-    const size_t sepset_size = p * p * 14;
-    std::array<double, 4> pmax{0.0};
-    std::array<int, 4> G = {0, 1, 1, 0};
-    std::array<double, 4> C = {1.0, 0.4, 0.4, 1.0};
-    std::array<double, NUMBER_OF_LEVELS> Th = threshold_array(n, alpha);
-    int sepset[sepset_size];
-    memset(sepset, 0, sizeof(sepset));
-    int l = 0;
-    Skeleton(C.data(), &p, G.data(), Th.data(), &l, &max_level, pmax.data(), sepset);
-}
+// void call_skeleton()
+// {
+//     const int n = 10;
+//     int p = 2;
+//     const double alpha = 0.05;
+//     int max_level = 14;
+//     const size_t sepset_size = p * p * 14;
+//     std::array<double, 4> pmax{0.0};
+//     std::array<int, 4> G = {0, 1, 1, 0};
+//     std::array<double, 4> C = {1.0, 0.4, 0.4, 1.0};
+//     std::array<double, NUMBER_OF_LEVELS> Th = threshold_array(n, alpha);
+//     int sepset[sepset_size];
+//     memset(sepset, 0, sizeof(sepset));
+//     int l = 0;
+//     Skeleton(C.data(), &p, G.data(), Th.data(), &l, &max_level, pmax.data(), sepset);
+// }
 
 auto corr_matrix_size(size_t num_markers) -> size_t { return num_markers * (num_markers - 1) / 2; }
 
