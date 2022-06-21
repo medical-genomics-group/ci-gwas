@@ -68,7 +68,7 @@ void cu_corr_npn(const unsigned char *marker_vals, const float *phen_vals, const
 
     marker_phen_corr_pearson<<<blocks_per_grid, threads_per_block>>>(
         gpu_marker_vals, gpu_phen_vals, num_markers, num_individuals, num_phen, col_len_bytes,
-        marker_mean, marker_std, gpu_marker_phen_corrs);
+        gpu_marker_mean, gpu_marker_std, gpu_marker_phen_corrs);
     CudaCheckError();
 
     HANDLE_ERROR(cudaMemcpy(marker_phen_corrs, gpu_marker_phen_corrs, marker_phen_output_bytes,
