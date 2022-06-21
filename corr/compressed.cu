@@ -71,7 +71,7 @@ void cu_corr_npn(const unsigned char *marker_vals, const float *phen_vals, const
     HANDLE_ERROR(cudaMalloc(&gpu_phen_corrs, phen_output_bytes));
 
     phen_corr_pearson<<<blocks_per_grid, threads_per_block>>>(gpu_phen_vals, num_individuals,
-                                                              num_phen, gpu_phen_coors);
+                                                              num_phen, gpu_phen_corrs);
     CudaCheckError();
 
     HANDLE_ERROR(cudaMemcpy(phen_corrs, gpu_phen_corrs, phen_output_bytes, cudaMemcpyDeviceToHost));
@@ -154,7 +154,10 @@ __global__ void phen_corr_pearson(const float *phen_vals, const size_t num_indiv
 
     __syncthreads();
     if (tix == 0) {
-        float s = 0.0 for (size_t i = 0; i < NUMTHREADS; i++) { s += thread_sums[i]; }
+        float s = 0.0;
+        for (size_t i = 0; i < NUMTHREADS; i++) {
+            s += thread_sums[i];
+        }
 
         results[lin_ix] = s / (float)(num_individuals - 1);
     }
