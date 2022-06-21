@@ -110,7 +110,7 @@ __global__ void marker_phen_corr_pearson(const unsigned char *marker_vals, const
     thread_sums_phen[tix] = thread_sum_phen;
 
     __syncthreads();
-    if (tix = 0) {
+    if (tix == 0) {
         float s_mv_phen = 0.0;
         float s_phen = 0.0;
         for (size_t i = 0; i < NUMTHREADS; i++) {
@@ -153,7 +153,7 @@ __global__ void phen_corr_pearson(const float *phen_vals, const size_t num_indiv
     thread_sums[tix] = thread_sum;
 
     __syncthreads();
-    if (tix = 0) {
+    if (tix == 0) {
         float s = 0.0 for (size_t i = 0; i < NUMTHREADS; i++) { s += thread_sums[i]; }
 
         results[lin_ix] = s / (float)(num_individuals - 1);
