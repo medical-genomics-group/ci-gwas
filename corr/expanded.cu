@@ -1,8 +1,8 @@
 #include <math.h>
 
+#include "../cuPC/gpuerrors.h"
 #include "bed_lut.h"
 #include "expanded.h"
-#include "gpuerrors.h"
 
 // Compute correlation matrix of all pairs of markers in 'x'.
 // The data is not partitioned.

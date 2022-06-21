@@ -1,15 +1,15 @@
 #include <math.h>
 
+#include "../cuPC/gpuerrors.h"
 #include "bed_lut.h"
 #include "compressed.h"
-#include "gpuerrors.h"
 
 // Compute correlations between markers, markers and phenotypes, and between phenotypes.
 // Markers are expected to be in compressed .bed format, with NaNs removed and no leading magic
 // numbers.
 void cu_corr_npn(const unsigned char *marker_vals, const float *phen_vals, const size_t num_markers,
                  const size_t num_individuals, const size_t num_phen, const float *marker_mean,
-                 const float *marker_std, float *marker_corrs, float *marker_phen_corrs,
+                 const float *marker_std, const float *marker_corrs, float *marker_phen_corrs,
                  float *phen_corrs)
 {
     // this is ceil
