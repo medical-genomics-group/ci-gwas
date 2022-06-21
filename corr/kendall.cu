@@ -120,7 +120,7 @@ void cu_corr_npn(const unsigned char *marker_vals, const float *phen_vals, const
         cudaMemcpy(gpu_marker_vals, marker_vals, marker_vals_bytes, cudaMemcpyHostToDevice));
     HANDLE_ERROR(cudaMalloc(&gpu_results, output_bytes));
 
-    bed_marker_corr_npn<<<blocks_per_grid, threads_per_block>>>(
+    bed_marker_corr_kendall_npn<<<blocks_per_grid, threads_per_block>>>(
         gpu_marker_vals, num_markers, num_individuals, col_len_bytes, gpu_results);
     CudaCheckError();
 
@@ -213,9 +213,9 @@ __global__ void phen_corr_pearson(const float *phen_vals, const size_t num_indiv
 // A O(n) runtime Kendall implementation for compressed genomic marker data.
 // The compression format is expected to be col-major .bed without NaN
 // and without leading magic numbers.
-__global__ void bed_marker_corr_npn(const unsigned char *marker_vals, const size_t num_markers,
-                                    const size_t num_individuals, const size_t col_len_bytes,
-                                    float *results)
+__global__ void bed_marker_corr_kendall_npn(const unsigned char *marker_vals,
+                                            const size_t num_markers, const size_t num_individuals,
+                                            const size_t col_len_bytes, float *results)
 {
     size_t tix = threadIdx.x;
 
