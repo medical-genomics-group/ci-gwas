@@ -23,6 +23,8 @@ void cu_corr_npn(const unsigned char *marker_vals, const float *phen_vals, const
     float *gpu_marker_corrs;
     float *gpu_marker_phen_corrs;
     float *gpu_phen_corrs;
+    float *gpu_marker_mean;
+    float *gpu_marker_std;
 
     size_t marker_output_length = num_markers * (num_markers - 1) / 2;
     size_t marker_phen_output_length = num_markers * num_phen;
@@ -31,6 +33,7 @@ void cu_corr_npn(const unsigned char *marker_vals, const float *phen_vals, const
     size_t marker_output_bytes = marker_output_length * sizeof(float);
     size_t marker_phen_output_bytes = marker_phen_output_length * sizeof(float);
     size_t phen_output_bytes = phen_output_length * sizeof(float);
+    size_t marker_stats_bytes = num_markers * sizeof(float);
 
     int threads_per_block = NUMTHREADS;
 
@@ -52,6 +55,13 @@ void cu_corr_npn(const unsigned char *marker_vals, const float *phen_vals, const
 
     // markers vs phen
     blocks_per_grid = marker_phen_output_length;
+
+    HANDLE_ERROR(cudaMalloc(&gpu_marker_mean, marker_stats_bytes));
+    HANDLE_ERROR(
+        cudaMemcpy(gpu_marker_mean, marker_mean, marker_stats_bytes, cudaMemcpyHostToDevice));
+    HANDLE_ERROR(cudaMalloc(&gpu_marker_std, marker_stats_bytes));
+    HANDLE_ERROR(
+        cudaMemcpy(gpu_marker_std, marker_std, marker_stats_bytes, cudaMemcpyHostToDevice));
     HANDLE_ERROR(cudaMalloc(&gpu_phen_vals, phen_vals_bytes));
     HANDLE_ERROR(cudaMemcpy(gpu_phen_vals, phen_vals, phen_vals_bytes, cudaMemcpyHostToDevice));
     HANDLE_ERROR(cudaMalloc(&gpu_marker_phen_corrs, marker_phen_output_bytes));
@@ -65,6 +75,8 @@ void cu_corr_npn(const unsigned char *marker_vals, const float *phen_vals, const
                             cudaMemcpyDeviceToHost));
     HANDLE_ERROR(cudaFree(gpu_marker_vals));
     HANDLE_ERROR(cudaFree(gpu_marker_phen_corrs));
+    HANDLE_ERROR(cudaFree(gpu_marker_mean));
+    HANDLE_ERROR(cudaFree(gpu_marker_std));
 
     // phen vs phen
     blocks_per_grid = phen_output_length;
