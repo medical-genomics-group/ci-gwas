@@ -2,13 +2,13 @@
 
 ## Build with CMake
 
-```bash
-~/mps $ cmake -S . -B build
-~/mps $ cmake --build build
+```console
+foo@bar:~/mps$ cmake -S . -B build
+foo@bar:~/mps$ cmake --build build
 ```
 
 ## Run tests
 
-```bash
-~/mps $ cd build && ctest
+```console
+~foo@bar:~/mps$ cd build && ctest
 ```
