@@ -1,7 +1,14 @@
 # marker-parent-set
 
-Currently compiled as binary with
+## Build with CMake
 
 ```bash
-nvcc -O3 -x cu -o main cuPC/cuPC-S.cu corr/compressed.cu main.cpp
+~/mps $ cmake -S . -B build
+~/mps $ cmake --build build
+```
+
+## Run tests
+
+```bash
+~/mps $ cd build && ctest
 ```

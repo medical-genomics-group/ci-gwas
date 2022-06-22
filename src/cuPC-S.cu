@@ -4,8 +4,8 @@
 
 #include <iostream>
 
-#include "cuPC-S.h"
-#include "gpuerrors.h"
+#include <mps/cuPC-S.h>
+#include <mps/gpuerrors.h>
 
 //========================> Main Function Parameter <========================
 // Description : this function just calculate one Stage of PC stable algorithm

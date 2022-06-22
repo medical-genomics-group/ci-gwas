@@ -1,8 +1,8 @@
 #include <math.h>
 
-#include "../cuPC/gpuerrors.h"
-#include "bed_lut.h"
-#include "compressed.h"
+#include <mps/gpuerrors.h>
+#include <mps/bed_lut.h>
+#include <mps/corr_compressed.h>
 
 // Compute correlations between markers, markers and phenotypes, and between phenotypes.
 // Markers are expected to be in compressed .bed format, with NaNs removed and no leading magic

@@ -3,10 +3,10 @@
 #include <cmath>
 #include <iostream>
 
-#include "corr/compressed.h"
+#include <mps/corr_compressed.h>
 // #include "cuPC/cuPC-S.h"
-#include "test_data/bed_marker_test_set.h"
-#include "test_data/corr_test_set.h"
+#include <test_data/bed_marker_test_set.h>
+#include <test_data/corr_test_set.h>
 
 const int NUMBER_OF_LEVELS = 50;
 
