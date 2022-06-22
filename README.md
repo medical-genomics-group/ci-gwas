@@ -10,5 +10,5 @@ foo@bar:~/mps$ cmake --build build
 ## Run tests
 
 ```console
-~foo@bar:~/mps$ cd build && ctest
+foo@bar:~/mps$ cd build && ctest
 ```
