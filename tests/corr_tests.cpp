@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <test_data/bed_marker_test_set.h>
+#include <mps/corr_compressed.h>
 
 // Demonstrate some basic assertions.
 TEST(HelloTest, BasicAssertions) {
@@ -8,6 +9,9 @@ TEST(HelloTest, BasicAssertions) {
   // Expect equality.
   EXPECT_EQ(7 * 6, 42);
 }
+
+
+auto corr_matrix_size(size_t num_markers) -> size_t { return num_markers * (num_markers - 1) / 2; }
 
 TEST(CuCorrNpnTest, ExpectedReturnVals) {
     const size_t num_markers = BMT_NUM_MARKERS;
@@ -32,14 +36,14 @@ TEST(CuCorrNpnTest, ExpectedReturnVals) {
     float phen_corr_expected[phen_cm_size] = {0.808083};
 
     for (size_t i = 0; i < marker_cm_size; i++) {
-        EXPECT_EQ(marker_corr[i], marker_corr_expected[i]);
+        EXPECT_NEAR(marker_corr[i], marker_corr_expected[i], 0.00001);
     }
 
     for (size_t i = 0; i < marker_phen_cm_size; i++) {
-        EXPECT_EQ(marker_phen_corr[i], marker_phen_corr_expected[i]);
+        EXPECT_NEAR(marker_phen_corr[i], marker_phen_corr_expected[i], 0.00001);
     }
 
     for (size_t i = 0; i < phen_cm_size; i++) {
-        EXPECT_EQ(phen_corr[i], phen_corr_expected[i]);
+        EXPECT_NEAR(phen_corr[i], phen_corr_expected[i], 0.00001);
     }   
 }
