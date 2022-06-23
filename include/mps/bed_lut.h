@@ -1,5 +1,7 @@
 #pragma once
 
+const unsigned char gt_to_bed_value[3] = {3, 2, 0};
+
 __device__ alignas(32) const float bed_lut_a[1024] = {
     2.0,  // 0 | 00000000 (b = 00000000, (b & 0b11) = 00000000)
     2.0,  // 0 | 00000000 (b = 00000000, (b & 0b11) = 00000000)
