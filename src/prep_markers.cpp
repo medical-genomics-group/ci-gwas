@@ -11,6 +11,7 @@
 
 #include <vector>
 #include <fstream>
+#include <sstream>
 #include <string>
 #include <mps/prep_markers.h>
 
@@ -25,11 +26,11 @@ auto count_lines(std::string file_path) -> int {
     return number_of_lines;
 }
 
-void split_line(std::string *line, std::string *buf)
+void split_line(std::string line, std::string *buf)
 {
-    istringstream ss(str);
+    std::istringstream ss(line);
  
-    string word;
+    std::string word;
     size_t word_ix = 0;
     
     while (ss >> word)
@@ -39,13 +40,7 @@ void split_line(std::string *line, std::string *buf)
     }
 }
 
-struct bimInfo {
-    size_t number_of_lines;
-    std::vector<std::string> chr_ids;
-    std::vector<size_t> chr_first_ix;
-};
-
-void parse_bim(std::string bim_path) -> binInfo {
+auto parse_bim(std::string bim_path) -> bimInfo {
     bimInfo res;
     res.number_of_lines = 0;
     res.chr_ids = {};
@@ -56,9 +51,9 @@ void parse_bim(std::string bim_path) -> binInfo {
     std::ifstream bim(bim_path);
 
     while (std::getline(bim, line)) {
-        split_line(&line, buf);
-        if ((res.number_of_lines == 0) || (buf[0] != res.chr_ids.back())) {
-            res.chr_ids.push_back(buf[0]);
+        split_line(line, bim_line);
+        if ((res.number_of_lines == 0) || (bim_line[0] != res.chr_ids.back())) {
+            res.chr_ids.push_back(bim_line[0]);
             res.chr_first_ix.push_back(res.number_of_lines);
         }
         ++res.number_of_lines;
