@@ -16,5 +16,17 @@ TEST(SplitBimLineTest, ExpectedReturnVals) {
     }
 }
 
-//TEST(ParseBimTest, ExpectedReturnVals) {
-//}
+TEST(ParseBimTest, ExpectedReturnVals) {
+    bimInfo exp;
+    exp.number_of_lines = 5;
+    exp.chr_ids = {"1", "19"};
+    exp.chr_first_ix = {0, 3};
+    bimInfo obs = parse_bim("../../tests/test_files/small.bim");
+    
+    EXPECT_EQ(obs.number_of_lines, exp.number_of_lines);
+
+    for (size_t i = 0; i < 2; ++i) {
+        EXPECT_EQ(obs.chr_ids[i], exp.chr_ids[i]);
+        EXPECT_EQ(obs.chr_first_ix[i], exp.chr_first_ix[i]);
+    }
+}
