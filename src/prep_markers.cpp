@@ -26,7 +26,7 @@ auto count_lines(std::string file_path) -> int {
     return number_of_lines;
 }
 
-void split_line(std::string line, std::string *buf)
+void split_bim_line(std::string line, std::string *buf)
 {
     std::istringstream ss(line);
  
@@ -51,7 +51,7 @@ auto parse_bim(std::string bim_path) -> bimInfo {
     std::ifstream bim(bim_path);
 
     while (std::getline(bim, line)) {
-        split_line(line, bim_line);
+        split_bim_line(line, bim_line);
         if ((res.number_of_lines == 0) || (bim_line[0] != res.chr_ids.back())) {
             res.chr_ids.push_back(bim_line[0]);
             res.chr_first_ix.push_back(res.number_of_lines);
