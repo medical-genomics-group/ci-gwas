@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <mps/prep_markers.h>
 #include <string>
+#include <filesystem>
 
 TEST(CountLinesTest, ExpectedReturnVals) {
     EXPECT_EQ(count_lines("../../tests/test_files/small.fam"), 10);
@@ -65,4 +66,18 @@ TEST(ParseBedDeathTest, WrongMagicNumberThree) {
         }, "unexpected magic number in bed file.");
 }
 
+TEST(ParseBed, OutFilesGenerated) {
+    prep_bed(
+        "../../tests/test_files/small.bed",
+        "../../tests/test_files/small.bim",
+        "../../tests/test_files/small.fam",
+        "../../tests/test_files",
+        1);
 
+    EXPECT_TRUE(std::filesystem::remove("../../tests/test_files/19.bed"));
+    EXPECT_TRUE(std::filesystem::remove("../../tests/test_files/19.means"));
+    EXPECT_TRUE(std::filesystem::remove("../../tests/test_files/19.stds"));
+    EXPECT_TRUE(std::filesystem::remove("../../tests/test_files/1.bed"));
+    EXPECT_TRUE(std::filesystem::remove("../../tests/test_files/1.means"));
+    EXPECT_TRUE(std::filesystem::remove("../../tests/test_files/1.stds"));
+}

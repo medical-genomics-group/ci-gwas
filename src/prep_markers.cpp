@@ -97,7 +97,7 @@ void write_means(
         const std::string out_dir,
         const std::string chr_id)
 {
-    std::string outpath = make_path(out_dir, chr_id, ".bed");    
+    std::string outpath = make_path(out_dir, chr_id, ".means");    
     std::ofstream fout;
     fout.open(outpath, std::ios::out);
 
@@ -113,7 +113,7 @@ void write_stds(
         const std::string out_dir,
         const std::string chr_id)
 {
-    std::string outpath = make_path(out_dir, chr_id, ".bed");    
+    std::string outpath = make_path(out_dir, chr_id, ".stds");    
     std::ofstream fout;
     fout.open(outpath, std::ios::out);
 
