@@ -9,6 +9,7 @@
 // the number of markers P is equal to the number of rows in the .bim file.
 // the number of individuals N is equal to the number of rows in .fam file.
 
+#include <iostream>
 #include <vector>
 #include <fstream>
 #include <sstream>
@@ -65,6 +66,74 @@ auto parse_bim(std::string bim_path) -> bimInfo {
     return res;
 }
 
+void write_bed(
+        unsigned char *out_buf,
+        std::string out_dir,
+        std::string chr_id)
+{
+    std::string filename = chr_id + ".bed";
+    std::string outpath;
+    if (out_dir.back() != "/") {
+        outpath = out_dir + "/" + filename;
+    } else {
+        outpath = out_dir + filename;
+    }
+    
+    std::ofstream bedout;
+    bedout.open(outpath, std::ios::out|ios::binary);
+    bedout << out_buf;
+    bedout.close();
+}
+
+void write_means(
+        float *chr_marker_means,
+        size_t num_vals,
+        std::string out_dir,
+        std::string chr_id)
+{
+    std::string filename = chr_id + ".means";
+    std::string outpath;
+    if (out_dir.back() != "/") {
+        outpath = out_dir + "/" + filename;
+    } else {
+        outpath = out_dir + filename;
+    }
+    
+    std::ofstream fout;
+    fout.open(outpath, std::ios::out);
+
+    for (size_t i = 0; i < num_vals; ++i) {
+        fout << chr_marker_means[i];
+    }
+
+    fout.close();       
+}
+
+void write_stds(
+        float *chr_marker_stds,
+        size_t num_vals,
+        std::string out_dir,
+        std::string chr_id)
+{
+    std::string filename = chr_id + ".stds";
+    std::string outpath;
+    if (out_dir.back() != "/") {
+        outpath = out_dir + "/" + filename;
+    } else {
+        outpath = out_dir + filename;
+    }
+    
+    std::ofstream fout;
+    fout.open(outpath, std::ios::out);
+
+    for (size_t i = 0; i < num_vals; ++i) {
+        fout << chr_marker_stds[i];
+    }
+
+    fout.close();       
+}
+
+
 // Split .bed by chromosome, impute NaN to median, compute col means and std
 void prep_bed(std::string bed_path,
               std::string bim_path,
@@ -86,9 +155,8 @@ void prep_bed(std::string bed_path,
         assert((bed_block[i] == bed_2_code[i]) && "unexpected magic number in bed file.");
     }
 
-    // TODO: adjust estimated size of mean and std vecs
     size_t max_num_bytes = mem_gb * 1'000'000'000;
-    size_t max_num_blocks = max_num_bytes / bed_block_size
+    size_t max_num_blocks = (max_num_bytes / (bed_block_size + 2 * sizeof(float)) - 1;
 
     std::vector<float> chr_marker_means = {};
     std::vector<float> chr_marker_stds = {};
@@ -96,23 +164,10 @@ void prep_bed(std::string bed_path,
     out_buf.reserve(max_num_bytes);
     size_t blocks_in_buf = 0;
     size_t gt_counts[3] = {0};
-    std::string curr_chr_id = bim_info.chr_ids[0];
-    std::string next_chr_
+    size_t chr_ix = 0;
+    size_t chr_processed_markers = 0;
 
     while (bed_file.read(reinterpret_cast<*unsigned char>(bed_block.data()), bed_block_size)) {
-        // if buffer is full
-        if (blocks_in_buf >= max_num_blocks) {
-            // TODO: implement this function!
-            write_bed(out_buf, out_dir, chr_id);
-            write_means(chr_marker_means, out_dir, chr_id);
-            write_std(chr_marker_std, out_dir, chr_id);
-            chr_marker_means.clear();
-            chr_marker_std.clear();
-            out_buf.clear();
-            blocks_in_buf = 0;
-        }
-        
-
         // first pass: mean, median
         gt_counts[0] = 0:
         gt_counts[1] = 0;
@@ -166,9 +221,30 @@ void prep_bed(std::string bed_path,
             }
             out_buf.push_back(new_byte);
         }
+
         float std = sum_squares / (float)num_individuals;
         chr_marker_means.push_back(mean);
         chr_marker_stds.push_back(std);
+        chr_processed_markers += 1;
+
+        // write to file
+        if (
+                (blocks_in_buf >= max_num_blocks) || 
+                (chr_processed_markers == bim_info.num_markers_on_chr[chr_ix]) 
+        {
+            write_bed(out_buf, out_dir, bim_info.chr_ids[chr_ix]);
+            write_means(chr_marker_means, chr_marker_means.size(),  out_dir, bim_info.chr_ids[chr_ix]);
+            write_stds(chr_marker_stds, chr_marker_stds.size(), out_dir, bim_info.chr_ids[chr_ix]);
+            chr_marker_means.clear();
+            chr_marker_std.clear();
+            // TODO: add magic numbers (maybe)
+            out_buf.clear();
+            blocks_in_buf = 0;
+            if (chr_processed_markers == bim_info.num_markers_on_chr[chr_ix]) {
+                chr_ix += 1;
+                chr_processed_markers = 0;
+            }
+        }
     }
 }
 
