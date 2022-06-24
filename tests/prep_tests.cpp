@@ -21,8 +21,9 @@ TEST(ParseBimTest, ExpectedReturnVals) {
     exp.number_of_lines = 5;
     exp.chr_ids = {"1", "19"};
     exp.num_markers_on_chr = {3, 2};
+
     bimInfo obs = parse_bim("../../tests/test_files/small.bim");
-    
+   
     EXPECT_EQ(obs.number_of_lines, exp.number_of_lines);
 
     for (size_t i = 0; i < 2; ++i) {
@@ -30,3 +31,38 @@ TEST(ParseBimTest, ExpectedReturnVals) {
         EXPECT_EQ(obs.num_markers_on_chr[i], exp.num_markers_on_chr[i]);
     }
 }
+
+TEST(ParseBedDeathTest, WrongMagicNumberOne) {
+    ASSERT_DEATH({
+        prep_bed(
+                "../../tests/test_files/wrong_magic_num_one.bed",
+                "../../tests/test_files/small.bim",
+                "../../tests/test_files/small.fam",
+                "../../tests/test_files",
+                1);
+        }, "unexpected magic number in bed file.");
+}
+
+TEST(ParseBedDeathTest, WrongMagicNumberTwo) {
+    ASSERT_DEATH({
+        prep_bed(
+                "../../tests/test_files/wrong_magic_num_two.bed",
+                "../../tests/test_files/small.bim",
+                "../../tests/test_files/small.fam",
+                "../../tests/test_files",
+                1);
+        }, "unexpected magic number in bed file.");
+}
+
+TEST(ParseBedDeathTest, WrongMagicNumberThree) {
+    ASSERT_DEATH({
+        prep_bed(
+                "../../tests/test_files/wrong_magic_num_three.bed",
+                "../../tests/test_files/small.bim",
+                "../../tests/test_files/small.fam",
+                "../../tests/test_files",
+                1);
+        }, "unexpected magic number in bed file.");
+}
+
+

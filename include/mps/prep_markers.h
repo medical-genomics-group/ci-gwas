@@ -8,9 +8,9 @@ struct bimInfo {
 };
 
 
-void write_bed(unsigned char *out_buf, std::string out_dir, std::string chr_id);
-void write_means(float *chr_marker_means, size_t num_vals, std::string out_dir, std::string chr_id);
-void write_stds(float *chr_marker_stds, size_t num_vals, std::string out_dir, std::string chr_id);
+void write_bed(const std::vector<unsigned char> &out_buf, const std::string out_dir, const std::string chr_id);
+void write_means(const std::vector<float> &chr_marker_means, const std::string out_dir, const std::string chr_id);
+void write_stds(const std::vector<float> &chr_marker_stds,  const std::string out_dir, const std::string chr_id);
 void prep_bed(std::string bed_path, std::string bim_path, std::string fam_path, std::string out_dir, size_t mem_gb);
 void split_bim_line(std::string line, std::string *buf);
 auto count_lines(std::string file_path) -> int;

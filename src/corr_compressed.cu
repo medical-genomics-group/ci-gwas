@@ -111,7 +111,7 @@ __global__ void marker_phen_corr_pearson(const unsigned char *marker_vals, const
     for (size_t i = tix; i < col_len_bytes; i += NUMTHREADS) {
         size_t curr_mv_byte_ix = 4 * (size_t)(marker_vals[mv_start_ix + i]);
         for (size_t j = 0; (j < 4) && (i * 4 + j < num_individuals); j++) {
-            float mv_val = bed_lut_a[(curr_mv_byte_ix + j)];
+            float mv_val = gpu_bed_lut_a[(curr_mv_byte_ix + j)];
             float phen_val = phen_vals[(phen_start_ix + (4 * i) + j)];
 
 	    thread_sum_mv_phen += (mv_val * phen_val);
@@ -206,8 +206,8 @@ __global__ void bed_marker_corr_kendall_npn(const unsigned char *marker_vals,
         size_t aix = 4 * (size_t)(marker_vals[col_start_a + i]);
         size_t bix = 4 * (size_t)(marker_vals[col_start_b + i]);
         for (size_t j = 0; (j < 4) && (i * 4 + j < num_individuals); j++) {
-            float val_a = bed_lut_a[(aix + j)];
-            float val_b = bed_lut_a[(bix + j)];
+            float val_a = gpu_bed_lut_a[(aix + j)];
+            float val_b = gpu_bed_lut_a[(bix + j)];
             size_t comp_ix = (size_t)((3 * val_a + val_b));
             thread_sum[comp_ix] += 1.f;
         }

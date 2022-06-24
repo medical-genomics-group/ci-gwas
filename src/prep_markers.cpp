@@ -9,6 +9,7 @@
 // the number of markers P is equal to the number of rows in the .bim file.
 // the number of individuals N is equal to the number of rows in .fam file.
 
+#include <iterator>
 #include <iostream>
 #include <vector>
 #include <fstream>
@@ -38,6 +39,7 @@ void split_bim_line(std::string line, std::string *buf)
     
     while (ss >> word)
     {
+        assert((word_ix < 6) && "found more than 6 columns in bim file, aborting.");
         buf[word_ix] = word;
         word_ix += 1;
     }
@@ -57,7 +59,7 @@ auto parse_bim(std::string bim_path) -> bimInfo {
         split_bim_line(line, bim_line);
         if ((res.number_of_lines == 0) || (bim_line[0] != res.chr_ids.back())) {
             res.chr_ids.push_back(bim_line[0]);
-            res.num_markers_on_chr = 0;
+            res.num_markers_on_chr.push_back(0);
         }
         ++res.num_markers_on_chr.back();
         ++res.number_of_lines;
@@ -66,43 +68,39 @@ auto parse_bim(std::string bim_path) -> bimInfo {
     return res;
 }
 
-void write_bed(
-        unsigned char *out_buf,
-        std::string out_dir,
-        std::string chr_id)
-{
-    std::string filename = chr_id + ".bed";
+auto make_path(std::string out_dir, std::string chr_id, std::string suffix) -> std::string {
+    std::string filename = chr_id + suffix;
     std::string outpath;
-    if (out_dir.back() != "/") {
-        outpath = out_dir + "/" + filename;
+    if (out_dir.back() != '/') {
+        outpath = out_dir + '/' + filename;
     } else {
         outpath = out_dir + filename;
     }
-    
+    return outpath;
+}
+
+void write_bed(
+        const std::vector<unsigned char> &out_buf,
+        const std::string out_dir,
+        const std::string chr_id)
+{
+    std::string outpath = make_path(out_dir, chr_id, ".bed");    
     std::ofstream bedout;
-    bedout.open(outpath, std::ios::out|ios::binary);
-    bedout << out_buf;
+    bedout.open(outpath, std::ios::out|std::ios::binary);
+    std::copy(out_buf.cbegin(), out_buf.cend(), std::ostream_iterator<unsigned char>(bedout));
     bedout.close();
 }
 
 void write_means(
-        float *chr_marker_means,
-        size_t num_vals,
-        std::string out_dir,
-        std::string chr_id)
+        const std::vector<float> &chr_marker_means,
+        const std::string out_dir,
+        const std::string chr_id)
 {
-    std::string filename = chr_id + ".means";
-    std::string outpath;
-    if (out_dir.back() != "/") {
-        outpath = out_dir + "/" + filename;
-    } else {
-        outpath = out_dir + filename;
-    }
-    
+    std::string outpath = make_path(out_dir, chr_id, ".bed");    
     std::ofstream fout;
     fout.open(outpath, std::ios::out);
 
-    for (size_t i = 0; i < num_vals; ++i) {
+    for (size_t i = 0; i < chr_marker_means.size(); ++i) {
         fout << chr_marker_means[i];
     }
 
@@ -110,23 +108,15 @@ void write_means(
 }
 
 void write_stds(
-        float *chr_marker_stds,
-        size_t num_vals,
-        std::string out_dir,
-        std::string chr_id)
+        const std::vector<float> &chr_marker_stds,
+        const std::string out_dir,
+        const std::string chr_id)
 {
-    std::string filename = chr_id + ".stds";
-    std::string outpath;
-    if (out_dir.back() != "/") {
-        outpath = out_dir + "/" + filename;
-    } else {
-        outpath = out_dir + filename;
-    }
-    
+    std::string outpath = make_path(out_dir, chr_id, ".bed");    
     std::ofstream fout;
     fout.open(outpath, std::ios::out);
 
-    for (size_t i = 0; i < num_vals; ++i) {
+    for (size_t i = 0; i < chr_marker_stds.size(); ++i) {
         fout << chr_marker_stds[i];
     }
 
@@ -139,24 +129,24 @@ void prep_bed(std::string bed_path,
               std::string bim_path,
               std::string fam_path,
               std::string out_dir,
-              size_t mem_gb // max memory used by this fn)
+              size_t mem_gb) // max memory used by this fn)
 {
     size_t num_individuals = count_lines(fam_path);
     bimInfo bim_info =  parse_bim(bim_path);
     size_t bed_block_size = (num_individuals + 3) / 4;
 
-    std::vector<unsigned char> = bed_block(bed_block_size);
-    std::ifstream<unsigned char> = bed_file(bed_path, std::ios::binary);
+    std::vector<unsigned char> bed_block(bed_block_size);
+    std::ifstream bed_file(bed_path, std::ios::binary);
 
     // read first three bytes, check if correct code
-    bed_file.read(reinterpret_cast<*unsigned char>(bed_block.data()), 3);
+    bed_file.read(reinterpret_cast<char*>(bed_block.data()), 3);
     unsigned char bed_2_code[3] = {0x6c, 0x1b, 0x00};
     for (size_t i = 0; i < 3; ++i) {
         assert((bed_block[i] == bed_2_code[i]) && "unexpected magic number in bed file.");
     }
 
     size_t max_num_bytes = mem_gb * 1'000'000'000;
-    size_t max_num_blocks = (max_num_bytes / (bed_block_size + 2 * sizeof(float)) - 1;
+    size_t max_num_blocks = (max_num_bytes / (bed_block_size + 2 * sizeof(float))) - 1;
 
     std::vector<float> chr_marker_means = {};
     std::vector<float> chr_marker_stds = {};
@@ -167,15 +157,15 @@ void prep_bed(std::string bed_path,
     size_t chr_ix = 0;
     size_t chr_processed_markers = 0;
 
-    while (bed_file.read(reinterpret_cast<*unsigned char>(bed_block.data()), bed_block_size)) {
+    while (bed_file.read(reinterpret_cast<char*>(bed_block.data()), bed_block_size)) {
         // first pass: mean, median
-        gt_counts[0] = 0:
+        gt_counts[0] = 0;
         gt_counts[1] = 0;
         gt_counts[2] = 0;
         size_t gt_sum = 0;
         size_t nan_count = 0;
 
-        for (size_t i = 0; i < bed_block_size, ++i) {
+        for (size_t i = 0; i < bed_block_size; ++i) {
             unsigned char bed_byte = bed_block[i];
             for (size_t j = 0; (j < 4) && (i * 4 + j < num_individuals); ++j) {
                 size_t ix = bed_byte + j;
@@ -201,13 +191,13 @@ void prep_bed(std::string bed_path,
 
         // second pass: impute, std
         float sum_squares = 0.0;
-        for (size_t i = 0; i < bed_block_size, ++i) {
+        for (size_t i = 0; i < bed_block_size; ++i) {
             unsigned char new_byte = 0;
             unsigned char bed_byte = bed_block[i];
-            for (size_t j = 3; j >= 0; --j) {
-                size_t ix = bed_byte + j;
-                if (i * 4 + j) < num_individuals {
-                    new_byte << 2;
+            for (size_t j = 0; j < 4; ++j) {
+                size_t ix = bed_byte + 3 - j;
+                if ((i * 4 + j) < num_individuals) {
+                    new_byte <<= 2;
                     size_t curr_val;
                     if (bed_lut_b[ix] == 0) {
                         curr_val = median;
@@ -230,13 +220,13 @@ void prep_bed(std::string bed_path,
         // write to file
         if (
                 (blocks_in_buf >= max_num_blocks) || 
-                (chr_processed_markers == bim_info.num_markers_on_chr[chr_ix]) 
+                (chr_processed_markers == bim_info.num_markers_on_chr[chr_ix])) 
         {
             write_bed(out_buf, out_dir, bim_info.chr_ids[chr_ix]);
-            write_means(chr_marker_means, chr_marker_means.size(),  out_dir, bim_info.chr_ids[chr_ix]);
-            write_stds(chr_marker_stds, chr_marker_stds.size(), out_dir, bim_info.chr_ids[chr_ix]);
+            write_means(chr_marker_means, out_dir, bim_info.chr_ids[chr_ix]);
+            write_stds(chr_marker_stds, out_dir, bim_info.chr_ids[chr_ix]);
             chr_marker_means.clear();
-            chr_marker_std.clear();
+            chr_marker_stds.clear();
             // TODO: add magic numbers (maybe)
             out_buf.clear();
             blocks_in_buf = 0;
