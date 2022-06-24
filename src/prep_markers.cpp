@@ -9,6 +9,7 @@
 // the number of markers P is equal to the number of rows in the .bim file.
 // the number of individuals N is equal to the number of rows in .fam file.
 
+#include <cmath>
 #include <iterator>
 #include <iostream>
 #include <vector>
@@ -212,7 +213,7 @@ void prep_bed(std::string bed_path,
             out_buf.push_back(new_byte);
         }
 
-        float std = sum_squares / (float)num_individuals;
+        float std = std::sqrt(sum_squares / (float)num_individuals);
         chr_marker_means.push_back(mean);
         chr_marker_stds.push_back(std);
         chr_processed_markers += 1;
