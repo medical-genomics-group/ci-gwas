@@ -3,19 +3,8 @@
 #include <cassert>
 #include <sys/stat.h>
 
+#include <mps/corr_compressed.h>
 #include <mps/prep_markers.h>
-
-const std::string MPS_USAGE = R"(
-usage: mps <command> [<args>]
-
-commands:
-    prep    Prepare input (PLINK) .bed file for mps
-    corr    Compute the marker/phenotype correlation matrix
-    cups    use cuPC to compute the parent set for each phenotype
-
-contact:
-    nick.machnik@gmail.com
-)";
 
 const std::string PREP_USAGE = R"(
 Prepare input (PLINK) .bed file for mps.
@@ -52,7 +41,6 @@ void prep_bed(int argc, char *argv[])
         }
     }
 
-
     int mem_gb = stoi((std::string)argv[6]);
     std::string bed_path = (std::string)argv[2];
     std::string bim_path = (std::string)argv[3];
@@ -64,6 +52,57 @@ void prep_bed(int argc, char *argv[])
 
     std::cout << "Preprocessing output files written to: " << out_dir << std::endl;
 }
+
+const std::string CORR_USAGE = R"(
+Compute correlations between markers and phenotypes.
+
+usage: mps corr <prepdir> <chr> <device_mem_gb>
+
+arguments:
+    prepdir Directory with `mps prep` output, i.e. .bed, .stds, .means and .dims files for each chromosome plus a .phen for for each phenotype to be processed
+    chr ID of the chromsome to be processed
+    device_mem_gb   Amount of memory available on the GPU
+)"
+
+void corr(int argc, char *argv[])
+{
+    // what args do I need?
+    // - path to preprocessed dir
+    // - chrom number
+    // - max mem on device
+    // - .phen files: can either be all in preprocess dir, or specific ones if specified?
+    // the rest should come from the preprocess dir
+    // wha
+    //
+    const size_t num_markers = BMT_NUM_MARKERS;
+    const size_t num_individuals = BMT_NUM_INDIVIDUALS;
+    const size_t num_phen = BMT_NUM_PHEN;
+    const size_t marker_cm_size = corr_matrix_size(num_markers);
+    const size_t marker_phen_cm_size = num_markers * num_phen;
+    const size_t phen_cm_size = corr_matrix_size(num_phen);
+ 
+    float marker_corr[marker_cm_size];
+    memset(marker_corr, 0.0, sizeof(marker_corr));
+    float marker_phen_corr[marker_phen_cm_size];
+    memset(marker_phen_corr, 0.0, sizeof(marker_phen_corr));
+    float phen_corr[phen_cm_size];
+    memset(phen_corr, 0.0, sizeof(phen_corr));
+
+    cu_corr_npn(bmt_marker_vals, bmt_phen_vals, num_markers, num_individuals, num_phen,
+                 bmt_marker_mean, bmt_marker_std, marker_corr, marker_phen_corr, phen_corr);
+}
+
+const std::string MPS_USAGE = R"(
+usage: mps <command> [<args>]
+
+commands:
+    prep    Prepare input (PLINK) .bed file for mps
+    corr    Compute the marker/phenotype correlation matrix
+    cups    use cuPC to compute the parent set for each phenotype
+
+contact:
+    nick.machnik@gmail.com
+)";
 
 auto main(int argc, char *argv[]) -> int 
 {
