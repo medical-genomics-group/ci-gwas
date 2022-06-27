@@ -62,7 +62,7 @@ void prep_bed(int argc, char *argv[])
     // run prep
     prep_bed(bed_path, bim_path, fam_path, out_dir, mem_gb);
 
-    std::cout << "Preprocessing output files written to: " << out_dir << std::endl
+    std::cout << "Preprocessing output files written to: " << out_dir << std::endl;
 }
 
 auto main(int argc, char *argv[]) -> int 
