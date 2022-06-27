@@ -3,6 +3,8 @@
 #include <cassert>
 #include <sys/stat.h>
 
+#include <mps/prep_markers.h>
+
 const std::string MPS_USAGE = R"(
 usage: mps <command> [<args>]
 
@@ -21,12 +23,20 @@ Prepare input (PLINK) .bed file for mps.
 The file is split by chromosome, NaNs are imputed to column medians
 and column means and standard deviations are computed.
 
-usage: mps prep <.bed> <.bim> <.fam> <outdir>
+usage: mps prep <.bed> <.bim> <.fam> <outdir> <mem_gb>
+
+arguments:
+    .bed    (PLINK) .bed file with marker data
+    .bim    (PLINK) .bim file with allele information
+    .fam    (PLINK) .fam file with sample information
+    outdir  output directory for processed .bed
+    mem_gb  maximal amount of memory available in Gb
 )";
 
 void prep_bed(int argc, char *argv[])
 {
-    if ((argc != 6) || (argv[2] == "--help") || (argv[2] == "-h")) 
+    // check if enough args present
+    if ((argc != 7) || (argv[2] == "--help") || (argv[2] == "-h")) 
     {
         std::cout << PREP_USAGE << std::endl;
         exit(1);
@@ -41,6 +51,16 @@ void prep_bed(int argc, char *argv[])
             exit(1);
         }
     }
+
+
+    int mem_gb = stoi((std::string)argv[6]);
+    std::string bed_path = (std::string)argv[2];
+    std::string bim_path = (std::string)argv[3];
+    std::string fam_path = (std::string)argv[4];
+    std::string out_dir = (std::string)argv[5];
+
+    // run prep
+    prep_bed(bed_path, bim_path, fam_path, out_dir, mem_gb);
 }
 
 auto main(int argc, char *argv[]) -> int 

@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <vector>
 
 struct bimInfo {
     size_t number_of_lines;
