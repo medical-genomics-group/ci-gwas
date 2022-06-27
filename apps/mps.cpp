@@ -62,26 +62,19 @@ void prep_bed(int argc, char *argv[])
 const std::string CORR_USAGE = R"(
 Compute correlations between markers and phenotypes.
 
-usage: mps corr <prepdir> <chr> <device_mem_gb>
+usage: mps corr <prepdir> <chr> <device_mem_gb> <.phen>...
 
 arguments:
-    prepdir Directory with `mps prep` output, i.e. .bed, .stds, .means and .dims files for each chromosome plus a .phen for for each phenotype to be processed
+    prepdir Directory with `mps prep` output, i.e. .bed, .stds, .means and .dims files for each chromosome
     chr ID of the chromsome to be processed
     device_mem_gb   Amount of memory available on the GPU
+    .phen   Path to .phen file with phenotype values, sorted in the same way as genotype info in the original bed file
 )"
 
 void corr(int argc, char *argv[])
 {
-    // what args do I need?
-    // - path to preprocessed dir
-    // - chrom number
-    // - max mem on device
-    // - .phen files: can either be all in preprocess dir, or specific ones if specified?
-    // the rest should come from the preprocess dir
-    // wha
-    
     // check for correct number of args
-    if (argc != 5) {
+    if (argc < 6) {
         std::cout << CORR_USAGE << std::endl;
         exit(1);
     }
@@ -99,13 +92,31 @@ void corr(int argc, char *argv[])
         }
     }
 
+    std::vector<std::string> phen_paths = {};
+    for (size_t i = 5; i < argc; ++i) {
+        std::string phen_path = (std::string)argv[i];
+        if (!path_exists(phen_path)) {
+            std::cout << "file or directory found: " << phen_path << std::endl;
+            exit(1);
+        }
+        phen_paths.push_back(phen_path);
+    }
+    
+    // load data + check that file contents are valid
+    // TODO: there is a lot more that can go wrong here, e.g. number of cols
     std::string dims_path = make_path(out_dir, chr_idd, ".dims");
     std::vector<int> dims = read_ints_from_lines(dims_path);
     size_t ndims = dims.size();
     if (ndims != 2) {
-        std::cout << "Invalid .dims file: found " << ndims << "instead of two." <<  std::endl;
-        exit(1;)
+        std::cout << "Invalid .dims file: found " << ndims << "dimensions instead of two." <<  std::endl;
+        exit(1);
     }
+    size_t num_individuals = ndims[0];
+    size_t num_markers = ndims[1];
+
+    
+
+    
 
     size_t num_individuals = dims[0];
     size_t num_markers = dims[1];
