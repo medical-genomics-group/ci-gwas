@@ -102,7 +102,7 @@ void write_means(
     fout.open(outpath, std::ios::out);
 
     for (size_t i = 0; i < chr_marker_means.size(); ++i) {
-        fout << chr_marker_means[i];
+        fout << chr_marker_means[i] << std::endl;
     }
 
     fout.close();       
@@ -118,7 +118,7 @@ void write_stds(
     fout.open(outpath, std::ios::out);
 
     for (size_t i = 0; i < chr_marker_stds.size(); ++i) {
-        fout << chr_marker_stds[i];
+        fout << chr_marker_stds[i] << std::endl;
     }
 
     fout.close();       
@@ -135,6 +135,7 @@ void prep_bed(std::string bed_path,
     size_t num_individuals = count_lines(fam_path);
     bimInfo bim_info =  parse_bim(bim_path);
     size_t bed_block_size = (num_individuals + 3) / 4;
+    printf("bed block size: %zu", bed_block_size);
 
     std::vector<unsigned char> bed_block(bed_block_size);
     std::ifstream bed_file(bed_path, std::ios::binary);
@@ -169,7 +170,7 @@ void prep_bed(std::string bed_path,
         for (size_t i = 0; i < bed_block_size; ++i) {
             unsigned char bed_byte = bed_block[i];
             for (size_t j = 0; (j < 4) && (i * 4 + j < num_individuals); ++j) {
-                size_t ix = bed_byte + j;
+                size_t ix = (4 * bed_byte) + j;
                 if (bed_lut_b[ix] == 0.0) {
                     nan_count += 1;
                 } else {
@@ -196,19 +197,19 @@ void prep_bed(std::string bed_path,
             unsigned char new_byte = 0;
             unsigned char bed_byte = bed_block[i];
             for (size_t j = 0; j < 4; ++j) {
-                size_t ix = bed_byte + 3 - j;
-                if ((i * 4 + j) < num_individuals) {
-                    new_byte <<= 2;
-                    size_t curr_val;
+                new_byte <<= 2;
+                size_t ix = (4 * bed_byte) + 3 - j;
+                size_t curr_val = 2;
+                if ((i * 4 + 3 - j) < num_individuals) {
                     if (bed_lut_b[ix] == 0) {
                         curr_val = median;
                     } else {
                         curr_val = (size_t)bed_lut_a[ix];
-                    }
-                    new_byte += gt_to_bed_value[curr_val];
+                    } 
                     float curr_diff = (float)curr_val - mean;
                     sum_squares += curr_diff * curr_diff;
                 }
+                new_byte += gt_to_bed_value[curr_val];
             }
             out_buf.push_back(new_byte);
         }

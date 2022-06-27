@@ -2,6 +2,8 @@
 #include <mps/prep_markers.h>
 #include <string>
 #include <filesystem>
+#include <fstream>
+#include <iostream>
 
 TEST(CountLinesTest, ExpectedReturnVals) {
     EXPECT_EQ(count_lines("../../tests/test_files/small.fam"), 10);
@@ -66,13 +68,45 @@ TEST(ParseBedDeathTest, WrongMagicNumberThree) {
         }, "unexpected magic number in bed file.");
 }
 
-TEST(ParseBed, OutFilesGenerated) {
+auto read_file(const std::string filename) -> std::vector<unsigned char>
+{
+    // open the file:
+    std::ifstream file(filename, std::ios::binary);
+
+    // read the data:
+    return std::vector<unsigned char>(
+            (std::istreambuf_iterator<char>(file)),
+            std::istreambuf_iterator<char>());
+}
+
+TEST(ParseBed, CorrectOutFilesGenerated) {
     prep_bed(
         "../../tests/test_files/small.bed",
         "../../tests/test_files/small.bim",
         "../../tests/test_files/small.fam",
         "../../tests/test_files",
         1);
+
+    std::vector<unsigned char> one_bed_content = read_file("../../tests/test_files/1.bed");
+    std::vector<unsigned char> one_bed_exp = {0xea, 0x8f, 0x0f, 0x38, 0x8e, 0x03, 0xea, 0x8a, 0x0f};
+    EXPECT_EQ(one_bed_content.size(), one_bed_exp.size());
+    for (size_t i = 0; i < one_bed_exp.size(); ++i) {
+        EXPECT_EQ(one_bed_exp[i], one_bed_content[i]);
+    }
+
+    std::vector<unsigned char> nt_bed_content = read_file("../../tests/test_files/19.bed");
+    std::vector<unsigned char> nt_bed_exp = {0xb2, 0x2c, 0x0b, 0xcb, 0xb2, 0x0c};
+    EXPECT_EQ(nt_bed_content.size(), nt_bed_exp.size());
+    for (size_t i = 0; i < nt_bed_exp.size(); ++i) {
+        EXPECT_EQ(nt_bed_exp[i], nt_bed_content[i]);
+    }
+
+    
+
+    // bed 1 should contain \xea, \x8f, \xff, \x38, \x8e, \xf3, \xea, \x8a, \xff
+    // bed 19 should contain \xb2, \x2c, \xfb, \xcb, \xb2, \xfc
+    // std should be [0.66332496, 0.83066239, 0.6       , 0.77459667, 0.83066239]
+    // mean shuold be [0.6, 1.1, 0.8, 1. , 0.9]
 
     EXPECT_TRUE(std::filesystem::remove("../../tests/test_files/19.bed"));
     EXPECT_TRUE(std::filesystem::remove("../../tests/test_files/19.means"));
