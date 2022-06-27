@@ -3,3 +3,7 @@ set_source_files_properties(main.cpp PROPERTIES LANGUAGE CUDA)
 target_compile_features(main PRIVATE cxx_std_17)
 
 target_link_libraries(main PRIVATE corr)
+
+add_executable(mps mps.cpp)
+target_compile_features(mps PRIVATE cxx_std_17)
+target_link_libraries(mps PRIVATE corr prep)
