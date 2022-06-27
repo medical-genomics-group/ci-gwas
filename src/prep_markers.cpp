@@ -135,7 +135,6 @@ void prep_bed(std::string bed_path,
     size_t num_individuals = count_lines(fam_path);
     bimInfo bim_info =  parse_bim(bim_path);
     size_t bed_block_size = (num_individuals + 3) / 4;
-    printf("bed block size: %zu", bed_block_size);
 
     std::vector<unsigned char> bed_block(bed_block_size);
     std::ifstream bed_file(bed_path, std::ios::binary);
