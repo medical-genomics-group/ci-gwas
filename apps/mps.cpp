@@ -29,13 +29,14 @@ void prep_bed(int argc, char *argv[])
     if ((argc != 6) || (argv[2] == "--help") || (argv[2] == "-h")) 
     {
         std::cout << PREP_USAGE << std::endl;
+        exit(1);
     }
 
     // check if files and dirs exist
-    for (size_t i = 2, i < 6; ++i) 
+    for (size_t i = 2; i < 6; ++i) 
     {
         struct stat buffer;
-        if !(stat (argv[i].c_str(), &buffer) == 0) {
+        if (stat (((std::string)argv[i]).c_str(), &buffer) != 0) {
             std::cout << "file or directory found: " << argv[i] << std::endl;
             exit(1);
         }
@@ -44,29 +45,23 @@ void prep_bed(int argc, char *argv[])
 
 auto main(int argc, char *argv[]) -> int 
 {
-    std::cout << "received " << argc << " arguments: " << std::endl;
-    
-    for (size_t i = 0; i < argc; ++i) 
-    {
-        std::cout << argv[i] << std::endl;
+    if (argc == 1) {
+        std::cout << MPS_USAGE << std::endl;
+        return EXIT_SUCCESS;
     }
     
-    switch argv[1] 
-    {
-        case "--help" || "-h":
-            std::cout << MPS_USAGE << std::endl;
-            break;
-        case "prep":
-            prep_bed(argc, argv);
-            break;
-        case "corr":
-            std::cout << "'corr' cli is not implemented yet." << std::endl;
-            break;
-        case "cups":
-            std::cout << "'cups' cli is not implemented yet." << std::endl;
-            break;
-        default:
-            std::cout << MPS_USAGE << std::endl;
+    std::string cmd = (std::string)argv[1];
+    
+    if ((cmd == "--help") || (cmd == "-h")) {
+        std::cout << MPS_USAGE << std::endl;
+    } else if (cmd == "prep") {
+        prep_bed(argc, argv);
+    } else if (cmd == "corr") {
+        std::cout << "'corr' cli is not implemented yet." << std::endl;
+    } else if (cmd == "cups") {
+        std::cout << "'cups' cli is not implemented yet." << std::endl;
+    } else {
+        std::cout << MPS_USAGE << std::endl;
     }
 
     return EXIT_SUCCESS;
