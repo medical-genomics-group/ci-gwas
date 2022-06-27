@@ -8,6 +8,8 @@ struct bimInfo {
     std::vector<size_t> num_markers_on_chr;
 };
 
+auto make_path(std::string out_dir, std::string chr_id, std::string suffix) -> std::string;
+
 auto read_ints_from_lines(std::string path) -> std::vector<int>;
 
 auto read_floats_from_lines(std::string path) -> std::vector<float>;

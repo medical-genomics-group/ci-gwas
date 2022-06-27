@@ -22,6 +22,12 @@ arguments:
     mem_gb  maximal amount of memory available in Gb
 )";
 
+auto path_exists(std::string path) -> bool
+{
+    struct stat_buffer;
+    return (stat (((std::string)argv[i]).c_str(), &buffer) == 0);
+}
+
 void prep_bed(int argc, char *argv[])
 {
     // check if enough args present
@@ -35,7 +41,7 @@ void prep_bed(int argc, char *argv[])
     for (size_t i = 2; i < 6; ++i) 
     {
         struct stat buffer;
-        if (stat (((std::string)argv[i]).c_str(), &buffer) != 0) {
+        if (! path_exists((std::string)argv[i])) {
             std::cout << "file or directory found: " << argv[i] << std::endl;
             exit(1);
         }
@@ -73,7 +79,37 @@ void corr(int argc, char *argv[])
     // - .phen files: can either be all in preprocess dir, or specific ones if specified?
     // the rest should come from the preprocess dir
     // wha
-    //
+    
+    // check for correct number of args
+    if (argc != 5) {
+        std::cout << CORR_USAGE << std::endl;
+        exit(1);
+    }
+
+    // check that paths are valid
+    // TODO: figure out how to glob files and check that at least one .phen is present
+    std::string out_dir = (std::string)argv[2];
+    std::string chr_id = (std::string)argv[3];
+    std::string req_suffixes[4] = {".bed", ".dims", ".means", ".stds"};
+    for (size_t i = 0; i < 4; ++i) {
+        std::string fpath = make_path(out_dir, chr_id, req_suffixes[i]);
+        if (!path_exists(fpath)) {
+            std::cout << "file or directory found: " << fpath << std::endl;
+            exit(1);
+        }
+    }
+
+    std::string dims_path = make_path(out_dir, chr_idd, ".dims");
+    std::vector<int> dims = read_ints_from_lines(dims_path);
+    size_t ndims = dims.size();
+    if (ndims != 2) {
+        std::cout << "Invalid .dims file: found " << ndims << "instead of two." <<  std::endl;
+        exit(1;)
+    }
+
+    size_t num_individuals = dims[0];
+    size_t num_markers = dims[1];
+
     const size_t num_markers = BMT_NUM_MARKERS;
     const size_t num_individuals = BMT_NUM_INDIVIDUALS;
     const size_t num_phen = BMT_NUM_PHEN;
