@@ -103,6 +103,7 @@ void corr(int argc, char *argv[])
     }
     
     // load data + check that file contents are valid
+    // .dims
     // TODO: there is a lot more that can go wrong here, e.g. number of cols
     std::string dims_path = make_path(out_dir, chr_id, ".dims");
     std::vector<int> dims = read_ints_from_lines(dims_path);
@@ -113,6 +114,19 @@ void corr(int argc, char *argv[])
     }
     size_t num_individuals = dims[0];
     size_t num_markers = dims[1];
+
+    // .phen
+    size_t num_phen = phen_paths.size();
+    std::vector<float> phen = {};
+    for (size_t i = 0; i < num_phen; ++i) {
+        read_floats_from_lines(phen_paths[i], phen);
+    }
+
+    // .bed
+    std::vector<unsigned char> marker_vals;
+    marker_vals.reserve(num_individuals * num_markers);
+
+
 
     //size_t num_individuals = dims[0];
     //size_t num_markers = dims[1];
