@@ -129,6 +129,18 @@ void corr(int argc, char *argv[])
     std::vector<unsigned char> marker_vals(nbytes_marker_vals);
     read_n_bytes_from_binary(bed_path, nbytes_marker_vals, marker_vals);
 
+    // .means
+    std::string means_path = make_path(out_dir, chr_id, ".means");
+    std::vector<float> marker_means = read_floats_from_lines(means_path);
+    assert((marker_means.size() == num_markers) && "number of marker means != num markers");
+
+    // .stds 
+    std::string means_path = make_path(out_dir, chr_id, ".means");
+    std::vector<float> marker_stds = read_floats_from_lines(stds_path);
+    assert((marker_stds.size() == num_markers) && "number of marker stds != num markers");
+
+    // allocate correlation result vecs
+
     //size_t num_individuals = dims[0];
     //size_t num_markers = dims[1];
 
