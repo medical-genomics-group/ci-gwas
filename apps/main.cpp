@@ -1,3 +1,5 @@
+// this is just a testing ground, not the real main binary target
+
 #include <array>
 #include <boost/math/distributions/normal.hpp>
 #include <cmath>
