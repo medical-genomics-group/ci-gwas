@@ -21,3 +21,5 @@ auto count_lines(std::string file_path) -> int;
 
 void write_dims(const size_t num_individuals, const size_t num_markers, const std::string out_dir, const std::string chr_id);
 
+void read_n_bytes_from_binary(const std::string path, const size_t nbytes, std::vector<unsigned char> &dest);
+
