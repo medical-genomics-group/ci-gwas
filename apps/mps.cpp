@@ -2,10 +2,13 @@
 #include <string>
 #include <cassert>
 #include <sys/stat.h>
+#include <array>
+#include <vector>
 
 #include <mps/corr_compressed.h>
 #include <mps/prep_markers.h>
 #include <mps/io.h>
+
 
 const std::string PREP_USAGE = R"(
 Prepare input (PLINK) .bed file for mps.
@@ -117,9 +120,9 @@ void corr(int argc, char *argv[])
 
     // .phen
     size_t num_phen = phen_paths.size();
-    std::vector<float> phen = {};
+    std::vector<float> phen_vals = {};
     for (size_t i = 0; i < num_phen; ++i) {
-        read_floats_from_lines(phen_paths[i], phen);
+        read_floats_from_lines(phen_paths[i], phen_vals);
     }
 
     // .bed
@@ -139,27 +142,21 @@ void corr(int argc, char *argv[])
     std::vector<float> marker_stds = read_floats_from_lines(stds_path);
     assert((marker_stds.size() == num_markers) && "number of marker stds != num markers");
 
-    // allocate correlation result vecs
+    // allocate correlation result arrays
+    size_t marker_corr_mat_size = num_markers * (num_markers - 1) / 2;
+    std::array<float, marker_corr_mat_size> marker_corr{0.0};
+    
+    size_t marker_phen_corr_mat_size = num_markers * num_phen;
+    std::array<float, marker_phen_corr_mat_size> = marker_phen_corr{0.0};
 
-    //size_t num_individuals = dims[0];
-    //size_t num_markers = dims[1];
+    // TODO: testcase for num_phen = 1;
+    size_t phen_corr_mat_size = num_phen * (num_phen - 1) / 2;
+    std::array<float, phen_corr_mat_size> = phen_corr{0.0};
 
-    //const size_t num_markers = BMT_NUM_MARKERS;
-    //const size_t num_individuals = BMT_NUM_INDIVIDUALS;
-    //const size_t num_phen = BMT_NUM_PHEN;
-    //const size_t marker_cm_size = corr_matrix_size(num_markers);
-    //const size_t marker_phen_cm_size = num_markers * num_phen;
-    //const size_t phen_cm_size = corr_matrix_size(num_phen);
- 
-    //float marker_corr[marker_cm_size];
-    //memset(marker_corr, 0.0, sizeof(marker_corr));
-    //float marker_phen_corr[marker_phen_cm_size];
-    //memset(marker_phen_corr, 0.0, sizeof(marker_phen_corr));
-    //float phen_corr[phen_cm_size];
-    //memset(phen_corr, 0.0, sizeof(phen_corr));
-
-    //cu_corr_npn(bmt_marker_vals, bmt_phen_vals, num_markers, num_individuals, num_phen,
-    //             bmt_marker_mean, bmt_marker_std, marker_corr, marker_phen_corr, phen_corr);
+    // compute correlations
+    cu_corr_npn(marker_vals.data(), phen_vals.data(), num_markers, num_individuals, num_phen,
+                marker_means.data(), marker_stds.data(), marker_corr.data(), marker_phen_corr.data(),
+                phen_corr.data());
 }
 
 const std::string MPS_USAGE = R"(
