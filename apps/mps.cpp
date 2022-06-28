@@ -123,10 +123,11 @@ void corr(int argc, char *argv[])
     }
 
     // .bed
-    std::vector<unsigned char> marker_vals;
-    marker_vals.reserve(num_individuals * num_markers);
-
-
+    std::string bed_path = make_path(out_dir, chr_id, ".bed");
+    size_t nbytes_per_block = (num_individuals + 3) / 4;
+    size_t nbytes_marker_vals = num_markers * nbytes_per_block;
+    std::vector<unsigned char> marker_vals(nbytes_marker_vals);
+    read_n_bytes_from_binary(bed_path, nbytes_marker_vals, marker_vals);
 
     //size_t num_individuals = dims[0];
     //size_t num_markers = dims[1];
