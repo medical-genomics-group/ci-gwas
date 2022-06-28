@@ -14,4 +14,6 @@ set_source_files_properties(prep_markers.cpp PROPERTIES LANGUAGE CUDA)
 target_include_directories(prep PUBLIC ../include)
 target_compile_features(prep PUBLIC cxx_std_17)
 
-
+add_library(io STATIC io.cpp ${HEADER_LIST})
+target_include_directories(io PUBLIC ../include)
+target_compile_features(io PUBLIC cxx_std_17)

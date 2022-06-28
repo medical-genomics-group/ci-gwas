@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <mps/prep_markers.h>
+#include <mps/io.h>
 #include <string>
 #include <filesystem>
 #include <fstream>
