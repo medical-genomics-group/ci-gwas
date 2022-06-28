@@ -28,6 +28,12 @@ auto make_path(const std::string out_dir, const std::string chr_id, const std::s
     return outpath;
 }
 
+void read_n_bytes_from_binary(const std::string path, const size_t nbytes, std::vector<unsigned char> &dest)
+{
+    std::ifstream bin_file(path, std::ios::binary);
+    bin_file.read(reinterpret_cast<char*>(dest.data()), nbytes); 
+}
+
 void read_floats_from_lines(const std::string path, std::vector<float> &dest)
 {
     std::string line;
