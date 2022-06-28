@@ -5,6 +5,7 @@
 
 #include <mps/corr_compressed.h>
 #include <mps/prep_markers.h>
+#include <mps/io.h>
 
 const std::string PREP_USAGE = R"(
 Prepare input (PLINK) .bed file for mps.
@@ -24,8 +25,8 @@ arguments:
 
 auto path_exists(std::string path) -> bool
 {
-    struct stat_buffer;
-    return (stat (((std::string)argv[i]).c_str(), &buffer) == 0);
+    struct stat buffer;
+    return (stat (path.c_str(), &buffer) == 0);
 }
 
 void prep_bed(int argc, char *argv[])
@@ -40,7 +41,6 @@ void prep_bed(int argc, char *argv[])
     // check if files and dirs exist
     for (size_t i = 2; i < 6; ++i) 
     {
-        struct stat buffer;
         if (! path_exists((std::string)argv[i])) {
             std::cout << "file or directory found: " << argv[i] << std::endl;
             exit(1);
@@ -69,7 +69,7 @@ arguments:
     chr ID of the chromsome to be processed
     device_mem_gb   Amount of memory available on the GPU
     .phen   Path to .phen file with phenotype values, sorted in the same way as genotype info in the original bed file
-)"
+)";
 
 void corr(int argc, char *argv[])
 {
@@ -104,39 +104,35 @@ void corr(int argc, char *argv[])
     
     // load data + check that file contents are valid
     // TODO: there is a lot more that can go wrong here, e.g. number of cols
-    std::string dims_path = make_path(out_dir, chr_idd, ".dims");
+    std::string dims_path = make_path(out_dir, chr_id, ".dims");
     std::vector<int> dims = read_ints_from_lines(dims_path);
     size_t ndims = dims.size();
     if (ndims != 2) {
         std::cout << "Invalid .dims file: found " << ndims << "dimensions instead of two." <<  std::endl;
         exit(1);
     }
-    size_t num_individuals = ndims[0];
-    size_t num_markers = ndims[1];
-
-    
-
-    
-
     size_t num_individuals = dims[0];
     size_t num_markers = dims[1];
 
-    const size_t num_markers = BMT_NUM_MARKERS;
-    const size_t num_individuals = BMT_NUM_INDIVIDUALS;
-    const size_t num_phen = BMT_NUM_PHEN;
-    const size_t marker_cm_size = corr_matrix_size(num_markers);
-    const size_t marker_phen_cm_size = num_markers * num_phen;
-    const size_t phen_cm_size = corr_matrix_size(num_phen);
- 
-    float marker_corr[marker_cm_size];
-    memset(marker_corr, 0.0, sizeof(marker_corr));
-    float marker_phen_corr[marker_phen_cm_size];
-    memset(marker_phen_corr, 0.0, sizeof(marker_phen_corr));
-    float phen_corr[phen_cm_size];
-    memset(phen_corr, 0.0, sizeof(phen_corr));
+    //size_t num_individuals = dims[0];
+    //size_t num_markers = dims[1];
 
-    cu_corr_npn(bmt_marker_vals, bmt_phen_vals, num_markers, num_individuals, num_phen,
-                 bmt_marker_mean, bmt_marker_std, marker_corr, marker_phen_corr, phen_corr);
+    //const size_t num_markers = BMT_NUM_MARKERS;
+    //const size_t num_individuals = BMT_NUM_INDIVIDUALS;
+    //const size_t num_phen = BMT_NUM_PHEN;
+    //const size_t marker_cm_size = corr_matrix_size(num_markers);
+    //const size_t marker_phen_cm_size = num_markers * num_phen;
+    //const size_t phen_cm_size = corr_matrix_size(num_phen);
+ 
+    //float marker_corr[marker_cm_size];
+    //memset(marker_corr, 0.0, sizeof(marker_corr));
+    //float marker_phen_corr[marker_phen_cm_size];
+    //memset(marker_phen_corr, 0.0, sizeof(marker_phen_corr));
+    //float phen_corr[phen_cm_size];
+    //memset(phen_corr, 0.0, sizeof(phen_corr));
+
+    //cu_corr_npn(bmt_marker_vals, bmt_phen_vals, num_markers, num_individuals, num_phen,
+    //             bmt_marker_mean, bmt_marker_std, marker_corr, marker_phen_corr, phen_corr);
 }
 
 const std::string MPS_USAGE = R"(
