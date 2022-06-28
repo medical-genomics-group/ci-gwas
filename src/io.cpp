@@ -28,6 +28,7 @@ auto make_path(const std::string out_dir, const std::string chr_id, const std::s
     return outpath;
 }
 
+// TODO: I don't ever need dest to have dynamic size, this should accept arrays
 void read_n_bytes_from_binary(const std::string path, const size_t nbytes, std::vector<unsigned char> &dest)
 {
     std::ifstream bin_file(path, std::ios::binary);
