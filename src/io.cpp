@@ -89,7 +89,7 @@ void write_floats_to_binary(const float *data,
 {
     std::ofstream fout;
     fout.open(path, std::ios::out|std::ios::binary);
-    for (size_t i; i < nvals; ++i) {
+    for (size_t i = 0; i < nvals; ++i) {
         fout.write(reinterpret_cast<const char*>(&data[i]), sizeof(float));
     }
     fout.close();
