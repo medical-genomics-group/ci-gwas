@@ -32,6 +32,7 @@ auto path_exists(std::string path) -> bool
     return (stat (path.c_str(), &buffer) == 0);
 }
 
+// TODO: this should also parse .phen files and make sure that no info is missing and order checks out
 void prep_bed(int argc, char *argv[])
 {
     // check if enough args present
