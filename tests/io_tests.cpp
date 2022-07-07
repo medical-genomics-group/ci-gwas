@@ -6,7 +6,7 @@
 
 TEST(LoadBinaryTest, ExpectedResults) {
     size_t nbytes = 5;
-    std::vector<unsigned char> exp = {0x6c, 0x1b, 0x00, 0xea, 0x8f};
+    std::vector<unsigned char> exp = {0x6c, 0x1b, 0x01, 0xea, 0x8f};
     std::vector<unsigned char> res(nbytes);
     read_n_bytes_from_binary("../../tests/test_files/small.bed", nbytes, res);
     

@@ -72,9 +72,9 @@ void prep_bed(std::string bed_path,
 
     // read first three bytes, check if correct code
     bed_file.read(reinterpret_cast<char*>(bed_block.data()), 3);
-    unsigned char bed_2_code[3] = {0x6c, 0x1b, 0x00};
+    unsigned char bed_col_maj_code[3] = {0x6c, 0x1b, 0x01};
     for (size_t i = 0; i < 3; ++i) {
-        assert((bed_block[i] == bed_2_code[i]) && "unexpected magic number in bed file.");
+        assert((bed_block[i] == bed_col_maj_code[i]) && "unexpected magic number in bed file.");
     }
 
     size_t max_num_bytes = mem_gb * 1'000'000'000;
