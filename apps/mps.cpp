@@ -138,20 +138,20 @@ void corr(int argc, char *argv[])
     assert((marker_means.size() == num_markers) && "number of marker means != num markers");
 
     // .stds 
-    std::string means_path = make_path(out_dir, chr_id, ".means");
+    std::string stds_path = make_path(out_dir, chr_id, ".stds");
     std::vector<float> marker_stds = read_floats_from_lines(stds_path);
     assert((marker_stds.size() == num_markers) && "number of marker stds != num markers");
 
     // allocate correlation result arrays
     size_t marker_corr_mat_size = num_markers * (num_markers - 1) / 2;
-    std::array<float, marker_corr_mat_size> marker_corr{0.0};
+    std::vector<float> marker_corr(marker_corr_mat_size, 0.0);
     
     size_t marker_phen_corr_mat_size = num_markers * num_phen;
-    std::array<float, marker_phen_corr_mat_size> = marker_phen_corr{0.0};
+    std::vector<float> marker_phen_corr(marker_phen_corr_mat_size, 0.0);
 
     // TODO: testcase for num_phen = 1;
     size_t phen_corr_mat_size = num_phen * (num_phen - 1) / 2;
-    std::array<float, phen_corr_mat_size> = phen_corr{0.0};
+    std::vector<float> phen_corr(phen_corr_mat_size, 0.0);
 
     // compute correlations
     cu_corr_npn(marker_vals.data(), phen_vals.data(), num_markers, num_individuals, num_phen,
