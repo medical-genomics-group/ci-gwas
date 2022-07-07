@@ -91,7 +91,7 @@ void corr(int argc, char *argv[])
     for (size_t i = 0; i < 4; ++i) {
         std::string fpath = make_path(out_dir, chr_id, req_suffixes[i]);
         if (!path_exists(fpath)) {
-            std::cout << "file or directory found: " << fpath << std::endl;
+            std::cout << "file or directory not found: " << fpath << std::endl;
             exit(1);
         }
     }
@@ -100,7 +100,7 @@ void corr(int argc, char *argv[])
     for (size_t i = 5; i < argc; ++i) {
         std::string phen_path = (std::string)argv[i];
         if (!path_exists(phen_path)) {
-            std::cout << "file or directory found: " << phen_path << std::endl;
+            std::cout << "file or directory not found: " << phen_path << std::endl;
             exit(1);
         }
         phen_paths.push_back(phen_path);
@@ -173,6 +173,38 @@ void corr(int argc, char *argv[])
     std::cout << "Correlation matrices written to: " << out_dir << std::endl;
 }
 
+const std::string PRINTBF_USAGE = R"(
+Interpret contents of binary file as floats and print to stoud.
+
+usage: mps printbf <file>
+
+arguments:
+    file    file with floats in binary
+)";
+
+void printbf(int argc, char *argv[])
+{
+    // check for correct number of args
+    if (argc != 3) {
+        std::cout << PRINTBF_USAGE << std::endl;
+        exit(1);
+    }
+
+    // check that path is valid
+    std::string fpath = (std::string)argv[2];
+    if (!path_exists(fpath)) {
+        std::cout << "file or directory found: " << fpath << std::endl;
+        exit(1);
+    }
+
+    std::vector<float> read = read_floats_from_binary(fpath);
+
+    // Using a for loop with index
+    for(std::size_t i = 0; i < read.size(); ++i) {
+        std::cout << read[i] << "\n";
+    }
+}
+
 const std::string MPS_USAGE = R"(
 usage: mps <command> [<args>]
 
@@ -202,6 +234,8 @@ auto main(int argc, char *argv[]) -> int
         corr(argc, argv);
     } else if (cmd == "cups") {
         std::cout << "'cups' cli is not implemented yet." << std::endl;
+    } else if (cmd == "printbf") {
+        printbf(argc, argv);
     } else {
         std::cout << MPS_USAGE << std::endl;
     }
