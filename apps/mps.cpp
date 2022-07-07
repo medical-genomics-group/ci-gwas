@@ -157,6 +157,19 @@ void corr(int argc, char *argv[])
     cu_corr_npn(marker_vals.data(), phen_vals.data(), num_markers, num_individuals, num_phen,
                 marker_means.data(), marker_stds.data(), marker_corr.data(), marker_phen_corr.data(),
                 phen_corr.data());
+
+    // write results
+    write_floats_to_binary(marker_corr.data(),
+                           marker_corr_mat_size,
+                           make_path(out_dir, chr_id, "_marker_corr.bin"));
+    write_floats_to_binary(marker_phen_corr.data(),
+                           marker_phen_corr_mat_size,
+                           make_path(out_dir, chr_id, "_marker_phen_corr.bin"));
+    write_floats_to_binary(phen_corr.data(),
+                           phen_corr_mat_size,
+                           make_path(out_dir, chr_id, "_phen_corr.bin"));
+
+    std::cout << "Correlation matrices written to: " << out_dir << std::endl;
 }
 
 const std::string MPS_USAGE = R"(
@@ -185,7 +198,7 @@ auto main(int argc, char *argv[]) -> int
     } else if (cmd == "prep") {
         prep_bed(argc, argv);
     } else if (cmd == "corr") {
-        std::cout << "'corr' cli is not implemented yet." << std::endl;
+        corr(argc, argv);
     } else if (cmd == "cups") {
         std::cout << "'cups' cli is not implemented yet." << std::endl;
     } else {
