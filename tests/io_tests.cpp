@@ -16,8 +16,21 @@ TEST(LoadBinaryTest, ExpectedResults) {
     }
 }
 
+TEST(ReadFloatsFromLinesTest, ExpectedResults) {
+    std::vector<float> exp_vals = {0.72031609, 0.59822862, 0.47614114, -0.62264611,
+                                   -1.110996, -1.23308348, 2.06327829, 0.59822862,
+                                   -0.86682106, -0.62264611};
+    std::vector<float> read_vals = {};
+    std::string loc = "../../tests/test_files/small.phen";
+    read_floats_from_lines(loc, read_vals);
+    
+    for (size_t i = 0; i < 10; ++i) {
+        EXPECT_EQ(exp_vals[i], read_vals[i]);
+    }
+}
+
 TEST(FloatToAndFromBinaryTest, ExpectedResults) {
-    std::vector<float> data = {0.0, 1.1, 2.2, 3.3, 4.4};
+    std::vector<float> data = {0.0, -1.1, 2.2, -3.3, 4.4};
     std::string loc = "../../tests/test_files/floats.bin";
     write_floats_to_binary(data.data(), 4, loc);
     std::vector<float> read = read_floats_from_binary(loc);
