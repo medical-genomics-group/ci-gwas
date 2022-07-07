@@ -23,3 +23,6 @@ void write_dims(const size_t num_individuals, const size_t num_markers, const st
 
 void read_n_bytes_from_binary(const std::string path, const size_t nbytes, std::vector<unsigned char> &dest);
 
+auto read_floats_from_binary(const std::string path) -> std::vector<float>;
+
+void write_floats_to_binary(const float *data, const size_t nvals, const std::string path);

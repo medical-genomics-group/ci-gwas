@@ -71,11 +71,33 @@ auto read_ints_from_lines(const std::string path) -> std::vector<int>
     return res;
 }
 
+auto read_floats_from_binary(const std::string path) -> std::vector<float>
+{
+    float f;
+    std::ifstream fin(path, std::ios::binary);
+    std::vector<float> res = {};
+    
+    while (fin.read(reinterpret_cast<char*>(&f), sizeof(float)))
+        res.push_back(f);
+    
+    return res;
+}
 
-void write_bed(
-        const std::vector<unsigned char> &out_buf,
-        const std::string out_dir,
-        const std::string chr_id)
+void write_floats_to_binary(const float *data,
+                            const size_t nvals,
+                            const std::string path)
+{
+    std::ofstream fout;
+    fout.open(path, std::ios::out|std::ios::binary);
+    for (size_t i; i < nvals; ++i) {
+        fout.write(reinterpret_cast<const char*>(&data[i]), sizeof(float));
+    }
+    fout.close();
+}
+
+void write_bed(const std::vector<unsigned char> &out_buf,
+               const std::string out_dir,
+               const std::string chr_id)
 {
     std::string outpath = make_path(out_dir, chr_id, ".bed");
     std::ofstream bedout;
@@ -84,10 +106,9 @@ void write_bed(
     bedout.close();
 }
 
-void write_means(
-        const std::vector<float> &chr_marker_means,
-        const std::string out_dir,
-        const std::string chr_id)
+void write_means(const std::vector<float> &chr_marker_means,
+                 const std::string out_dir,
+                 const std::string chr_id)
 {
     std::string outpath = make_path(out_dir, chr_id, ".means");
     std::ofstream fout;
@@ -100,10 +121,9 @@ void write_means(
     fout.close();
 }
 
-void write_stds(
-        const std::vector<float> &chr_marker_stds,
-        const std::string out_dir,
-        const std::string chr_id)
+void write_stds(const std::vector<float> &chr_marker_stds,
+                const std::string out_dir,
+                const std::string chr_id)
 {
     std::string outpath = make_path(out_dir, chr_id, ".stds");
     std::ofstream fout;
@@ -116,11 +136,10 @@ void write_stds(
     fout.close();
 }
 
-void write_dims(
-        const size_t num_individuals,
-        const size_t num_markers,
-        const std::string out_dir,
-        const std::string chr_id)
+void write_dims(const size_t num_individuals,
+                const size_t num_markers,
+                const std::string out_dir,
+                const std::string chr_id)
 {
     std::string outpath = make_path(out_dir, chr_id, ".dims");
     std::ofstream fout;
