@@ -14,7 +14,56 @@ void cu_marker_corr_pearson(const unsigned char *marker_vals,
                             const float *marker_std,
                             float *marker_corrs)
 {
+    size_t col_len_bytes = (num_individuals + 3) / 4 * sizeof(unsigned char);
+    size_t marker_vals_bytes = col_len_bytes * num_markers;
 
+    unsigned char *gpu_marker_vals;
+    float *gpu_marker_corrs;
+    float *gpu_marker_mean;
+    float *gpu_marker_std;
+
+    size_t marker_output_length = num_markers * (num_markers - 1) / 2;
+    size_t marker_output_bytes = marker_output_length * sizeof(float);
+
+    int threads_per_block = NUMTHREADS;
+
+    // markers vs markers
+    int blocks_per_grid = marker_output_length;
+    
+    // allocate device memory and copy over data
+    // marker values
+    HANDLE_ERROR(cudaMalloc(&gpu_marker_vals, marker_vals_bytes));
+    HANDLE_ERROR(
+        cudaMemcpy(gpu_marker_vals, marker_vals, marker_vals_bytes, cudaMemcpyHostToDevice));
+
+    // space for results
+    HANDLE_ERROR(cudaMalloc(&gpu_marker_corrs, marker_output_bytes));
+
+    // marker means
+    HANDLE_ERROR(cudaMalloc(&gpu_marker_mean, marker_stats_bytes));
+    HANDLE_ERROR(
+        cudaMemcpy(gpu_marker_mean, marker_mean, marker_stats_bytes, cudaMemcpyHostToDevice));
+
+    // marker stds
+    HANDLE_ERROR(cudaMalloc(&gpu_marker_std, marker_stats_bytes));
+    HANDLE_ERROR(
+        cudaMemcpy(gpu_marker_std, marker_std, marker_stats_bytes, cudaMemcpyHostToDevice));
+
+    // compute correlations
+    marker_corr_pearson<<<blocks_per_grid, threads_per_block>>>(
+        gpu_marker_vals, num_markers, num_individuals,
+        col_len_bytes, gpu_marker_mean, gpu_marker_stdgpu_marker_corrs);
+    CudaCheckError();
+    
+    // copy results to host
+    HANDLE_ERROR(
+        cudaMemcpy(marker_corrs, gpu_marker_corrs, marker_output_bytes, cudaMemcpyDeviceToHost));
+    
+    // free allocated device memory
+    HANDLE_ERROR(cudaFree(gpu_marker_corrs));
+    HANDLE_ERROR(cudaFree(gpu_marker_vals));
+    HANDLE_ERROR(cudaFree(gpu_marker_mean));
+    HANDLE_ERROR(cudaFree(gpu_marker_std));
 }
 
 // Compute correlations between markers, markers and phenotypes, and between phenotypes.
