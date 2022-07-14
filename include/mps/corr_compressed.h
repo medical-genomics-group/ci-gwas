@@ -19,3 +19,11 @@ __global__ void phen_corr_pearson(const float *phen_vals, const size_t num_indiv
 __global__ void bed_marker_corr_kendall_npn(const unsigned char *marker_vals,
                                             const size_t num_markers, const size_t num_individuals,
                                             const size_t col_len_bytes, float *results);
+
+__global__ void marker_corr_pearson(const unsigned char *marker_vals,
+                                     const size_t num_markers,
+                                     const size_t num_individuals,
+                                     const size_t col_len_bytes,
+                                     const float *marker_mean,
+                                     const float *marker_std,
+                                     float *results);
