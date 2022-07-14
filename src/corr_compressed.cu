@@ -4,6 +4,19 @@
 #include <mps/bed_lut.h>
 #include <mps/corr_compressed.h>
 
+// Compute pearson correlations between markers.
+// Markers are expected to be in compressed .bed format, with NaNs removed
+// and no leading magic numbers.
+void cu_marker_corr_pearson(const unsigned char *marker_vals,
+                            const size_t num_markers,
+                            const size_t num_individuals,
+                            const float *marker_mean,
+                            const float *marker_std,
+                            float *marker_corrs)
+{
+
+}
+
 // Compute correlations between markers, markers and phenotypes, and between phenotypes.
 // Markers are expected to be in compressed .bed format, with NaNs removed and no leading magic
 // numbers.
@@ -185,7 +198,6 @@ __global__ void phen_corr_pearson(const float *phen_vals, const size_t num_indiv
     }
 }
 
-/*
 // Compute Pearson's r between a pair of marker vectors.
 __global__ void marker_corr_pearson(const unsigned char *marker_vals,
                                     const size_t num_markers,
@@ -196,45 +208,40 @@ __global__ void marker_corr_pearson(const unsigned char *marker_vals,
                                     float *results)
 {
     size_t tix = threadIdx.x;
-    size_t lin_ix = blockIdx.x;
+    size_t row;
+    size_t col;
+    row_col_ix_from_linear_ix(blockIdx.x, num_markers, &row, &col);
+    size_t col_start_a = row * col_len_bytes;
+    size_t col_start_b = col * col_len_bytes;
 
-    size_t mv_ix = lin_ix / num_phen;
-    size_t phen_ix = lin_ix - (num_phen * mv_ix);
-    size_t mv_start_ix = mv_ix * col_len_bytes;
-    size_t phen_start_ix = phen_ix * num_individuals;
+    float thread_sum_mvp = 0.0
+    __shared__ float thread_sums_mvp[NUMTHREADS];
 
-    float thread_sum_mv_phen = 0.0;
-    float thread_sum_phen = 0.0;
-    __shared__ float thread_sums_mv_phen[NUMTHREADS];
-    __shared__ float thread_sums_phen[NUMTHREADS];
-    for (size_t i = tix; i < col_len_bytes; i += NUMTHREADS) {
-        size_t curr_mv_byte_ix = 4 * (size_t)(marker_vals[mv_start_ix + i]);
-        for (size_t j = 0; (j < 4) && (i * 4 + j < num_individuals); j++) {
-            float mv_val = gpu_bed_lut_a[(curr_mv_byte_ix + j)];
-            float phen_val = phen_vals[(phen_start_ix + (4 * i) + j)];
-
-	    thread_sum_mv_phen += (mv_val * phen_val);
-            thread_sum_phen += phen_val;
+    for (size_t i = tix; i < col_len_bytes; i += NUMTRHREADS) {
+        size_t mv_byte_ix_a = 4 * (size_t)(marker_vals[col_start_a + i]);
+        size_t mv_byte_ix_b = 4 * (size_t)(marker_vals[col_start_b + i]);
+        for (size_t j = 0; (j < 4) && (i * 4 + j < num_individuals); j++ {
+                float mv_a = gpu_bed_lut_a[(mv_byte_ix_a + j)];
+                float mv_b = gpu_bed_lut_a[(mv_byte_ix_b + j)];
+                thread_sum_mvp += mv_a * mv_b;
         }
     }
 
-    thread_sums_mv_phen[tix] = thread_sum_mv_phen;
-    thread_sums_phen[tix] = thread_sum_phen;
+    thread_sums_mvp[tix] = thread_sum_mvp;
 
     __syncthreads();
     if (tix == 0) {
-        float s_mv_phen = 0.0;
-        float s_phen = 0.0;
+        float s_mvps = 0.0;
         for (size_t i = 0; i < NUMTHREADS; i++) {
-            s_mv_phen += thread_sums_mv_phen[i];
-            s_phen += thread_sums_phen[i];
+            s_mvps += thread_sums_mvp[i];
         }
 
-        results[lin_ix] = (s_mv_phen - marker_mean[mv_ix] * s_phen) /
-                          ((float)(num_individuals) * marker_std[mv_ix]);
+        float num = (s_mvps / (float)num_individuals) - (marker_mean[row] * marker_means[col]);
+        float denom = marker_std[row] * marker_std[col];
+
+        results[blockIdx.x] = num / denom;
     }
 }
-*/
 
 // A O(n) runtime Kendall implementation for compressed genomic marker data.
 // The compression format is expected to be col-major .bed without NaN
