@@ -24,6 +24,7 @@ void cu_marker_corr_pearson(const unsigned char *marker_vals,
 
     size_t marker_output_length = num_markers * (num_markers - 1) / 2;
     size_t marker_output_bytes = marker_output_length * sizeof(float);
+    size_t marker_stats_bytes = num_markers * sizeof(float);
 
     int threads_per_block = NUMTHREADS;
 
@@ -52,7 +53,7 @@ void cu_marker_corr_pearson(const unsigned char *marker_vals,
     // compute correlations
     marker_corr_pearson<<<blocks_per_grid, threads_per_block>>>(
         gpu_marker_vals, num_markers, num_individuals,
-        col_len_bytes, gpu_marker_mean, gpu_marker_stdgpu_marker_corrs);
+        col_len_bytes, gpu_marker_mean, gpu_marker_std, gpu_marker_corrs);
     CudaCheckError();
     
     // copy results to host
@@ -263,13 +264,13 @@ __global__ void marker_corr_pearson(const unsigned char *marker_vals,
     size_t col_start_a = row * col_len_bytes;
     size_t col_start_b = col * col_len_bytes;
 
-    float thread_sum_mvp = 0.0
+    float thread_sum_mvp = 0.0;
     __shared__ float thread_sums_mvp[NUMTHREADS];
 
-    for (size_t i = tix; i < col_len_bytes; i += NUMTRHREADS) {
+    for (size_t i = tix; i < col_len_bytes; i += NUMTHREADS) {
         size_t mv_byte_ix_a = 4 * (size_t)(marker_vals[col_start_a + i]);
         size_t mv_byte_ix_b = 4 * (size_t)(marker_vals[col_start_b + i]);
-        for (size_t j = 0; (j < 4) && (i * 4 + j < num_individuals); j++ {
+        for (size_t j = 0; (j < 4) && (i * 4 + j < num_individuals); j++) {
                 float mv_a = gpu_bed_lut_a[(mv_byte_ix_a + j)];
                 float mv_b = gpu_bed_lut_a[(mv_byte_ix_b + j)];
                 thread_sum_mvp += mv_a * mv_b;
@@ -285,7 +286,7 @@ __global__ void marker_corr_pearson(const unsigned char *marker_vals,
             s_mvps += thread_sums_mvp[i];
         }
 
-        float num = (s_mvps / (float)num_individuals) - (marker_mean[row] * marker_means[col]);
+        float num = (s_mvps / (float)num_individuals) - (marker_mean[row] * marker_mean[col]);
         float denom = marker_std[row] * marker_std[col];
 
         results[blockIdx.x] = num / denom;
