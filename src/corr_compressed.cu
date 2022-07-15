@@ -14,6 +14,8 @@ void cu_marker_corr_pearson(const unsigned char *marker_vals,
                             const float *marker_std,
                             float *marker_corrs)
 {
+    printf("Starting cu_marer_corr_pearson \n");
+
     size_t col_len_bytes = (num_individuals + 3) / 4 * sizeof(unsigned char);
     size_t marker_vals_bytes = col_len_bytes * num_markers;
 
@@ -31,24 +33,34 @@ void cu_marker_corr_pearson(const unsigned char *marker_vals,
     // markers vs markers
     int blocks_per_grid = marker_output_length;
     
+    
     // allocate device memory and copy over data
     // marker values
-    HANDLE_ERROR(cudaMalloc(&gpu_marker_vals, marker_vals_bytes));
+    printf("Allocating space for marker data \n");
+    HANDLE_ERROR(cudaMalloc(&gpu_marker_vals, marker_vals_bytes)); 
+    printf("Copying marker data to device \n");
     HANDLE_ERROR(
         cudaMemcpy(gpu_marker_vals, marker_vals, marker_vals_bytes, cudaMemcpyHostToDevice));
 
     // space for results
+    printf("Allocating space for results \n");
     HANDLE_ERROR(cudaMalloc(&gpu_marker_corrs, marker_output_bytes));
 
     // marker means
+    printf("Allocating space for marker means \n");
     HANDLE_ERROR(cudaMalloc(&gpu_marker_mean, marker_stats_bytes));
+    printf("Copying marker means to device \n");
     HANDLE_ERROR(
         cudaMemcpy(gpu_marker_mean, marker_mean, marker_stats_bytes, cudaMemcpyHostToDevice));
 
     // marker stds
-    HANDLE_ERROR(cudaMalloc(&gpu_marker_std, marker_stats_bytes));
+    printf("Allocating space for marker stds \n");
+    HANDLE_ERROR(cudaMalloc(&gpu_marker_std, marker_stats_bytes)); 
+    printf("Copying marker stds to device \n");
     HANDLE_ERROR(
         cudaMemcpy(gpu_marker_std, marker_std, marker_stats_bytes, cudaMemcpyHostToDevice));
+
+    printf("Calling kernels \n");
 
     // compute correlations
     marker_corr_pearson<<<blocks_per_grid, threads_per_block>>>(
@@ -56,10 +68,12 @@ void cu_marker_corr_pearson(const unsigned char *marker_vals,
         col_len_bytes, gpu_marker_mean, gpu_marker_std, gpu_marker_corrs);
     CudaCheckError();
     
+    printf("Copying results to host \n");
     // copy results to host
     HANDLE_ERROR(
         cudaMemcpy(marker_corrs, gpu_marker_corrs, marker_output_bytes, cudaMemcpyDeviceToHost));
     
+    printf("Freeing device memory \n");
     // free allocated device memory
     HANDLE_ERROR(cudaFree(gpu_marker_corrs));
     HANDLE_ERROR(cudaFree(gpu_marker_vals));
@@ -257,17 +271,24 @@ __global__ void marker_corr_pearson(const unsigned char *marker_vals,
                                     const float *marker_std,
                                     float *results)
 {
+    printf("[bix: %u | tix: %u]: started", blockIdx.x, threadIdx.x);
+    size_t work_per_thread = (num_individuals + (NUMTHREADS - 1)) / NUMTHREADS;
     size_t tix = threadIdx.x;
+    size_t worker_start = tix * work_per_thread;
+    size_t worker_end = (tix + 1) * work_per_thread;
     size_t row;
     size_t col;
     row_col_ix_from_linear_ix(blockIdx.x, num_markers, &row, &col);
     size_t col_start_a = row * col_len_bytes;
     size_t col_start_b = col * col_len_bytes;
 
+    //printf("[r: %lu| c: %lu]: wpt: %lu \t ws: %lu \t we: %lu \n", row, col, work_per_thread, worker_start, worker_end);
+
     float thread_sum_mvp = 0.0;
     __shared__ float thread_sums_mvp[NUMTHREADS];
+    
 
-    for (size_t i = tix; i < col_len_bytes; i += NUMTHREADS) {
+    for (size_t i = worker_start; i < worker_end; i += 1) {
         size_t mv_byte_ix_a = 4 * (size_t)(marker_vals[col_start_a + i]);
         size_t mv_byte_ix_b = 4 * (size_t)(marker_vals[col_start_b + i]);
         for (size_t j = 0; (j < 4) && (i * 4 + j < num_individuals); j++) {
@@ -280,6 +301,7 @@ __global__ void marker_corr_pearson(const unsigned char *marker_vals,
     thread_sums_mvp[tix] = thread_sum_mvp;
 
     __syncthreads();
+    //printf("[tix: %lu]: syncing... \n", tix);
     if (tix == 0) {
         float s_mvps = 0.0;
         for (size_t i = 0; i < NUMTHREADS; i++) {
