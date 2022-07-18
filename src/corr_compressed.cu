@@ -70,8 +70,8 @@ void cu_marker_corr_pearson(const unsigned char *marker_vals,
     
     printf("Copying results to host \n");
     // copy results to host
-    HANDLE_ERROR(
-        cudaMemcpy(marker_corrs, gpu_marker_corrs, marker_output_bytes, cudaMemcpyDeviceToHost));
+    HANDLE_ERROR(cudaMemcpy(marker_corrs, gpu_marker_corrs, marker_output_bytes, cudaMemcpyDeviceToHost));
+    
     
     printf("Freeing device memory \n");
     // free allocated device memory
@@ -271,24 +271,17 @@ __global__ void marker_corr_pearson(const unsigned char *marker_vals,
                                     const float *marker_std,
                                     float *results)
 {
-    printf("[bix: %u | tix: %u]: started", blockIdx.x, threadIdx.x);
-    size_t work_per_thread = (num_individuals + (NUMTHREADS - 1)) / NUMTHREADS;
     size_t tix = threadIdx.x;
-    size_t worker_start = tix * work_per_thread;
-    size_t worker_end = (tix + 1) * work_per_thread;
     size_t row;
     size_t col;
     row_col_ix_from_linear_ix(blockIdx.x, num_markers, &row, &col);
     size_t col_start_a = row * col_len_bytes;
     size_t col_start_b = col * col_len_bytes;
 
-    //printf("[r: %lu| c: %lu]: wpt: %lu \t ws: %lu \t we: %lu \n", row, col, work_per_thread, worker_start, worker_end);
-
     float thread_sum_mvp = 0.0;
     __shared__ float thread_sums_mvp[NUMTHREADS];
-    
 
-    for (size_t i = worker_start; i < worker_end; i += 1) {
+    for (size_t i = tix; i < col_len_bytes; i += NUMTHREADS) {
         size_t mv_byte_ix_a = 4 * (size_t)(marker_vals[col_start_a + i]);
         size_t mv_byte_ix_b = 4 * (size_t)(marker_vals[col_start_b + i]);
         for (size_t j = 0; (j < 4) && (i * 4 + j < num_individuals); j++) {
