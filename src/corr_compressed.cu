@@ -13,21 +13,28 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
                        const float *marker_std,
                        // the constant number of markers, 
                        // i.e. half the total number of markers in a batch
-                       const size_t const_batch_size,
+                       const size_t row_width,
                        float *marker_corrs,
                        float *marker_phen_corrs,
                        float *phen_corrs)
 {
-    size_t full_width_stripe_length = num_markers - const_batch_size;
-    size_t num_regular_batches = full_width_stripe_length / const_batch_size;
-    size_t ncols_small_batch = full_width_stripe_length % const_batch_size;
+    size_t num_full_stripes = (num_markers - 1) / row_width;
+    size_t nrows_small_stripe = (num_markers - 1) % row_width;
+    bool small_stripe = nrows_small_stripe;
+    size_t num_stripes = num_full_stripes + small_stripe;
+
+    size_t num_regular_batches = num_full_stripes / row_width - 1;
+    size_t ncols_small_batch = num_full_stripes % row_width;
     bool small_batch = (ncols_small_batch == 0);
+    size_t num batches = num_regular_batches + small_batch;
+
     // this is ceil
     size_t col_len_bytes = (num_individuals + 3) / 4 * sizeof(unsigned char);
-    size_t marker_vals_bytes = col_len_bytes * const_batch_size;
+    size_t marker_vals_bytes = col_len_bytes * row_width;
     size_t phen_vals_bytes = num_phen * num_individuals * sizeof(float);
 
-    unsigned char *gpu_marker_vals;
+    unsigned char *gpu_marker_vals_row;
+    unsigned char *gpu_marker_vals_col;
     float *gpu_phen_vals;
 
     float *gpu_marker_corrs;
@@ -37,19 +44,54 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
     float *gpu_marker_std;
 
     // batch output size
-    size_t marker_output_length = const_batch_size * const_batch_size;
-    size_t marker_phen_output_length = const_batch_size * num_phen;
+    size_t marker_output_length = row_width * row_width;
+    size_t marker_phen_output_length = row_width * num_phen;
     size_t phen_output_length = num_phen * (num_phen - 1) / 2;
 
     size_t marker_output_bytes = marker_output_length * sizeof(float);
     size_t marker_phen_output_bytes = marker_phen_output_length * sizeof(float);
     size_t phen_output_bytes = phen_output_length * sizeof(float);
-    size_t marker_stats_bytes = const_batch_size * sizeof(float);
+    size_t marker_stats_bytes = row_width * sizeof(float);
 
     int threads_per_block = NUMTHREADS;
 
+    HANDLE_ERROR(cudaMalloc(&gpu_marker_vals_row, marker_vals_bytes));
+    HANDLE_ERROR(cudaMalloc(&gpu_marker_vals_col, marker_vals_bytes));
+
     // markers vs markers
-    // TODO: see if proper blocks give any performace increase
+    for (size_t stripe_ix = 0; stripe_ix < num_stripes; ++stripe_ix) {
+        size_t stripe_marker_bytes = 
+            (small_stripe && stripe_ix == (num_stripes - 1))
+            ? (nrows_small_stripe * col_len_bytes)
+            : marker_vals_bytes;
+
+        // copy row marker data to device
+        HANDLE_ERROR(
+            cudaMemcpy(gpu_marker_vals_row,
+                       marker_vals[stripe_ix * col_len_bytes],
+                       stripe_marker_bytes,
+                       cudaMemcpyHostToDevice));
+
+        for (size_t batch_ix = 0; batch_ix < num_batches; ++batch_ix) {
+            if (small_batch && batch_ix == 0) {
+                
+            } else {
+
+            }
+            // copy col marker data to device
+            HANDLE_ERROR(
+                cudaMemcpy(gpu_marker_vals_col,
+                           marker_vals[])
+            );
+        }
+        // don't forget to process that row elements against themselved!
+
+        // next stripe is going to have one batch less
+        --num_batches;
+        // swap gpu_marker_vals_row and gpu_marker_vals_col, bc the last col
+        // batch is the next row batch
+    }
+
     int blocks_per_grid = marker_output_length;
     HANDLE_ERROR(cudaMalloc(&gpu_marker_vals, marker_vals_bytes));
     HANDLE_ERROR(
