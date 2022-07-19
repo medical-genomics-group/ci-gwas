@@ -51,19 +51,31 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
     size_t marker_output_bytes = marker_output_length * sizeof(float);
     size_t marker_phen_output_bytes = marker_phen_output_length * sizeof(float);
     size_t phen_output_bytes = phen_output_length * sizeof(float);
-    size_t marker_stats_bytes = row_width * sizeof(float);
+    // for now we don't partition the stats
+    size_t marker_stats_bytes = num_markers * sizeof(float);
 
     int threads_per_block = NUMTHREADS;
 
     HANDLE_ERROR(cudaMalloc(&gpu_marker_vals_row, marker_vals_bytes));
     HANDLE_ERROR(cudaMalloc(&gpu_marker_vals_col, marker_vals_bytes));
 
+    // copy marker stats over, assume that there is always space to fit them in
+    // without partitioning
+    HANDLE_ERROR(cudaMalloc(&gpu_marker_mean, marker_stats_bytes));
+    HANDLE_ERROR(cudaMalloc(&gpu_marker_std, marker_stats_bytes));
+    HANDLE_ERROR(cudaMemcpy(gpu_marker_mean, marker_mean, marker_stats_bytes, cudaMemcpyHostToDevice));
+    HANDLE_ERROR(cudaMemcpy(gpu_marker_std, marker_std, marker_stats_bytes, cudaMemcpyHostToDevice));
+
     // markers vs markers
     for (size_t stripe_ix = 0; stripe_ix < num_stripes; ++stripe_ix) {
-        size_t stripe_marker_bytes = 
-            (small_stripe && stripe_ix == (num_stripes - 1))
-            ? (nrows_small_stripe * col_len_bytes)
-            : marker_vals_bytes;
+        size_t stripe_marker_bytes, stripe_width;
+        if (small_stripe && stripe_ix == (num_stripes - 1)) {
+            stripe_marker_bytes = (nrows_small_stripe * col_len_bytes);
+            stripe_width = nrows_small_stripe;
+        } else {
+            stripe_marker_bytes = marker_vals_bytes;
+            stripe_width = row_width;
+        }
 
         // copy row marker data to device
         HANDLE_ERROR(
@@ -72,19 +84,35 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
                        stripe_marker_bytes,
                        cudaMemcpyHostToDevice));
 
+        size_t batch_data_ix = 0;
         for (size_t batch_ix = 0; batch_ix < num_batches; ++batch_ix) {
+            size_t nbytes;
+            dim3 num_blocks;
             if (small_batch && batch_ix == 0) {
-                
+                batchbytes = ncols_small_batch * col_len_bytes;;
+                num_blocks = dim3(ncols_small_batch, stripe_width);
             } else {
-
+                batchbytes = row_width * col_len_bytes;
+                num_blocks = dim3(row_width, stripe_width);
             }
+
             // copy col marker data to device
             HANDLE_ERROR(
                 cudaMemcpy(gpu_marker_vals_col,
-                           marker_vals[])
-            );
+                           marker_vals[batch_data_ix],
+                           batchbytes,
+                           cudaMemcpyHostToDevice));
+            
+
+            // at this point I have marker data for both row and cols
+            // and all stats, so I can call a kernel here.
+            // I am computing a rectangular matrix thing, so can use 2D blocks
+
+
+
+            batch_data_ix += batchbytes;
         }
-        // don't forget to process that row elements against themselved!
+        // don't forget to process that row elements against themselves!
 
         // next stripe is going to have one batch less
         --num_batches;
