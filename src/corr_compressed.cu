@@ -26,7 +26,7 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
     size_t num_regular_batches = num_full_stripes / row_width - 1;
     size_t ncols_small_batch = num_full_stripes % row_width;
     bool small_batch = (ncols_small_batch == 0);
-    size_t num batches = num_regular_batches + small_batch;
+    size_t num_batches = num_regular_batches + small_batch;
 
     // this is ceil
     size_t col_len_bytes = (num_individuals + 3) / 4 * sizeof(unsigned char);
@@ -85,9 +85,11 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
                        cudaMemcpyHostToDevice));
 
         size_t batch_data_ix = 0;
+        size_t batchbytes;
         for (size_t batch_ix = 0; batch_ix < num_batches; ++batch_ix) {
             size_t nbytes;
             dim3 num_blocks;
+            
             if (small_batch && batch_ix == 0) {
                 batchbytes = ncols_small_batch * col_len_bytes;;
                 num_blocks = dim3(ncols_small_batch, stripe_width);
