@@ -70,6 +70,13 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
     // allocate space for correlation results
     HANDLE_ERROR(cudaMalloc(&gpu_marker_corrs, marker_output_bytes));
 
+    // copy row marker data for first stripe to device
+    HANDLE_ERROR(
+        cudaMemcpy(gpu_marker_vals_row,
+                   marker_vals[0],
+                   stripe_marker_bytes,
+                   cudaMemcpyHostToDevice));
+
     size_t batch_result_start_host = 0;
     for (size_t stripe_ix = 0; stripe_ix < num_stripes; ++stripe_ix)
     {
@@ -84,13 +91,6 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
             stripe_marker_bytes = marker_vals_bytes;
             stripe_width = row_width;
         }
-
-        // copy row marker data to device
-        HANDLE_ERROR(
-            cudaMemcpy(gpu_marker_vals_row,
-                       marker_vals[stripe_ix * col_len_bytes],
-                       stripe_marker_bytes,
-                       cudaMemcpyHostToDevice));
 
         size_t batch_data_ix = marker_vals_bytes * (num_regular_batches + 1);
         size_t batch_num_bytes;
