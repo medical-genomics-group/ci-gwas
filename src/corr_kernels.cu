@@ -1,9 +1,8 @@
 #include <math.h>
-
-#include <mps/gpuerrors.h>
 #include <mps/bed_lut.h>
 #include <mps/corr_host.h>
 #include <mps/corr_kernels.h>
+#include <mps/gpuerrors.h>
 
 // Compute row and column indices from the linear index into
 // upper triangular matrix.
@@ -225,24 +224,24 @@ __global__ void bed_marker_corr_kendall_npn(const unsigned char *marker_vals,
 // The compression format is expected to be col-major .bed without NaN
 // and without leading magic numbers.
 __global__ void bed_marker_corr_kendall_npn_batched(
-    const unsigned char *marker_vals,
-    const size_t num_markers,
+    const unsigned char *row_marker_vals,
+    const unsigned char *col_marker_vals,
+    const size_t num_col_markers,
     const size_t num_individuals,
     const size_t col_len_bytes,
     float *results)
 {
+    // figure out which corr we are computing
+    // we have a 2d grid
     size_t tix = threadIdx.x;
-    size_t row;
-    size_t col;
-    row_col_ix_from_linear_ix(blockIdx.x, num_markers, &row, &col);
-    size_t col_start_a = row * col_len_bytes;
-    size_t col_start_b = col * col_len_bytes;
+    size_t col = blockIdx.x;
+    size_t row = blockIdx.y;
+    size_t data_start_a = col * col_len_bytes;
+    size_t data_start_b = row * col_len_bytes;
 
     float thread_sum[9] = {0.0};
     __shared__ float thread_sums[NUMTHREADS][9];
 
-    // TODO: it seems stupid to jump in memory, sequential reads are probably more efficient.
-    // should have ++ increment and adjust the start.
     for (size_t i = tix; i < col_len_bytes; i += NUMTHREADS)
     {
         size_t aix = 4 * (size_t)(marker_vals[col_start_a + i]);
@@ -285,6 +284,6 @@ __global__ void bed_marker_corr_kendall_npn_batched(
 
         float kendall_corr = (p - q) / sqrt((p + q + t) * (p + q + u));
 
-        results[blockIdx.x] = sin(M_PI / 2 * kendall_corr);
+        results[num_col_markers * row + col] = sin(M_PI / 2 * kendall_corr);
     }
 }

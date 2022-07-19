@@ -1,9 +1,8 @@
 #include <math.h>
-
-#include <mps/gpuerrors.h>
 #include <mps/bed_lut.h>
 #include <mps/corr_host.h>
 #include <mps/corr_kernels.h>
+#include <mps/gpuerrors.h>
 
 void cu_corr_npn_batched(const unsigned char *marker_vals,
                          const float *phen_vals,
