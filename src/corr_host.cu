@@ -147,6 +147,9 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
         --num_batches;
         // swap gpu_marker_vals_row and gpu_marker_vals_col, bc the last col
         // batch is the next row batch
+        unsigned char *tmp = gpu_marker_vals_col;
+        gpu_marker_vals_col = gpu_marker_vals_row;
+        gpu_marker_vals_row = tmp;
     }
 
     int blocks_per_grid = marker_output_length;
