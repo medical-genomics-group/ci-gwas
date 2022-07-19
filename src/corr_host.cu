@@ -67,6 +67,9 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
     HANDLE_ERROR(cudaMemcpy(gpu_marker_std, marker_std, marker_stats_bytes, cudaMemcpyHostToDevice));
 
     // markers vs markers
+    // allocate space for correlation results
+    HANDLE_ERROR(cudaMalloc(&gpu_marker_corrs, marker_output_bytes));
+
     for (size_t stripe_ix = 0; stripe_ix < num_stripes; ++stripe_ix)
     {
         size_t stripe_marker_bytes, stripe_width;
@@ -89,36 +92,41 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
                        cudaMemcpyHostToDevice));
 
         size_t batch_data_ix = 0;
-        size_t batchbytes;
+        size_t batch_num_bytes;
+        size_t batch_num_cols = 0;
         for (size_t batch_ix = 0; batch_ix < num_batches; ++batch_ix)
         {
-            size_t nbytes;
-            dim3 num_blocks;
-
             if (small_batch && batch_ix == 0)
             {
-                batchbytes = ncols_small_batch * col_len_bytes;
-                ;
-                num_blocks = dim3(ncols_small_batch, stripe_width);
+                batch_num_cols = ncols_small_batch;
             }
             else
             {
-                batchbytes = row_width * col_len_bytes;
-                num_blocks = dim3(row_width, stripe_width);
+                batch_num_cols = row_width;
             }
+            batch_num_bytes = batch_num_cols * col_len_bytes;
+            dim3 num_blocks(batch_num_cols, stripe_width);
 
             // copy col marker data to device
             HANDLE_ERROR(
                 cudaMemcpy(gpu_marker_vals_col,
                            marker_vals[batch_data_ix],
-                           batchbytes,
+                           batch_num_bytes,
                            cudaMemcpyHostToDevice));
 
             // at this point I have marker data for both row and cols
             // and all stats, so I can call a kernel here.
             // I am computing a rectangular matrix thing, so can use 2D blocks
+            bed_marker_corr_kendall_npn_batched<<<num_blocks, threads_per_block>>>(
+                gpu_marker_vals_row,
+                gpu_marker_vals_col,
+                batch_num_cols,
+                num_individuals,
+                col_len_bytes,
+                gpu_marker_corrs);
+            CudaCheckError();
 
-            batch_data_ix += batchbytes;
+            batch_data_ix += batch_num_bytes;
         }
         // don't forget to process that row elements against themselves!
 
