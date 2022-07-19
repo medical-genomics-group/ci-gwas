@@ -6,18 +6,18 @@
 #include <mps/corr_kernels.h>
 
 void cu_corr_npn_batched(const unsigned char *marker_vals,
-                       const float *phen_vals,
-                       const size_t num_markers,
-                       const size_t num_individuals,
-                       const size_t num_phen,
-                       const float *marker_mean,
-                       const float *marker_std,
-                       // the constant number of markers, 
-                       // i.e. half the total number of markers in a batch
-                       const size_t row_width,
-                       float *marker_corrs,
-                       float *marker_phen_corrs,
-                       float *phen_corrs)
+                         const float *phen_vals,
+                         const size_t num_markers,
+                         const size_t num_individuals,
+                         const size_t num_phen,
+                         const float *marker_mean,
+                         const float *marker_std,
+                         // the constant number of markers,
+                         // i.e. half the total number of markers in a batch
+                         const size_t row_width,
+                         float *marker_corrs,
+                         float *marker_phen_corrs,
+                         float *phen_corrs)
 {
     size_t num_full_stripes = (num_markers - 1) / row_width;
     size_t nrows_small_stripe = (num_markers - 1) % row_width;
@@ -68,12 +68,16 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
     HANDLE_ERROR(cudaMemcpy(gpu_marker_std, marker_std, marker_stats_bytes, cudaMemcpyHostToDevice));
 
     // markers vs markers
-    for (size_t stripe_ix = 0; stripe_ix < num_stripes; ++stripe_ix) {
+    for (size_t stripe_ix = 0; stripe_ix < num_stripes; ++stripe_ix)
+    {
         size_t stripe_marker_bytes, stripe_width;
-        if (small_stripe && stripe_ix == (num_stripes - 1)) {
+        if (small_stripe && stripe_ix == (num_stripes - 1))
+        {
             stripe_marker_bytes = (nrows_small_stripe * col_len_bytes);
             stripe_width = nrows_small_stripe;
-        } else {
+        }
+        else
+        {
             stripe_marker_bytes = marker_vals_bytes;
             stripe_width = row_width;
         }
@@ -87,14 +91,19 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
 
         size_t batch_data_ix = 0;
         size_t batchbytes;
-        for (size_t batch_ix = 0; batch_ix < num_batches; ++batch_ix) {
+        for (size_t batch_ix = 0; batch_ix < num_batches; ++batch_ix)
+        {
             size_t nbytes;
             dim3 num_blocks;
-            
-            if (small_batch && batch_ix == 0) {
-                batchbytes = ncols_small_batch * col_len_bytes;;
+
+            if (small_batch && batch_ix == 0)
+            {
+                batchbytes = ncols_small_batch * col_len_bytes;
+                ;
                 num_blocks = dim3(ncols_small_batch, stripe_width);
-            } else {
+            }
+            else
+            {
                 batchbytes = row_width * col_len_bytes;
                 num_blocks = dim3(row_width, stripe_width);
             }
@@ -105,13 +114,10 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
                            marker_vals[batch_data_ix],
                            batchbytes,
                            cudaMemcpyHostToDevice));
-            
 
             // at this point I have marker data for both row and cols
             // and all stats, so I can call a kernel here.
             // I am computing a rectangular matrix thing, so can use 2D blocks
-
-
 
             batch_data_ix += batchbytes;
         }
@@ -173,7 +179,6 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
     HANDLE_ERROR(cudaMemcpy(phen_corrs, gpu_phen_corrs, phen_output_bytes, cudaMemcpyDeviceToHost));
     HANDLE_ERROR(cudaFree(gpu_phen_corrs));
     HANDLE_ERROR(cudaFree(gpu_phen_vals));
-
 }
 
 // Compute pearson correlations between markers.
@@ -204,12 +209,11 @@ void cu_marker_corr_pearson(const unsigned char *marker_vals,
 
     // markers vs markers
     int blocks_per_grid = marker_output_length;
-    
-    
+
     // allocate device memory and copy over data
     // marker values
     printf("Allocating space for marker data \n");
-    HANDLE_ERROR(cudaMalloc(&gpu_marker_vals, marker_vals_bytes)); 
+    HANDLE_ERROR(cudaMalloc(&gpu_marker_vals, marker_vals_bytes));
     printf("Copying marker data to device \n");
     HANDLE_ERROR(
         cudaMemcpy(gpu_marker_vals, marker_vals, marker_vals_bytes, cudaMemcpyHostToDevice));
@@ -227,7 +231,7 @@ void cu_marker_corr_pearson(const unsigned char *marker_vals,
 
     // marker stds
     printf("Allocating space for marker stds \n");
-    HANDLE_ERROR(cudaMalloc(&gpu_marker_std, marker_stats_bytes)); 
+    HANDLE_ERROR(cudaMalloc(&gpu_marker_std, marker_stats_bytes));
     printf("Copying marker stds to device \n");
     HANDLE_ERROR(
         cudaMemcpy(gpu_marker_std, marker_std, marker_stats_bytes, cudaMemcpyHostToDevice));
@@ -239,12 +243,11 @@ void cu_marker_corr_pearson(const unsigned char *marker_vals,
         gpu_marker_vals, num_markers, num_individuals,
         col_len_bytes, gpu_marker_mean, gpu_marker_std, gpu_marker_corrs);
     CudaCheckError();
-    
+
     printf("Copying results to host \n");
     // copy results to host
     HANDLE_ERROR(cudaMemcpy(marker_corrs, gpu_marker_corrs, marker_output_bytes, cudaMemcpyDeviceToHost));
-    
-    
+
     printf("Freeing device memory \n");
     // free allocated device memory
     HANDLE_ERROR(cudaFree(gpu_marker_corrs));
