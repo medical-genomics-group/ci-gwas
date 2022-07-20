@@ -1,3 +1,4 @@
+#include <math.h>
 #include <iostream>
 #include <string>
 #include <cassert>
@@ -255,6 +256,15 @@ void corr(int argc, char *argv[])
     // TODO: testcase for num_phen = 1;
     size_t phen_corr_mat_size = num_phen * (num_phen - 1) / 2;
     std::vector<float> phen_corr(phen_corr_mat_size, 0.0);
+
+    // mem required for non-batched processing
+    size_t req_mem_bytes = (num_individuals * num_markers) / 4
+        + 4 * num_individuals * num_phen
+        + 2 * (num_phen + num_markers) * (num_markers + num_phen - 1);
+    
+    double req_mem_gb = (double)req_mem_bytes * std::pow(10, -9);
+    
+    // TODO: check if enough memory on device
 
     printf("Calling correlation main\n");
 
