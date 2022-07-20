@@ -42,3 +42,10 @@ __global__ void bed_marker_corr_kendall_npn_batched(
     const size_t num_individuals,
     const size_t col_len_bytes,
     float *results);
+
+__global__ void bed_marker_corr_kendall_npn_batched_row(
+    const unsigned char *row_marker_vals,
+    const size_t num_rows,
+    const size_t num_individuals,
+    const size_t col_len_bytes,
+    float *results);
