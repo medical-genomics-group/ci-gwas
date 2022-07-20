@@ -56,6 +56,7 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
 
     int threads_per_block = NUMTHREADS;
 
+    // allocate space for marker subsets
     HANDLE_ERROR(cudaMalloc(&gpu_marker_vals_row, marker_vals_bytes));
     HANDLE_ERROR(cudaMalloc(&gpu_marker_vals_col, marker_vals_bytes));
 
@@ -65,6 +66,11 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
     HANDLE_ERROR(cudaMalloc(&gpu_marker_std, marker_stats_bytes));
     HANDLE_ERROR(cudaMemcpy(gpu_marker_mean, marker_mean, marker_stats_bytes, cudaMemcpyHostToDevice));
     HANDLE_ERROR(cudaMemcpy(gpu_marker_std, marker_std, marker_stats_bytes, cudaMemcpyHostToDevice));
+
+    // allocate and copy over phenotype data
+    HANDLE_ERROR(cudaMalloc(&gpu_phen_vals, phen_vals_bytes));
+    HANDLE_ERROR(cudaMemcpy(gpu_phen_vals, phen_vals, phen_vals_bytes, cudaMemcpyHostToDevice));
+    HANDLE_ERROR(cudaMalloc(&gpu_marker_phen_corrs, marker_phen_output_bytes));
 
     // markers vs markers
     // allocate space for correlation results
@@ -90,6 +96,8 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
             stripe_width = row_width;
         }
 
+        size_t num_marker_phen_corrs = stripe_width * num_phen;
+        size_t marker_phen_corrs_bytes = num_marker_phen_corrs * sizeof(float);
         size_t batch_data_ix = marker_vals_bytes * (num_regular_batches + 1);
         size_t batch_data_bytes;
         size_t batch_num_cols = 0;
@@ -117,8 +125,6 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
                            batch_data_bytes,
                            cudaMemcpyHostToDevice));
 
-            // at this point I have marker data for both row and cols
-            // and all stats, so I can call a kernel here.
             // I am computing a rectangular matrix thing, so can use 2D blocks
             bed_marker_corr_kendall_npn_batched<<<num_blocks, threads_per_block>>>(
                 gpu_marker_vals_row,
@@ -153,7 +159,7 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
                 stripe_width,
                 num_individuals,
                 col_len_bytes,
-                results);
+                gpu_marker_corrs);
             CudaCheckError();
 
             // copy corr results to host
@@ -167,6 +173,29 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
             batch_result_start_host += batch_num_corrs;
         }
 
+        // compute row markers vs phenotype data
+        // everything is allocated, just gotta compute I believe
+        dim3 num_blocks(num_marker_phen_corrs);
+        marker_phen_corr_pearson<<<num_blocks, threads_per_block>>>(
+            gpu_marker_vals_row,
+            gpu_phen_vals,
+            stripe_width,
+            num_individuals,
+            num_phen,
+            col_len_bytes,
+            gpu_marker_mean,
+            gpu_marker_std,
+            gpu_marker_phen_corrs);
+        CudaCheckError();
+
+        // copy corr results to host
+        HANDLE_ERROR(
+            cudaMemcpy(
+                marker_phen_corrs[stripe_ix * row_width],
+                gpu_marker_phen_corrs,
+                marker_phen_corrs_bytes,
+                cudaMemcpyDeviceToHost));
+
         // next stripe is going to have one batch less
         --num_batches;
         // swap gpu_marker_vals_row and gpu_marker_vals_col, bc the last col
@@ -177,29 +206,9 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
     }
 
     HANDLE_ERROR(cudaFree(gpu_marker_corrs));
-
-    // markers vs phen
-    blocks_per_grid = marker_phen_output_length;
-
-    HANDLE_ERROR(cudaMalloc(&gpu_marker_mean, marker_stats_bytes));
-    HANDLE_ERROR(
-        cudaMemcpy(gpu_marker_mean, marker_mean, marker_stats_bytes, cudaMemcpyHostToDevice));
-    HANDLE_ERROR(cudaMalloc(&gpu_marker_std, marker_stats_bytes));
-    HANDLE_ERROR(
-        cudaMemcpy(gpu_marker_std, marker_std, marker_stats_bytes, cudaMemcpyHostToDevice));
-    HANDLE_ERROR(cudaMalloc(&gpu_phen_vals, phen_vals_bytes));
-    HANDLE_ERROR(cudaMemcpy(gpu_phen_vals, phen_vals, phen_vals_bytes, cudaMemcpyHostToDevice));
-    HANDLE_ERROR(cudaMalloc(&gpu_marker_phen_corrs, marker_phen_output_bytes));
-
-    marker_phen_corr_pearson<<<blocks_per_grid, threads_per_block>>>(
-        gpu_marker_vals, gpu_phen_vals, num_markers, num_individuals, num_phen, col_len_bytes,
-        gpu_marker_mean, gpu_marker_std, gpu_marker_phen_corrs);
-    CudaCheckError();
-
-    HANDLE_ERROR(cudaMemcpy(marker_phen_corrs, gpu_marker_phen_corrs, marker_phen_output_bytes,
-                            cudaMemcpyDeviceToHost));
-    HANDLE_ERROR(cudaFree(gpu_marker_vals));
     HANDLE_ERROR(cudaFree(gpu_marker_phen_corrs));
+    HANDLE_ERROR(cudaFree(gpu_marker_vals_row));
+    HANDLE_ERROR(cudaFree(gpu_marker_vals_col));
     HANDLE_ERROR(cudaFree(gpu_marker_mean));
     HANDLE_ERROR(cudaFree(gpu_marker_std));
 
