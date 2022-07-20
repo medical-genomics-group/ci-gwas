@@ -74,7 +74,7 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
     HANDLE_ERROR(
         cudaMemcpy(gpu_marker_vals_row,
                    marker_vals[0],
-                   stripe_marker_bytes,
+                   marker_vals_bytes,
                    cudaMemcpyHostToDevice));
 
     size_t batch_result_start_host = 0;
@@ -83,18 +83,18 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
         size_t stripe_marker_bytes, stripe_width;
         if (small_stripe && stripe_ix == (num_stripes - 1))
         {
-            stripe_marker_bytes = (nrows_small_stripe * col_len_bytes);
             stripe_width = nrows_small_stripe;
         }
         else
         {
-            stripe_marker_bytes = marker_vals_bytes;
             stripe_width = row_width;
         }
 
         size_t batch_data_ix = marker_vals_bytes * (num_regular_batches + 1);
-        size_t batch_num_bytes;
+        size_t batch_data_bytes;
         size_t batch_num_cols = 0;
+        size_t batch_num_corrs;
+        size_t batch_corrs_bytes;
         for (size_t batch_ix = 0; batch_ix < num_batches; ++batch_ix)
         {
             if (small_batch && batch_ix == 0)
@@ -105,7 +105,7 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
             {
                 batch_num_cols = row_width;
             }
-            batch_num_bytes = batch_num_cols * col_len_bytes;
+            batch_data_bytes = batch_num_cols * col_len_bytes;
             batch_num_corrs = batch_num_cols * stripe_width;
             batch_corrs_bytes = batch_num_corrs * sizeof(float);
             dim3 num_blocks(batch_num_cols, stripe_width);
@@ -114,7 +114,7 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
             HANDLE_ERROR(
                 cudaMemcpy(gpu_marker_vals_col,
                            marker_vals[batch_data_ix],
-                           batch_num_bytes,
+                           batch_data_bytes,
                            cudaMemcpyHostToDevice));
 
             // at this point I have marker data for both row and cols
@@ -137,11 +137,35 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
                     batch_corrs_bytes,
                     cudaMemcpyDeviceToHost));
 
-            batch_data_ix -= batch_num_bytes;
+            batch_data_ix -= batch_data_bytes;
             batch_result_start_host += batch_num_corrs;
         }
 
-        // don't forget to process that row elements against themselves!
+        // process row markers vs row markers
+        if (stripe_width > 1)
+        {
+            batch_num_corrs = stripe_width * (stripe_width - 1) / 2;
+            batch_corrs_bytes = batch_num_corrs * sizeof(float);
+            dim3 num_blocks(batch_num_corrs);
+
+            bed_marker_corr_kendall_npn_batched_row<<<num_blocks, threads_per_block>>>(
+                gpu_marker_vals_row,
+                stripe_width,
+                num_individuals,
+                col_len_bytes,
+                results);
+            CudaCheckError();
+
+            // copy corr results to host
+            HANDLE_ERROR(
+                cudaMemcpy(
+                    marker_corrs[batch_result_start_host],
+                    gpu_marker_corrs,
+                    batch_corrs_bytes,
+                    cudaMemcpyDeviceToHost));
+
+            batch_result_start_host += batch_num_corrs;
+        }
 
         // next stripe is going to have one batch less
         --num_batches;
@@ -152,18 +176,6 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
         gpu_marker_vals_row = tmp;
     }
 
-    int blocks_per_grid = marker_output_length;
-    HANDLE_ERROR(cudaMalloc(&gpu_marker_vals, marker_vals_bytes));
-    HANDLE_ERROR(
-        cudaMemcpy(gpu_marker_vals, marker_vals, marker_vals_bytes, cudaMemcpyHostToDevice));
-    HANDLE_ERROR(cudaMalloc(&gpu_marker_corrs, marker_output_bytes));
-
-    bed_marker_corr_kendall_npn<<<blocks_per_grid, threads_per_block>>>(
-        gpu_marker_vals, num_markers, num_individuals, col_len_bytes, gpu_marker_corrs);
-    CudaCheckError();
-
-    HANDLE_ERROR(
-        cudaMemcpy(marker_corrs, gpu_marker_corrs, marker_output_bytes, cudaMemcpyDeviceToHost));
     HANDLE_ERROR(cudaFree(gpu_marker_corrs));
 
     // markers vs phen
