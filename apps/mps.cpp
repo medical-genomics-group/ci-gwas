@@ -178,6 +178,8 @@ void corr(int argc, char *argv[])
         exit(1);
     }
 
+    double device_mem_gb = atof((std::string)argv[4]);
+
     // check that paths are valid
     // TODO: figure out how to glob files and check that at least one .phen is present
     std::string out_dir = (std::string)argv[2];
@@ -264,17 +266,33 @@ void corr(int argc, char *argv[])
     
     double req_mem_gb = (double)req_mem_bytes * std::pow(10, -9);
     
-    // TODO: check if enough memory on device
+    if (req_mem_gb < device_mem_gb)
+    {
+        // figure out batch size
+        double b = (double)num_individuals / 4.0;
+        size_t max_batch_size =
+            (size_t)(
+                -b + std::sqrt(b * b - (4.0 * (double)num_individuals * (double)num_phen - (double)req_mem_bytes)));
+        size_t row_width = max_batch_size / 2;
 
-    printf("Calling correlation main\n");
+        printf("Device mem < required mem; Running tiled routine. \n");
 
-    // compute correlations
-    cu_corr_npn(marker_vals.data(), phen_vals.data(), num_markers, num_individuals, num_phen,
-                marker_means.data(), marker_stds.data(), marker_corr.data(), marker_phen_corr.data(),
-                phen_corr.data());
+        cu_corr_npn_batched(
+            marker_vals.data(), phen_vals.data(), num_markers, num_individuals, num_phen,
+            marker_means.data(), marker_stds.data(), row_width, marker_corr.data(), marker_phen_corr.data(),
+            phen_corr.data()
+        );
+        // TODO: the output corrs matrices are ordered in a really stupid way,
+        // they need to be reordered.
+    } else {
+        printf("Calling correlation main\n");
+        // compute correlations
+        cu_corr_npn(marker_vals.data(), phen_vals.data(), num_markers, num_individuals, num_phen,
+                    marker_means.data(), marker_stds.data(), marker_corr.data(), marker_phen_corr.data(),
+                    phen_corr.data());
+    }
 
     printf("Writing results\n");
-
     // write results
     write_floats_to_binary(marker_corr.data(),
                            marker_corr_mat_size,
