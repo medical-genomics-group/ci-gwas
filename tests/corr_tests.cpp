@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <test_data/bed_marker_test_set.h>
-#include <mps/corr_compressed.h>
+#include <mps/corr_host.h>
+#include <mps/corr_kernels.h>
 
 // Demonstrate some basic assertions.
 TEST(HelloTest, BasicAssertions) {

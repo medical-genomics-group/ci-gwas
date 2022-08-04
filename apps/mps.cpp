@@ -6,7 +6,8 @@
 #include <array>
 #include <vector>
 
-#include <mps/corr_compressed.h>
+#include <mps/corr_host.h>
+#include <mps/corr_kernels.h>
 #include <mps/prep_markers.h>
 #include <mps/io.h>
 
