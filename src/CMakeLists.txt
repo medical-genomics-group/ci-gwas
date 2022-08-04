@@ -5,11 +5,7 @@ add_library(cuPC STATIC cuPC-S.cu ${HEADER_LIST})
 target_include_directories(cuPC PUBLIC ../include)
 target_compile_features(cuPC PUBLIC cxx_std_17)
 
-add_library(corr STATIC corr_host.cu ${HEADER_LIST})
-target_include_directories(corr PUBLIC ../include)
-target_compile_features(corr PUBLIC cxx_std_17)
-
-add_library(corr STATIC corr_kernels.cu ${HEADER_LIST})
+add_library(corr STATIC corr_host.cu corr_kernels.cu ${HEADER_LIST})
 target_include_directories(corr PUBLIC ../include)
 target_compile_features(corr PUBLIC cxx_std_17)
 
