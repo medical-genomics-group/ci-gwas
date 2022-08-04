@@ -175,6 +175,7 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
 
         // compute row markers vs phenotype data
         // everything is allocated, just gotta compute I believe
+        // TODO: this should be Kendall instead of pearson.
         dim3 num_blocks(num_marker_phen_corrs);
         marker_phen_corr_pearson<<<num_blocks, threads_per_block>>>(
             gpu_marker_vals_row,
