@@ -13,24 +13,24 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
                          const float *marker_std,
                          // the constant number of markers,
                          // i.e. half the total number of markers in a batch
-                         const size_t row_width,
+                         const size_t batch_stripe_width,
                          float *marker_corrs,
                          float *marker_phen_corrs,
                          float *phen_corrs)
 {
-    size_t num_full_stripes = (num_markers - 1) / row_width;
-    size_t nrows_small_stripe = (num_markers - 1) % row_width;
+    size_t num_full_stripes = (num_markers - 1) / batch_stripe_width;
+    size_t nrows_small_stripe = (num_markers - 1) % batch_stripe_width;
     bool small_stripe = nrows_small_stripe;
     size_t num_stripes = num_full_stripes + small_stripe;
 
-    size_t num_regular_batches = num_full_stripes / row_width - 1;
-    size_t ncols_small_batch = num_full_stripes % row_width;
+    size_t num_regular_batches = num_full_stripes / batch_stripe_width - 1;
+    size_t ncols_small_batch = num_full_stripes % batch_stripe_width;
     bool small_batch = (ncols_small_batch == 0);
     size_t num_batches = num_regular_batches + small_batch;
 
     // this is ceil
     size_t col_len_bytes = (num_individuals + 3) / 4 * sizeof(unsigned char);
-    size_t marker_vals_bytes = col_len_bytes * row_width;
+    size_t marker_vals_bytes = col_len_bytes * batch_stripe_width;
     size_t phen_vals_bytes = num_phen * num_individuals * sizeof(float);
 
     unsigned char *gpu_marker_vals_row;
@@ -44,8 +44,8 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
     float *gpu_marker_std;
 
     // batch output size
-    size_t marker_output_length = row_width * row_width;
-    size_t marker_phen_output_length = row_width * num_phen;
+    size_t marker_output_length = batch_stripe_width * batch_stripe_width;
+    size_t marker_phen_output_length = batch_stripe_width * num_phen;
     size_t phen_output_length = num_phen * (num_phen - 1) / 2;
 
     size_t marker_output_bytes = marker_output_length * sizeof(float);
@@ -93,7 +93,7 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
         }
         else
         {
-            stripe_width = row_width;
+            stripe_width = batch_stripe_width;
         }
 
         size_t num_marker_phen_corrs = stripe_width * num_phen;
@@ -111,7 +111,7 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
             }
             else
             {
-                batch_num_cols = row_width;
+                batch_num_cols = batch_stripe_width;
             }
             batch_data_bytes = batch_num_cols * col_len_bytes;
             batch_num_corrs = batch_num_cols * stripe_width;
@@ -192,7 +192,7 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
         // copy corr results to host
         HANDLE_ERROR(
             cudaMemcpy(
-                &marker_phen_corrs[stripe_ix * row_width],
+                &marker_phen_corrs[stripe_ix * batch_stripe_width],
                 gpu_marker_phen_corrs,
                 marker_phen_corrs_bytes,
                 cudaMemcpyDeviceToHost));
