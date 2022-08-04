@@ -234,16 +234,17 @@ __global__ void bed_marker_corr_kendall_npn_batched(
     size_t tix = threadIdx.x;
     size_t col = blockIdx.x;
     size_t row = blockIdx.y;
-    size_t data_start_a = col * col_len_bytes;
-    size_t data_start_b = row * col_len_bytes;
+    size_t data_start_b = col * col_len_bytes;
+    size_t data_start_a = row * col_len_bytes;
 
     float thread_sum[9] = {0.0};
     __shared__ float thread_sums[NUMTHREADS][9];
 
     for (size_t i = tix; i < col_len_bytes; i += NUMTHREADS)
     {
-        size_t aix = 4 * (size_t)(marker_vals[col_start_a + i]);
-        size_t bix = 4 * (size_t)(marker_vals[col_start_b + i]);
+        // look up table indices
+        size_t aix = 4 * (size_t)(row_marker_vals[data_start_a + i]);
+        size_t bix = 4 * (size_t)(col_marker_vals[data_start_b + i]);
         for (size_t j = 0; (j < 4) && (i * 4 + j < num_individuals); j++)
         {
             float val_a = gpu_bed_lut_a[(aix + j)];
@@ -289,6 +290,8 @@ __global__ void bed_marker_corr_kendall_npn_batched(
 // A O(n) runtime Kendall implementation for compressed genomic marker data.
 // The compression format is expected to be col-major .bed without NaN
 // and without leading magic numbers.
+// These are the correlations between the markers that are held constant
+// in a batch row.
 __global__ void bed_marker_corr_kendall_npn_batched_row(
     const unsigned char *row_marker_vals,
     const size_t num_rows,
@@ -308,8 +311,8 @@ __global__ void bed_marker_corr_kendall_npn_batched_row(
 
     for (size_t i = tix; i < col_len_bytes; i += NUMTHREADS)
     {
-        size_t aix = 4 * (size_t)(marker_vals[col_start_a + i]);
-        size_t bix = 4 * (size_t)(marker_vals[col_start_b + i]);
+        size_t aix = 4 * (size_t)(row_marker_vals[data_start_a + i]);
+        size_t bix = 4 * (size_t)(row_marker_vals[data_start_b + i]);
         for (size_t j = 0; (j < 4) && (i * 4 + j < num_individuals); j++)
         {
             float val_a = gpu_bed_lut_a[(aix + j)];

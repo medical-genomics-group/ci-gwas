@@ -179,7 +179,7 @@ void corr(int argc, char *argv[])
         exit(1);
     }
 
-    double device_mem_gb = atof((std::string)argv[4]);
+    double device_mem_gb = atof(argv[4]);
 
     // check that paths are valid
     // TODO: figure out how to glob files and check that at least one .phen is present
