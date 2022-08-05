@@ -24,12 +24,15 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
     bool small_stripe = nrows_small_stripe;
     size_t num_stripes_total = num_full_stripes + small_stripe;
 
-    size_t num_regular_batches = num_markers / batch_stripe_width - 1; // this checks out because we want
-                                                                       // ((nm - 1) - (bsw - 1)) / bsw =
-                                                                       // (nm - bsw) / bsw = nm / bsw - 1
-    size_t ncols_small_batch = num_full_stripes % batch_stripe_width;
+    size_t num_regular_batches = num_markers / batch_stripe_width - 1; // 1) this checks out because we want
+                                                                       //    ((nm - 1) - (bsw - 1)) / bsw =
+                                                                       //    (nm - bsw) / bsw = nm / bsw - 1
+                                                                       // 2) this is only for the first stripe
+                                                                       //    the next stripes will always have
+                                                                       //    one less.
+    size_t ncols_small_batch = num_markers % batch_stripe_width;
     bool small_batch = (ncols_small_batch == 0);
-    size_t num_batches = num_regular_batches + small_batch;
+    size_t num_batches = num_regular_batches + small_batch; // this is only for the first stripe.
 
     size_t col_len_bytes = (num_individuals + 3) / 4 * sizeof(unsigned char); // this is ceil
     size_t marker_vals_bytes = col_len_bytes * batch_stripe_width;
