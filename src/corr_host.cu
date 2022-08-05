@@ -49,15 +49,13 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
     float *gpu_marker_mean;
     float *gpu_marker_std;
 
-    // batch output size
-    size_t marker_output_length = batch_stripe_width * batch_stripe_width;
-    size_t marker_phen_output_length = batch_stripe_width * num_phen;
+    size_t batch_marker_output_length = batch_stripe_width * batch_stripe_width;
+    size_t batch_marker_phen_output_length = batch_stripe_width * num_phen;
     size_t phen_output_length = num_phen * (num_phen - 1) / 2;
 
-    size_t marker_output_bytes = marker_output_length * sizeof(float);
-    size_t marker_phen_output_bytes = marker_phen_output_length * sizeof(float);
+    size_t batch_marker_output_bytes = batch_marker_output_length * sizeof(float);
+    size_t batch_marker_phen_output_bytes = batch_marker_phen_output_length * sizeof(float);
     size_t phen_output_bytes = phen_output_length * sizeof(float);
-    // for now we don't partition the stats
     size_t marker_stats_bytes = num_markers * sizeof(float);
 
     int threads_per_block = NUMTHREADS;
@@ -76,11 +74,11 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
     // allocate and copy over phenotype data
     HANDLE_ERROR(cudaMalloc(&gpu_phen_vals, phen_vals_bytes));
     HANDLE_ERROR(cudaMemcpy(gpu_phen_vals, phen_vals, phen_vals_bytes, cudaMemcpyHostToDevice));
-    HANDLE_ERROR(cudaMalloc(&gpu_marker_phen_corrs, marker_phen_output_bytes));
+    HANDLE_ERROR(cudaMalloc(&gpu_marker_phen_corrs, batch_marker_phen_output_bytes));
 
     // markers vs markers
     // allocate space for correlation results
-    HANDLE_ERROR(cudaMalloc(&gpu_marker_corrs, marker_output_bytes));
+    HANDLE_ERROR(cudaMalloc(&gpu_marker_corrs, batch_marker_output_bytes));
 
     // copy row marker data for first stripe to device
     HANDLE_ERROR(
