@@ -20,8 +20,8 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
                          float *phen_corrs)
 {
     size_t num_full_stripes = (num_markers - 1) / batch_stripe_width;
-    size_t nrows_small_stripe = (num_markers - 1) % batch_stripe_width;
-    bool small_stripe = nrows_small_stripe;
+    size_t last_stripe_width = (num_markers - 1) % batch_stripe_width;
+    bool small_stripe = last_stripe_width;
     size_t num_stripes_total = num_full_stripes + small_stripe;
 
     size_t num_regular_batches = num_markers / batch_stripe_width - 1; // 1) this checks out because we want
@@ -93,7 +93,7 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
         size_t stripe_width;
         if (small_stripe && stripe_ix == (num_stripes_total - 1))
         {
-            stripe_width = nrows_small_stripe;
+            stripe_width = last_stripe_width;
         }
         else
         {
