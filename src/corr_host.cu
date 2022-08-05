@@ -4,6 +4,7 @@
 #include <mps/corr_kernels.h>
 #include <mps/gpuerrors.h>
 
+// TODO: fully review this function
 void cu_corr_npn_batched(const unsigned char *marker_vals,
                          const float *phen_vals,
                          const size_t num_markers,
