@@ -36,7 +36,8 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
 
     size_t col_len_bytes = (num_individuals + 3) / 4 * sizeof(unsigned char); // this is ceil
     size_t batch_marker_vals_bytes = col_len_bytes * batch_stripe_width;
-    size_t phen_vals_bytes = num_phen * num_individuals * sizeof(float);
+    size_t phen_vals_bytes = num_phen * num_individuals * sizeof(float); // We load all the phenotype data,
+                                                                         // no batching here
 
     unsigned char *gpu_marker_vals_row;
     unsigned char *gpu_marker_vals_col;
