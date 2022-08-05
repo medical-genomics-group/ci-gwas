@@ -158,9 +158,12 @@ __global__ void marker_corr_pearson(const unsigned char *marker_vals,
 // A O(n) runtime Kendall implementation for compressed genomic marker data.
 // The compression format is expected to be col-major .bed without NaN
 // and without leading magic numbers.
-__global__ void bed_marker_corr_kendall_npn(const unsigned char *marker_vals,
-                                            const size_t num_markers, const size_t num_individuals,
-                                            const size_t col_len_bytes, float *results)
+__global__ void bed_marker_corr_kendall_npn(
+    const unsigned char *marker_vals,
+    const size_t num_markers,
+    const size_t num_individuals,
+    const size_t col_len_bytes,
+    float *results)
 {
     size_t tix = threadIdx.x;
     size_t row;
@@ -283,6 +286,7 @@ __global__ void bed_marker_corr_kendall_npn_batched(
 
         float kendall_corr = (p - q) / sqrt((p + q + t) * (p + q + u));
 
+        // TODO:: are these indices correct?
         results[num_col_markers * row + col] = sin(M_PI / 2 * kendall_corr);
     }
 }
@@ -351,6 +355,7 @@ __global__ void bed_marker_corr_kendall_npn_batched_row(
 
         float kendall_corr = (p - q) / sqrt((p + q + t) * (p + q + u));
 
+        // TODO:: are these indices correct?
         results[blockIdx.x] = sin(M_PI / 2 * kendall_corr);
     }
 }
