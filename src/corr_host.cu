@@ -35,7 +35,7 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
     size_t num_batches = num_regular_batches + small_batch; // this is only for the first stripe.
 
     size_t col_len_bytes = (num_individuals + 3) / 4 * sizeof(unsigned char); // this is ceil
-    size_t marker_vals_bytes = col_len_bytes * batch_stripe_width;
+    size_t batch_marker_vals_bytes = col_len_bytes * batch_stripe_width;
     size_t phen_vals_bytes = num_phen * num_individuals * sizeof(float);
 
     unsigned char *gpu_marker_vals_row;
@@ -62,8 +62,8 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
     int threads_per_block = NUMTHREADS;
 
     // allocate space for marker subsets
-    HANDLE_ERROR(cudaMalloc(&gpu_marker_vals_row, marker_vals_bytes));
-    HANDLE_ERROR(cudaMalloc(&gpu_marker_vals_col, marker_vals_bytes));
+    HANDLE_ERROR(cudaMalloc(&gpu_marker_vals_row, batch_marker_vals_bytes));
+    HANDLE_ERROR(cudaMalloc(&gpu_marker_vals_col, batch_marker_vals_bytes));
 
     // copy marker stats over, assume that there is always space to fit them in
     // without partitioning
@@ -85,7 +85,7 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
     HANDLE_ERROR(
         cudaMemcpy(gpu_marker_vals_row,
                    &marker_vals[0],
-                   marker_vals_bytes,
+                   batch_marker_vals_bytes,
                    cudaMemcpyHostToDevice));
 
     size_t batch_result_start_host = 0;
@@ -103,7 +103,7 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
 
         size_t num_marker_phen_corrs = stripe_width * num_phen;
         size_t marker_phen_corrs_bytes = num_marker_phen_corrs * sizeof(float);
-        size_t batch_data_ix = marker_vals_bytes * (num_regular_batches + 1);
+        size_t batch_data_ix = batch_marker_vals_bytes * (num_regular_batches + 1);
         size_t batch_data_bytes;
         size_t batch_num_cols = 0;
         size_t batch_num_corrs;
