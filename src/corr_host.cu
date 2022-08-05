@@ -5,6 +5,7 @@
 #include <mps/gpuerrors.h>
 
 // TODO: fully review this function
+// TODO: test this function
 void cu_corr_npn_batched(const unsigned char *marker_vals,
                          const float *phen_vals,
                          const size_t num_markers,
@@ -12,9 +13,8 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
                          const size_t num_phen,
                          const float *marker_mean,
                          const float *marker_std,
-                         // the constant number of markers,
-                         // i.e. half the total number of markers in a batch
-                         const size_t batch_stripe_width,
+                         const size_t batch_stripe_width, // const number of markers
+                                                          // i.e. half the total num markers in a batch
                          float *marker_corrs,
                          float *marker_phen_corrs,
                          float *phen_corrs)
@@ -22,15 +22,16 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
     size_t num_full_stripes = (num_markers - 1) / batch_stripe_width;
     size_t nrows_small_stripe = (num_markers - 1) % batch_stripe_width;
     bool small_stripe = nrows_small_stripe;
-    size_t num_stripes = num_full_stripes + small_stripe;
+    size_t num_stripes_total = num_full_stripes + small_stripe;
 
-    size_t num_regular_batches = num_full_stripes / batch_stripe_width - 1;
+    size_t num_regular_batches = num_markers / batch_stripe_width - 1; // this checks out because we want
+                                                                       // ((nm - 1) - (bsw - 1)) / bsw =
+                                                                       // (nm - bsw) / bsw = nm / bsw - 1
     size_t ncols_small_batch = num_full_stripes % batch_stripe_width;
     bool small_batch = (ncols_small_batch == 0);
     size_t num_batches = num_regular_batches + small_batch;
 
-    // this is ceil
-    size_t col_len_bytes = (num_individuals + 3) / 4 * sizeof(unsigned char);
+    size_t col_len_bytes = (num_individuals + 3) / 4 * sizeof(unsigned char); // this is ceil
     size_t marker_vals_bytes = col_len_bytes * batch_stripe_width;
     size_t phen_vals_bytes = num_phen * num_individuals * sizeof(float);
 
@@ -85,10 +86,10 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
                    cudaMemcpyHostToDevice));
 
     size_t batch_result_start_host = 0;
-    for (size_t stripe_ix = 0; stripe_ix < num_stripes; ++stripe_ix)
+    for (size_t stripe_ix = 0; stripe_ix < num_stripes_total; ++stripe_ix)
     {
         size_t stripe_width;
-        if (small_stripe && stripe_ix == (num_stripes - 1))
+        if (small_stripe && stripe_ix == (num_stripes_total - 1))
         {
             stripe_width = nrows_small_stripe;
         }
