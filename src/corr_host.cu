@@ -33,6 +33,7 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
     size_t ncols_small_batch = num_markers % batch_stripe_width;
     bool small_batch = (ncols_small_batch == 0);
     size_t num_batches = num_regular_batches + small_batch; // this is only for the first stripe.
+                                                            // but it is adjusted later in the loop.
 
     size_t col_len_bytes = (num_individuals + 3) / 4 * sizeof(unsigned char); // this is ceil
     size_t batch_marker_vals_bytes = col_len_bytes * batch_stripe_width;
@@ -88,6 +89,7 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
                    cudaMemcpyHostToDevice));
 
     size_t batch_result_start_host = 0;
+    // TODO: put loop body in new function, this is hard to read
     for (size_t stripe_ix = 0; stripe_ix < num_stripes_total; ++stripe_ix)
     {
         size_t stripe_width;
@@ -102,7 +104,17 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
 
         size_t num_marker_phen_corrs = stripe_width * num_phen;
         size_t marker_phen_corrs_bytes = num_marker_phen_corrs * sizeof(float);
-        size_t batch_data_ix = batch_marker_vals_bytes * (num_regular_batches + 1);
+        size_t batch_data_ix = batch_marker_vals_bytes * (num_regular_batches + 1); // this is the index to the
+                                                                                    // first byte of the marker
+                                                                                    // data of the batch.
+                                                                                    // TODO: also, this is
+                                                                                    // clearly wrong, because
+                                                                                    // it makes every
+                                                                                    // stripe start with the same
+                                                                                    // batch_data_ix.
+                                                                                    // Ideally, I should just
+                                                                                    // adjust this after
+                                                                                    // every colset loaded.
         size_t batch_data_bytes;
         size_t batch_num_cols = 0;
         size_t batch_num_corrs;
