@@ -49,6 +49,38 @@ TEST(CuCorrNpnTest, ExpectedReturnVals) {
     }   
 }
 
+TEST(CuCorrNpnBatchedTest, ExpectedReturnVals) {
+    const size_t num_markers = BMT2_NUM_MARKERS;
+    const size_t num_individuals = BMT2_NUM_INDIVIDUALS;
+    const size_t num_phen = BMT2_NUM_PHEN;
+    const size_t marker_cm_size = corr_matrix_size(num_markers);
+    const size_t marker_phen_cm_size = num_markers * num_phen;
+    const size_t phen_cm_size = corr_matrix_size(num_phen);
+    const size_t stripe_width = 3;
+
+    float marker_corr[marker_cm_size];
+    memset(marker_corr, 0.0, sizeof(marker_corr));
+    float marker_phen_corr[marker_phen_cm_size];
+    memset(marker_phen_corr, 0.0, sizeof(marker_phen_corr));
+    float phen_corr[phen_cm_size];
+    memset(phen_corr, 0.0, sizeof(phen_corr));
+    
+    cu_corr_npn_batched(bmt2_marker_vals, bmt2_phen_vals, num_markers, num_individuals, num_phen,
+                 bmt2_marker_mean, bmt2_marker_std, stripe_width, marker_corr, marker_phen_corr, phen_corr);
+    
+    for (size_t i = 0; i < marker_cm_size; i++) {
+        EXPECT_NEAR(marker_corr[i], bmt2_marker_corrs[i], 0.00001);
+    }
+
+    for (size_t i = 0; i < marker_phen_cm_size; i++) {
+        EXPECT_NEAR(marker_phen_corr[i], bmt2_marker_phen_corrs_pearson[i], 0.00001);
+    }
+
+    for (size_t i = 0; i < phen_cm_size; i++) {
+        EXPECT_NEAR(phen_corr[i], bmt2_phen_corrs[i], 0.00001);
+    }
+}
+
 TEST(CuMarkerPearsonTest, ExpectedReturnVals)
 {
     const size_t num_markers = BMT_NUM_MARKERS;
