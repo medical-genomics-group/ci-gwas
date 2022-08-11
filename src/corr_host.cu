@@ -6,18 +6,21 @@
 
 // TODO: fully review this function
 // TODO: test this function
-void cu_corr_npn_batched(const unsigned char *marker_vals,
-                         const float *phen_vals,
-                         const size_t num_markers,
-                         const size_t num_individuals,
-                         const size_t num_phen,
-                         const float *marker_mean,
-                         const float *marker_std,
-                         const size_t batch_stripe_width, // const number of markers
-                                                          // i.e. half the total num markers in a batch
-                         float *marker_corrs,
-                         float *marker_phen_corrs,
-                         float *phen_corrs)
+void cu_corr_npn_batched(
+    const unsigned char *marker_vals,
+    const float *phen_vals,
+    const size_t num_markers,
+    const size_t num_individuals,
+    const size_t num_phen,
+    const float *marker_mean,
+    const float *marker_std,
+    const size_t batch_stripe_width, // const number of markers
+                                     // i.e. half the total num markers in a batch
+    float *marker_corrs_tmp,         // storage of batch results, have to be sorted into marker_corrs
+                                     // immediately after memcpy
+    float *marker_corrs,
+    float *marker_phen_corrs,
+    float *phen_corrs)
 {
     size_t num_full_stripes = (num_markers - 1) / batch_stripe_width;
     size_t last_stripe_width = (num_markers - 1) % batch_stripe_width;
@@ -139,7 +142,7 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
                            batch_data_bytes,
                            cudaMemcpyHostToDevice));
 
-            // I am computing a rectangular matrix thing, so can use 2D blocks
+            // compute marker correlations
             bed_marker_corr_kendall_npn_batched<<<num_blocks, threads_per_block>>>(
                 gpu_marker_vals_row,
                 gpu_marker_vals_col,

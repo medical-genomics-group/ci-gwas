@@ -9,6 +9,7 @@ void cu_corr_npn_batched(
     const float *marker_mean,
     const float *marker_std,
     const size_t row_width,
+    float *marker_corrs_tmp,
     float *marker_corrs,
     float *marker_phen_corrs,
     float *phen_corrs);
