@@ -105,33 +105,28 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
 
         size_t num_marker_phen_corrs = stripe_width * num_phen;
         size_t marker_phen_corrs_bytes = num_marker_phen_corrs * sizeof(float);
-        size_t batch_data_ix = batch_marker_vals_bytes * (num_regular_batches + 1); // this is the index to the
-                                                                                    // first byte of the marker
-                                                                                    // data of the batch.
-                                                                                    // TODO: also, this is
-                                                                                    // clearly wrong, because
-                                                                                    // it makes every
-                                                                                    // stripe start with the same
-                                                                                    // batch_data_ix.
-                                                                                    // Ideally, I should just
-                                                                                    // adjust this after
-                                                                                    // every colset loaded.
+        size_t batch_data_ix = batch_marker_vals_bytes * (num_regular_batches + 1); // this is the index of the
+                                                                                    // first byte of the first
+                                                                                    // column of the first
+                                                                                    // (rightmost) batch
+                                                                                    // in each stripe
         size_t batch_data_bytes;
-        size_t batch_num_cols = 0;
+        size_t batch_num_cols;
         size_t batch_num_corrs;
         size_t batch_corrs_bytes;
+
+        if (small_batch)
+        {
+            batch_num_cols = ncols_small_batch;
+        }
+        else
+        {
+            batch_num_cols = batch_stripe_width;
+        }
 
         // Iterate through batches in stripe
         for (size_t batch_ix = 0; batch_ix < num_batches; ++batch_ix)
         {
-            if (small_batch && batch_ix == 0)
-            {
-                batch_num_cols = ncols_small_batch;
-            }
-            else
-            {
-                batch_num_cols = batch_stripe_width;
-            }
             batch_data_bytes = batch_num_cols * col_len_bytes;
             batch_num_corrs = batch_num_cols * stripe_width;
             batch_corrs_bytes = batch_num_corrs * sizeof(float);
@@ -164,6 +159,7 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
 
             batch_data_ix -= batch_data_bytes;
             batch_result_start_host += batch_num_corrs;
+            batch_num_cols = batch_stripe_width;
         }
 
         // process row markers vs row markers
