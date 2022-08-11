@@ -89,6 +89,7 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
                    cudaMemcpyHostToDevice));
 
     size_t batch_result_start_host = 0;
+    // Iterate through stripes
     // TODO: put loop body in new function, this is hard to read
     for (size_t stripe_ix = 0; stripe_ix < num_stripes_total; ++stripe_ix)
     {
@@ -119,6 +120,8 @@ void cu_corr_npn_batched(const unsigned char *marker_vals,
         size_t batch_num_cols = 0;
         size_t batch_num_corrs;
         size_t batch_corrs_bytes;
+
+        // Iterate through batches in stripe
         for (size_t batch_ix = 0; batch_ix < num_batches; ++batch_ix)
         {
             if (small_batch && batch_ix == 0)
