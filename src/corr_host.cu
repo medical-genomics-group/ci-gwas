@@ -3,6 +3,7 @@
 #include <mps/corr_host.h>
 #include <mps/corr_kernels.h>
 #include <mps/gpuerrors.h>
+#include <vector>
 
 // TODO: fully review this function
 // TODO: test this function
@@ -16,8 +17,6 @@ void cu_corr_npn_batched(
     const float *marker_std,
     const size_t batch_stripe_width, // const number of markers
                                      // i.e. half the total num markers in a batch
-    float *marker_corrs_tmp,         // storage of batch results, have to be sorted into marker_corrs
-                                     // immediately after memcpy
     float *marker_corrs,
     float *marker_phen_corrs,
     float *phen_corrs)
@@ -56,6 +55,8 @@ void cu_corr_npn_batched(
     size_t batch_marker_output_length = batch_stripe_width * batch_stripe_width;
     size_t batch_marker_phen_output_length = batch_stripe_width * num_phen;
     size_t phen_output_length = num_phen * (num_phen - 1) / 2;
+
+    std::vector<float> marker_corrs_tmp(batch_marker_output_length, 0.0);
 
     size_t batch_marker_output_bytes = batch_marker_output_length * sizeof(float);
     size_t batch_marker_phen_output_bytes = batch_marker_phen_output_length * sizeof(float);
@@ -106,13 +107,16 @@ void cu_corr_npn_batched(
             stripe_width = batch_stripe_width;
         }
 
+        size_t stripe_first_row_ix = batch_stripe_width * stripe_ix;
         size_t num_marker_phen_corrs = stripe_width * num_phen;
         size_t marker_phen_corrs_bytes = num_marker_phen_corrs * sizeof(float);
-        size_t batch_data_ix = batch_marker_vals_bytes * (num_regular_batches + 1); // this is the index of the
-                                                                                    // first byte of the first
-                                                                                    // column of the first
-                                                                                    // (rightmost) batch
-                                                                                    // in each stripe
+        size_t batch_data_ix = batch_marker_vals_bytes * (num_regular_batches + 1);     // this is the index of the
+                                                                                        // first byte of the first
+                                                                                        // column of the first
+                                                                                        // (rightmost) batch
+                                                                                        // in each stripe
+        size_t batch_first_col_ix = batch_stripe_width * (num_regular_batches + 1) - 1; // ix 0 is the first col
+                                                                                        // off the diagonal
         size_t batch_data_bytes;
         size_t batch_num_cols;
         size_t batch_num_corrs;
@@ -155,14 +159,26 @@ void cu_corr_npn_batched(
             // copy corr results to host
             HANDLE_ERROR(
                 cudaMemcpy(
-                    &marker_corrs[batch_result_start_host],
+                    marker_corrs_tmp.data(),
                     gpu_marker_corrs,
                     batch_corrs_bytes,
                     cudaMemcpyDeviceToHost));
 
+            // put correlations from tmp into right place
+            size_t rix, cix, lin_ix;
+            for (size_t ix = 0; ix < batch_num_corrs; ++ix)
+            {
+                rix = stripe_first_row_ix + (ix / batch_num_cols);
+                cix = batch_first_col_ix + (ix % batch_num_cols);
+                lin_ix = (rix * (2 * num_markers - rix - 1) / 2) + cix; // r (2p - r - 1) / 2 is the first ix of
+                                                                        // of the row
+                marker_corrs[lin_ix] = marker_corrs_tmp[ix];
+            }
+
             batch_data_ix -= batch_data_bytes;
             batch_result_start_host += batch_num_corrs;
             batch_num_cols = batch_stripe_width;
+            batch_first_col_ix -= batch_stripe_width;
         }
 
         // process row markers vs row markers
@@ -183,10 +199,12 @@ void cu_corr_npn_batched(
             // copy corr results to host
             HANDLE_ERROR(
                 cudaMemcpy(
-                    &marker_corrs[batch_result_start_host],
+                    marker_corrs_tmp.data(),
                     gpu_marker_corrs,
                     batch_corrs_bytes,
                     cudaMemcpyDeviceToHost));
+
+            // Sort
 
             batch_result_start_host += batch_num_corrs;
         }
