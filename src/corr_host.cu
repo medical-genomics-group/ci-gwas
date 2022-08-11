@@ -56,7 +56,11 @@ void cu_corr_npn_batched(
     size_t batch_marker_phen_output_length = batch_stripe_width * num_phen;
     size_t phen_output_length = num_phen * (num_phen - 1) / 2;
 
+    // allocate tmp space in host memory
+    // batch results are put here before they are put in the full output vec
+    // in the correct order
     std::vector<float> marker_corrs_tmp(batch_marker_output_length, 0.0);
+    std::vector<float> marker_phen_corrs_tmp(batch_marker_phen_output_length, 0.0);
 
     size_t batch_marker_output_bytes = batch_marker_output_length * sizeof(float);
     size_t batch_marker_phen_output_bytes = batch_marker_phen_output_length * sizeof(float);
@@ -165,6 +169,7 @@ void cu_corr_npn_batched(
                     cudaMemcpyDeviceToHost));
 
             // put correlations from tmp into right place
+            // marker_corrs is upper traingular, batch is rectangular
             size_t rix, cix, lin_ix;
             for (size_t ix = 0; ix < batch_num_corrs; ++ix)
             {
@@ -204,13 +209,25 @@ void cu_corr_npn_batched(
                     batch_corrs_bytes,
                     cudaMemcpyDeviceToHost));
 
-            // Sort
+            // put correlations from tmp into right place
+            // marker_corrs is upper traingular, batch is upper triangular
+            size_t rix, cix, glob_lin_ix;
+            size_t loc_lin_ix = 0;
+            for (size_t r = 0; r < (stripe_width - 1); ++r)
+            {
+                rix = stripe_first_row_ix + r;
+                for (size_t c = 0; r < (stripe_width - 1 - rix); ++c)
+                {
+                    glob_lin_ix = (rix * (2 * num_markers - rix - 1) / 2) + cix;
+                    loc_lin_ix += 1;
+                    marker_corrs[glob_lin_ix] = marker_corrs_tmp[loc_lin_ix];
+                }
+            }
 
             batch_result_start_host += batch_num_corrs;
         }
 
         // compute row markers vs phenotype data
-        // everything is allocated, just gotta compute I believe
         // TODO: this should be Kendall instead of pearson.
         dim3 num_blocks(num_marker_phen_corrs);
         marker_phen_corr_pearson<<<num_blocks, threads_per_block>>>(
