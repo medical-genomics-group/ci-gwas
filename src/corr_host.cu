@@ -245,10 +245,20 @@ void cu_corr_npn_batched(
         // copy corr results to host
         HANDLE_ERROR(
             cudaMemcpy(
-                &marker_phen_corrs[stripe_ix * batch_stripe_width],
+                //&marker_phen_corrs[stripe_ix * batch_stripe_width],
+                marker_phen_corr_tmp.data(),
                 gpu_marker_phen_corrs,
                 marker_phen_corrs_bytes,
                 cudaMemcpyDeviceToHost));
+
+        // sort
+        // marker_phen_corrs is rectangular (p x num_phen), batch rectangular (stripe_width x num_phen)
+        for (size_t ix = 0; ix < num_marker_phen_corrs; ++ix)
+        {
+            rix = stripe_first_row_ix + (ix / num_phen);
+            cix = ix % num_phen;
+            marker_phen_corrs[cix + (rix * num_phen)] = marker_phen_corrs_tmp[ix];
+        }
 
         // next stripe is going to have one batch less
         --num_batches;

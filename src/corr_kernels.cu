@@ -22,11 +22,16 @@ __device__ void row_col_ix_from_linear_ix(const size_t lin_ix,
     *col_ix = (size_t)col;
 }
 
-__global__ void marker_phen_corr_pearson(const unsigned char *marker_vals, const float *phen_vals,
-                                         const size_t num_markers, const size_t num_individuals,
-                                         const size_t num_phen, const size_t col_len_bytes,
-                                         const float *marker_mean, const float *marker_std,
-                                         float *results)
+__global__ void marker_phen_corr_pearson(
+    const unsigned char *marker_vals,
+    const float *phen_vals,
+    const size_t num_markers,
+    const size_t num_individuals,
+    const size_t num_phen,
+    const size_t col_len_bytes,
+    const float *marker_mean,
+    const float *marker_std,
+    float *results)
 {
     size_t tix = threadIdx.x;
     size_t lin_ix = blockIdx.x;
@@ -72,8 +77,11 @@ __global__ void marker_phen_corr_pearson(const unsigned char *marker_vals, const
 }
 
 // Compute Pearson's r between a pair of standardized phenotype vectors.
-__global__ void phen_corr_pearson(const float *phen_vals, const size_t num_individuals,
-                                  const size_t num_phen, float *results)
+__global__ void phen_corr_pearson(
+    const float *phen_vals,
+    const size_t num_individuals,
+    const size_t num_phen,
+    float *results)
 {
     size_t tix = threadIdx.x;
     size_t row;
