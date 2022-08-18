@@ -4,6 +4,8 @@
 #include <mps/corr_kernels.h>
 #include <mps/gpuerrors.h>
 #include <vector>
+#include <iostream>
+#include <iomanip>
 
 // TODO: fully review this function
 // TODO: test this function
@@ -21,6 +23,8 @@ void cu_corr_npn_batched(
     float *marker_phen_corrs,
     float *phen_corrs)
 {
+    std::cerr << "starting cu_corr_npn_batched" << std::endl;
+
     size_t num_full_stripes = (num_markers - 1) / batch_stripe_width;
     size_t last_stripe_width = (num_markers - 1) % batch_stripe_width;
     bool small_stripe = last_stripe_width;
@@ -33,7 +37,11 @@ void cu_corr_npn_batched(
                                                                        //    the next stripes will always have
                                                                        //    one less.
     size_t ncols_small_batch = num_markers % batch_stripe_width;
-    bool small_batch = (ncols_small_batch == 0);
+    bool small_batch = (ncols_small_batch > 0);
+
+    std::cerr << "small_batch: " << small_batch << std::endl;
+    std::cerr << "ncols_small_batch: " << ncols_small_batch << std::endl;
+
     size_t num_batches = num_regular_batches + small_batch; // this is only for the first stripe.
                                                             // but it is adjusted later in the loop.
 
@@ -96,11 +104,17 @@ void cu_corr_npn_batched(
                    batch_marker_vals_bytes,
                    cudaMemcpyHostToDevice));
 
+
+    std::cerr << "starting stripe loop" << std::endl;
+
     size_t batch_result_start_host = 0;
     // Iterate through stripes
     // TODO: put loop body in new function, this is hard to read
     for (size_t stripe_ix = 0; stripe_ix < num_stripes_total; ++stripe_ix)
     {
+
+        std::cerr << "stripe: " << stripe_ix << std::endl;
+
         size_t stripe_width;
         if (small_stripe && stripe_ix == (num_stripes_total - 1))
         {
@@ -138,10 +152,14 @@ void cu_corr_npn_batched(
         // Iterate through batches in stripe
         for (size_t batch_ix = 0; batch_ix < num_batches; ++batch_ix)
         {
+            std::cerr << "batch: " << batch_ix << std::endl;
+
             batch_data_bytes = batch_num_cols * col_len_bytes;
             batch_num_corrs = batch_num_cols * stripe_width;
             batch_corrs_bytes = batch_num_corrs * sizeof(float);
             dim3 num_blocks(batch_num_cols, stripe_width);
+
+            std::cerr << "loading " << (int)batch_data_bytes << " bytes starting with byte " << batch_data_ix  << std::endl;
 
             // copy col marker data to device
             HANDLE_ERROR(
@@ -149,6 +167,17 @@ void cu_corr_npn_batched(
                            &marker_vals[batch_data_ix],
                            batch_data_bytes,
                            cudaMemcpyHostToDevice));
+
+            std::cerr << "computing marker corrs" << std::endl;
+           
+            // TODO: do we have the right data on the device?
+
+            //for (size_t ix = 0; ix < batch_data_bytes; ++ix) 
+            //{
+            //    std::cerr << std::hex << std::setfill('0') << std::setw(2) << (int)marker_vals[batch_data_ix + ix] << " ";
+            //    
+            //}
+            //std::cerr << std::endl;
 
             // compute marker correlations
             bed_marker_corr_kendall_npn_batched<<<num_blocks, threads_per_block>>>(
@@ -159,6 +188,8 @@ void cu_corr_npn_batched(
                 col_len_bytes,
                 gpu_marker_corrs);
             CudaCheckError();
+ 
+            std::cerr << "copying to host" << std::endl;
 
             // copy corr results to host
             HANDLE_ERROR(
@@ -168,24 +199,46 @@ void cu_corr_npn_batched(
                     batch_corrs_bytes,
                     cudaMemcpyDeviceToHost));
 
-            // put correlations from tmp into right place
-            // marker_corrs is upper traingular, batch is rectangular
-            size_t rix, cix, lin_ix;
-            for (size_t ix = 0; ix < batch_num_corrs; ++ix)
-            {
-                rix = stripe_first_row_ix + (ix / batch_num_cols);
-                cix = batch_first_col_ix + (ix % batch_num_cols);
-                lin_ix = (rix * (2 * num_markers - rix - 1) / 2) + cix; // r (2p - r - 1) / 2 is the first ix of
-                                                                        // of the row
-                marker_corrs[lin_ix] = marker_corrs_tmp[ix];
+            std::cerr << "corrs before sort:" << std::endl;
+            for (size_t ix = 0; ix < batch_num_corrs; ++ix) {
+                std::cerr << marker_corrs_tmp[ix] << std::endl;
             }
 
-            batch_data_ix -= batch_data_bytes;
+            std::cerr << "sorting on host" << std::endl;
+
+            // put correlations from tmp into right place
+            // marker_corrs is upper triangular, batch is rectangular
+            size_t rix, cix, glob_lin_ix;
+            size_t loc_lin_ix = 0;
+            for (size_t r = 0; r < stripe_width; ++r) {
+                rix = stripe_first_row_ix + r;
+                for (size_t c = batch_first_col_ix; c < batch_num_cols; ++c) {
+                    cix = batch_first_col_ix + c;
+                    glob_lin_ix = (rix * (2 * num_markers - rix - 1) / 2) + cix; 
+                    marker_corrs[glob_lin_ix] = marker_corrs_tmp[loc_lin_ix];
+                    ++loc_lin_ix;
+                }
+            }
+
+
+            //size_t rix, cix, lin_ix;
+            //for (size_t ix = 0; ix < batch_num_corrs; ++ix)
+            //{
+            //    rix = stripe_first_row_ix + (ix / batch_num_cols);
+            //    cix = batch_first_col_ix + (ix % batch_num_cols);
+            //    lin_ix = (rix * (2 * num_markers - rix - 1) / 2) + cix; // r (2p - r - 1) / 2 is the first ix of
+            //                                                            // of the row
+            //    marker_corrs[lin_ix] = marker_corrs_tmp[ix];
+            //}
+
+            batch_data_ix -= batch_marker_vals_bytes;
             batch_result_start_host += batch_num_corrs;
             batch_num_cols = batch_stripe_width;
             batch_first_col_ix -= batch_stripe_width;
         }
 
+
+        //std::cerr << "preparing row marker triangle corrs" << std::endl;
         // process row markers vs row markers
         if (stripe_width > 1)
         {
@@ -193,6 +246,7 @@ void cu_corr_npn_batched(
             batch_corrs_bytes = batch_num_corrs * sizeof(float);
             dim3 num_blocks(batch_num_corrs);
 
+            //std::cerr << "computing triangle corrs" << std::endl;
             bed_marker_corr_kendall_npn_batched_row<<<num_blocks, threads_per_block>>>(
                 gpu_marker_vals_row,
                 stripe_width,
@@ -201,6 +255,7 @@ void cu_corr_npn_batched(
                 gpu_marker_corrs);
             CudaCheckError();
 
+            //std::cerr << "copying tri corrs to host" << std::endl;
             // copy corr results to host
             HANDLE_ERROR(
                 cudaMemcpy(
@@ -209,6 +264,7 @@ void cu_corr_npn_batched(
                     batch_corrs_bytes,
                     cudaMemcpyDeviceToHost));
 
+            //std::cerr << "sorting tri corrs on host" << std::endl;
             // put correlations from tmp into right place
             // marker_corrs is upper traingular, batch is upper triangular
             size_t rix, cix, glob_lin_ix;
@@ -216,10 +272,12 @@ void cu_corr_npn_batched(
             for (size_t r = 0; r < (stripe_width - 1); ++r)
             {
                 rix = stripe_first_row_ix + r;
-                for (size_t c = 0; r < (stripe_width - 1 - rix); ++c)
+                for (size_t c = r; c < (stripe_width - 1); ++c)
                 {
+                    cix = stripe_first_row_ix + c;
                     glob_lin_ix = (rix * (2 * num_markers - rix - 1) / 2) + cix;
                     loc_lin_ix += 1;
+                    //std::cerr << "glob ix: " << glob_lin_ix << std::endl;
                     marker_corrs[glob_lin_ix] = marker_corrs_tmp[loc_lin_ix];
                 }
             }
@@ -227,6 +285,7 @@ void cu_corr_npn_batched(
             batch_result_start_host += batch_num_corrs;
         }
 
+        //std::cerr << "computing marker phen corrs" << std::endl;
         // compute row markers vs phenotype data
         // TODO: this should be Kendall instead of pearson.
         dim3 num_blocks(num_marker_phen_corrs);
@@ -242,6 +301,8 @@ void cu_corr_npn_batched(
             gpu_marker_phen_corrs);
         CudaCheckError();
 
+
+        //std::cerr << "copying marker phen corrs to host" << std::endl;
         // copy corr results to host
         HANDLE_ERROR(
             cudaMemcpy(
@@ -251,6 +312,8 @@ void cu_corr_npn_batched(
                 marker_phen_corrs_bytes,
                 cudaMemcpyDeviceToHost));
 
+
+        //std::cerr << "sorting marker phen corrs on host" << std::endl;
         // sort
         // marker_phen_corrs is rectangular (p x num_phen), batch rectangular (stripe_width x num_phen)
         size_t rix, cix;
@@ -258,16 +321,24 @@ void cu_corr_npn_batched(
         {
             rix = stripe_first_row_ix + (ix / num_phen);
             cix = ix % num_phen;
+            
+            //std::cerr << "ix: " << ix << " rix: " << rix << " cix: " << cix  << std::endl;
+            //std::cerr << "index is: " << cix + (rix * num_phen) << std::endl;
+
             marker_phen_corrs[cix + (rix * num_phen)] = marker_phen_corrs_tmp[ix];
         }
+        
+        //std::cerr << "done sorting" << std::endl;
 
         // next stripe is going to have one batch less
         --num_batches;
         // swap gpu_marker_vals_row and gpu_marker_vals_col, bc the last col
         // batch is the next row batch
+        //std::cerr << "swapping col and row pointers" << std::endl;
         unsigned char *tmp = gpu_marker_vals_col;
         gpu_marker_vals_col = gpu_marker_vals_row;
         gpu_marker_vals_row = tmp;
+        //std::cerr << "finished stripe" << std::endl;
     }
 
     HANDLE_ERROR(cudaFree(gpu_marker_corrs));
