@@ -56,7 +56,6 @@ TEST(CuCorrNpnBatchedTest, ExpectedReturnVals) {
     const size_t marker_cm_size = corr_matrix_size(num_markers);
     const size_t marker_phen_cm_size = num_markers * num_phen;
     const size_t phen_cm_size = corr_matrix_size(num_phen);
-    // TODO: test with stripe_width = 2;
     const size_t stripe_width = 3;
 
     float marker_corr[marker_cm_size];
@@ -68,11 +67,6 @@ TEST(CuCorrNpnBatchedTest, ExpectedReturnVals) {
 
     cu_corr_npn_batched(bmt2_marker_vals, bmt2_phen_vals, num_markers, num_individuals, num_phen,
                  bmt2_marker_mean, bmt2_marker_std, stripe_width, marker_corr, marker_phen_corr, phen_corr);
-
-    std::cerr << "mrkr / phen obs exp" << std::endl;
-    for (size_t i = 0; i < marker_phen_cm_size; i++) {
-        std::cerr << marker_phen_corr[i] << " " << bmt2_marker_phen_corrs_pearson[i] << std::endl;
-    }
 
     for (size_t i = 0; i < marker_cm_size; i++) {
         EXPECT_NEAR(marker_corr[i], bmt2_marker_corrs[i], 0.00001);

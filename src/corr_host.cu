@@ -1,11 +1,11 @@
+#include <iomanip>
+#include <iostream>
 #include <math.h>
 #include <mps/bed_lut.h>
 #include <mps/corr_host.h>
 #include <mps/corr_kernels.h>
 #include <mps/gpuerrors.h>
 #include <vector>
-#include <iostream>
-#include <iomanip>
 
 // TODO: fully review this function
 // TODO: test this function
@@ -145,7 +145,7 @@ void cu_corr_npn_batched(
             batch_num_corrs = batch_num_cols * stripe_width;
             batch_corrs_bytes = batch_num_corrs * sizeof(float);
             dim3 num_blocks(batch_num_cols, stripe_width);
-            
+
             // copy col marker data to device
             HANDLE_ERROR(
                 cudaMemcpy(gpu_marker_vals_col,
@@ -162,7 +162,7 @@ void cu_corr_npn_batched(
                 col_len_bytes,
                 gpu_marker_corrs);
             CudaCheckError();
- 
+
             // copy corr results to host
             HANDLE_ERROR(
                 cudaMemcpy(
@@ -193,7 +193,7 @@ void cu_corr_npn_batched(
         {
             batch_num_corrs = stripe_width * (stripe_width - 1) / 2;
             batch_corrs_bytes = batch_num_corrs * sizeof(float);
-             dim3 num_blocks(batch_num_corrs);
+            dim3 num_blocks(batch_num_corrs);
 
             bed_marker_corr_kendall_npn_batched_row<<<num_blocks, threads_per_block>>>(
                 gpu_marker_vals_row,
@@ -212,7 +212,7 @@ void cu_corr_npn_batched(
                     cudaMemcpyDeviceToHost));
 
             // put correlations from tmp into right place
-            // marker_corrs is upper traingular, batch is upper triangular
+            // marker_corrs is upper triangular, batch is upper triangular
             size_t rix, cix, glob_lin_ix;
             size_t loc_lin_ix = 0;
             for (size_t r = 0; r < (stripe_width - 1); ++r)
@@ -230,22 +230,6 @@ void cu_corr_npn_batched(
             batch_result_start_host += batch_num_corrs;
         }
 
-        // do I have the correct marker data?
-        //std::cerr << std::endl;
-        //std::cerr << "current content of gpu_marker_vals_row:" << std::endl;
-        //std::vector<unsigned char> mv_row_host(batch_stripe_width, 0);
-        //HANDLE_ERROR(
-        //        cudaMemcpy(
-        //            mv_row_host.data(),
-        //            gpu_marker_vals_row,
-        //            batch_marker_vals_bytes,
-        //            cudaMemcpyDeviceToHost));
-        //for (size_t i = 0; i < batch_marker_vals_bytes; ++i) {
-        //    std::cerr << "0x" << std::hex << std::setfill('0') << std::setw(2) << (int)mv_row_host[i] << ", ";
-        //}
-        //std::cerr << std::endl;
-
-        //std::cerr << "computing marker phen corrs" << std::endl;
         // compute row markers vs phenotype data
         // TODO: this should be Kendall instead of pearson.
         dim3 num_blocks(num_marker_phen_corrs);
@@ -268,13 +252,6 @@ void cu_corr_npn_batched(
                 marker_phen_corrs_bytes,
                 cudaMemcpyDeviceToHost));
 
-        size_t total_num_mp_corrs = num_markers * num_phen;
-        std::cerr << "marker phen corrs before sorting (tmp):" << std::endl;
-        for (size_t i = 0; i < batch_marker_phen_output_length; ++i) {
-            std::cerr << marker_phen_corrs_tmp[i] << " ";
-        }
-        std::cerr << std::endl;
-
         // sort
         // marker_phen_corrs is rectangular (p x num_phen), batch rectangular (stripe_width x num_phen)
         size_t rix, cix;
@@ -284,16 +261,16 @@ void cu_corr_npn_batched(
             cix = ix % num_phen;
             marker_phen_corrs[cix + (rix * num_phen)] = marker_phen_corrs_tmp[ix];
         }
-        
+
         // next stripe is going to have one batch less
         --num_batches;
         // swap gpu_marker_vals_row and gpu_marker_vals_col, bc the last col
         // batch is the next row batch
-        //std::cerr << "swapping col and row pointers" << std::endl;
+        // std::cerr << "swapping col and row pointers" << std::endl;
         unsigned char *tmp = gpu_marker_vals_col;
         gpu_marker_vals_col = gpu_marker_vals_row;
         gpu_marker_vals_row = tmp;
-        //std::cerr << "finished stripe" << std::endl;
+        // std::cerr << "finished stripe" << std::endl;
     }
 
     HANDLE_ERROR(cudaFree(gpu_marker_corrs));
