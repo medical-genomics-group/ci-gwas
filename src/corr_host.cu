@@ -128,10 +128,8 @@ void cu_marker_corr_pearson_batched(
                 col_len_bytes,
                 &gpu_marker_mean[stripe_first_row_ix],
                 &gpu_marker_std[stripe_first_row_ix],
-                // TODO: these indices might be off,
-                // I don't remember how the columns are counted (which one is 0)
-                &gpu_marker_mean[batch_first_col_ix],
-                &gpu_marker_std[batch_first_col_ix],
+                &gpu_marker_mean[batch_first_col_ix + 1],
+                &gpu_marker_std[batch_first_col_ix + 1],
                 gpu_marker_corrs);
             CudaCheckError();
 
