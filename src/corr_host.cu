@@ -230,6 +230,21 @@ void cu_corr_npn_batched(
             batch_result_start_host += batch_num_corrs;
         }
 
+        // do I have the correct marker data?
+        //std::cerr << std::endl;
+        //std::cerr << "current content of gpu_marker_vals_row:" << std::endl;
+        //std::vector<unsigned char> mv_row_host(batch_stripe_width, 0);
+        //HANDLE_ERROR(
+        //        cudaMemcpy(
+        //            mv_row_host.data(),
+        //            gpu_marker_vals_row,
+        //            batch_marker_vals_bytes,
+        //            cudaMemcpyDeviceToHost));
+        //for (size_t i = 0; i < batch_marker_vals_bytes; ++i) {
+        //    std::cerr << "0x" << std::hex << std::setfill('0') << std::setw(2) << (int)mv_row_host[i] << ", ";
+        //}
+        //std::cerr << std::endl;
+
         //std::cerr << "computing marker phen corrs" << std::endl;
         // compute row markers vs phenotype data
         // TODO: this should be Kendall instead of pearson.
@@ -241,11 +256,10 @@ void cu_corr_npn_batched(
             num_individuals,
             num_phen,
             col_len_bytes,
-            gpu_marker_mean,
-            gpu_marker_std,
+            &gpu_marker_mean[stripe_first_row_ix],
+            &gpu_marker_std[stripe_first_row_ix],
             gpu_marker_phen_corrs);
         CudaCheckError();
-
 
         //std::cerr << "copying marker phen corrs to host" << std::endl;
         // copy corr results to host
@@ -263,7 +277,6 @@ void cu_corr_npn_batched(
             std::cerr << marker_phen_corrs_tmp[i] << " ";
         }
         std::cerr << std::endl;
-
 
         //std::cerr << "sorting marker phen corrs on host" << std::endl;
         // sort
