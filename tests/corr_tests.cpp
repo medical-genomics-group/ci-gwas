@@ -50,8 +50,6 @@ TEST(CuCorrNpnTest, ExpectedReturnVals) {
 }
 
 TEST(CuCorrNpnBatchedTest, ExpectedReturnVals) {
-    std::cerr << "Starting batched test" << std::endl;
-
     const size_t num_markers = BMT2_NUM_MARKERS; 
     const size_t num_individuals = BMT2_NUM_INDIVIDUALS;
     const size_t num_phen = BMT2_NUM_PHEN;
@@ -61,25 +59,19 @@ TEST(CuCorrNpnBatchedTest, ExpectedReturnVals) {
     // TODO: test with stripe_width = 2;
     const size_t stripe_width = 3;
 
-    std::cerr << "Preparing corr data for test" << std::endl;
-
     float marker_corr[marker_cm_size];
     memset(marker_corr, 0.0, sizeof(marker_corr));
     float marker_phen_corr[marker_phen_cm_size];
     memset(marker_phen_corr, 0.0, sizeof(marker_phen_corr));
     float phen_corr[phen_cm_size];
     memset(phen_corr, 0.0, sizeof(phen_corr));
-   
-    std::cerr << "Running batched corrs" << std::endl;
 
     cu_corr_npn_batched(bmt2_marker_vals, bmt2_phen_vals, num_markers, num_individuals, num_phen,
                  bmt2_marker_mean, bmt2_marker_std, stripe_width, marker_corr, marker_phen_corr, phen_corr);
-    
-    std::cerr << "Finished batched corrs" << std::endl;
 
-    std::cerr << "obs exp" << std::endl;
-    for (size_t i = 0; i < marker_cm_size; i++) {
-        std::cerr << marker_corr[i] << " " << bmt2_marker_corrs[i] << std::endl;
+    std::cerr << "mrkr / phen obs exp" << std::endl;
+    for (size_t i = 0; i < marker_phen_cm_size; i++) {
+        std::cerr << marker_phen_corr[i] << " " << bmt2_marker_phen_corrs_pearson[i] << std::endl;
     }
 
     for (size_t i = 0; i < marker_cm_size; i++) {

@@ -23,8 +23,6 @@ void cu_corr_npn_batched(
     float *marker_phen_corrs,
     float *phen_corrs)
 {
-    std::cerr << "starting cu_corr_npn_batched" << std::endl;
-
     size_t num_full_stripes = (num_markers - 1) / batch_stripe_width;
     size_t last_stripe_width = (num_markers - 1) % batch_stripe_width;
     bool small_stripe = last_stripe_width;
@@ -38,9 +36,6 @@ void cu_corr_npn_batched(
                                                                        //    one less.
     size_t ncols_small_batch = num_markers % batch_stripe_width;
     bool small_batch = (ncols_small_batch > 0);
-
-    std::cerr << "small_batch: " << small_batch << std::endl;
-    std::cerr << "ncols_small_batch: " << ncols_small_batch << std::endl;
 
     size_t num_batches = num_regular_batches + small_batch; // this is only for the first stripe.
                                                             // but it is adjusted later in the loop.
@@ -104,17 +99,11 @@ void cu_corr_npn_batched(
                    batch_marker_vals_bytes,
                    cudaMemcpyHostToDevice));
 
-
-    std::cerr << "starting stripe loop" << std::endl;
-
     size_t batch_result_start_host = 0;
     // Iterate through stripes
     // TODO: put loop body in new function, this is hard to read
     for (size_t stripe_ix = 0; stripe_ix < num_stripes_total; ++stripe_ix)
     {
-
-        std::cerr << "stripe: " << stripe_ix << std::endl;
-
         size_t stripe_width;
         if (small_stripe && stripe_ix == (num_stripes_total - 1))
         {
@@ -267,6 +256,13 @@ void cu_corr_npn_batched(
                 gpu_marker_phen_corrs,
                 marker_phen_corrs_bytes,
                 cudaMemcpyDeviceToHost));
+
+        size_t total_num_mp_corrs = num_markers * num_phen;
+        std::cerr << "marker phen corrs before sorting (tmp):" << std::endl;
+        for (size_t i = 0; i < batch_marker_phen_output_length; ++i) {
+            std::cerr << marker_phen_corrs_tmp[i] << " ";
+        }
+        std::cerr << std::endl;
 
 
         //std::cerr << "sorting marker phen corrs on host" << std::endl;
