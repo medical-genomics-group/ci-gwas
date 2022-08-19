@@ -7,8 +7,200 @@
 #include <mps/gpuerrors.h>
 #include <vector>
 
-// TODO: fully review this function
-// TODO: test this function
+void cu_marker_corr_npn_batched(
+    const unsigned char *marker_vals,
+    const size_t num_markers,
+    const size_t num_individuals,
+    const size_t row_set_size, // const number of markers
+                               // i.e. half the total num markers in a batch
+    float *marker_corrs)
+{
+    size_t num_full_stripes = num_markers / row_set_size;
+    size_t last_stripe_width = num_markers % row_set_size;
+    bool small_stripe = last_stripe_width;
+    size_t num_stripes_total = num_full_stripes + small_stripe;
+
+    size_t num_regular_batches = num_markers / row_set_size - 1;
+    size_t ncols_small_batch = num_markers % row_set_size;
+    bool small_batch = (ncols_small_batch > 0);
+
+    size_t num_batches = num_regular_batches + small_batch;
+
+    size_t col_len_bytes = (num_individuals + 3) / 4 * sizeof(unsigned char); // this is ceil
+    size_t row_set_bytes = col_len_bytes * row_set_size;
+
+    unsigned char *gpu_marker_vals_row;
+    unsigned char *gpu_marker_vals_col;
+
+    float *gpu_marker_corrs;
+
+    size_t batch_output_len = row_set_size * row_set_size;
+
+    // allocate tmp space in host memory
+    // batch results are put here before they are put in the full output vec
+    // in the correct order
+    std::vector<float> marker_corrs_tmp(batch_output_len, 0.0);
+
+    size_t batch_output_bytes = batch_output_len * sizeof(float);
+
+    int threads_per_block = NUMTHREADS;
+
+    // allocate space for marker subsets
+    HANDLE_ERROR(cudaMalloc(&gpu_marker_vals_row, row_set_bytes));
+    HANDLE_ERROR(cudaMalloc(&gpu_marker_vals_col, row_set_bytes));
+
+    // markers vs markers
+    // allocate space for correlation results
+    HANDLE_ERROR(cudaMalloc(&gpu_marker_corrs, batch_output_bytes));
+
+    // copy row marker data for first stripe to device
+    HANDLE_ERROR(
+        cudaMemcpy(gpu_marker_vals_row,
+                   &marker_vals[0],
+                   row_set_bytes,
+                   cudaMemcpyHostToDevice));
+
+    size_t batch_result_start_host = 0;
+    // Iterate through stripes
+    // TODO: put loop body in new function, this is hard to read
+    for (size_t stripe_ix = 0; stripe_ix < num_stripes_total; ++stripe_ix)
+    {
+        size_t stripe_width;
+        if (small_stripe && stripe_ix == (num_stripes_total - 1))
+        {
+            stripe_width = last_stripe_width;
+        }
+        else
+        {
+            stripe_width = row_set_size;
+        }
+
+        size_t stripe_first_row_ix = row_set_size * stripe_ix;
+        size_t batch_data_ix = row_set_bytes * (num_regular_batches + 1);         // this is the index of the
+                                                                                  // first byte of the first
+                                                                                  // column of the first
+                                                                                  // (rightmost) batch
+                                                                                  // in each stripe
+        size_t batch_first_col_ix = row_set_size * (num_regular_batches + 1) - 1; // ix 0 is the first col
+                                                                                  // off the diagonal
+        size_t batch_data_bytes;
+        size_t batch_num_cols;
+        size_t batch_num_corrs;
+        size_t batch_corrs_bytes;
+
+        if (small_batch)
+        {
+            batch_num_cols = ncols_small_batch;
+        }
+        else
+        {
+            batch_num_cols = row_set_size;
+        }
+
+        // Iterate through batches in stripe
+        for (size_t batch_ix = 0; batch_ix < num_batches; ++batch_ix)
+        {
+            batch_data_bytes = batch_num_cols * col_len_bytes;
+            batch_num_corrs = batch_num_cols * stripe_width;
+            batch_corrs_bytes = batch_num_corrs * sizeof(float);
+            dim3 num_blocks(batch_num_cols, stripe_width);
+
+            // copy col marker data to device
+            HANDLE_ERROR(
+                cudaMemcpy(gpu_marker_vals_col,
+                           &marker_vals[batch_data_ix],
+                           batch_data_bytes,
+                           cudaMemcpyHostToDevice));
+
+            // compute marker correlations
+            bed_marker_corr_kendall_npn_batched<<<num_blocks, threads_per_block>>>(
+                gpu_marker_vals_row,
+                gpu_marker_vals_col,
+                batch_num_cols,
+                num_individuals,
+                col_len_bytes,
+                gpu_marker_corrs);
+            CudaCheckError();
+
+            // copy corr results to host
+            HANDLE_ERROR(
+                cudaMemcpy(
+                    marker_corrs_tmp.data(),
+                    gpu_marker_corrs,
+                    batch_corrs_bytes,
+                    cudaMemcpyDeviceToHost));
+
+            // put correlations from tmp into right place
+            size_t rix, cix, lin_ix;
+            for (size_t ix = 0; ix < batch_num_corrs; ++ix)
+            {
+                rix = stripe_first_row_ix + (ix / batch_num_cols);
+                cix = batch_first_col_ix + (ix % batch_num_cols);
+                lin_ix = (rix * (2 * num_markers - rix - 1) / 2) + (cix - rix); // r (2p - r - 1) / 2 is the first ix of
+                                                                                // of the row
+                marker_corrs[lin_ix] = marker_corrs_tmp[ix];
+            }
+
+            batch_data_ix -= row_set_bytes;
+            batch_result_start_host += batch_num_corrs;
+            batch_num_cols = row_set_size;
+            batch_first_col_ix -= row_set_size;
+        }
+
+        // process row markers vs row markers
+        if (stripe_width > 1)
+        {
+            batch_num_corrs = stripe_width * (stripe_width - 1) / 2;
+            batch_corrs_bytes = batch_num_corrs * sizeof(float);
+            dim3 num_blocks(batch_num_corrs);
+
+            bed_marker_corr_kendall_npn_batched_row<<<num_blocks, threads_per_block>>>(
+                gpu_marker_vals_row,
+                stripe_width,
+                num_individuals,
+                col_len_bytes,
+                gpu_marker_corrs);
+            CudaCheckError();
+
+            // copy corr results to host
+            HANDLE_ERROR(
+                cudaMemcpy(
+                    marker_corrs_tmp.data(),
+                    gpu_marker_corrs,
+                    batch_corrs_bytes,
+                    cudaMemcpyDeviceToHost));
+
+            // put correlations from tmp into right place
+            // marker_corrs is upper triangular, batch is upper triangular
+            size_t rix, cix, glob_lin_ix;
+            size_t loc_lin_ix = 0;
+            for (size_t r = 0; r < (stripe_width - 1); ++r)
+            {
+                rix = stripe_first_row_ix + r;
+                for (size_t c = r; c < (stripe_width - 1); ++c)
+                {
+                    cix = stripe_first_row_ix + c;
+                    glob_lin_ix = (rix * (2 * num_markers - rix - 1) / 2) + (cix - rix);
+                    marker_corrs[glob_lin_ix] = marker_corrs_tmp[loc_lin_ix];
+                    ++loc_lin_ix;
+                }
+            }
+
+            batch_result_start_host += batch_num_corrs;
+        }
+
+        // next stripe is going to have one batch less
+        --num_batches;
+        // swap gpu_marker_vals_row and gpu_marker_vals_col, bc the last col
+        // batch is the next row batch
+        unsigned char *tmp = gpu_marker_vals_col;
+        gpu_marker_vals_col = gpu_marker_vals_row;
+        gpu_marker_vals_row = tmp;
+    }
+
+    HANDLE_ERROR(cudaFree(gpu_marker_corrs));
+}
+
 void cu_corr_npn_batched(
     const unsigned char *marker_vals,
     const float *phen_vals,

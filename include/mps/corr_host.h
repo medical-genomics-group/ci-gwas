@@ -1,5 +1,12 @@
 #pragma once
 
+void cu_marker_corr_npn_batched(
+    const unsigned char *marker_vals,
+    const size_t num_markers,
+    const size_t num_individuals,
+    const size_t row_set_size,
+    float *marker_corrs);
+
 void cu_corr_npn_batched(
     const unsigned char *marker_vals,
     const float *phen_vals,
