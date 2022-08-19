@@ -642,7 +642,7 @@ void cu_corr_npn_batched(
         // compute row markers vs phenotype data
         // TODO: this should be Kendall instead of pearson.
         dim3 num_blocks(num_marker_phen_corrs);
-        marker_phen_corr_pearson<<<num_blocks, threads_per_block>>>(
+        bed_marker_phen_corr_pearson<<<num_blocks, threads_per_block>>>(
             gpu_marker_vals_row,
             gpu_phen_vals,
             stripe_width,
@@ -760,7 +760,7 @@ void cu_marker_corr_pearson(const unsigned char *marker_vals,
     printf("Calling kernels \n");
 
     // compute correlations
-    marker_corr_pearson<<<blocks_per_grid, threads_per_block>>>(
+    bed_marker_corr_pearson<<<blocks_per_grid, threads_per_block>>>(
         gpu_marker_vals, num_markers, num_individuals,
         col_len_bytes, gpu_marker_mean, gpu_marker_std, gpu_marker_corrs);
     CudaCheckError();
@@ -839,7 +839,7 @@ void cu_corr_npn(const unsigned char *marker_vals, const float *phen_vals, const
     HANDLE_ERROR(cudaMemcpy(gpu_phen_vals, phen_vals, phen_vals_bytes, cudaMemcpyHostToDevice));
     HANDLE_ERROR(cudaMalloc(&gpu_marker_phen_corrs, marker_phen_output_bytes));
 
-    marker_phen_corr_pearson<<<blocks_per_grid, threads_per_block>>>(
+    bed_marker_phen_corr_pearson<<<blocks_per_grid, threads_per_block>>>(
         gpu_marker_vals, gpu_phen_vals, num_markers, num_individuals, num_phen, col_len_bytes,
         gpu_marker_mean, gpu_marker_std, gpu_marker_phen_corrs);
     CudaCheckError();
