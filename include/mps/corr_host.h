@@ -1,5 +1,14 @@
 #pragma once
 
+void cu_marker_corr_pearson_batched(
+    const unsigned char *marker_vals,
+    const size_t num_markers,
+    const size_t num_individuals,
+    const float *marker_mean,
+    const float *marker_std,
+    const size_t batch_stripe_width,
+    float *marker_corrs);
+
 void cu_marker_corr_npn_batched(
     const unsigned char *marker_vals,
     const size_t num_markers,

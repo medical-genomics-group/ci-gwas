@@ -229,9 +229,119 @@ __global__ void bed_marker_corr_kendall_npn(
     }
 }
 
-// A O(n) runtime Kendall implementation for compressed genomic marker data.
+// A O(n) runtime pearson implementation for compressed genomic marker data.
 // The compression format is expected to be col-major .bed without NaN
 // and without leading magic numbers.
+__global__ void bed_marker_corr_pearson_batched(
+    const unsigned char *row_marker_vals,
+    const unsigned char *col_marker_vals,
+    const size_t num_col_markers,
+    const size_t num_individuals,
+    const size_t col_len_bytes,
+    const float *marker_mean_row,
+    const float *marker_std_row,
+    const float *marker_mean_col,
+    const float *marker_std_col,
+    float *results)
+{
+    // figure out which corr we are computing
+    // we have a 2d grid
+    size_t tix = threadIdx.x;
+    size_t col = blockIdx.x;
+    size_t row = blockIdx.y;
+    size_t data_start_b = col * col_len_bytes;
+    size_t data_start_a = row * col_len_bytes;
+
+    float thread_sum_mvp = 0.0;
+    __shared__ float thread_sums_mvp[NUMTHREADS];
+
+    for (size_t i = tix; i < col_len_bytes; i += NUMTHREADS)
+    {
+        // look up table indices
+        size_t aix = 4 * (size_t)(row_marker_vals[data_start_a + i]);
+        size_t bix = 4 * (size_t)(col_marker_vals[data_start_b + i]);
+        for (size_t j = 0; (j < 4) && (i * 4 + j < num_individuals); j++)
+        {
+            float val_a = gpu_bed_lut_a[(aix + j)];
+            float val_b = gpu_bed_lut_a[(bix + j)];
+            thread_sum_mvp += mv_a * mv_b;
+        }
+    }
+
+    thread_sums_mvp[tix] = thread_sum_mvp;
+
+    // consolidate thread_sums
+    __syncthreads();
+    if (tix == 0)
+    {
+        float s_mvps = 0.0;
+        for (size_t i = 0; i < NUMTHREADS; i++)
+        {
+            s_mvps += thread_sums_mvp[i];
+        }
+
+        float num = (s_mvps / (float)num_individuals) - (marker_mean_row[row] * marker_mean_col[col]);
+        float denom = marker_std_row[row] * marker_std_col[col];
+
+        results[num_col_markers * row + col] = num / denom;
+    }
+}
+
+// A O(n) runtime pearson implementation for compressed genomic marker data.
+// The compression format is expected to be col-major .bed without NaN
+// and without leading magic numbers.
+// These are pearson correlations between the markers that are held constant
+// in a batch row.
+__global__ void bed_marker_corr_pearson_batched_row(
+    const unsigned char *row_marker_vals,
+    const size_t num_rows,
+    const size_t num_individuals,
+    const size_t col_len_bytes,
+    const float *marker_mean,
+    const float *marker_std,
+    float *results)
+{
+    // 1d grid
+    size_t tix = threadIdx.x;
+    size_t row, col;
+    row_col_ix_from_linear_ix(blockIdx.x, num_rows, &row, &col);
+    size_t data_start_a = col * col_len_bytes;
+    size_t data_start_b = row * col_len_bytes;
+
+    float thread_sum_mvp = 0.0;
+    __shared__ float thread_sums_mvp[NUMTHREADS];
+
+    for (size_t i = tix; i < col_len_bytes; i += NUMTHREADS)
+    {
+        size_t aix = 4 * (size_t)(row_marker_vals[data_start_a + i]);
+        size_t bix = 4 * (size_t)(row_marker_vals[data_start_b + i]);
+        for (size_t j = 0; (j < 4) && (i * 4 + j < num_individuals); j++)
+        {
+            float val_a = gpu_bed_lut_a[(aix + j)];
+            float val_b = gpu_bed_lut_a[(bix + j)];
+            thread_sum_mvp += mv_a * mv_b;
+        }
+    }
+
+    thread_sums_mvp[tix] = thread_sum_mvp;
+
+    // consolidate thread_sums
+    __syncthreads();
+    if (tix == 0)
+    {
+        float s_mvps = 0.0;
+        for (size_t i = 0; i < NUMTHREADS; i++)
+        {
+            s_mvps += thread_sums_mvp[i];
+        }
+
+        float num = (s_mvps / (float)num_individuals) - (marker_mean[row] * marker_mean[col]);
+        float denom = marker_std[row] * marker_std[col];
+
+        results[blockIdx.x] = num / denom;
+    }
+}
+
 __global__ void bed_marker_corr_kendall_npn_batched(
     const unsigned char *row_marker_vals,
     const unsigned char *col_marker_vals,

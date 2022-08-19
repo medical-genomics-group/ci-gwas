@@ -14,6 +14,29 @@ TEST(HelloTest, BasicAssertions) {
 
 auto corr_matrix_size(size_t num_markers) -> size_t { return num_markers * (num_markers - 1) / 2; }
 
+TEST(CuMarkerCorrPearsonBatchedTest, ExpectedReturnVals) {
+    const size_t num_markers = BMT2_NUM_MARKERS; 
+    const size_t num_individuals = BMT2_NUM_INDIVIDUALS;
+    const size_t marker_cm_size = corr_matrix_size(num_markers);
+    const size_t stripe_width = 3;
+
+    float marker_corr[marker_cm_size];
+    memset(marker_corr, 0.0, sizeof(marker_corr));
+
+    cu_marker_corr_pearson_batched(
+        bmt2_marker_vals,
+        num_markers,
+        num_individuals,
+        bmt2_marker_mean,
+        bmt2_marker_std,
+        stripe_width,
+        marker_corr);
+
+    for (size_t i = 0; i < marker_cm_size; i++) {
+        EXPECT_NEAR(marker_corr[i], bmt2_marker_corrs[i], 0.00001);
+    }
+}
+
 TEST(CuMarkerCorrNpnBatchedTest, ExpectedReturnVals) {
     const size_t num_markers = BMT2_NUM_MARKERS; 
     const size_t num_individuals = BMT2_NUM_INDIVIDUALS;
