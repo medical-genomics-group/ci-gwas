@@ -23,8 +23,8 @@ void cu_corr_npn_batched(
     float *marker_phen_corrs,
     float *phen_corrs)
 {
-    size_t num_full_stripes = (num_markers - 1) / batch_stripe_width;
-    size_t last_stripe_width = (num_markers - 1) % batch_stripe_width;
+    size_t num_full_stripes = num_markers / batch_stripe_width;
+    size_t last_stripe_width = num_markers % batch_stripe_width;
     bool small_stripe = last_stripe_width;
     size_t num_stripes_total = num_full_stripes + small_stripe;
 
@@ -261,11 +261,8 @@ void cu_corr_npn_batched(
             gpu_marker_phen_corrs);
         CudaCheckError();
 
-        //std::cerr << "copying marker phen corrs to host" << std::endl;
-        // copy corr results to host
         HANDLE_ERROR(
             cudaMemcpy(
-                //&marker_phen_corrs[stripe_ix * batch_stripe_width],
                 marker_phen_corrs_tmp.data(),
                 gpu_marker_phen_corrs,
                 marker_phen_corrs_bytes,
@@ -278,7 +275,6 @@ void cu_corr_npn_batched(
         }
         std::cerr << std::endl;
 
-        //std::cerr << "sorting marker phen corrs on host" << std::endl;
         // sort
         // marker_phen_corrs is rectangular (p x num_phen), batch rectangular (stripe_width x num_phen)
         size_t rix, cix;
@@ -286,15 +282,9 @@ void cu_corr_npn_batched(
         {
             rix = stripe_first_row_ix + (ix / num_phen);
             cix = ix % num_phen;
-            
-            //std::cerr << "ix: " << ix << " rix: " << rix << " cix: " << cix  << std::endl;
-            //std::cerr << "index is: " << cix + (rix * num_phen) << std::endl;
-
             marker_phen_corrs[cix + (rix * num_phen)] = marker_phen_corrs_tmp[ix];
         }
         
-        //std::cerr << "done sorting" << std::endl;
-
         // next stripe is going to have one batch less
         --num_batches;
         // swap gpu_marker_vals_row and gpu_marker_vals_col, bc the last col
