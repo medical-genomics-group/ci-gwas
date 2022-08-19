@@ -264,7 +264,7 @@ __global__ void bed_marker_corr_pearson_batched(
         {
             float val_a = gpu_bed_lut_a[(aix + j)];
             float val_b = gpu_bed_lut_a[(bix + j)];
-            thread_sum_mvp += mv_a * mv_b;
+            thread_sum_mvp += val_a * val_b;
         }
     }
 
@@ -319,7 +319,7 @@ __global__ void bed_marker_corr_pearson_batched_row(
         {
             float val_a = gpu_bed_lut_a[(aix + j)];
             float val_b = gpu_bed_lut_a[(bix + j)];
-            thread_sum_mvp += mv_a * mv_b;
+            thread_sum_mvp += val_a * val_b;
         }
     }
 
