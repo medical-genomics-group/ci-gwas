@@ -415,9 +415,10 @@ void corr(int argc, char *argv[])
 
         printf("Device mem < required mem; Running tiled routine. \n");
 
-        cu_corr_npn_batched(marker_vals.data(), phen_vals.data(), num_markers, num_individuals,
-                            num_phen, marker_means.data(), marker_stds.data(), row_width,
-                            marker_corr.data(), marker_phen_corr.data(), phen_corr.data());
+        cu_corr_pearson_npn_batched(marker_vals.data(), phen_vals.data(), num_markers,
+                                    num_individuals, num_phen, marker_means.data(),
+                                    marker_stds.data(), row_width, marker_corr.data(),
+                                    marker_phen_corr.data(), phen_corr.data());
         // TODO: the output corrs matrices are ordered in a really stupid way,
         // they need to be reordered.
     }
