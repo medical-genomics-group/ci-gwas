@@ -1,11 +1,11 @@
 // this is just a testing ground, not the real main binary target
 
+#include <mps/corr_compressed.h>
+
 #include <array>
 #include <boost/math/distributions/normal.hpp>
 #include <cmath>
 #include <iostream>
-
-#include <mps/corr_compressed.h>
 // #include "cuPC/cuPC-S.h"
 #include <test_data/bed_marker_test_set.h>
 #include <test_data/corr_test_set.h>
@@ -24,7 +24,8 @@ auto threshold_array(const int n, const double alpha) -> std::array<double, NUMB
     // my loop range is exclusive of the last i, so I don't subtract one here
     const int n_thr = (NUMBER_OF_LEVELS < (n - 3)) ? NUMBER_OF_LEVELS : n;
     const double half = 0.5;
-    for (size_t i = 0; i < n_thr; i++) {
+    for (size_t i = 0; i < n_thr; i++)
+    {
         thr[i] = abs(std_normal_qnorm(half * alpha) / sqrt(n - i - 3));
     }
     return thr;
@@ -83,24 +84,27 @@ void call_cu_bed_corr()
                 bmt_marker_mean, bmt_marker_std, marker_corr, marker_phen_corr, phen_corr);
 
     printf("marker corrs: \n");
-    for (size_t i = 0; i < marker_cm_size; i++) {
+    for (size_t i = 0; i < marker_cm_size; i++)
+    {
         std::cout << marker_corr[i] << std::endl;
     }
 
     printf("phen marker corrs: \n");
-    for (size_t i = 0; i < marker_phen_cm_size; i++) {
+    for (size_t i = 0; i < marker_phen_cm_size; i++)
+    {
         std::cout << marker_phen_corr[i] << std::endl;
     }
 
     printf("phen corrs: \n");
-    for (size_t i = 0; i < phen_cm_size; i++) {
+    for (size_t i = 0; i < phen_cm_size; i++)
+    {
         std::cout << phen_corr[i] << std::endl;
     }
 }
 
-auto main(int argc, char const *argv[]) -> int
-{
-    call_cu_bed_corr();
-    std::cout << "All done!" << std::endl;
-    return 0;
-}
+// auto main(int argc, char const *argv[]) -> int
+// {
+//     call_cu_bed_corr();
+//     std::cout << "All done!" << std::endl;
+//     return 0;
+// }
