@@ -714,12 +714,9 @@ void cu_marker_corr_pearson_npn(const unsigned char *marker_vals, const size_t n
 
     unsigned char *gpu_marker_vals;
     float *gpu_marker_corrs;
-    float *gpu_marker_mean;
-    float *gpu_marker_std;
 
     size_t marker_output_length = num_markers * (num_markers - 1) / 2;
     size_t marker_output_bytes = marker_output_length * sizeof(float);
-    size_t marker_stats_bytes = num_markers * sizeof(float);
 
     int threads_per_block = NUMTHREADS;
 
