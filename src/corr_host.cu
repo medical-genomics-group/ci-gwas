@@ -203,6 +203,7 @@ void cu_marker_corr_pearson_npn_batched(
                                 // i.e. half the total num markers in a batch
     float *marker_corrs)
 {
+    printf("Starting tiled routine");
     size_t num_full_stripes = num_markers / row_set_size;
     size_t last_stripe_width = num_markers % row_set_size;
     bool small_stripe = last_stripe_width;
@@ -233,9 +234,14 @@ void cu_marker_corr_pearson_npn_batched(
 
     int threads_per_block = NUMTHREADS;
 
+    printf("Allocating mem for markers on device");
+    
     // allocate space for marker subsets
     HANDLE_ERROR(cudaMalloc(&gpu_marker_vals_row, row_set_bytes));
     HANDLE_ERROR(cudaMalloc(&gpu_marker_vals_col, row_set_bytes));
+
+
+    printf("Allocating mem for correlations on device");
 
     // markers vs markers
     // allocate space for correlation results
@@ -250,6 +256,8 @@ void cu_marker_corr_pearson_npn_batched(
     // TODO: put loop body in new function, this is hard to read
     for (size_t stripe_ix = 0; stripe_ix < num_stripes_total; ++stripe_ix)
     {
+        printf("Processing stripe %i / %i", stripe_ix + 1, num_stripes_total);
+
         size_t stripe_width;
         if (small_stripe && stripe_ix == (num_stripes_total - 1))
         {
