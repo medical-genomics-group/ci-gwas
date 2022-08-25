@@ -130,8 +130,6 @@ void mcorrk(int argc, char *argv[])
     std::vector<unsigned char> marker_vals(nbytes_marker_vals);
     read_n_bytes_from_binary(bed_path, nbytes_marker_vals, marker_vals);
 
-    prinf("Allocating results array");
-    
     // allocate correlation result arrays
     size_t marker_corr_mat_size = num_markers * (num_markers - 1) / 2;
     std::vector<float> marker_corr(marker_corr_mat_size, 0.0);
