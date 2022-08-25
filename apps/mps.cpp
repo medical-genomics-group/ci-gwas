@@ -1,16 +1,15 @@
 #include <math.h>
-#include <iostream>
-#include <string>
-#include <cassert>
-#include <sys/stat.h>
-#include <array>
-#include <vector>
-
 #include <mps/corr_host.h>
 #include <mps/corr_kernels.h>
-#include <mps/prep_markers.h>
 #include <mps/io.h>
+#include <mps/prep_markers.h>
+#include <sys/stat.h>
 
+#include <array>
+#include <cassert>
+#include <iostream>
+#include <string>
+#include <vector>
 
 const std::string PREP_USAGE = R"(
 Prepare input (PLINK) .bed file for mps.
@@ -28,26 +27,28 @@ arguments:
     mem_gb  maximal amount of memory available in Gb
 )";
 
-auto path_exists(std::string path) -> bool
+auto path_exists(const std::string path) -> bool
 {
     struct stat buffer;
-    return (stat (path.c_str(), &buffer) == 0);
+    return (stat(path.c_str(), &buffer) == 0);
 }
 
-// TODO: this should also parse .phen files and make sure that no info is missing and order checks out
+// TODO: this should also parse .phen files and make sure that no info is missing and order checks
+// out
 void prep_bed(int argc, char *argv[])
 {
     // check if enough args present
-    if ((argc != 7) || (argv[2] == "--help") || (argv[2] == "-h")) 
+    if ((argc != 7) || (argv[2] == "--help") || (argv[2] == "-h"))
     {
         std::cout << PREP_USAGE << std::endl;
         exit(1);
     }
 
     // check if files and dirs exist
-    for (size_t i = 2; i < 6; ++i) 
+    for (size_t i = 2; i < 6; ++i)
     {
-        if (! path_exists((std::string)argv[i])) {
+        if (!path_exists((std::string)argv[i]))
+        {
             std::cout << "file or directory found: " << argv[i] << std::endl;
             exit(1);
         }
@@ -68,17 +69,20 @@ void prep_bed(int argc, char *argv[])
 const std::string MCORRP_USAGE = R"(
 Compute pearson correlation between markers
 
-usage: mps corr <prepdir> <chr>
+usage: mps mcorrp <prepdir> <chr>
 
 arguments:
     prepdir Directory with `mps prep` output, i.e. .bed, .stds, .means and .dims files for each chromosome
     chr ID of the chromsome to be processed
 )";
 
+const int MCORRP_NARGS = 4;
+
 void mcorrp(int argc, char *argv[])
 {
     // check for correct number of args
-    if (argc < 4) {
+    if (argc < MCORRP_NARGS)
+    {
         std::cout << MCORRP_USAGE << std::endl;
         exit(1);
     }
@@ -88,22 +92,26 @@ void mcorrp(int argc, char *argv[])
     std::string out_dir = (std::string)argv[2];
     std::string chr_id = (std::string)argv[3];
     std::string req_suffixes[4] = {".bed", ".dims", ".means", ".stds"};
-    for (size_t i = 0; i < 4; ++i) {
+    for (size_t i = 0; i < 4; ++i)
+    {
         std::string fpath = make_path(out_dir, chr_id, req_suffixes[i]);
-        if (!path_exists(fpath)) {
+        if (!path_exists(fpath))
+        {
             std::cout << "file or directory not found: " << fpath << std::endl;
             exit(1);
         }
     }
-   
+
     // load data + check that file contents are valid
     // .dims
     // TODO: there is a lot more that can go wrong here, e.g. number of cols
     std::string dims_path = make_path(out_dir, chr_id, ".dims");
     std::vector<int> dims = read_ints_from_lines(dims_path);
     size_t ndims = dims.size();
-    if (ndims != 2) {
-        std::cout << "Invalid .dims file: found " << ndims << "dimensions instead of two." <<  std::endl;
+    if (ndims != 2)
+    {
+        std::cout << "Invalid .dims file: found " << ndims << "dimensions instead of two."
+                  << std::endl;
         exit(1);
     }
     size_t num_individuals = dims[0];
@@ -126,8 +134,8 @@ void mcorrp(int argc, char *argv[])
     assert((marker_means.size() == num_markers) && "number of marker means != num markers");
 
     printf("Loading stds \n");
-    
-    // .stds 
+
+    // .stds
     std::string stds_path = make_path(out_dir, chr_id, ".stds");
     std::vector<float> marker_stds = read_floats_from_lines(stds_path);
     assert((marker_stds.size() == num_markers) && "number of marker stds != num markers");
@@ -137,27 +145,21 @@ void mcorrp(int argc, char *argv[])
     // allocate correlation result arrays
     size_t marker_corr_mat_size = num_markers * (num_markers - 1) / 2;
     std::vector<float> marker_corr(marker_corr_mat_size, 0.0);
-   
+
     printf("Calling correlation main\n");
 
     // compute correlations
-    cu_marker_corr_pearson(marker_vals.data(),
-                           num_markers,
-                           num_individuals,
-                           marker_means.data(),
-                           marker_stds.data(),
-                           marker_corr.data());
+    cu_marker_corr_pearson(marker_vals.data(), num_markers, num_individuals, marker_means.data(),
+                           marker_stds.data(), marker_corr.data());
 
     printf("Writing results\n");
 
     // write results
-    write_floats_to_binary(marker_corr.data(),
-                           marker_corr_mat_size,
+    write_floats_to_binary(marker_corr.data(), marker_corr_mat_size,
                            make_path(out_dir, chr_id, "_marker_corr.bin"));
-   
+
     std::cout << "Correlation matrix written to: " << out_dir << std::endl;
 }
-
 
 const std::string CORR_USAGE = R"(
 Compute correlations between markers and phenotypes.
@@ -171,10 +173,13 @@ arguments:
     .phen   Path to .phen file with phenotype values, sorted in the same way as genotype info in the original bed file
 )";
 
+const int CORR_NARGS = 6;
+
 void corr(int argc, char *argv[])
 {
     // check for correct number of args
-    if (argc < 6) {
+    if (argc < CORR_NARGS)
+    {
         std::cout << CORR_USAGE << std::endl;
         exit(1);
     }
@@ -186,32 +191,38 @@ void corr(int argc, char *argv[])
     std::string out_dir = (std::string)argv[2];
     std::string chr_id = (std::string)argv[3];
     std::string req_suffixes[4] = {".bed", ".dims", ".means", ".stds"};
-    for (size_t i = 0; i < 4; ++i) {
+    for (size_t i = 0; i < 4; ++i)
+    {
         std::string fpath = make_path(out_dir, chr_id, req_suffixes[i]);
-        if (!path_exists(fpath)) {
+        if (!path_exists(fpath))
+        {
             std::cout << "file or directory not found: " << fpath << std::endl;
             exit(1);
         }
     }
 
     std::vector<std::string> phen_paths = {};
-    for (size_t i = 5; i < argc; ++i) {
+    for (size_t i = 5; i < argc; ++i)
+    {
         std::string phen_path = (std::string)argv[i];
-        if (!path_exists(phen_path)) {
+        if (!path_exists(phen_path))
+        {
             std::cout << "file or directory not found: " << phen_path << std::endl;
             exit(1);
         }
         phen_paths.push_back(phen_path);
     }
-    
+
     // load data + check that file contents are valid
     // .dims
     // TODO: there is a lot more that can go wrong here, e.g. number of cols
     std::string dims_path = make_path(out_dir, chr_id, ".dims");
     std::vector<int> dims = read_ints_from_lines(dims_path);
     size_t ndims = dims.size();
-    if (ndims != 2) {
-        std::cout << "Invalid .dims file: found " << ndims << "dimensions instead of two." <<  std::endl;
+    if (ndims != 2)
+    {
+        std::cout << "Invalid .dims file: found " << ndims << "dimensions instead of two."
+                  << std::endl;
         exit(1);
     }
     size_t num_individuals = dims[0];
@@ -220,7 +231,8 @@ void corr(int argc, char *argv[])
     // .phen
     size_t num_phen = phen_paths.size();
     std::vector<float> phen_vals = {};
-    for (size_t i = 0; i < num_phen; ++i) {
+    for (size_t i = 0; i < num_phen; ++i)
+    {
         read_floats_from_lines(phen_paths[i], phen_vals);
     }
 
@@ -241,8 +253,8 @@ void corr(int argc, char *argv[])
     assert((marker_means.size() == num_markers) && "number of marker means != num markers");
 
     printf("Loading stds \n");
-    
-    // .stds 
+
+    // .stds
     std::string stds_path = make_path(out_dir, chr_id, ".stds");
     std::vector<float> marker_stds = read_floats_from_lines(stds_path);
     assert((marker_stds.size() == num_markers) && "number of marker stds != num markers");
@@ -252,7 +264,7 @@ void corr(int argc, char *argv[])
     // allocate correlation result arrays
     size_t marker_corr_mat_size = num_markers * (num_markers - 1) / 2;
     std::vector<float> marker_corr(marker_corr_mat_size, 0.0);
-    
+
     size_t marker_phen_corr_mat_size = num_markers * num_phen;
     std::vector<float> marker_phen_corr(marker_phen_corr_mat_size, 0.0);
 
@@ -261,48 +273,44 @@ void corr(int argc, char *argv[])
     std::vector<float> phen_corr(phen_corr_mat_size, 0.0);
 
     // mem required for non-batched processing
-    size_t req_mem_bytes = (num_individuals * num_markers) / 4
-        + 4 * num_individuals * num_phen
-        + 2 * (num_phen + num_markers) * (num_markers + num_phen - 1);
-    
+    size_t req_mem_bytes = (num_individuals * num_markers) / 4 + 4 * num_individuals * num_phen +
+                           2 * (num_phen + num_markers) * (num_markers + num_phen - 1);
+
     double req_mem_gb = (double)req_mem_bytes * std::pow(10, -9);
-    
+
     if (req_mem_gb < device_mem_gb)
     {
         // figure out batch size
         double b = (double)num_individuals / 4.0;
         size_t max_batch_size =
-            (size_t)(
-                -b + std::sqrt(b * b - (4.0 * (double)num_individuals * (double)num_phen - (double)req_mem_bytes)));
+            (size_t)(-b + std::sqrt(b * b - (4.0 * (double)num_individuals * (double)num_phen -
+                                             (double)req_mem_bytes)));
         size_t row_width = max_batch_size / 2;
 
         printf("Device mem < required mem; Running tiled routine. \n");
 
-        cu_corr_npn_batched(
-            marker_vals.data(), phen_vals.data(), num_markers, num_individuals, num_phen,
-            marker_means.data(), marker_stds.data(), row_width, marker_corr.data(), marker_phen_corr.data(),
-            phen_corr.data()
-        );
+        cu_corr_npn_batched(marker_vals.data(), phen_vals.data(), num_markers, num_individuals,
+                            num_phen, marker_means.data(), marker_stds.data(), row_width,
+                            marker_corr.data(), marker_phen_corr.data(), phen_corr.data());
         // TODO: the output corrs matrices are ordered in a really stupid way,
         // they need to be reordered.
-    } else {
+    }
+    else
+    {
         printf("Calling correlation main\n");
         // compute correlations
         cu_corr_npn(marker_vals.data(), phen_vals.data(), num_markers, num_individuals, num_phen,
-                    marker_means.data(), marker_stds.data(), marker_corr.data(), marker_phen_corr.data(),
-                    phen_corr.data());
+                    marker_means.data(), marker_stds.data(), marker_corr.data(),
+                    marker_phen_corr.data(), phen_corr.data());
     }
 
     printf("Writing results\n");
     // write results
-    write_floats_to_binary(marker_corr.data(),
-                           marker_corr_mat_size,
+    write_floats_to_binary(marker_corr.data(), marker_corr_mat_size,
                            make_path(out_dir, chr_id, "_marker_corr.bin"));
-    write_floats_to_binary(marker_phen_corr.data(),
-                           marker_phen_corr_mat_size,
+    write_floats_to_binary(marker_phen_corr.data(), marker_phen_corr_mat_size,
                            make_path(out_dir, chr_id, "_marker_phen_corr.bin"));
-    write_floats_to_binary(phen_corr.data(),
-                           phen_corr_mat_size,
+    write_floats_to_binary(phen_corr.data(), phen_corr_mat_size,
                            make_path(out_dir, chr_id, "_phen_corr.bin"));
 
     std::cout << "Correlation matrices written to: " << out_dir << std::endl;
@@ -320,14 +328,16 @@ arguments:
 void printbf(int argc, char *argv[])
 {
     // check for correct number of args
-    if (argc != 3) {
+    if (argc != 3)
+    {
         std::cout << PRINTBF_USAGE << std::endl;
         exit(1);
     }
 
     // check that path is valid
     std::string fpath = (std::string)argv[2];
-    if (!path_exists(fpath)) {
+    if (!path_exists(fpath))
+    {
         std::cout << "file or directory found: " << fpath << std::endl;
         exit(1);
     }
@@ -335,7 +345,8 @@ void printbf(int argc, char *argv[])
     std::vector<float> read = read_floats_from_binary(fpath);
 
     // Using a for loop with index
-    for(std::size_t i = 0; i < read.size(); ++i) {
+    for (std::size_t i = 0; i < read.size(); ++i)
+    {
         std::cout << read[i] << "\n";
     }
 }
@@ -353,31 +364,44 @@ contact:
     nick.machnik@gmail.com
 )";
 
-auto main(int argc, char *argv[]) -> int 
+auto main(int argc, char *argv[]) -> int
 {
-    if (argc == 1) {
+    if (argc == 1)
+    {
         std::cout << MPS_USAGE << std::endl;
         return EXIT_SUCCESS;
     }
-    
+
     std::string cmd = (std::string)argv[1];
-    
-    if ((cmd == "--help") || (cmd == "-h")) {
+
+    if ((cmd == "--help") || (cmd == "-h"))
+    {
         std::cout << MPS_USAGE << std::endl;
-    } else if (cmd == "prep") {
+    }
+    else if (cmd == "prep")
+    {
         prep_bed(argc, argv);
-    } else if (cmd == "corr") {
+    }
+    else if (cmd == "corr")
+    {
         corr(argc, argv);
-    } else if (cmd == "cups") {
+    }
+    else if (cmd == "cups")
+    {
         std::cout << "'cups' cli is not implemented yet." << std::endl;
-    } else if (cmd == "printbf") {
+    }
+    else if (cmd == "printbf")
+    {
         printbf(argc, argv);
-    } else if (cmd == "mcorrp") {
+    }
+    else if (cmd == "mcorrp")
+    {
         mcorrp(argc, argv);
-    } else {
+    }
+    else
+    {
         std::cout << MPS_USAGE << std::endl;
     }
 
     return EXIT_SUCCESS;
 }
-
