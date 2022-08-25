@@ -484,6 +484,7 @@ usage: mps <command> [<args>]
 commands:
     prep    Prepare input (PLINK) .bed file for mps
     corr    Compute the marker/phenotype correlation matrix
+    mcorrk  Compute pearson correlations between markers as sin(pi / 2 tau_b)
     mcorrp  Compute pearson correlations between markers
     cups    use cuPC to compute the parent set for each phenotype
 
@@ -524,6 +525,10 @@ auto main(int argc, char *argv[]) -> int
     else if (cmd == "mcorrp")
     {
         mcorrp(argc, argv);
+    }
+    else if (cmd == "mcorrk")
+    {
+        mcorrk(argc, argv);
     }
     else
     {
