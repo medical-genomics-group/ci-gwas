@@ -95,8 +95,8 @@ void mcorrk(int argc, char *argv[])
     // TODO: figure out how to glob files and check that at least one .phen is present
     std::string out_dir = (std::string)argv[2];
     std::string chr_id = (std::string)argv[3];
-    std::string req_suffixes[4] = {".bed", ".dims"};
-    for (size_t i = 0; i < 4; ++i)
+    std::string req_suffixes[2] = {".bed", ".dims"};
+    for (size_t i = 0; i < 2; ++i)
     {
         std::string fpath = make_path(out_dir, chr_id, req_suffixes[i]);
         if (!path_exists(fpath))
