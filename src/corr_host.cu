@@ -756,10 +756,10 @@ void cu_marker_corr_pearson_npn(const unsigned char *marker_vals, const size_t n
 // Compute correlations between markers, markers and phenotypes, and between phenotypes.
 // Markers are expected to be in compressed .bed format, with NaNs removed and no leading magic
 // numbers.
-void cu_corr_npn(const unsigned char *marker_vals, const float *phen_vals, const size_t num_markers,
-                 const size_t num_individuals, const size_t num_phen, const float *marker_mean,
-                 const float *marker_std, float *marker_corrs, float *marker_phen_corrs,
-                 float *phen_corrs)
+void cu_corr_pearson_npn(const unsigned char *marker_vals, const float *phen_vals,
+                         const size_t num_markers, const size_t num_individuals,
+                         const size_t num_phen, const float *marker_mean, const float *marker_std,
+                         float *marker_corrs, float *marker_phen_corrs, float *phen_corrs)
 {
     // this is ceil
     size_t col_len_bytes = (num_individuals + 3) / 4 * sizeof(unsigned char);
