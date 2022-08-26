@@ -147,7 +147,8 @@ void mcorrk(int argc, char *argv[])
         size_t batch_nrows = max_batch_size / 2;
 
         printf("req mem: %zu, device mem: %zu \n", req_mem_bytes, device_mem_bytes);
-        size_t mb_bytes = num_individuals / 4 * max_batch_size + max_batch_size * (max_batch_size - 1) * 2;
+        size_t mb_bytes =
+            num_individuals / 4 * max_batch_size + max_batch_size * (max_batch_size - 1) * 2;
         printf("max_batch_size: %zu (%zu bytes \n)", max_batch_size, mb_bytes);
 
         printf("Device mem < required mem; Running tiled routine. \n");
@@ -155,11 +156,11 @@ void mcorrk(int argc, char *argv[])
         printf("arg1: %p \n", marker_vals.data());
         printf("arg2: %i \n", num_markers);
         printf("arg3: %i \n", num_individuals);
-        printf("arg4: %i \n",  batch_nrows);
-        printf("arg5: %p \n",  marker_corr.data());
+        printf("arg4: %i \n", batch_nrows);
+        printf("arg5: %p \n", marker_corr.data());
         printf("wtf1 \n");
         printf("args: %p, %i, %i, %i, %p \n", marker_vals.data(), num_markers, num_individuals,
-                batch_nrows, marker_corr.data());
+               batch_nrows, marker_corr.data());
         printf("wtf2 \n");
         printf("wtf3 \n");
         cu_marker_corr_pearson_npn_batched(marker_vals.data(), num_markers, num_individuals,
@@ -496,6 +497,7 @@ const std::string MPS_USAGE = R"(
 usage: mps <command> [<args>]
 
 commands:
+    printbf Interpret contents of binary file as floats and print to stoud
     prep    Prepare input (PLINK) .bed file for mps
     corr    Compute the marker/phenotype correlation matrix
     mcorrk  Compute pearson correlations between markers as sin(pi / 2 tau_b)
