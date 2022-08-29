@@ -134,7 +134,7 @@ TEST(CuCorrNpnBatchedTest, ExpectedReturnVals)
     }
 }
 
-TEST(CuMarkerPearsonTest, ExpectedReturnVals)
+TEST(CuMarkerPearsonTest, ExpectedReturnVals3Markers)
 {
     const size_t num_markers = BMT_NUM_MARKERS;
     const size_t num_individuals = BMT_NUM_INDIVIDUALS;
@@ -151,5 +151,23 @@ TEST(CuMarkerPearsonTest, ExpectedReturnVals)
     for (size_t i = 0; i < marker_cm_size; i++)
     {
         EXPECT_NEAR(marker_corr[i], marker_corr_expected[i], 0.00001);
+    }
+}
+
+TEST(CuMarkerPearsonTest, ExpectedReturnVals7Markers)
+{
+    const size_t num_markers = BMT2_NUM_MARKERS;
+    const size_t num_individuals = BMT2_NUM_INDIVIDUALS;
+    const size_t marker_cm_size = corr_matrix_size(num_markers);
+
+    float marker_corr[marker_cm_size];
+    memset(marker_corr, 0.0, sizeof(marker_corr));
+
+    cu_marker_corr_pearson(bmt2_marker_vals, num_markers, num_individuals, bmt2_marker_mean,
+                           bmt2_marker_std, marker_corr);
+
+    for (size_t i = 0; i < marker_cm_size; i++)
+    {
+        EXPECT_NEAR(marker_corr[i], bmt2_marker_corrs[i], 0.00001);
     }
 }
