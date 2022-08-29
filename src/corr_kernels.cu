@@ -6,10 +6,9 @@
 
 // Compute row and column indices from the linear index into
 // upper triangular matrix.
-__device__ void row_col_ix_from_linear_ix(const size_t lin_ix,
-                                          const size_t num_rows,
-                                          size_t *row_ix,
-                                          size_t *col_ix)
+__device__ void row_col_ix_from_linear_ix(
+    const size_t lin_ix, const size_t num_rows, size_t *row_ix, size_t *col_ix
+)
 {
     float l = num_rows - 1;
     float b = 2 * l - 1;
@@ -22,6 +21,16 @@ __device__ void row_col_ix_from_linear_ix(const size_t lin_ix,
     *col_ix = (size_t)col;
 }
 
+// Compute row and column indices from a linear index into
+// a upper triangular matrix.
+// This kernel exists only for testing purposes of the device function.
+__global__ void ix_from_linear(
+    const size_t lin_ix, const size_t num_rows, size_t *row_ix, size_t *col_ix
+)
+{
+    row_col_ix_from_linear_ix(lin_ix, num_rows, row_ix, col_ix);
+}
+
 __global__ void bed_marker_phen_corr_pearson(
     const unsigned char *marker_vals,
     const float *phen_vals,
@@ -31,7 +40,8 @@ __global__ void bed_marker_phen_corr_pearson(
     const size_t col_len_bytes,
     const float *marker_mean,
     const float *marker_std,
-    float *results)
+    float *results
+)
 {
     size_t tix = threadIdx.x;
     size_t lin_ix = blockIdx.x;
@@ -78,10 +88,8 @@ __global__ void bed_marker_phen_corr_pearson(
 
 // Compute Pearson's r between a pair of standardized phenotype vectors.
 __global__ void phen_corr_pearson(
-    const float *phen_vals,
-    const size_t num_individuals,
-    const size_t num_phen,
-    float *results)
+    const float *phen_vals, const size_t num_individuals, const size_t num_phen, float *results
+)
 {
     size_t tix = threadIdx.x;
     size_t row;
@@ -114,13 +122,15 @@ __global__ void phen_corr_pearson(
 }
 
 // Compute Pearson's r between a pair of marker vectors.
-__global__ void bed_marker_corr_pearson(const unsigned char *marker_vals,
-                                        const size_t num_markers,
-                                        const size_t num_individuals,
-                                        const size_t col_len_bytes,
-                                        const float *marker_mean,
-                                        const float *marker_std,
-                                        float *results)
+__global__ void bed_marker_corr_pearson(
+    const unsigned char *marker_vals,
+    const size_t num_markers,
+    const size_t num_individuals,
+    const size_t col_len_bytes,
+    const float *marker_mean,
+    const float *marker_std,
+    float *results
+)
 {
     size_t tix = threadIdx.x;
     size_t row;
@@ -171,7 +181,8 @@ __global__ void bed_marker_corr_kendall_npn(
     const size_t num_markers,
     const size_t num_individuals,
     const size_t col_len_bytes,
-    float *results)
+    float *results
+)
 {
     size_t tix = threadIdx.x;
     size_t row;
@@ -214,14 +225,18 @@ __global__ void bed_marker_corr_kendall_npn(
                 s[j] += thread_sums[i][j];
             }
         }
-        float p = ((s[0] * (s[4] + s[5] + s[7] + s[8])) + (s[1] * (s[5] + s[8])) +
-                   (s[3] * (s[7] + s[8])) + (s[4] * s[8]));
-        float q = ((s[1] * (s[3] + s[6])) + (s[2] * (s[3] + s[4] + s[6] + s[7])) + (s[4] * s[6]) +
-                   (s[5] * (s[6] + s[7])));
-        float t = ((s[0] * (s[1] + s[2])) + (s[1] * s[2]) + (s[3] * (s[4] + s[5])) + (s[4] * s[5]) +
-                   (s[6] * (s[7] + s[8])) + (s[7] * s[8]));
-        float u = ((s[0] * (s[3] + s[6])) + (s[1] * (s[4] + s[7])) + (s[2] * (s[5] + s[8])) +
-                   (s[3] * s[6]) + (s[4] * s[7]) + (s[5] * s[8]));
+        float p =
+            ((s[0] * (s[4] + s[5] + s[7] + s[8])) + (s[1] * (s[5] + s[8])) +
+             (s[3] * (s[7] + s[8])) + (s[4] * s[8]));
+        float q =
+            ((s[1] * (s[3] + s[6])) + (s[2] * (s[3] + s[4] + s[6] + s[7])) + (s[4] * s[6]) +
+             (s[5] * (s[6] + s[7])));
+        float t =
+            ((s[0] * (s[1] + s[2])) + (s[1] * s[2]) + (s[3] * (s[4] + s[5])) + (s[4] * s[5]) +
+             (s[6] * (s[7] + s[8])) + (s[7] * s[8]));
+        float u =
+            ((s[0] * (s[3] + s[6])) + (s[1] * (s[4] + s[7])) + (s[2] * (s[5] + s[8])) +
+             (s[3] * s[6]) + (s[4] * s[7]) + (s[5] * s[8]));
 
         float kendall_corr = (p - q) / sqrt((p + q + t) * (p + q + u));
 
@@ -242,7 +257,8 @@ __global__ void bed_marker_corr_pearson_batched(
     const float *marker_std_row,
     const float *marker_mean_col,
     const float *marker_std_col,
-    float *results)
+    float *results
+)
 {
     // figure out which corr we are computing
     // we have a 2d grid
@@ -280,7 +296,8 @@ __global__ void bed_marker_corr_pearson_batched(
             s_mvps += thread_sums_mvp[i];
         }
 
-        float num = (s_mvps / (float)num_individuals) - (marker_mean_row[row] * marker_mean_col[col]);
+        float num =
+            (s_mvps / (float)num_individuals) - (marker_mean_row[row] * marker_mean_col[col]);
         float denom = marker_std_row[row] * marker_std_col[col];
 
         results[num_col_markers * row + col] = num / denom;
@@ -299,7 +316,8 @@ __global__ void bed_marker_corr_pearson_batched_row(
     const size_t col_len_bytes,
     const float *marker_mean,
     const float *marker_std,
-    float *results)
+    float *results
+)
 {
     // 1d grid
     size_t tix = threadIdx.x;
@@ -348,7 +366,8 @@ __global__ void bed_marker_corr_kendall_npn_batched(
     const size_t num_col_markers,
     const size_t num_individuals,
     const size_t col_len_bytes,
-    float *results)
+    float *results
+)
 {
     // figure out which corr we are computing
     // we have a 2d grid
@@ -393,14 +412,18 @@ __global__ void bed_marker_corr_kendall_npn_batched(
                 s[j] += thread_sums[i][j];
             }
         }
-        float p = ((s[0] * (s[4] + s[5] + s[7] + s[8])) + (s[1] * (s[5] + s[8])) +
-                   (s[3] * (s[7] + s[8])) + (s[4] * s[8]));
-        float q = ((s[1] * (s[3] + s[6])) + (s[2] * (s[3] + s[4] + s[6] + s[7])) + (s[4] * s[6]) +
-                   (s[5] * (s[6] + s[7])));
-        float t = ((s[0] * (s[1] + s[2])) + (s[1] * s[2]) + (s[3] * (s[4] + s[5])) + (s[4] * s[5]) +
-                   (s[6] * (s[7] + s[8])) + (s[7] * s[8]));
-        float u = ((s[0] * (s[3] + s[6])) + (s[1] * (s[4] + s[7])) + (s[2] * (s[5] + s[8])) +
-                   (s[3] * s[6]) + (s[4] * s[7]) + (s[5] * s[8]));
+        float p =
+            ((s[0] * (s[4] + s[5] + s[7] + s[8])) + (s[1] * (s[5] + s[8])) +
+             (s[3] * (s[7] + s[8])) + (s[4] * s[8]));
+        float q =
+            ((s[1] * (s[3] + s[6])) + (s[2] * (s[3] + s[4] + s[6] + s[7])) + (s[4] * s[6]) +
+             (s[5] * (s[6] + s[7])));
+        float t =
+            ((s[0] * (s[1] + s[2])) + (s[1] * s[2]) + (s[3] * (s[4] + s[5])) + (s[4] * s[5]) +
+             (s[6] * (s[7] + s[8])) + (s[7] * s[8]));
+        float u =
+            ((s[0] * (s[3] + s[6])) + (s[1] * (s[4] + s[7])) + (s[2] * (s[5] + s[8])) +
+             (s[3] * s[6]) + (s[4] * s[7]) + (s[5] * s[8]));
 
         float kendall_corr = (p - q) / sqrt((p + q + t) * (p + q + u));
 
@@ -419,7 +442,8 @@ __global__ void bed_marker_corr_kendall_npn_batched_row(
     const size_t num_rows,
     const size_t num_individuals,
     const size_t col_len_bytes,
-    float *results)
+    float *results
+)
 {
     // 1d grid
     size_t tix = threadIdx.x;
@@ -462,14 +486,18 @@ __global__ void bed_marker_corr_kendall_npn_batched_row(
                 s[j] += thread_sums[i][j];
             }
         }
-        float p = ((s[0] * (s[4] + s[5] + s[7] + s[8])) + (s[1] * (s[5] + s[8])) +
-                   (s[3] * (s[7] + s[8])) + (s[4] * s[8]));
-        float q = ((s[1] * (s[3] + s[6])) + (s[2] * (s[3] + s[4] + s[6] + s[7])) + (s[4] * s[6]) +
-                   (s[5] * (s[6] + s[7])));
-        float t = ((s[0] * (s[1] + s[2])) + (s[1] * s[2]) + (s[3] * (s[4] + s[5])) + (s[4] * s[5]) +
-                   (s[6] * (s[7] + s[8])) + (s[7] * s[8]));
-        float u = ((s[0] * (s[3] + s[6])) + (s[1] * (s[4] + s[7])) + (s[2] * (s[5] + s[8])) +
-                   (s[3] * s[6]) + (s[4] * s[7]) + (s[5] * s[8]));
+        float p =
+            ((s[0] * (s[4] + s[5] + s[7] + s[8])) + (s[1] * (s[5] + s[8])) +
+             (s[3] * (s[7] + s[8])) + (s[4] * s[8]));
+        float q =
+            ((s[1] * (s[3] + s[6])) + (s[2] * (s[3] + s[4] + s[6] + s[7])) + (s[4] * s[6]) +
+             (s[5] * (s[6] + s[7])));
+        float t =
+            ((s[0] * (s[1] + s[2])) + (s[1] * s[2]) + (s[3] * (s[4] + s[5])) + (s[4] * s[5]) +
+             (s[6] * (s[7] + s[8])) + (s[7] * s[8]));
+        float u =
+            ((s[0] * (s[3] + s[6])) + (s[1] * (s[4] + s[7])) + (s[2] * (s[5] + s[8])) +
+             (s[3] * s[6]) + (s[4] * s[7]) + (s[5] * s[8]));
 
         float kendall_corr = (p - q) / sqrt((p + q + t) * (p + q + u));
 

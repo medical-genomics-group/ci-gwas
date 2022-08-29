@@ -35,8 +35,9 @@ auto make_path(const std::string out_dir, const std::string chr_id, const std::s
 }
 
 // TODO: I don't ever need dest to have dynamic size, this should accept arrays
-void read_n_bytes_from_binary(const std::string path, const size_t nbytes,
-                              std::vector<unsigned char> &dest)
+void read_n_bytes_from_binary(
+    const std::string path, const size_t nbytes, std::vector<unsigned char> &dest
+)
 {
     dest.resize(nbytes);
     std::ifstream bin_file(path, std::ios::binary);
@@ -104,8 +105,9 @@ void write_floats_to_binary(const float *data, const size_t nvals, const std::st
     fout.close();
 }
 
-void write_bed(const std::vector<unsigned char> &out_buf, const std::string out_dir,
-               const std::string chr_id)
+void write_bed(
+    const std::vector<unsigned char> &out_buf, const std::string out_dir, const std::string chr_id
+)
 {
     std::string outpath = make_path(out_dir, chr_id, ".bed");
     std::ofstream bedout;
@@ -114,8 +116,9 @@ void write_bed(const std::vector<unsigned char> &out_buf, const std::string out_
     bedout.close();
 }
 
-void write_means(const std::vector<float> &chr_marker_means, const std::string out_dir,
-                 const std::string chr_id)
+void write_means(
+    const std::vector<float> &chr_marker_means, const std::string out_dir, const std::string chr_id
+)
 {
     std::string outpath = make_path(out_dir, chr_id, ".means");
     std::ofstream fout;
@@ -129,8 +132,9 @@ void write_means(const std::vector<float> &chr_marker_means, const std::string o
     fout.close();
 }
 
-void write_stds(const std::vector<float> &chr_marker_stds, const std::string out_dir,
-                const std::string chr_id)
+void write_stds(
+    const std::vector<float> &chr_marker_stds, const std::string out_dir, const std::string chr_id
+)
 {
     std::string outpath = make_path(out_dir, chr_id, ".stds");
     std::ofstream fout;
@@ -144,8 +148,12 @@ void write_stds(const std::vector<float> &chr_marker_stds, const std::string out
     fout.close();
 }
 
-void write_dims(const size_t num_individuals, const size_t num_markers, const std::string out_dir,
-                const std::string chr_id)
+void write_dims(
+    const size_t num_individuals,
+    const size_t num_markers,
+    const std::string out_dir,
+    const std::string chr_id
+)
 {
     std::string outpath = make_path(out_dir, chr_id, ".dims");
     std::ofstream fout;

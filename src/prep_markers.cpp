@@ -53,8 +53,13 @@ auto parse_bim(std::string bim_path) -> bimInfo
 }
 
 // Split .bed by chromosome, impute NaN to mode, compute col means and std
-void prep_bed(std::string bed_path, std::string bim_path, std::string fam_path, std::string out_dir,
-              size_t mem_gb)  // max memory used by this fn)
+void prep_bed(
+    std::string bed_path,
+    std::string bim_path,
+    std::string fam_path,
+    std::string out_dir,
+    size_t mem_gb
+)  // max memory used by this fn)
 {
     size_t num_individuals = count_lines(fam_path);
     bimInfo bim_info = parse_bim(bim_path);
