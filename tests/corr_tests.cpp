@@ -168,6 +168,6 @@ TEST(CuMarkerPearsonTest, ExpectedReturnVals7Markers)
 
     for (size_t i = 0; i < marker_cm_size; i++)
     {
-        EXPECT_NEAR(marker_corr[i], bmt2_marker_corrs[i], 0.00001);
+        EXPECT_NEAR(marker_corr[i], bmt2_marker_corrs_pearson[i], 0.00001);
     }
 }
