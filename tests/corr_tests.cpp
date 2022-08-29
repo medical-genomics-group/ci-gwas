@@ -14,7 +14,7 @@ TEST(HelloTest, BasicAssertions)
 
 auto corr_matrix_size(size_t num_markers) -> size_t { return num_markers * (num_markers - 1) / 2; }
 
-TEST(RowColIxFromLinearTest, ExpectedReturnVals)
+TEST(RowColIxFromLinearTest, ExpectedReturnVals3Markers)
 {
     size_t row_ix, col_ix;
     size_t num_rows = 3;
@@ -30,6 +30,16 @@ TEST(RowColIxFromLinearTest, ExpectedReturnVals)
     cu_ix_from_linear(2, num_rows, &row_ix, &col_ix);
     EXPECT_EQ(row_ix, 1);
     EXPECT_EQ(col_ix, 2);
+}
+
+TEST(RowColIxFromLinearTest, ExpectedReturnVals7603Markers)
+{
+    size_t row_ix, col_ix;
+    size_t num_rows = 7603;
+
+    cu_ix_from_linear(28'899'003, num_rows, &row_ix, &col_ix);
+    EXPECT_EQ(row_ix, 7602);
+    EXPECT_EQ(col_ix, 7603);
 }
 
 TEST(CuMarkerCorrPearsonBatchedTest, ExpectedReturnVals)
