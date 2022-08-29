@@ -4,6 +4,48 @@
 #include <mps/corr_kernels.h>
 #include <mps/gpuerrors.h>
 
+// this is from https://forums.developer.nvidia.com/t/integer-square-root/198642/2
+__device__ unsigned long long int umul_wide(unsigned int a, unsigned int b)
+{
+    unsigned long long int r;
+    asm("mul.wide.u32 %0,%1,%2;\n\t" : "=l"(r) : "r"(a), "r"(b));
+    return r;
+}
+
+// this is from https://forums.developer.nvidia.com/t/integer-square-root/198642/2
+__device__ uint32_t isqrtll(uint64_t a)
+{
+    uint64_t rem, arg;
+    uint32_t b, r, s, scal;
+
+    arg = a;
+    /* Normalize argument */
+    scal = __clzll(a) & ~1;
+    a = a << scal;
+    b = a >> 32;
+    /* Approximate rsqrt accurately. Make sure it's an underestimate! */
+    float fb, fr;
+    fb = (float)b;
+    asm("rsqrt.approx.ftz.f32 %0,%1; \n\t" : "=f"(fr) : "f"(fb));
+    r = (uint32_t)fmaf(1.407374884e14f, fr, -438.0f);
+    /* Compute sqrt(a) as a * rsqrt(a) */
+    s = __umulhi(r, b);
+    /* NR iteration combined with back multiply */
+    s = s * 2;
+    rem = a - umul_wide(s, s);
+    r = __umulhi((uint32_t)(rem >> 32) + 1, r);
+    s = s + r;
+    /* Denormalize result */
+    s = s >> (scal >> 1);
+    /* Make sure we get the floor correct; can be off by one to either side */
+    rem = arg - umul_wide(s, s);
+    if ((int64_t)rem < 0)
+        s--;
+    else if (rem >= ((uint64_t)s * 2 + 1))
+        s++;
+    return (arg == 0) ? 0 : s;
+}
+
 // Compute row and column indices from the linear index into
 // upper triangular matrix.
 // __device__ void row_col_ix_from_linear_ix(
@@ -27,10 +69,10 @@ __device__ void row_col_ix_from_linear_ix(
     const size_t lin_ix, const size_t num_rows, size_t *row_ix, size_t *col_ix
 )
 {
-    uint64_t M = num_rows - 1;
-    uint64_t num_ix = M * (M + 1) / 2;
-    uint64 ii = num_ix - 1 - lin_ix;
-    uint64 K = std::floor((std::sqrt(8 * ii + 1) - 1) / 2);
+    uint32_t M = num_rows - 1;
+    uint64_t num_ix = (uint64_t)M * ((uint64_t)M + 1) / 2;
+    uint64_t ii = num_ix - 1 - lin_ix;
+    uint32_t K = std::floor((isqrtll(8 * ii + 1) - 1) / 2);
     *row_ix = (size_t)(M - 1 - K);
     *col_ix = (size_t)(lin_ix - num_ix + (K + 1) * (K + 2) / 2);
 }
