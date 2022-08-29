@@ -40,6 +40,18 @@ TEST(RowColIxFromLinearTest, ExpectedReturnVals7603Markers)
     cu_ix_from_linear(28'899'002, num_rows, &row_ix, &col_ix);
     EXPECT_EQ(row_ix, 7601);
     EXPECT_EQ(col_ix, 7602);
+
+    cu_ix_from_linear(28'898'997, num_rows, &row_ix, &col_ix);
+    EXPECT_EQ(row_ix, 7599);
+    EXPECT_EQ(col_ix, 7600);
+
+    cu_ix_from_linear(28'898'996, num_rows, &row_ix, &col_ix);
+    EXPECT_EQ(row_ix, 7598);
+    EXPECT_EQ(col_ix, 7602);
+
+    cu_ix_from_linear(28'898'996, num_rows, &row_ix, &col_ix);
+    EXPECT_EQ(row_ix, 7598);
+    EXPECT_EQ(col_ix, 7601);
 }
 
 // TEST(CuMarkerCorrPearsonBatchedTest, ExpectedReturnVals)
