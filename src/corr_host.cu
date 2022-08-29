@@ -10,8 +10,13 @@
 
 void cu_ix_from_linear(const size_t lin_ix, const size_t num_rows, size_t *row_ix, size_t *col_ix)
 {
-    ix_from_linear<<<1, 1>>>(lin_ix, num_rows, row_ix, col_ix);
+    size_t *gpu_rix, gpu_cix;
+    HANDLE_ERROR(cudaMalloc(&gpu_rix, sizeof(size_t)));
+    HANDLE_ERROR(cudaMalloc(&gpu_cix, sizeof(size_t)));
+    ix_from_linear<<<1, 1>>>(lin_ix, num_rows, gpu_rix, gpu_cix);
     CudaCheckError();
+    HANDLE_ERROR(cudaMemcpy(row_ix, gpu_rix, sizeof(size_t), cudaMemcpyDeviceToHost));
+    HANDLE_ERROR(cudaMemcpy(col_ix, gpu_rcix, sizeof(size_t), cudaMemcpyDeviceToHost));
 }
 
 void cu_marker_corr_pearson_batched(
