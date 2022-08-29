@@ -14,7 +14,7 @@ def corr_plot(
     num_markers: int,
     # outpath: str
 ):
-    num_values = num_markers * (num_markers - 1) / 2
+    num_values = int(num_markers * (num_markers - 1) / 2)
     v1 = read_floats_from_bin(b1, num_values)
     v2 = read_floats_from_bin(b2, num_values)
     corr = np.corrcoef(v1, v2)[0, 1]
