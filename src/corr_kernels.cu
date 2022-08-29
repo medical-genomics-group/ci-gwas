@@ -73,7 +73,7 @@ __device__ void row_col_ix_from_linear_ix(
     uint32_t M = num_rows - 1;
     uint64_t num_ix = (uint64_t)M * ((uint64_t)M + 1) / 2;
     uint64_t ii = num_ix - 1 - lin_ix;
-    uint32_t K = std::floor((isqrtll(8 * ii + 1) - 1) / 2);
+    uint32_t K = (isqrtll(8 * ii + 1) - 1) / 2;
     *row_ix = (size_t)(M - 1 - K);
     *col_ix = (size_t)(lin_ix - num_ix + (K + 1) * (K + 2) / 2);
 }
