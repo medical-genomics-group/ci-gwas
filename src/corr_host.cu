@@ -10,7 +10,7 @@
 
 void cu_ix_from_linear(const size_t lin_ix, const size_t num_rows, size_t *row_ix, size_t *col_ix)
 {
-    bed_marker_corr_pearson_batched<<<1, 1>>>(lin_ix, num_rows, row_ix, col_ix);
+    ix_from_linear<<<1, 1>>>(lin_ix, num_rows, row_ix, col_ix);
     CudaCheckError();
 }
 
