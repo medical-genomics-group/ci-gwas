@@ -14,6 +14,16 @@ TEST(HelloTest, BasicAssertions)
 
 auto corr_matrix_size(size_t num_markers) -> size_t { return num_markers * (num_markers - 1) / 2; }
 
+TEST(RowColIxFromLinearTest, ExpectedReturnVals)
+{
+    size_t row_ix, col_ix;
+    size_t num_rows = 3;
+    size_t lin_ix = 0;
+    cu_ix_from_linear(lin_ix, num_rows, &row_ix, &col_ix);
+    EXPECT_EQ(row_ix, 1);
+    EXPECT_EQ(col_ix, 1);
+}
+
 TEST(CuMarkerCorrPearsonBatchedTest, ExpectedReturnVals)
 {
     const size_t num_markers = BMT2_NUM_MARKERS;
