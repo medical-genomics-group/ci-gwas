@@ -643,7 +643,7 @@ void cu_marker_corr_pearson(const unsigned char *marker_vals, const size_t num_m
                             const size_t num_individuals, const float *marker_mean,
                             const float *marker_std, float *marker_corrs)
 {
-    printf("Starting cu_marer_corr_pearson \n");
+    printf("Starting cu_marker_corr_pearson \n");
 
     size_t col_len_bytes = (num_individuals + 3) / 4 * sizeof(unsigned char);
     size_t marker_vals_bytes = col_len_bytes * num_markers;
