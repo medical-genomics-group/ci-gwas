@@ -29,7 +29,7 @@ def corr_plot(
     num_values = int(num_markers * (num_markers - 1) / 2)
     v1 = read_floats_from_bin(b1, num_values)
     v2 = read_floats_from_bin(b2, num_values)
-    corr = np.corrcoef(v1, v2)[0, 1]
+    corr = np.around(np.corrcoef(v1, v2)[0, 1], 3)
     diag = np.linspace(-1, 1, 10)
     props = dict(boxstyle="round", facecolor="wheat", alpha=0.5)
 
