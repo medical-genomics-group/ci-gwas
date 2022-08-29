@@ -49,7 +49,7 @@ TEST(RowColIxFromLinearTest, ExpectedReturnVals7603Markers)
     EXPECT_EQ(row_ix, 7598);
     EXPECT_EQ(col_ix, 7602);
 
-    cu_ix_from_linear(28'898'996, num_rows, &row_ix, &col_ix);
+    cu_ix_from_linear(28'898'995, num_rows, &row_ix, &col_ix);
     EXPECT_EQ(row_ix, 7598);
     EXPECT_EQ(col_ix, 7601);
 }
