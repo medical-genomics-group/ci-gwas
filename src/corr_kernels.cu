@@ -3,6 +3,7 @@
 #include <mps/corr_host.h>
 #include <mps/corr_kernels.h>
 #include <mps/gpuerrors.h>
+#include <stdint.h>
 
 // this is from https://forums.developer.nvidia.com/t/integer-square-root/198642/2
 __device__ unsigned long long int umul_wide(unsigned int a, unsigned int b)
