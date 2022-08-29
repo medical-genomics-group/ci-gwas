@@ -20,7 +20,7 @@ TEST(RowColIxFromLinearTest, ExpectedReturnVals)
     size_t num_rows = 3;
     size_t lin_ix = 0;
     cu_ix_from_linear(lin_ix, num_rows, &row_ix, &col_ix);
-    EXPECT_EQ(row_ix, 1);
+    EXPECT_EQ(row_ix, 0);
     EXPECT_EQ(col_ix, 1);
 }
 
