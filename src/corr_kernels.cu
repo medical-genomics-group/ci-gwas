@@ -6,19 +6,33 @@
 
 // Compute row and column indices from the linear index into
 // upper triangular matrix.
+// __device__ void row_col_ix_from_linear_ix(
+//     const size_t lin_ix, const size_t num_rows, size_t *row_ix, size_t *col_ix
+// )
+// {
+//     float l = num_rows - 1;
+//     float b = 2 * l - 1;
+//     float c = 2 * (l - (float)lin_ix);
+//     float row = std::floor((-b + sqrt(b * b + 4 * c)) / -2.0) + 1.0;
+//     float h = (-(row * row) + row * (2.0 * l + 1.0)) / 2.0;
+//     // offset of 1 because we do not include the diagonal
+//     float col = (float)lin_ix - h + row + 1;
+//     *row_ix = (size_t)row;
+//     *col_ix = (size_t)col;
+// }
+
+// Compute row and column indices from the linear index into
+// upper triangular matrix.
 __device__ void row_col_ix_from_linear_ix(
     const size_t lin_ix, const size_t num_rows, size_t *row_ix, size_t *col_ix
 )
 {
-    float l = num_rows - 1;
-    float b = 2 * l - 1;
-    float c = 2 * (l - (float)lin_ix);
-    float row = std::floor((-b + sqrt(b * b + 4 * c)) / -2.0) + 1.0;
-    float h = (-(row * row) + row * (2.0 * l + 1.0)) / 2.0;
-    // offset of 1 because we do not include the diagonal
-    float col = (float)lin_ix - h + row + 1;
-    *row_ix = (size_t)row;
-    *col_ix = (size_t)col;
+    uint64_t M = num_rows - 1;
+    uint64_t num_ix = M * (M + 1) / 2;
+    uint64 ii = num_ix - 1 - lin_ix;
+    uint64 K = std::floor((std::sqrt(8 * ii + 1) - 1) / 2);
+    *row_ix = (size_t)(M - 1 - K);
+    *col_ix = (size_t)(lin_ix - num_ix + (K + 1) * (K + 2) / 2);
 }
 
 // Compute row and column indices from a linear index into
