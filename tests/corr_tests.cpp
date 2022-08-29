@@ -37,9 +37,9 @@ TEST(RowColIxFromLinearTest, ExpectedReturnVals7603Markers)
     size_t row_ix, col_ix;
     size_t num_rows = 7603;
 
-    cu_ix_from_linear(28'899'003, num_rows, &row_ix, &col_ix);
-    EXPECT_EQ(row_ix, 7602);
-    EXPECT_EQ(col_ix, 7603);
+    cu_ix_from_linear(28'899'002, num_rows, &row_ix, &col_ix);
+    EXPECT_EQ(row_ix, 7601);
+    EXPECT_EQ(col_ix, 7602);
 }
 
 // TEST(CuMarkerCorrPearsonBatchedTest, ExpectedReturnVals)
