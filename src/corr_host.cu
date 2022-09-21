@@ -4,6 +4,7 @@
 #include <mps/corr_kernels.h>
 #include <mps/gpuerrors.h>
 
+#include <cassert>
 #include <iomanip>
 #include <iostream>
 #include <vector>
@@ -946,6 +947,8 @@ void cu_corr_pearson_npn_batched_sparse(
 
     memory requirement is 4(np + m'(w + p)) + nm' / 4 bytes
     */
+
+    assert((batch_size > corr_width) && "error: batch_size <= corr_width");
 
     // copy all marker stats over
     float *gpu_marker_mean;
