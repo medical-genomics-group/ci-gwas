@@ -982,6 +982,8 @@ void cu_corr_pearson_npn_batched_sparse(
     HANDLE_ERROR(cudaMemcpy(
         gpu_marker_vals, &marker_vals[0], batch_marker_vals_bytes, cudaMemcpyHostToDevice));
 
+    size_t reload_interval = batch_size - corr_width;
+    size_t corr_row_len = corr_width + num_phen;
     size_t last_full_row = num_markers - corr_width - 1;
     size_t max_row_in = batch_size - corr_width;
     size_t batch_start = 0;
@@ -989,7 +991,7 @@ void cu_corr_pearson_npn_batched_sparse(
     for (size_t row_ix = 0; row_ix < num_markers; ++row_ix)
     {
         size_t row_out = row_ix % batch_size;
-        size_t row_in = row_ix % max_row_in;
+        size_t row_in = row_ix % reload_interval;
         // marker-marker corr
 
         printf("row_ix: %u\t row_out: %u\t row_in: %u\t curr_width: %u\n", row_ix, row_out, row_in, curr_width);
@@ -1002,7 +1004,7 @@ void cu_corr_pearson_npn_batched_sparse(
                 num_individuals,
                 genotype_col_bytes,
                 row_in,
-                &gpu_corrs[row_out]);
+                &gpu_corrs[row_out * corr_row_len]);
             CudaCheckError();
         }
         // marker-phen corr
@@ -1018,12 +1020,12 @@ void cu_corr_pearson_npn_batched_sparse(
             &gpu_marker_std[row_ix],
             corr_width,
             row_in,
-            &gpu_corrs[row_out]);
+            &gpu_corrs[row_out * corr_row_len]);
         CudaCheckError();
 
         if (row_out == (batch_size - 1))
         {
-            printf("saving batch with start at row %u", batch_start);
+            printf("saving batch with start at row %u \n", batch_start);
             // copy batch results to host
             HANDLE_ERROR(cudaMemcpy(
                 &corrs[batch_start * (corr_width + num_phen)],
@@ -1047,13 +1049,14 @@ void cu_corr_pearson_npn_batched_sparse(
         if (row_ix >= last_full_row)
         {
             curr_width -= 1;
+            max_row_in += 1;
         }
     }
 
     // copy remaining results to host
     if ((num_markers % batch_size) != 0)
     {
-        printf("saving batch with start at row %u", batch_start);
+        printf("saving batch with start at row %u \n", batch_start);
         size_t last_batch_size = num_markers - batch_start;
         HANDLE_ERROR(cudaMemcpy(
             &corrs[batch_start * (corr_width + num_phen)],
@@ -1081,7 +1084,6 @@ void cu_corr_pearson_npn_batched_sparse(
         num_phen_corrs * sizeof(float),
         cudaMemcpyDeviceToHost));
 
-    size_t corr_row_len = corr_width + num_phen;
     size_t num_row_entries = num_phen - 1;
     size_t lin_ix = 0;
     for (size_t pix = 0; pix < num_phen; ++pix)
