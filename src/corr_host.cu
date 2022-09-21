@@ -993,6 +993,7 @@ void cu_corr_pearson_npn_batched_sparse(
         // marker-marker corr
         BLOCKS_PER_GRID = dim3(curr_width, 1, 1);
         THREADS_PER_BLOCK = dim3(NUMTHREADS, 1, 1);
+        printf("curr_width: %u, numthreads: %u", curr_width, NUMTHREADS);
         bed_marker_corr_pearson_npn_sparse<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
             gpu_marker_vals,
             num_individuals,

@@ -1,6 +1,6 @@
 #pragma once
 
-#define NUMTHREADS 1024
+#define NUMTHREADS 128
 #define gdimx gridDim.x
 #define gdimy gridDim.y
 #define gdimz gridDim.z
