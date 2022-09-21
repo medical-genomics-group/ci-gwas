@@ -1009,8 +1009,8 @@ void cu_corr_pearson_npn_batched_sparse(
             num_individuals,
             num_phen,
             genotype_col_bytes,
-            gpu_marker_mean,
-            gpu_marker_std,
+            &gpu_marker_mean[row_ix],
+            &gpu_marker_std[row_ix],
             corr_width,
             row_in,
             &gpu_corrs[row_out]);
