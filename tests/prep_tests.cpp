@@ -24,14 +24,14 @@ TEST(SplitBimLineTest, ExpectedReturnVals)
     }
 }
 
-TEST(ParseBimTest, ExpectedReturnVals)
+TEST(PrepBimTest, ExpectedReturnVals)
 {
     bimInfo exp;
     exp.number_of_lines = 5;
     exp.chr_ids = {"1", "19"};
     exp.num_markers_on_chr = {3, 2};
 
-    bimInfo obs = parse_bim("../../tests/test_files/small.bim");
+    bimInfo obs = prep_bim("../../tests/test_files/small.bim", "../../tests/test_files");
 
     EXPECT_EQ(obs.number_of_lines, exp.number_of_lines);
 
@@ -40,6 +40,9 @@ TEST(ParseBimTest, ExpectedReturnVals)
         EXPECT_EQ(obs.chr_ids[i], exp.chr_ids[i]);
         EXPECT_EQ(obs.num_markers_on_chr[i], exp.num_markers_on_chr[i]);
     }
+
+    EXPECT_TRUE(std::filesystem::remove("../../tests/test_files/19.bim"));
+    EXPECT_TRUE(std::filesystem::remove("../../tests/test_files/1.bim"));
 }
 
 TEST(ParseBedDeathTest, WrongMagicNumberOne)
@@ -181,4 +184,6 @@ TEST(ParseBed, CorrectOutFilesGenerated)
     EXPECT_TRUE(std::filesystem::remove("../../tests/test_files/1.dims"));
     EXPECT_TRUE(std::filesystem::remove("../../tests/test_files/1.means"));
     EXPECT_TRUE(std::filesystem::remove("../../tests/test_files/1.stds"));
+    EXPECT_TRUE(std::filesystem::remove("../../tests/test_files/19.bim"));
+    EXPECT_TRUE(std::filesystem::remove("../../tests/test_files/1.bim"));
 }

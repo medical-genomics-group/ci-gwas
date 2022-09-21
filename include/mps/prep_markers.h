@@ -19,4 +19,4 @@ void prep_bed(
 
 void split_bim_line(std::string line, std::string *buf);
 
-auto parse_bim(std::string bim_path) -> bimInfo;
+auto prep_bim(std::string bim_path, std::string out_dir) -> bimInfo;

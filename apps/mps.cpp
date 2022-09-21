@@ -298,6 +298,22 @@ void mcorrp(int argc, char *argv[])
     std::cout << "Correlation matrix written to: " << out_dir << std::endl;
 }
 
+const std::string SCORR_USAGE = R"(
+Compute correlations between markers and phenotypes. The marker-marker correlation part 
+is computed as a banded matrix.
+
+usage: mps scorr <prepdir> <chr> <device_mem_gb> <distance_threshold> <.phen>...
+
+arguments:
+    prepdir Directory with `mps prep` output, i.e. .bed, .stds, .means and .dims files for each chromosome
+    chr                 ID of the chromsome to be processed
+    device_mem_gb       Amount of memory available on the GPU
+    distance_threshold  Maximal distance between markers up to which correlations are computed
+    .phen               Path to .phen file with phenotype values, sorted in the same way as genotype info in the original bed file
+)";
+
+const int SCORR_NARGS = 7;
+
 const std::string CORR_USAGE = R"(
 Compute correlations between markers and phenotypes.
 
@@ -499,6 +515,7 @@ usage: mps <command> [<args>]
 commands:
     printbf Interpret contents of binary file as floats and print to stoud
     prep    Prepare input (PLINK) .bed file for mps
+    scorr   Compute the marker/phenotype correlation matrix in sparse format
     corr    Compute the marker/phenotype correlation matrix
     mcorrk  Compute pearson correlations between markers as sin(pi / 2 tau_b)
     mcorrp  Compute pearson correlations between markers
@@ -545,6 +562,10 @@ auto main(int argc, char *argv[]) -> int
     else if (cmd == "mcorrk")
     {
         mcorrk(argc, argv);
+    }
+    else if (cmd == "scorr")
+    {
+        // scorr(argc, argv);
     }
     else
     {

@@ -26,7 +26,7 @@ void split_bim_line(std::string line, std::string *buf)
     }
 }
 
-auto parse_bim(std::string bim_path) -> bimInfo
+auto prep_bim(std::string bim_path, std::string out_dir) -> bimInfo
 {
     bimInfo res;
     res.number_of_lines = 0;
@@ -36,15 +36,22 @@ auto parse_bim(std::string bim_path) -> bimInfo
     std::string bim_line[6];
     std::string line;
     std::ifstream bim(bim_path);
+    std::string outpath;
+    std::ofstream fout;
 
     while (std::getline(bim, line))
     {
         split_bim_line(line, bim_line);
         if ((res.number_of_lines == 0) || (bim_line[0] != res.chr_ids.back()))
         {
+            fout.close();
+            outpath = make_path(out_dir, bim_line[0], ".bim");
+            fout.open(outpath, std::ios::out);
+            
             res.chr_ids.push_back(bim_line[0]);
             res.num_markers_on_chr.push_back(0);
         }
+        fout << line << std::endl;
         ++res.num_markers_on_chr.back();
         ++res.number_of_lines;
     }
@@ -62,7 +69,7 @@ void prep_bed(
 )  // max memory used by this fn)
 {
     size_t num_individuals = count_lines(fam_path);
-    bimInfo bim_info = parse_bim(bim_path);
+    bimInfo bim_info = prep_bim(bim_path, out_dir);
     size_t bed_block_size = (num_individuals + 3) / 4;
 
     for (size_t i = 0; i < bim_info.chr_ids.size(); ++i)
