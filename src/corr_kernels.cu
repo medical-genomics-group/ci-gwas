@@ -591,12 +591,12 @@ __global__ void bed_marker_corr_pearson_npn_sparse(
 
     for (size_t i = 0; i < 9; i++)
     {
-        thread_sums[tix][i] = thread_sum[i];
+        thread_sums[tx][i] = thread_sum[i];
     }
 
     // consolidate thread_sums
     __syncthreads();
-    if (tix == 0)
+    if (tx == 0)
     {
         // produce single sum
         float s[9] = {0.0};
@@ -660,11 +660,11 @@ __global__ void bed_marker_phen_corr_pearson_sparse(
         }
     }
 
-    thread_sums_mv_phen[tix] = thread_sum_mv_phen;
-    thread_sums_phen[tix] = thread_sum_phen;
+    thread_sums_mv_phen[tx] = thread_sum_mv_phen;
+    thread_sums_phen[tx] = thread_sum_phen;
 
     __syncthreads();
-    if (tix == 0)
+    if (tx == 0)
     {
         float s_mv_phen = 0.0;
         float s_phen = 0.0;
@@ -674,7 +674,7 @@ __global__ void bed_marker_phen_corr_pearson_sparse(
             s_phen += thread_sums_phen[i];
         }
 
-        results[corr_width + phen_ix] = (s_mv_phen - marker_mean[mv_ix] * s_phen) /
-                                        ((float)(num_individuals)*marker_std[mv_ix]);
+        results[corr_width + phen_ix] = (s_mv_phen - *marker_mean * s_phen) /
+                                        ((float)(num_individuals) * *marker_std);
     }
 }
