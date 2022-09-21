@@ -991,9 +991,10 @@ void cu_corr_pearson_npn_batched_sparse(
         size_t row_out = row_ix % batch_size;
         size_t row_in = row_ix % max_row_in;
         // marker-marker corr
+
+        printf("row_ix: %u\t row_out: %u\t row_in: %u\t curr_width: %u\n", row_ix, row_out, row_in, curr_width);
         BLOCKS_PER_GRID = dim3(curr_width, 1, 1);
         THREADS_PER_BLOCK = dim3(NUMTHREADS, 1, 1);
-        printf("curr_width: %u, numthreads: %u \n", curr_width, NUMTHREADS);
         if (curr_width > 0)
         {
             bed_marker_corr_pearson_npn_sparse<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
@@ -1022,6 +1023,7 @@ void cu_corr_pearson_npn_batched_sparse(
 
         if (row_out == (batch_size - 1))
         {
+            printf("saving batch with start at row %u", batch_start);
             // copy batch results to host
             HANDLE_ERROR(cudaMemcpy(
                 &corrs[batch_start * (corr_width + num_phen)],
@@ -1033,6 +1035,7 @@ void cu_corr_pearson_npn_batched_sparse(
 
         if (row_in == (max_row_in - 1))
         {
+            printf("loading marker data from row %u \n", row_ix + 1);
             // get new marker data batch
             HANDLE_ERROR(cudaMemcpy(
                 gpu_marker_vals,
@@ -1050,6 +1053,7 @@ void cu_corr_pearson_npn_batched_sparse(
     // copy remaining results to host
     if ((num_markers % batch_size) != 0)
     {
+        printf("saving batch with start at row %u", batch_start);
         size_t last_batch_size = num_markers - batch_start;
         HANDLE_ERROR(cudaMemcpy(
             &corrs[batch_start * (corr_width + num_phen)],
