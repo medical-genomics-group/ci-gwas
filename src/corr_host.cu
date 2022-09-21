@@ -992,8 +992,16 @@ void cu_corr_pearson_npn_batched_sparse(
     {
         size_t row_out = row_ix % batch_size;
         size_t row_in = row_ix % reload_interval;
-        // marker-marker corr
+        if (curr_width > corr_width)
+        {
+            // overwrite old results
+            HANDLE_ERROR(cudaMemset(
+                &gpu_corrs[row_out * corr_row_len + curr_width],
+                0,
+                (corr_width - curr_width) * sizeof(float)));
+        }
 
+        // marker-marker corr
         printf("row_ix: %u\t row_out: %u\t row_in: %u\t curr_width: %u\n", row_ix, row_out, row_in, curr_width);
         BLOCKS_PER_GRID = dim3(curr_width, 1, 1);
         THREADS_PER_BLOCK = dim3(NUMTHREADS, 1, 1);
