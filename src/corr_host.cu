@@ -948,6 +948,9 @@ void cu_corr_pearson_npn_batched_sparse(
     memory requirement is 4(np + m'(w + p)) + nm' / 4 bytes
     */
 
+    dim3 BLOCKS_PER_GRID;
+    dim3 THREADS_PER_BLOCK;
+
     assert((batch_size > corr_width) && "error: batch_size <= corr_width");
 
     // copy all marker stats over
@@ -991,12 +994,11 @@ void cu_corr_pearson_npn_batched_sparse(
         BLOCKS_PER_GRID = dim3(curr_width, 1, 1);
         THREADS_PER_BLOCK = dim3(NUMTHREADS, 1, 1);
         bed_marker_corr_pearson_npn_sparse<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
-            &gpu_marker_vals[row_in_batch],
-            num_markers,
+            gpu_marker_vals,
             num_individuals,
             genotype_col_bytes,
             row_in,
-            &gpu_corrs[row_in_batch]);
+            &gpu_corrs[row_out]);
         CudaCheckError();
         // marker-phen corr
         BLOCKS_PER_GRID = dim3(num_phen, 1, 1);
@@ -1010,8 +1012,8 @@ void cu_corr_pearson_npn_batched_sparse(
             gpu_marker_mean,
             gpu_marker_std,
             corr_width,
-            ix_in_batch,
-            &gpu_corrs[row_in_batch]);
+            row_in,
+            &gpu_corrs[row_out]);
         CudaCheckError();
 
         if (row_out == (batch_size - 1))
@@ -1030,7 +1032,7 @@ void cu_corr_pearson_npn_batched_sparse(
             // get new marker data batch
             HANDLE_ERROR(cudaMemcpy(
                 gpu_marker_vals,
-                &marker_vals[genotype_col_byte * (row_ix + 1)],
+                &marker_vals[genotype_col_bytes * (row_ix + 1)],
                 batch_marker_vals_bytes,
                 cudaMemcpyHostToDevice));
         }
@@ -1058,7 +1060,7 @@ void cu_corr_pearson_npn_batched_sparse(
     size_t THREADS_PER_BLOCK = dim3(NUMTHREADS, 1, 1);
     float *gpu_phen_corrs;
     HANDLE_ERROR(cudaMalloc(&gpu_phen_corrs, num_phen_corrs * sizeof(float)));
-    phen_corrs_pearson<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
+    phen_corr_pearson<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
         gpu_phen_vals,
         num_individuals,
         num_phen,
@@ -1076,9 +1078,9 @@ void cu_corr_pearson_npn_batched_sparse(
     size_t lin_ix = 0;
     for (size_t pix = 0; pix < num_phen; ++pix)
     {
-        for (size_t vix = 0; vix < num_row_entries; ++vix)
+        for (size_t vix = pix; vix < num_row_entries; ++vix)
         {
-            corrs[(num_markers +) * corr_row_len + corr_width + 1 + pix + vix] = phen_corrs_tmp[lin_ix];
+            corrs[(num_markers + pix) * corr_row_len + corr_width + 1 + vix] = phen_corrs_tmp[lin_ix];
             lin_ix += 1;
         }
         num_row_entries -= 1;
@@ -1087,7 +1089,6 @@ void cu_corr_pearson_npn_batched_sparse(
     HANDLE_ERROR(cudaFree(gpu_phen_corrs));
     HANDLE_ERROR(cudaFree(gpu_corrs));
     HANDLE_ERROR(cudaFree(gpu_marker_vals));
-    HANDLE_ERROR(cudaFree(gpu_marker_vals_col));
     HANDLE_ERROR(cudaFree(gpu_marker_mean));
     HANDLE_ERROR(cudaFree(gpu_marker_std));
     HANDLE_ERROR(cudaFree(gpu_phen_vals));

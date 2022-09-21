@@ -635,10 +635,10 @@ __global__ void bed_marker_phen_corr_pearson_sparse(
     const float *marker_mean,
     const float *marker_std,
     const size_t corr_width,
-    const size_t ix_in_batch,
+    const size_t row_in,
     float *results)
 {
-    size_t row = ix_in_batch;
+    size_t row = row_in;
     size_t phen_ix = bx;
     size_t mv_start_ix = row * col_len_bytes;
     size_t phen_start_ix = phen_ix * num_individuals;
