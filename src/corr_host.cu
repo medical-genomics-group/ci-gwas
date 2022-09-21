@@ -1056,8 +1056,8 @@ void cu_corr_pearson_npn_batched_sparse(
 
     // phen-phen corr
     size_t num_phen_corrs = num_phen * (num_phen - 1) / 2;
-    size_t BLOCKS_PER_GRID = dim3(num_phen_corrs, 1, 1);
-    size_t THREADS_PER_BLOCK = dim3(NUMTHREADS, 1, 1);
+    BLOCKS_PER_GRID = dim3(num_phen_corrs, 1, 1);
+    THREADS_PER_BLOCK = dim3(NUMTHREADS, 1, 1);
     float *gpu_phen_corrs;
     HANDLE_ERROR(cudaMalloc(&gpu_phen_corrs, num_phen_corrs * sizeof(float)));
     phen_corr_pearson<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
