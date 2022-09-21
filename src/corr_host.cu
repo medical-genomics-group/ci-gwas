@@ -982,7 +982,7 @@ void cu_corr_pearson_npn_batched_sparse(
     HANDLE_ERROR(cudaMemcpy(
         gpu_marker_vals, &marker_vals[0], batch_marker_vals_bytes, cudaMemcpyHostToDevice));
 
-    size_t reload_interval = batch_size - corr_width;
+    size_t row_in = 0;
     size_t corr_row_len = corr_width + num_phen;
     size_t last_full_row = num_markers - corr_width - 1;
     size_t max_row_in = batch_size - corr_width;
@@ -991,8 +991,7 @@ void cu_corr_pearson_npn_batched_sparse(
     for (size_t row_ix = 0; row_ix < num_markers; ++row_ix)
     {
         size_t row_out = row_ix % batch_size;
-        size_t row_in = row_ix % reload_interval;
-        if (curr_width > corr_width)
+        if (curr_width < corr_width)
         {
             // overwrite old results
             HANDLE_ERROR(cudaMemset(
@@ -1052,6 +1051,9 @@ void cu_corr_pearson_npn_batched_sparse(
                 &marker_vals[genotype_col_bytes * (row_ix + 1)],
                 batch_marker_vals_bytes,
                 cudaMemcpyHostToDevice));
+            row_in = 0;
+        } else {
+            row_in += 1;
         }
 
         if (row_ix >= last_full_row)
