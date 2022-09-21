@@ -1103,9 +1103,12 @@ void cu_corr_pearson_npn_batched_sparse(
             corrs[(num_markers + pix) * corr_row_len + corr_width + 1 + vix] = phen_corrs_tmp[lin_ix];
             lin_ix += 1;
         }
-        num_row_entries -= 1;
     }
-
+    /*
+    for (size_t i = (num_markers * corr_row_len); i < (corr_row_len * (num_markers + num_phen)); ++i) {
+        printf("%f\n", corrs[i]);
+    }
+    */
     HANDLE_ERROR(cudaFree(gpu_phen_corrs));
     HANDLE_ERROR(cudaFree(gpu_corrs));
     HANDLE_ERROR(cudaFree(gpu_marker_vals));

@@ -44,11 +44,11 @@ TEST(SparseCorrTest, ExpectedReturnVals)
         batch_size,
         corrs);
 
+    printf("obs, exp\n");
     for (size_t i = 0; i < cm_size; i++)
     {
-        printf("%f \n", corrs[i]);
+        printf("%f, %f\n", corrs[i], bmt2_sparse_corrs[i]);
     }
-
 
     for (size_t i = 0; i < cm_size; i++)
     {
