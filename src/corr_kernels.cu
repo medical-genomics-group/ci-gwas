@@ -565,10 +565,10 @@ __global__ void bed_marker_corr_pearson_npn_sparse(
     const unsigned char *marker_vals,
     const size_t num_individuals,
     const size_t col_len_bytes,
-    const size_t row_in_batch,
+    const size_t row_in,
     float *results)
 {
-    size_t row = row_in_batch;
+    size_t row = row_in;
     size_t col = row + bx + 1;
     size_t col_start_a = row * col_len_bytes;
     size_t col_start_b = col * col_len_bytes;

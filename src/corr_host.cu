@@ -943,9 +943,8 @@ void cu_corr_pearson_npn_batched_sparse(
     n: num_individuals
     p: num_phen
     w: corr_width
-    u: m'-w
 
-    memory requirement is 4(np + u(w + p)) + nm' / 4 bytes
+    memory requirement is 4(np + m'(w + p)) + nm' / 4 bytes
     */
 
     // copy all marker stats over
@@ -977,12 +976,14 @@ void cu_corr_pearson_npn_batched_sparse(
     HANDLE_ERROR(cudaMemcpy(
         gpu_marker_vals, &marker_vals[0], batch_marker_vals_bytes, cudaMemcpyHostToDevice));
 
-    size_t max_row_batch = batch_size - corr_width;
+    size_t last_full_row = num_markers - corr_width - 1;
+    size_t max_row_in = batch_size - corr_width;
     size_t batch_start = 0;
     size_t curr_width = corr_width;
     for (size_t row_ix = 0; row_ix < num_markers; ++row_ix)
     {
-        size_t row_in_batch = row_ix % batch_size;
+        size_t row_out = row_ix % batch_size;
+        size_t row_in = row_ix % max_row_in;
         // marker-marker corr
         BLOCKS_PER_GRID = dim3(curr_width, 1, 1);
         THREADS_PER_BLOCK = dim3(NUMTHREADS, 1, 1);
@@ -991,7 +992,7 @@ void cu_corr_pearson_npn_batched_sparse(
             num_markers,
             num_individuals,
             genotype_col_bytes,
-            row_in_batch,
+            row_in,
             &gpu_corrs[row_in_batch]);
         CudaCheckError();
         // marker-phen corr
@@ -1010,80 +1011,42 @@ void cu_corr_pearson_npn_batched_sparse(
             &gpu_corrs[row_in_batch]);
         CudaCheckError();
 
-        if (row_in_batch = max_row_batch)
+        if (row_out == (batch_size - 1))
         {
             // copy batch results to host
             HANDLE_ERROR(cudaMemcpy(
-                &corrs[row_ix * (corr_width + num_phen)],
+                &corrs[batch_start * (corr_width + num_phen)],
                 gpu_corrs,
                 (corr_width + num_phen) * batch_size * sizeof(float),
                 cudaMemcpyDeviceToHost));
+            batch_start = row_ix + 1;
+        }
 
-            // TODO: handle cases in the end, where the number of remaining
-            // markers is less than the batch size
-            // get new batch
+        if (row_in == (max_row_in - 1))
+        {
+            // get new marker data batch
             HANDLE_ERROR(cudaMemcpy(
                 gpu_marker_vals,
                 &marker_vals[genotype_col_byte * (row_ix + 1)],
                 batch_marker_vals_bytes,
                 cudaMemcpyHostToDevice));
         }
-    }
 
-    size_t curr_width = corr_width;
-    // compute marker rows
-    for (size_t row_ix = 0; row_ix < num_markers; ++row_ix)
-    {
-        // marker-marker corr
-        BLOCKS_PER_GRID = dim3(curr_width, 1, 1);
-        THREADS_PER_BLOCK = dim3(NUMTHREADS, 1, 1);
-        bed_marker_corr_pearson_npn_sparse<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
-            gpu_marker_vals,
-            num_markers,
-            num_individuals,
-            genotype_col_bytes,
-            ix_in_batch,
-            gpu_corrs);
-        CudaCheckError();
-        // marker-phen corr
-        BLOCKS_PER_GRID = dim3(num_phen, 1, 1);
-        THREADS_PER_BLOCK = dim3(NUMTHREADS, 1, 1);
-        bed_marker_phen_corr_pearson_sparse<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
-            gpu_marker_vals,
-            gpu_phen_vals,
-            num_individuals,
-            num_phen,
-            genotype_col_bytes,
-            gpu_marker_mean,
-            gpu_marker_std,
-            corr_width,
-            ix_in_batch,
-            gpu_corrs);
-        CudaCheckError();
-
-        // copy over current result row
-        HANDLE_ERROR(cudaMemcpy(
-            &corrs[row_ix * (corr_width + num_phen)],
-            gpu_corrs,
-            (corr_width + num_phen) * sizeof(float),
-            cudaMemcpyDeviceToHost));
-
-        // copy next marker col over
-        if ((row_ix) < (num_markers - corr_width))
-        {
-            HANDLE_ERROR(cudaMemcpy(
-                &gpu_marker_vals[row_ix * genotype_col_bytes],
-                &marker_vals[ix_in_batch],
-                genotype_col_bytes,
-                cudaMemcpyHostToDevice));
-        }
-        else
+        if (row_ix >= last_full_row)
         {
             curr_width -= 1;
-            // set now unused position in corr array to 0
-            size_t offset_from_end = corr_width - curr_width;
-            HANDLE_ERROR(cudaMemset(gpu_corrs[corr_width - offset_from_end], 0, sizeof(float)));
         }
+    }
+
+    // copy remaining results to host
+    if ((num_markers % batch_size) != 0)
+    {
+        size_t last_batch_size = num_markers - batch_start;
+        HANDLE_ERROR(cudaMemcpy(
+            &corrs[batch_start * (corr_width + num_phen)],
+            gpu_corrs,
+            (corr_width + num_phen) * last_batch_size * sizeof(float),
+            cudaMemcpyDeviceToHost));
     }
 
     // phen-phen corr
