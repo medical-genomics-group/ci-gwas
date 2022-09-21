@@ -44,12 +44,6 @@ TEST(SparseCorrTest, ExpectedReturnVals)
         batch_size,
         corrs);
 
-    printf("obs, exp\n");
-    for (size_t i = 0; i < cm_size; i++)
-    {
-        printf("%f, %f\n", corrs[i], bmt2_sparse_corrs[i]);
-    }
-
     for (size_t i = 0; i < cm_size; i++)
     {
         EXPECT_NEAR(corrs[i], bmt2_sparse_corrs[i], 0.00001);

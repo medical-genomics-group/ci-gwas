@@ -235,7 +235,6 @@ void cu_marker_corr_pearson_npn_batched(
                                // i.e. half the total num markers in a batch
     float *marker_corrs)
 {
-    printf("Starting tiled routine \n");
     size_t num_full_stripes = num_markers / row_set_size;
     size_t last_stripe_width = num_markers % row_set_size;
     bool small_stripe = last_stripe_width;
@@ -266,13 +265,9 @@ void cu_marker_corr_pearson_npn_batched(
 
     int threads_per_block = NUMTHREADS;
 
-    printf("Allocating mem for markers on device \n");
-
     // allocate space for marker subsets
     HANDLE_ERROR(cudaMalloc(&gpu_marker_vals_row, row_set_bytes));
     HANDLE_ERROR(cudaMalloc(&gpu_marker_vals_col, row_set_bytes));
-
-    printf("Allocating mem for correlations on device \n");
 
     // markers vs markers
     // allocate space for correlation results
@@ -287,7 +282,6 @@ void cu_marker_corr_pearson_npn_batched(
     // TODO: put loop body in new function, this is hard to read
     for (size_t stripe_ix = 0; stripe_ix < num_stripes_total; ++stripe_ix)
     {
-        printf("Processing stripe %i / %i \n", stripe_ix + 1, num_stripes_total);
 
         size_t stripe_width;
         if (small_stripe && stripe_ix == (num_stripes_total - 1))
@@ -704,7 +698,6 @@ void cu_marker_corr_pearson(
     const float *marker_std,
     float *marker_corrs)
 {
-    printf("Starting cu_marker_corr_pearson \n");
 
     size_t col_len_bytes = (num_individuals + 3) / 4 * sizeof(unsigned char);
     size_t marker_vals_bytes = col_len_bytes * num_markers;
@@ -725,29 +718,20 @@ void cu_marker_corr_pearson(
 
     // allocate device memory and copy over data
     // marker values
-    printf("Allocating space for marker data \n");
     HANDLE_ERROR(cudaMalloc(&gpu_marker_vals, marker_vals_bytes));
-    printf("Copying marker data to device \n");
     HANDLE_ERROR(cudaMemcpy(gpu_marker_vals, marker_vals, marker_vals_bytes, cudaMemcpyHostToDevice));
 
     // space for results
-    printf("Allocating space for results \n");
     HANDLE_ERROR(cudaMalloc(&gpu_marker_corrs, marker_output_bytes));
 
     // marker means
-    printf("Allocating space for marker means \n");
     HANDLE_ERROR(cudaMalloc(&gpu_marker_mean, marker_stats_bytes));
-    printf("Copying marker means to device \n");
     HANDLE_ERROR(
         cudaMemcpy(gpu_marker_mean, marker_mean, marker_stats_bytes, cudaMemcpyHostToDevice));
 
     // marker stds
-    printf("Allocating space for marker stds \n");
     HANDLE_ERROR(cudaMalloc(&gpu_marker_std, marker_stats_bytes));
-    printf("Copying marker stds to device \n");
     HANDLE_ERROR(cudaMemcpy(gpu_marker_std, marker_std, marker_stats_bytes, cudaMemcpyHostToDevice));
-
-    printf("Calling kernels \n");
 
     // compute correlations
     bed_marker_corr_pearson<<<blocks_per_grid, threads_per_block>>>(
@@ -760,12 +744,10 @@ void cu_marker_corr_pearson(
         gpu_marker_corrs);
     CudaCheckError();
 
-    printf("Copying results to host \n");
     // copy results to host
     HANDLE_ERROR(
         cudaMemcpy(marker_corrs, gpu_marker_corrs, marker_output_bytes, cudaMemcpyDeviceToHost));
 
-    printf("Freeing device memory \n");
     // free allocated device memory
     HANDLE_ERROR(cudaFree(gpu_marker_corrs));
     HANDLE_ERROR(cudaFree(gpu_marker_vals));
@@ -782,7 +764,6 @@ void cu_marker_corr_pearson_npn(
     const size_t num_individuals,
     float *marker_corrs)
 {
-    printf("Starting cu_marer_corr_pearson \n");
 
     size_t col_len_bytes = (num_individuals + 3) / 4 * sizeof(unsigned char);
     size_t marker_vals_bytes = col_len_bytes * num_markers;
@@ -800,28 +781,21 @@ void cu_marker_corr_pearson_npn(
 
     // allocate device memory and copy over data
     // marker values
-    printf("Allocating space for marker data \n");
     HANDLE_ERROR(cudaMalloc(&gpu_marker_vals, marker_vals_bytes));
-    printf("Copying marker data to device \n");
     HANDLE_ERROR(cudaMemcpy(gpu_marker_vals, marker_vals, marker_vals_bytes, cudaMemcpyHostToDevice));
 
     // space for results
-    printf("Allocating space for results \n");
     HANDLE_ERROR(cudaMalloc(&gpu_marker_corrs, marker_output_bytes));
-
-    printf("Calling kernels \n");
 
     // compute correlations
     bed_marker_corr_pearson_npn<<<blocks_per_grid, threads_per_block>>>(
         gpu_marker_vals, num_markers, num_individuals, col_len_bytes, gpu_marker_corrs);
     CudaCheckError();
 
-    printf("Copying results to host \n");
     // copy results to host
     HANDLE_ERROR(
         cudaMemcpy(marker_corrs, gpu_marker_corrs, marker_output_bytes, cudaMemcpyDeviceToHost));
 
-    printf("Freeing device memory \n");
     // free allocated device memory
     HANDLE_ERROR(cudaFree(gpu_marker_corrs));
     HANDLE_ERROR(cudaFree(gpu_marker_vals));
@@ -1001,7 +975,6 @@ void cu_corr_pearson_npn_batched_sparse(
         }
 
         // marker-marker corr
-        printf("row_ix: %u\t row_out: %u\t row_in: %u\t curr_width: %u\n", row_ix, row_out, row_in, curr_width);
         BLOCKS_PER_GRID = dim3(curr_width, 1, 1);
         THREADS_PER_BLOCK = dim3(NUMTHREADS, 1, 1);
         if (curr_width > 0)
@@ -1032,7 +1005,6 @@ void cu_corr_pearson_npn_batched_sparse(
 
         if (row_out == (batch_size - 1))
         {
-            printf("saving batch with start at row %u \n", batch_start);
             // copy batch results to host
             HANDLE_ERROR(cudaMemcpy(
                 &corrs[batch_start * (corr_width + num_phen)],
@@ -1044,7 +1016,6 @@ void cu_corr_pearson_npn_batched_sparse(
 
         if (row_in == (max_row_in - 1))
         {
-            printf("loading marker data from row %u \n", row_ix + 1);
             // get new marker data batch
             HANDLE_ERROR(cudaMemcpy(
                 gpu_marker_vals,
@@ -1052,7 +1023,9 @@ void cu_corr_pearson_npn_batched_sparse(
                 batch_marker_vals_bytes,
                 cudaMemcpyHostToDevice));
             row_in = 0;
-        } else {
+        }
+        else
+        {
             row_in += 1;
         }
 
@@ -1066,7 +1039,6 @@ void cu_corr_pearson_npn_batched_sparse(
     // copy remaining results to host
     if ((num_markers % batch_size) != 0)
     {
-        printf("saving batch with start at row %u \n", batch_start);
         size_t last_batch_size = num_markers - batch_start;
         HANDLE_ERROR(cudaMemcpy(
             &corrs[batch_start * (corr_width + num_phen)],
@@ -1104,11 +1076,7 @@ void cu_corr_pearson_npn_batched_sparse(
             lin_ix += 1;
         }
     }
-    /*
-    for (size_t i = (num_markers * corr_row_len); i < (corr_row_len * (num_markers + num_phen)); ++i) {
-        printf("%f\n", corrs[i]);
-    }
-    */
+
     HANDLE_ERROR(cudaFree(gpu_phen_corrs));
     HANDLE_ERROR(cudaFree(gpu_corrs));
     HANDLE_ERROR(cudaFree(gpu_marker_vals));
