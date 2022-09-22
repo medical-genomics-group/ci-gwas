@@ -52,6 +52,12 @@ __global__ void bed_marker_phen_corr_pearson(
 __global__ void phen_corr_pearson(
     const float *phen_vals, const size_t num_individuals, const size_t num_phen, float *results);
 
+__global__ void phen_corr_pearson_scan(
+    const float *phen_vals,
+    const size_t num_individuals,
+    const size_t num_phen,
+    float *results);
+
 __global__ void bed_marker_corr_pearson_npn(
     const unsigned char *marker_vals,
     const size_t num_markers,

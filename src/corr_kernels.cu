@@ -178,6 +178,55 @@ __global__ void phen_corr_pearson(
     }
 }
 
+// Compute Pearson's r between a pair of standardized phenotype vectors.
+__global__ void phen_corr_pearson_scan(
+    const float *phen_vals,
+    const size_t num_individuals,
+    const size_t num_phen,
+    float *results)
+{
+    size_t row;
+    size_t col;
+    row_col_ix_from_linear_ix(bx, num_phen, &row, &col);
+    size_t col_start_a = row * num_individuals;
+    size_t col_start_b = col * num_individuals;
+
+    float thread_sum = 0.0;
+    __shared__ float thread_sums[NUMTHREADS];
+    for (size_t i = tx; i < num_individuals; i += NUMTHREADS)
+    {
+        float val_a = phen_vals[(col_start_a + i)];
+        float val_b = phen_vals[(col_start_b + i)];
+        thread_sum += val_a * val_b;
+    }
+
+    thread_sums[tx] = thread_sum;
+
+    // consolidate thread sums
+    float tmp = 0.0;
+    __syncthreads();
+    for (int step = 1; step < NUMTHREADS; step = step * 2)
+    {
+        if (tx < step)
+        {
+            tmp = thread_sums[tx];
+        }
+        else
+        {
+            tmp = thread_sums[tx] + thread_sums[tx - step];
+        }
+        __syncthreads();
+        thread_sums[tx] = tmp;
+        __syncthreads();
+    }
+
+    if (tx == 0)
+    {
+        float s = thread_sums[NUMTHREADS - 1];
+        results[bx] = s / (float)(num_individuals);
+    }
+}
+
 // Compute Pearson's r between a pair of marker vectors.
 __global__ void bed_marker_corr_pearson(
     const unsigned char *marker_vals,
@@ -682,7 +731,7 @@ __global__ void bed_marker_corr_pearson_npn_sparse_scan(
             }
         }
         __syncthreads();
-        for (size_t i = 0; i < 9; ++i) 
+        for (size_t i = 0; i < 9; ++i)
         {
             thread_sums[tx][i] = tmp[i];
         }
@@ -824,7 +873,6 @@ __global__ void bed_marker_phen_corr_pearson_sparse_scan(
         __syncthreads();
     }
 
-    __syncthreads();
     if (tx == 0)
     {
         float s_mv_phen = thread_sums_mv_phen[NUMTHREADS - 1];

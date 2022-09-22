@@ -1053,7 +1053,7 @@ void cu_corr_pearson_npn_batched_sparse(
     THREADS_PER_BLOCK = dim3(NUMTHREADS, 1, 1);
     float *gpu_phen_corrs;
     HANDLE_ERROR(cudaMalloc(&gpu_phen_corrs, num_phen_corrs * sizeof(float)));
-    phen_corr_pearson<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
+    phen_corr_pearson_scan<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
         gpu_phen_vals,
         num_individuals,
         num_phen,
