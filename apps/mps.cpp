@@ -308,11 +308,15 @@ arguments:
     prepdir Directory with `mps prep` output, i.e. .bed, .stds, .means and .dims files for each chromosome
     chr                 ID of the chromsome to be processed
     device_mem_gb       Amount of memory available on the GPU
-    distance_threshold  Maximal distance between markers up to which correlations are computed
+    distance_threshold  Maximal distance between markers up to which correlations are computed (in bases)
     .phen               Path to .phen file with phenotype values, sorted in the same way as genotype info in the original bed file
 )";
 
 const int SCORR_NARGS = 7;
+
+void scorr(int argc, char *argv[])
+{
+}
 
 const std::string CORR_USAGE = R"(
 Compute correlations between markers and phenotypes.

@@ -979,7 +979,7 @@ void cu_corr_pearson_npn_batched_sparse(
         THREADS_PER_BLOCK = dim3(NUMTHREADS, 1, 1);
         if (curr_width > 0)
         {
-            bed_marker_corr_pearson_npn_sparse<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
+            bed_marker_corr_pearson_npn_sparse_scan<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
                 gpu_marker_vals,
                 num_individuals,
                 genotype_col_bytes,
@@ -990,7 +990,7 @@ void cu_corr_pearson_npn_batched_sparse(
         // marker-phen corr
         BLOCKS_PER_GRID = dim3(num_phen, 1, 1);
         THREADS_PER_BLOCK = dim3(NUMTHREADS, 1, 1);
-        bed_marker_phen_corr_pearson_sparse<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
+        bed_marker_phen_corr_pearson_sparse_scan<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
             gpu_marker_vals,
             gpu_phen_vals,
             num_individuals,

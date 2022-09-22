@@ -626,6 +626,86 @@ __global__ void bed_marker_corr_pearson_npn_sparse(
     }
 }
 
+// A O((0.24n / t) + log t) runtime Kendall implementation for compressed genomic marker data.
+// The compression format is expected to be col-major .bed without NaN
+// and without leading magic numbers.
+__global__ void bed_marker_corr_pearson_npn_sparse_scan(
+    const unsigned char *marker_vals,
+    const size_t num_individuals,
+    const size_t col_len_bytes,
+    const size_t row_in,
+    float *results)
+{
+    size_t row = row_in;
+    size_t col = row + bx + 1;
+    size_t col_start_a = row * col_len_bytes;
+    size_t col_start_b = col * col_len_bytes;
+
+    float thread_sum[9] = {0.0};
+    __shared__ float thread_sums[NUMTHREADS][9];
+
+    for (size_t i = tx; i < col_len_bytes; i += NUMTHREADS)
+    {
+        size_t aix = 4 * (size_t)(marker_vals[col_start_a + i]);
+        size_t bix = 4 * (size_t)(marker_vals[col_start_b + i]);
+        for (size_t j = 0; (j < 4) && (i * 4 + j < num_individuals); j++)
+        {
+            float val_a = gpu_bed_lut_a[(aix + j)];
+            float val_b = gpu_bed_lut_a[(bix + j)];
+            size_t comp_ix = (size_t)((3 * val_a + val_b));
+            thread_sum[comp_ix] += 1.f;
+        }
+    }
+
+    for (size_t i = 0; i < 9; i++)
+    {
+        thread_sums[tx][i] = thread_sum[i];
+    }
+
+    // consolidate thread_sums
+    float tmp[9] = {0.0};
+    __syncthreads();
+    for (int step = 1; step < NUMTHREADS; step = step * 2)
+    {
+        if (tx < step)
+        {
+            tmp = thread_sums[tx];
+        }
+        else
+        {
+            for (size_t i = 0; i < 9; ++i)
+            {
+                tmp[i] = thread_sums[tx][i] + thread_sums[tx - step][i];
+            }
+        }
+        __syncthreads();
+        thread_sums[tx] = tmp;
+        __syncthreads();
+    }
+
+    if (tx == 0)
+    {
+        // produce single sum
+        float s[9] = thread_sums[NUMTHREADS - 1];
+        float p =
+            ((s[0] * (s[4] + s[5] + s[7] + s[8])) + (s[1] * (s[5] + s[8])) +
+             (s[3] * (s[7] + s[8])) + (s[4] * s[8]));
+        float q =
+            ((s[1] * (s[3] + s[6])) + (s[2] * (s[3] + s[4] + s[6] + s[7])) + (s[4] * s[6]) +
+             (s[5] * (s[6] + s[7])));
+        float t =
+            ((s[0] * (s[1] + s[2])) + (s[1] * s[2]) + (s[3] * (s[4] + s[5])) + (s[4] * s[5]) +
+             (s[6] * (s[7] + s[8])) + (s[7] * s[8]));
+        float u =
+            ((s[0] * (s[3] + s[6])) + (s[1] * (s[4] + s[7])) + (s[2] * (s[5] + s[8])) +
+             (s[3] * s[6]) + (s[4] * s[7]) + (s[5] * s[8]));
+
+        float kendall_corr = (p - q) / sqrt((p + q + t) * (p + q + u));
+
+        results[bx] = sin(M_PI / 2 * kendall_corr);
+    }
+}
+
 __global__ void bed_marker_phen_corr_pearson_sparse(
     const unsigned char *marker_vals,
     const float *phen_vals,
@@ -673,6 +753,76 @@ __global__ void bed_marker_phen_corr_pearson_sparse(
             s_mv_phen += thread_sums_mv_phen[i];
             s_phen += thread_sums_phen[i];
         }
+
+        results[corr_width + phen_ix] = (s_mv_phen - *marker_mean * s_phen) /
+                                        ((float)(num_individuals) * *marker_std);
+    }
+}
+
+__global__ void bed_marker_phen_corr_pearson_sparse_scan(
+    const unsigned char *marker_vals,
+    const float *phen_vals,
+    const size_t num_individuals,
+    const size_t num_phen,
+    const size_t col_len_bytes,
+    const float *marker_mean,
+    const float *marker_std,
+    const size_t corr_width,
+    const size_t row_in,
+    float *results)
+{
+    size_t row = row_in;
+    size_t phen_ix = bx;
+    size_t mv_start_ix = row * col_len_bytes;
+    size_t phen_start_ix = phen_ix * num_individuals;
+
+    float thread_sum_mv_phen = 0.0;
+    float thread_sum_phen = 0.0;
+    __shared__ float thread_sums_mv_phen[NUMTHREADS];
+    __shared__ float thread_sums_phen[NUMTHREADS];
+    for (size_t i = tx; i < col_len_bytes; i += NUMTHREADS)
+    {
+        size_t curr_mv_byte_ix = 4 * (size_t)(marker_vals[mv_start_ix + i]);
+        for (size_t j = 0; (j < 4) && (i * 4 + j < num_individuals); j++)
+        {
+            float mv_val = gpu_bed_lut_a[(curr_mv_byte_ix + j)];
+            float phen_val = phen_vals[(phen_start_ix + (4 * i) + j)];
+
+            thread_sum_mv_phen += (mv_val * phen_val);
+            thread_sum_phen += phen_val;
+        }
+    }
+
+    thread_sums_mv_phen[tx] = thread_sum_mv_phen;
+    thread_sums_phen[tx] = thread_sum_phen;
+
+    // consolidate thread_sums
+    float tmp_mv_phen = 0.0;
+    float tmp_phen = 0.0;
+    __syncthreads();
+    for (int step = 1; step < NUMTHREADS; step = step * 2)
+    {
+        if (tx < step)
+        {
+            tmp_mv_phen = thread_sums_mv_phen[tx];
+            tmp_phen = thread_sums_phen[tx];
+        }
+        else
+        {
+            tmp_mv_phen = thread_sums_mv_phen[tx] + thread_sums_mv_phen[tx - step];
+            tmp_phen = thread_sums_phen[tx] + thread_sums_phen[tx - step];
+        }
+        __syncthreads();
+        thread_sums_mv_phen[tx] = tmp_mv_phen;
+        thread_sums_phen[tx] = tmp_phen;
+        __syncthreads();
+    }
+
+    __syncthreads();
+    if (tx == 0)
+    {
+        float s_mv_phen = thread_sums_mv_phen[NUMTHREADS - 1];
+        float s_phen = thread_sums_phen[NUMTHREADS - 1];
 
         results[corr_width + phen_ix] = (s_mv_phen - *marker_mean * s_phen) /
                                         ((float)(num_individuals) * *marker_std);
