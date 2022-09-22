@@ -337,6 +337,7 @@ void scorr(int argc, char *argv[])
             std::cout << "file or directory not found: " << fpath << std::endl;
             exit(1);
         }
+    }
         double device_mem_gb = atof(argv[4]);
         unsigned long dthr = atol(argv[5]);
         size_t corr_width = num_markers_within_distance(make_path(out_dir, chr_id, ".bim"), dthr);
@@ -376,7 +377,10 @@ void scorr(int argc, char *argv[])
                 (corr_width + num_phen + num_individuals / 16));
         if (upper_bound_batch_size < corr_width)
         {
-            printf("Maximal batch size (%u) < corr width (%u). Decrease distance threshold or increase device memory. \n");
+            printf(
+                    "Maximal batch size (%u) < corr width (%u). Decrease distance threshold or increase device memory. \n",
+                    upper_bound_batch_size,
+                    corr_width);
             exit(1);
         }
 
