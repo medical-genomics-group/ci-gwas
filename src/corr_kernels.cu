@@ -669,7 +669,10 @@ __global__ void bed_marker_corr_pearson_npn_sparse_scan(
     {
         if (tx < step)
         {
-            tmp = thread_sums[tx];
+            for (size_t i = 0; i < 9; ++i)
+            {
+                tmp[i] = thread_sums[tx][i];
+            }
         }
         else
         {
@@ -679,14 +682,17 @@ __global__ void bed_marker_corr_pearson_npn_sparse_scan(
             }
         }
         __syncthreads();
-        thread_sums[tx] = tmp;
+        for (size_t i = 0; i < 9; ++i) 
+        {
+            thread_sums[tx][i] = tmp[i];
+        }
         __syncthreads();
     }
 
     if (tx == 0)
     {
         // produce single sum
-        float s[9] = thread_sums[NUMTHREADS - 1];
+        float *s = thread_sums[NUMTHREADS - 1];
         float p =
             ((s[0] * (s[4] + s[5] + s[7] + s[8])) + (s[1] * (s[5] + s[8])) +
              (s[3] * (s[7] + s[8])) + (s[4] * s[8]));
