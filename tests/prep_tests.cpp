@@ -1,11 +1,17 @@
 #include <gtest/gtest.h>
 #include <mps/io.h>
 #include <mps/prep_markers.h>
+#include <mps/bim_stats.h>
 
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <string>
+
+TEST(BimStatTest, MarkersInDistance)
+{
+    EXPECT_EQ(num_markers_within_distance("../../tests/test_files/distance.bim"), 2);
+}
 
 TEST(CountLinesTest, ExpectedReturnVals)
 {
