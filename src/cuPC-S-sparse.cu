@@ -20,7 +20,7 @@
 //@param Ncol       = Number of Col in Nbr matrix
 //============================================================================
 
-void Skeleton(double *C, int *P, int *G, double *Th, int *l, int *maxlevel, double *pMax,
+void Skeleton(float *C, int *M, int *P, int *W, int *G, double *Th, int *l, int *maxlevel, float *pMax,
               int *SepSet)
 {
     double *C_cuda; // Copy of C array in GPU
@@ -31,7 +31,16 @@ void Skeleton(double *C, int *P, int *G, double *Th, int *l, int *maxlevel, doub
     int *GPrime_cuda;
     int *mutex_cuda;
 
-    int n = *P;
+    // num phen
+    int p = *P;
+    // num markers
+    int m = *M;
+    // corr width
+    int w = *W;
+    // height (nrows) of the corr matrix: num_markers + num_phen
+    int nr = p + m;
+    // width (ncols) of the corr matrix: corr_width + num_phen
+    int nc = w + p;
     int nprime = 0;
     dim3 BLOCKS_PER_GRID;
     dim3 THREADS_PER_BLOCK;
@@ -40,17 +49,17 @@ void Skeleton(double *C, int *P, int *G, double *Th, int *l, int *maxlevel, doub
 
     *l = 0;
 
-    HANDLE_ERROR(cudaMalloc((void **)&mutex_cuda, n * n * sizeof(int)));
+    HANDLE_ERROR(cudaMalloc((void **)&mutex_cuda, nc * nr * sizeof(int)));
     HANDLE_ERROR(cudaMalloc((void **)&nprime_cuda, 1 * sizeof(int)));
-    HANDLE_ERROR(cudaMalloc((void **)&SepSet_cuda, n * n * ML * sizeof(int)));
-    HANDLE_ERROR(cudaMalloc((void **)&GPrime_cuda, n * n * sizeof(int)));
-    HANDLE_ERROR(cudaMalloc((void **)&C_cuda, n * n * sizeof(double)));
-    HANDLE_ERROR(cudaMalloc((void **)&G_cuda, n * n * sizeof(int)));
-    HANDLE_ERROR(cudaMalloc((void **)&pMax_cuda, n * n * sizeof(double)));
+    HANDLE_ERROR(cudaMalloc((void **)&SepSet_cuda, nc * nr * ML * sizeof(int)));
+    HANDLE_ERROR(cudaMalloc((void **)&GPrime_cuda, nc * nr * sizeof(int)));
+    HANDLE_ERROR(cudaMalloc((void **)&C_cuda, nc * nr * sizeof(double)));
+    HANDLE_ERROR(cudaMalloc((void **)&G_cuda, nc * nr * sizeof(int)));
+    HANDLE_ERROR(cudaMalloc((void **)&pMax_cuda, nc * nr * sizeof(float)));
     // copy correlation matrix from CPU to GPU
-    HANDLE_ERROR(cudaMemcpy(C_cuda, C, n * n * sizeof(double), cudaMemcpyHostToDevice));
+    HANDLE_ERROR(cudaMemcpy(C_cuda, C, nc * nr * sizeof(float), cudaMemcpyHostToDevice));
     // initialize a 0 matrix
-    HANDLE_ERROR(cudaMemset(mutex_cuda, 0, n * n * sizeof(int)));
+    HANDLE_ERROR(cudaMemset(mutex_cuda, 0, nc * nr * sizeof(int)));
 
     CudaCheckError();
     //----------------------------------------------------------
@@ -58,7 +67,8 @@ void Skeleton(double *C, int *P, int *G, double *Th, int *l, int *maxlevel, doub
     {
         if (*l == 0)
         {
-            if ((n * n) < 1024)
+            if ((nc * nr) < 1024)
+            // TODO: continue to change dims from here
             {
                 BLOCKS_PER_GRID = dim3(1, 1, 1);
                 THREADS_PER_BLOCK = dim3(32, 32, 1);
