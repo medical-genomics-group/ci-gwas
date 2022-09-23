@@ -9,7 +9,7 @@ add_library(corr STATIC corr_host.cu corr_kernels.cu ${HEADER_LIST})
 target_include_directories(corr PUBLIC ../include)
 target_compile_features(corr PUBLIC cxx_std_17)
 
-add_library(prep STATIC prep.cpp bim.cpp ${HEADER_LIST})
+add_library(prep STATIC prep.cpp bim.cpp phen.cpp ${HEADER_LIST})
 set_source_files_properties(prep.cpp PROPERTIES LANGUAGE CUDA)
 target_include_directories(prep PUBLIC ../include)
 target_compile_features(prep PUBLIC cxx_std_17)
