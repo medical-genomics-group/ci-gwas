@@ -342,6 +342,7 @@ void scorr(int argc, char *argv[])
     double device_mem_gb = atof(argv[4]);
     unsigned long dthr = atol(argv[5]);
     size_t corr_width = num_markers_within_distance(make_path(out_dir, chr_id, ".bim"), dthr);
+    printf("Determined corr width: %u \n", corr_width);
 
     // .dims
     // TODO: there is a lot more that can go wrong here, e.g. number of cols
