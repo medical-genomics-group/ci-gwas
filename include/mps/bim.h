@@ -2,6 +2,8 @@
 #include <string>
 #include <vector>
 
+#define BIM_NUM_COLS 6
+
 struct bimInfo
 {
     size_t number_of_lines;
@@ -9,14 +11,10 @@ struct bimInfo
     std::vector<size_t> num_markers_on_chr;
 };
 
-void prep_bed(
-    std::string bed_path,
-    std::string bim_path,
-    std::string fam_path,
-    std::string out_dir,
-    size_t mem_gb
-);
-
 void split_bim_line(std::string line, std::string *buf);
 
 auto prep_bim(std::string bim_path, std::string out_dir) -> bimInfo;
+
+int median(std::vector<int> &v);
+
+auto num_markers_within_distance(std::string bim_path, unsigned long dthr) -> size_t;
