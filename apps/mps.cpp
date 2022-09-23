@@ -365,11 +365,20 @@ void scorr(int argc, char *argv[])
 
     assert((phen.num_samples == num_individuals) && "number of phen values != number of individuals in dim");
 
+
+    printf("num_individuals: %u \n", num_individuals);
+    printf("num_phen: %u \n", num_phen);
+    printf("num_markers: %u \n", num_markers);
+    
     double device_mem_bytes = device_mem_gb * std::pow(10, 9);
     size_t upper_bound_batch_size =
         std::floor(
             (device_mem_bytes / 4 - (num_phen * num_individuals)) /
             (corr_width + num_phen + num_individuals / 16));
+    if (upper_bound_batch_size > num_markers)
+    {
+        upper_bound_batch_size = num_markers;
+    }
     if (upper_bound_batch_size < corr_width)
     {
         printf(
@@ -378,6 +387,8 @@ void scorr(int argc, char *argv[])
             corr_width);
         exit(1);
     }
+
+    printf("batch_size: %u \n", upper_bound_batch_size);
 
     printf("Loading .bed \n");
 

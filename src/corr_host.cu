@@ -964,6 +964,9 @@ void cu_corr_pearson_npn_batched_sparse(
     size_t curr_width = corr_width;
     for (size_t row_ix = 0; row_ix < num_markers; ++row_ix)
     {
+        if (row_ix % 10000 == 0) {
+            printf("Processing marker #%u \n", row_ix);
+        }
         size_t row_out = row_ix % batch_size;
         if (curr_width < corr_width)
         {
@@ -1047,6 +1050,7 @@ void cu_corr_pearson_npn_batched_sparse(
             cudaMemcpyDeviceToHost));
     }
 
+    printf("Computing phen-phen corrs \n");
     // phen-phen corr
     size_t num_phen_corrs = num_phen * (num_phen - 1) / 2;
     BLOCKS_PER_GRID = dim3(num_phen_corrs, 1, 1);
