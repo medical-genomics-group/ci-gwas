@@ -7,13 +7,41 @@
 #include <iterator>
 #include <sstream>
 
+auto split_line(std::string line) -> std::vector<std::string>
+{
+    std::vector<std::string> res;
+    std::istringstream ss(line);
+    std::string word;
+    while (ss >> word)
+    {
+        res.push_back(word);
+    }
+    return res;
+}
+
+void split_line(std::string line, std::string *buf, size_t ncols)
+{
+    std::istringstream ss(line);
+
+    std::string word;
+    size_t word_ix = 0;
+
+    while (ss >> word)
+    {
+        assert((word_ix < ncols) && "too many entries in line, aborting.");
+        buf[word_ix] = word;
+        word_ix += 1;
+    }
+}
+
 auto count_lines(std::string file_path) -> int
 {
     int number_of_lines = 0;
     std::string line;
     std::ifstream fin(file_path);
 
-    while (std::getline(fin, line)) ++number_of_lines;
+    while (std::getline(fin, line))
+        ++number_of_lines;
 
     return number_of_lines;
 }
@@ -36,8 +64,7 @@ auto make_path(const std::string out_dir, const std::string chr_id, const std::s
 
 // TODO: I don't ever need dest to have dynamic size, this should accept arrays
 void read_n_bytes_from_binary(
-    const std::string path, const size_t nbytes, std::vector<unsigned char> &dest
-)
+    const std::string path, const size_t nbytes, std::vector<unsigned char> &dest)
 {
     dest.resize(nbytes);
     std::ifstream bin_file(path, std::ios::binary);
@@ -89,7 +116,8 @@ auto read_floats_from_binary(const std::string path) -> std::vector<float>
     std::ifstream fin(path, std::ios::binary);
     std::vector<float> res = {};
 
-    while (fin.read(reinterpret_cast<char *>(&f), sizeof(float))) res.push_back(f);
+    while (fin.read(reinterpret_cast<char *>(&f), sizeof(float)))
+        res.push_back(f);
 
     return res;
 }
@@ -106,8 +134,7 @@ void write_floats_to_binary(const float *data, const size_t nvals, const std::st
 }
 
 void write_bed(
-    const std::vector<unsigned char> &out_buf, const std::string out_dir, const std::string chr_id
-)
+    const std::vector<unsigned char> &out_buf, const std::string out_dir, const std::string chr_id)
 {
     std::string outpath = make_path(out_dir, chr_id, ".bed");
     std::ofstream bedout;
@@ -117,8 +144,7 @@ void write_bed(
 }
 
 void write_means(
-    const std::vector<float> &chr_marker_means, const std::string out_dir, const std::string chr_id
-)
+    const std::vector<float> &chr_marker_means, const std::string out_dir, const std::string chr_id)
 {
     std::string outpath = make_path(out_dir, chr_id, ".means");
     std::ofstream fout;
@@ -133,8 +159,7 @@ void write_means(
 }
 
 void write_stds(
-    const std::vector<float> &chr_marker_stds, const std::string out_dir, const std::string chr_id
-)
+    const std::vector<float> &chr_marker_stds, const std::string out_dir, const std::string chr_id)
 {
     std::string outpath = make_path(out_dir, chr_id, ".stds");
     std::ofstream fout;
@@ -152,8 +177,7 @@ void write_dims(
     const size_t num_individuals,
     const size_t num_markers,
     const std::string out_dir,
-    const std::string chr_id
-)
+    const std::string chr_id)
 {
     std::string outpath = make_path(out_dir, chr_id, ".dims");
     std::ofstream fout;

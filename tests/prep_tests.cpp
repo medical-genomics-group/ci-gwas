@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
+#include <mps/bim.h>
 #include <mps/io.h>
-#include <mps/prep_markers.h>
-#include <mps/bim_stats.h>
+#include <mps/prep.h>
 
 #include <filesystem>
 #include <fstream>
@@ -60,11 +60,9 @@ TEST(ParseBedDeathTest, WrongMagicNumberOne)
                 "../../tests/test_files/small.bim",
                 "../../tests/test_files/small.fam",
                 "../../tests/test_files",
-                1
-            );
+                1);
         },
-        "unexpected magic number in bed file."
-    );
+        "unexpected magic number in bed file.");
 }
 
 TEST(ParseBedDeathTest, WrongMagicNumberTwo)
@@ -76,11 +74,9 @@ TEST(ParseBedDeathTest, WrongMagicNumberTwo)
                 "../../tests/test_files/small.bim",
                 "../../tests/test_files/small.fam",
                 "../../tests/test_files",
-                1
-            );
+                1);
         },
-        "unexpected magic number in bed file."
-    );
+        "unexpected magic number in bed file.");
 }
 
 TEST(ParseBedDeathTest, WrongMagicNumberThree)
@@ -92,11 +88,9 @@ TEST(ParseBedDeathTest, WrongMagicNumberThree)
                 "../../tests/test_files/small.bim",
                 "../../tests/test_files/small.fam",
                 "../../tests/test_files",
-                1
-            );
+                1);
         },
-        "unexpected magic number in bed file."
-    );
+        "unexpected magic number in bed file.");
 }
 
 auto read_file(const std::string filename) -> std::vector<unsigned char>
@@ -106,8 +100,7 @@ auto read_file(const std::string filename) -> std::vector<unsigned char>
 
     // read the data:
     return std::vector<unsigned char>(
-        (std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>()
-    );
+        (std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 }
 
 TEST(ParseBed, CorrectOutFilesGenerated)
@@ -117,8 +110,7 @@ TEST(ParseBed, CorrectOutFilesGenerated)
         "../../tests/test_files/small.bim",
         "../../tests/test_files/small.fam",
         "../../tests/test_files",
-        1
-    );
+        1);
 
     // .bed
     std::vector<unsigned char> one_bed_content = read_file("../../tests/test_files/1.bed");

@@ -1,9 +1,9 @@
 #include <math.h>
-#include <mps/bim_stats.h>
+#include <mps/bim.h>
 #include <mps/corr_host.h>
 #include <mps/corr_kernels.h>
 #include <mps/io.h>
-#include <mps/prep_markers.h>
+#include <mps/prep.h>
 #include <sys/stat.h>
 
 #include <array>

@@ -1,6 +1,6 @@
 #include <mps/bed_lut.h>
 #include <mps/io.h>
-#include <mps/prep_markers.h>
+#include <mps/prep.h>
 
 #include <cassert>
 #include <cmath>
@@ -47,7 +47,7 @@ auto prep_bim(std::string bim_path, std::string out_dir) -> bimInfo
             fout.close();
             outpath = make_path(out_dir, bim_line[0], ".bim");
             fout.open(outpath, std::ios::out);
-            
+
             res.chr_ids.push_back(bim_line[0]);
             res.num_markers_on_chr.push_back(0);
         }
@@ -65,8 +65,7 @@ void prep_bed(
     std::string bim_path,
     std::string fam_path,
     std::string out_dir,
-    size_t mem_gb
-)  // max memory used by this fn)
+    size_t mem_gb) // max memory used by this fn)
 {
     size_t num_individuals = count_lines(fam_path);
     bimInfo bim_info = prep_bim(bim_path, out_dir);
