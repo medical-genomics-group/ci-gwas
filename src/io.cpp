@@ -2,6 +2,7 @@
 
 #include <mps/io.h>
 
+#include <cassert>
 #include <fstream>
 #include <iostream>
 #include <iterator>
