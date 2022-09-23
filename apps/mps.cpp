@@ -3,6 +3,7 @@
 #include <mps/corr_host.h>
 #include <mps/corr_kernels.h>
 #include <mps/io.h>
+#include <mps/phen.h>
 #include <mps/prep.h>
 #include <sys/stat.h>
 
@@ -303,7 +304,7 @@ const std::string SCORR_USAGE = R"(
 Compute correlations between markers and phenotypes. The marker-marker correlation part 
 is computed as a banded matrix.
 
-usage: mps scorr <prepdir> <chr> <device_mem_gb> <distance_threshold> <.phen>...
+usage: mps scorr <prepdir> <chr> <device_mem_gb> <distance_threshold> <.phen>
 
 arguments:
     prepdir Directory with `mps prep` output, i.e. .bed, .stds, .means and .dims files for each chromosome
@@ -356,19 +357,12 @@ void scorr(int argc, char *argv[])
     size_t num_individuals = dims[0];
     size_t num_markers = dims[1];
 
-    // get phen paths and their number
-    std::vector<std::string> phen_paths = {};
-    for (size_t i = 5; i < argc; ++i)
-    {
-        std::string phen_path = (std::string)argv[i];
-        if (!path_exists(phen_path))
-        {
-            std::cout << "file or directory not found: " << phen_path << std::endl;
-            exit(1);
-        }
-        phen_paths.push_back(phen_path);
-    }
-    size_t num_phen = phen_paths.size();
+    printf("Loading .phen \n");
+    // load phen data
+    Phen phen = load_phen((std::string)argv[6]);
+    size_t num_phen = phen.num_phen;
+
+    assert((phen.num_samples == num_individuals) && "number of phen values != number of individuals in dim");
 
     double device_mem_bytes = device_mem_gb * std::pow(10, 9);
     size_t upper_bound_batch_size =
@@ -382,15 +376,6 @@ void scorr(int argc, char *argv[])
             upper_bound_batch_size,
             corr_width);
         exit(1);
-    }
-
-    printf("Loading .phen \n");
-
-    // load phen data
-    std::vector<float> phen_vals = {};
-    for (size_t i = 0; i < num_phen; ++i)
-    {
-        read_floats_from_lines(phen_paths[i], phen_vals);
     }
 
     printf("Loading .bed \n");

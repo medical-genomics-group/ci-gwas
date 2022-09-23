@@ -1,4 +1,5 @@
 #include <mps/bed_lut.h>
+#include <mps/bim.h>
 #include <mps/io.h>
 #include <mps/prep.h>
 
@@ -10,54 +11,6 @@
 #include <sstream>
 #include <string>
 #include <vector>
-
-void split_bim_line(std::string line, std::string *buf)
-{
-    std::istringstream ss(line);
-
-    std::string word;
-    size_t word_ix = 0;
-
-    while (ss >> word)
-    {
-        assert((word_ix < 6) && "found more than 6 columns in bim file, aborting.");
-        buf[word_ix] = word;
-        word_ix += 1;
-    }
-}
-
-auto prep_bim(std::string bim_path, std::string out_dir) -> bimInfo
-{
-    bimInfo res;
-    res.number_of_lines = 0;
-    res.chr_ids = {};
-    res.num_markers_on_chr = {};
-
-    std::string bim_line[6];
-    std::string line;
-    std::ifstream bim(bim_path);
-    std::string outpath;
-    std::ofstream fout;
-
-    while (std::getline(bim, line))
-    {
-        split_bim_line(line, bim_line);
-        if ((res.number_of_lines == 0) || (bim_line[0] != res.chr_ids.back()))
-        {
-            fout.close();
-            outpath = make_path(out_dir, bim_line[0], ".bim");
-            fout.open(outpath, std::ios::out);
-
-            res.chr_ids.push_back(bim_line[0]);
-            res.num_markers_on_chr.push_back(0);
-        }
-        fout << line << std::endl;
-        ++res.num_markers_on_chr.back();
-        ++res.number_of_lines;
-    }
-
-    return res;
-}
 
 // Split .bed by chromosome, impute NaN to mode, compute col means and std
 void prep_bed(
