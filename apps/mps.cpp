@@ -695,7 +695,7 @@ auto main(int argc, char *argv[]) -> int
     }
     else if (cmd == "scorr")
     {
-        // scorr(argc, argv);
+        scorr(argc, argv);
     }
     else
     {
