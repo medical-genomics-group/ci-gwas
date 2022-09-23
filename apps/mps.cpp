@@ -420,6 +420,7 @@ void scorr(int argc, char *argv[])
     std::vector<float> corrs(corr_mat_size, 0.0);
 
     printf("Computing correlations\n");
+    fflush(stdout);
     // compute correlations
     cu_corr_pearson_npn_batched_sparse(
         marker_vals.data(),

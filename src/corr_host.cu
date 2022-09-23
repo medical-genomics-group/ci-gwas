@@ -966,6 +966,7 @@ void cu_corr_pearson_npn_batched_sparse(
     {
         if (row_ix % 10000 == 0) {
             printf("Processing marker #%u \n", row_ix);
+            fflush(stdout);
         }
         size_t row_out = row_ix % batch_size;
         if (curr_width < corr_width)
@@ -1008,6 +1009,8 @@ void cu_corr_pearson_npn_batched_sparse(
 
         if (row_out == (batch_size - 1))
         {
+            printf("Copying batch results to host\n");
+            fflush(stdout);
             // copy batch results to host
             HANDLE_ERROR(cudaMemcpy(
                 &corrs[batch_start * (corr_width + num_phen)],
@@ -1015,10 +1018,20 @@ void cu_corr_pearson_npn_batched_sparse(
                 (corr_width + num_phen) * batch_size * sizeof(float),
                 cudaMemcpyDeviceToHost));
             batch_start = row_ix + 1;
+            fflush(stdout);
+        }
+
+        if (row_ix >= last_full_row)
+        {
+            curr_width -= 1;
+            max_row_in += 1;
         }
 
         if (row_in == (max_row_in - 1))
         {
+            printf("At marker #%u;\n", row_ix);
+            printf("Loading new marker batch \n");
+            fflush(stdout);
             // get new marker data batch
             HANDLE_ERROR(cudaMemcpy(
                 gpu_marker_vals,
@@ -1031,13 +1044,9 @@ void cu_corr_pearson_npn_batched_sparse(
         {
             row_in += 1;
         }
-
-        if (row_ix >= last_full_row)
-        {
-            curr_width -= 1;
-            max_row_in += 1;
-        }
     }
+
+    printf("Finished computing marker-marker and marker-phen \n");
 
     // copy remaining results to host
     if ((num_markers % batch_size) != 0)
@@ -1051,6 +1060,7 @@ void cu_corr_pearson_npn_batched_sparse(
     }
 
     printf("Computing phen-phen corrs \n");
+    fflush(stdout);
     // phen-phen corr
     size_t num_phen_corrs = num_phen * (num_phen - 1) / 2;
     BLOCKS_PER_GRID = dim3(num_phen_corrs, 1, 1);
