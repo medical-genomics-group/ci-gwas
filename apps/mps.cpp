@@ -411,7 +411,7 @@ void scorr(int argc, char *argv[])
     // compute correlations
     cu_corr_pearson_npn_batched_sparse(
         marker_vals.data(),
-        phen_vals.data(),
+        phen.data.data(),
         num_markers,
         num_individuals,
         num_phen,
