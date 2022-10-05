@@ -51,7 +51,7 @@
 //==========================> Function Declaration <==========================
 __global__ void cal_Indepl0(double *C, int *G, double th, double *pMax, int n);
 __global__ void cal_Indepl1(double *C, int *G, int *GPrime, int *mutex, int *Sepset, double *pMax,
-                            double th, int n);
+                            double th, int nr, int nc);
 __global__ void cal_Indepl3(double *C, int *G, int *GPrime, int *mutex, int *Sepset, double *pMax,
                             int n, double th);
 __global__ void cal_Indepl4(double *C, int *G, int *GPrime, int *mutex, int *Sepset, double *pMax,

@@ -23,6 +23,7 @@
 void Skeleton(float *C, int *M, int *P, int *W, int *G, double *Th, int *l, int *maxlevel, float *pMax,
               int *SepSet)
 {
+    // we expect C to be in row major format
     double *C_cuda; // Copy of C array in GPU
     double *pMax_cuda;
     int *G_cuda; // Copy of G Array in GPU
@@ -71,17 +72,17 @@ void Skeleton(float *C, int *M, int *P, int *W, int *G, double *Th, int *l, int 
             // TODO: continue to change dims from here
             {
                 BLOCKS_PER_GRID = dim3(1, 1, 1);
-                THREADS_PER_BLOCK = dim3(32, 32, 1);
+                THREADS_PER_BLOCK = dim3(nr, nc, 1);
                 cal_Indepl0<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(C_cuda, G_cuda, Th[0],
-                                                                    pMax_cuda, n);
+                                                                    pMax_cuda, nr, nc);
                 CudaCheckError();
             }
             else
             {
-                BLOCKS_PER_GRID = dim3(ceil(((double)(n)) / 32.0), ceil(((double)(n)) / 32.0), 1);
+                BLOCKS_PER_GRID = dim3(ceil(((double)nr) / 32.0), ceil(((double)nc) / 32.0), 1);
                 THREADS_PER_BLOCK = dim3(32, 32, 1);
                 cal_Indepl0<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(C_cuda, G_cuda, Th[0],
-                                                                    pMax_cuda, n);
+                                                                    pMax_cuda, nr, nc);
                 CudaCheckError();
             }
             BLOCKS_PER_GRID = dim3(n * n, 1, 1);
@@ -278,30 +279,24 @@ __global__ void SepSet_initialize(int *SepSet, int size)
     SepSet[row * ML + tx] = -1;
 }
 
-__global__ void cal_Indepl0(double *C, int *G, double th, double *pMax, int n)
+__global__ void cal_Indepl0(double *C, int *G, double th, double *pMax, int nr, int nc)
 {
     int row = blockDim.x * bx + tx;
     int col = blockDim.y * by + ty;
-    if (row < col && col < n)
+    if (row < nr && col < nc)
     {
-        double res = C[row * n + col];
+        double res = C[row * nc + col];
         res = abs(0.5 * log(abs((1 + res) / (1 - res))));
         if (res < th)
         {
-            pMax[row * n + col] = res;
-            G[row * n + col] = 0;
-            G[col * n + row] = 0;
+            pMax[row * nc + col] = res;
+            // we store G in sparse form
+            G[row * nc + col] = 0;
         }
         else
         {
             G[row * n + col] = 1;
-            G[col * n + row] = 1;
         }
-    }
-    if (row == col && col < n)
-    {
-        G[row * n + col] = 0;
-        G[col * n + row] = 0;
     }
 }
 
