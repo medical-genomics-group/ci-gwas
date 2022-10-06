@@ -71,6 +71,11 @@ void Skeleton(float *C, int *M, int *P, int *W, int *G, double *Th, int *l, int 
     HANDLE_ERROR(cudaMemset(mutex_cuda, 0, mixed_matrix_size * sizeof(int)));
 
     CudaCheckError();
+
+    // !!!!!!!!!!!!!! this is just here for compilation reasons for the time being !!!!!!!!!!!!!!!
+    int n = 8;
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
     //----------------------------------------------------------
     for (*l = 0; *l <= ML && !FinishFlag && *l <= *maxlevel; *l = *l + 1)
     {
@@ -81,7 +86,7 @@ void Skeleton(float *C, int *M, int *P, int *W, int *G, double *Th, int *l, int 
                 BLOCKS_PER_GRID = dim3(1, 1, 1);
                 THREADS_PER_BLOCK = dim3(nr, nc, 1);
                 cal_Indepl0<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(C_cuda, G_cuda, Th[0],
-                                                                    pMax_cuda, nr, nc);
+                                                                    pMax_cuda, m, p, w);
                 CudaCheckError();
             }
             else
@@ -89,12 +94,12 @@ void Skeleton(float *C, int *M, int *P, int *W, int *G, double *Th, int *l, int 
                 BLOCKS_PER_GRID = dim3(ceil(((double)nr) / 32.0), ceil(((double)nc) / 32.0), 1);
                 THREADS_PER_BLOCK = dim3(32, 32, 1);
                 cal_Indepl0<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(C_cuda, G_cuda, Th[0],
-                                                                    pMax_cuda, nr, nc);
+                                                                    pMax_cuda, m, p, w);
                 CudaCheckError();
             }
             BLOCKS_PER_GRID = dim3(sepset_n_rows, 1, 1);
             THREADS_PER_BLOCK = dim3(ML, 1, 1);
-            SepSet_initialize<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(SepSet_cuda, n);
+            SepSet_initialize<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(SepSet_cuda, nr);
             CudaCheckError();
         }
         else
@@ -126,7 +131,7 @@ void Skeleton(float *C, int *M, int *P, int *W, int *G, double *Th, int *l, int 
                 THREADS_PER_BLOCK = dim3(ParGivenL1, 1, 1);
                 // HANDLE_ERROR( cudaMalloc((void**)&SepSet_cuda,  n * n * 1 * sizeof(int)) );
                 cal_Indepl1<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, Th[1], n);
+                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, Th[1], nr, nc);
                 // HANDLE_ERROR( cudaFree(SepSet_cuda) );
                 CudaCheckError();
                 HANDLE_ERROR(cudaDeviceSynchronize());
@@ -305,13 +310,13 @@ __global__ void cal_Indepl0(double *C, int *G, double th, double *pMax, int m, i
         if (res < th)
         {
             pMax[row * nc + col] = res;
-            G[mixed_matrix_size(XIdx, YIdx, m, p, w)] = 0;
-            G[mixed_matrix_size(YIdx, XIdx, m, p, w)] = 0;
+            G[mixed_matrix_index(XIdx, YIdx, m, p, w)] = 0;
+            G[mixed_matrix_index(YIdx, XIdx, m, p, w)] = 0;
         }
         else
         {
-            G[mixed_matrix_size(XIdx, YIdx, m, p, w)] = 1;
-            G[mixed_matrix_size(YIdx, XIdx, m, p, w)] = 1;
+            G[mixed_matrix_index(XIdx, YIdx, m, p, w)] = 1;
+            G[mixed_matrix_index(YIdx, XIdx, m, p, w)] = 1;
         }
     }
 }
