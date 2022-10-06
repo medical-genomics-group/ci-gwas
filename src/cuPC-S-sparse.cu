@@ -309,7 +309,7 @@ __global__ void cal_Indepl0(double *C, int *G, double th, double *pMax, int m, i
         res = abs(0.5 * log(abs((1 + res) / (1 - res))));
         if (res < th)
         {
-            pMax[row * nc + col] = res;
+            pMax[mixed_matrix_index(XIdx, YIdx, m, p, w)] = res;
             G[mixed_matrix_index(XIdx, YIdx, m, p, w)] = 0;
             G[mixed_matrix_index(YIdx, XIdx, m, p, w)] = 0;
         }
