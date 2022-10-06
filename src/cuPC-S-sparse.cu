@@ -42,6 +42,11 @@ void Skeleton(float *C, int *M, int *P, int *W, int *G, double *Th, int *l, int 
     int nr = p + m;
     // width (ncols) of the corr matrix: corr_width + num_phen
     int nc = w + p;
+    //  sepset dims
+    int sepset_marker_row_width = 2 * w + p;
+    int sepset_phen_row_width = m + p;
+    int sepset_size = (sepset_marker_row_width * m + sepset_phen_row_width * p) * ML;
+
     int nprime = 0;
     dim3 BLOCKS_PER_GRID;
     dim3 THREADS_PER_BLOCK;
@@ -52,7 +57,7 @@ void Skeleton(float *C, int *M, int *P, int *W, int *G, double *Th, int *l, int 
 
     HANDLE_ERROR(cudaMalloc((void **)&mutex_cuda, nc * nr * sizeof(int)));
     HANDLE_ERROR(cudaMalloc((void **)&nprime_cuda, 1 * sizeof(int)));
-    HANDLE_ERROR(cudaMalloc((void **)&SepSet_cuda, nc * nr * ML * sizeof(int)));
+    HANDLE_ERROR(cudaMalloc((void **)&SepSet_cuda, sepset_size * sizeof(int)));
     HANDLE_ERROR(cudaMalloc((void **)&GPrime_cuda, nc * nr * sizeof(int)));
     HANDLE_ERROR(cudaMalloc((void **)&C_cuda, nc * nr * sizeof(double)));
     HANDLE_ERROR(cudaMalloc((void **)&G_cuda, nc * nr * sizeof(int)));
@@ -69,7 +74,6 @@ void Skeleton(float *C, int *M, int *P, int *W, int *G, double *Th, int *l, int 
         if (*l == 0)
         {
             if ((nc * nr) < 1024)
-            // TODO: continue to change dims from here
             {
                 BLOCKS_PER_GRID = dim3(1, 1, 1);
                 THREADS_PER_BLOCK = dim3(nr, nc, 1);
@@ -85,7 +89,15 @@ void Skeleton(float *C, int *M, int *P, int *W, int *G, double *Th, int *l, int 
                                                                     pMax_cuda, nr, nc);
                 CudaCheckError();
             }
-            BLOCKS_PER_GRID = dim3(n * n, 1, 1);
+            // TODO: what are the correct dimensions for sepset?
+            // I am not sure yet why, but it seems that
+            // each edge is tested in both directions, potentially yielding
+            // two different separation sets per edge.
+            // Each node V_i, i \in 1..nr has degree 2 * w + p,
+            // except for the p nodes, which have degree nr
+            // So in total, sepset should have
+            // (m * (2 * w + p) + p * (m + p)) * 14 space
+            BLOCKS_PER_GRID = dim3(nr * nc, 1, 1);
             THREADS_PER_BLOCK = dim3(ML, 1, 1);
             SepSet_initialize<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(SepSet_cuda, n);
             CudaCheckError();
@@ -6463,4 +6475,21 @@ __device__ void IthCombination(int out[], int N, int P, int L)
         k = k - R;
     }
     out[P1] = out[P1 - 1] + L - k;
+}
+
+__device__ long long int sepset_index(int XIdx, int YIdx, int m, int p, int w)
+{
+    int marker_row_width = 2 * w + p;
+    int phen_row_width = m + p;
+    if (XIdx < m)
+    {
+        int relY = YIdx - (XIdx - w);
+        return ((long long int)XIdx * (long long int)marker_row_width + (long long int)relY) * ML;
+    }
+    else
+    {
+        long long int marker_part = m * marker_row_width;
+        long long int phen_part = (XIdx - m) * phen_row_width;
+        return (marker_part + phen_part + (long long int)YIdx) * ML;
+    }
 }
