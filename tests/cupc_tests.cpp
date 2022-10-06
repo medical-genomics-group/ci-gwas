@@ -1,4 +1,4 @@
-#include <array>
+#include <vector>
 #include <boost/math/distributions/normal.hpp>
 #include <cmath>
 #include <gtest/gtest.h>
@@ -36,15 +36,15 @@ TEST(cuPCSparseTests, CalIndepL1SingleBlock)
     int m = BMT2_NUM_MARKERS;
     int max_marker_degree = 2 * w + p;
     int max_phen_degree = m + p;
-    int mixed_matrix_size = max_marker_degree * m + max_phen_degree * p;
-    std::array<int, mixed_matrix_size> G{0};
+    size_t mixed_matrix_size = max_marker_degree * m + max_phen_degree * p;
+    std::vector<int> G(mixed_matrix_size, 0);
     std::array<double, NUMBER_OF_LEVELS> Th = threshold_array(p + m, alpha);
 
     test_cal_Indepl0(
-        bmt2_sparse_corrs.data(),
-        m,
-        p,
-        w,
+        bmt2_sparse_corrs,
+        &m,
+        &p,
+        &w,
         G.data(),
         Th.data());
 }
