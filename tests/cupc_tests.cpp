@@ -1,11 +1,9 @@
-#include <vector>
 #include <boost/math/distributions/normal.hpp>
 #include <cmath>
 #include <gtest/gtest.h>
-#include <mps/cuPC-S-sparse.h>
 #include <mps/cu_test_helpers.h>
-#include <mps/gpuerrors.h>
 #include <test_data/bed_marker_test_set.h>
+#include <vector>
 
 const int NUMBER_OF_LEVELS = 50;
 
