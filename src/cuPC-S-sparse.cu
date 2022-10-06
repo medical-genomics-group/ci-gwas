@@ -43,9 +43,10 @@ void Skeleton(float *C, int *M, int *P, int *W, int *G, double *Th, int *l, int 
     // width (ncols) of the corr matrix: corr_width + num_phen
     int nc = w + p;
     //  sepset dims
-    int sepset_marker_row_width = 2 * w + p;
-    int sepset_phen_row_width = m + p;
-    int sepset_size = (sepset_marker_row_width * m + sepset_phen_row_width * p) * ML;
+    int sepset_marker_degree = 2 * w + p;
+    int sepset_phen_degree = m + p;
+    int sepset_n_rows = sepset_marker_degree * m + sepset_phen_degree * p;
+    int sepset_size = sepset_n_rows * ML;
 
     int nprime = 0;
     dim3 BLOCKS_PER_GRID;
@@ -89,21 +90,15 @@ void Skeleton(float *C, int *M, int *P, int *W, int *G, double *Th, int *l, int 
                                                                     pMax_cuda, nr, nc);
                 CudaCheckError();
             }
-            // TODO: what are the correct dimensions for sepset?
-            // I am not sure yet why, but it seems that
-            // each edge is tested in both directions, potentially yielding
-            // two different separation sets per edge.
-            // Each node V_i, i \in 1..nr has degree 2 * w + p,
-            // except for the p nodes, which have degree nr
-            // So in total, sepset should have
-            // (m * (2 * w + p) + p * (m + p)) * 14 space
-            BLOCKS_PER_GRID = dim3(nr * nc, 1, 1);
+            BLOCKS_PER_GRID = dim3(sepset_n_rows, 1, 1);
             THREADS_PER_BLOCK = dim3(ML, 1, 1);
             SepSet_initialize<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(SepSet_cuda, n);
             CudaCheckError();
         }
         else
         {
+            // TODO: change dims from here
+
             //================================> Start Scan Process <===============================
             HANDLE_ERROR(cudaMemset(nprime_cuda, 0, 1 * sizeof(int)));
             BLOCKS_PER_GRID = dim3(1, n, 1);
@@ -6479,17 +6474,17 @@ __device__ void IthCombination(int out[], int N, int P, int L)
 
 __device__ long long int sepset_index(int XIdx, int YIdx, int m, int p, int w)
 {
-    int marker_row_width = 2 * w + p;
-    int phen_row_width = m + p;
+    int marker_degree = 2 * w + p;
+    int phen_degree = m + p;
     if (XIdx < m)
     {
         int relY = YIdx - (XIdx - w);
-        return ((long long int)XIdx * (long long int)marker_row_width + (long long int)relY) * ML;
+        return ((long long int)XIdx * (long long int)marker_degree + (long long int)relY) * ML;
     }
     else
     {
-        long long int marker_part = m * marker_row_width;
-        long long int phen_part = (XIdx - m) * phen_row_width;
+        long long int marker_part = m * marker_degree;
+        long long int phen_part = (XIdx - m) * phen_degree;
         return (marker_part + phen_part + (long long int)YIdx) * ML;
     }
 }
