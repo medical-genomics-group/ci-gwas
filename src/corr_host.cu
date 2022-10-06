@@ -964,7 +964,8 @@ void cu_corr_pearson_npn_batched_sparse(
     size_t curr_width = corr_width;
     for (size_t row_ix = 0; row_ix < num_markers; ++row_ix)
     {
-        if (row_ix % 10000 == 0) {
+        if (row_ix % 10000 == 0)
+        {
             printf("Processing marker #%u \n", row_ix);
             fflush(stdout);
         }
@@ -1080,13 +1081,16 @@ void cu_corr_pearson_npn_batched_sparse(
         num_phen_corrs * sizeof(float),
         cudaMemcpyDeviceToHost));
 
-    size_t num_row_entries = num_phen - 1;
+    size_t num_row_entries = num_phen;
     size_t lin_ix = 0;
     for (size_t pix = 0; pix < num_phen; ++pix)
     {
-        for (size_t vix = pix; vix < num_row_entries; ++vix)
+        for (size_t vix = pix + 1; vix < num_row_entries; ++vix)
         {
-            corrs[(num_markers + pix) * corr_row_len + corr_width + 1 + vix] = phen_corrs_tmp[lin_ix];
+            size_t pix1 = pix;
+            size_t pix2 = vix;
+            corrs[(num_markers + pix1) * corr_row_len + corr_width + pix2] = phen_corrs_tmp[lin_ix];
+            corrs[(num_markers + pix2) * corr_row_len + corr_width + pix1] = phen_corrs_tmp[lin_ix];
             lin_ix += 1;
         }
     }
