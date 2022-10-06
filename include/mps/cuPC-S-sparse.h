@@ -113,5 +113,6 @@ __device__ void BINOM(int n, int k, int *out);
 __device__ void IthCombination(int out[], int N, int P, int L);
 __device__ double PYTHAG(double a, double b);
 __device__ void inverse(double M2[][3], double M2Inv[][3]);
+__device__ long long int sepset_index(int XIdx, int YIdx, int m, int p, int w)
 
 #endif /* CUPC_S_H_ */
