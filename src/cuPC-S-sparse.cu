@@ -42,10 +42,12 @@ void Skeleton(float *C, int *M, int *P, int *W, int *G, double *Th, int *l, int 
     int nr = p + m;
     // width (ncols) of the corr matrix: corr_width + num_phen
     int nc = w + p;
-    //  sepset dims
-    int sepset_marker_degree = 2 * w + p;
-    int sepset_phen_degree = m + p;
-    int sepset_n_rows = sepset_marker_degree * m + sepset_phen_degree * p;
+
+    int max_marker_degree = 2 * w + p;
+    int max_phen_degree = m + p;
+    int mixed_matrix_size = max_marker_degree * m + max_phen_degree * p;
+    // sepset dims
+    int sepset_n_rows = max_marker_degree * m + max_phen_degree * p;
     int sepset_size = sepset_n_rows * ML;
 
     int nprime = 0;
@@ -56,17 +58,17 @@ void Skeleton(float *C, int *M, int *P, int *W, int *G, double *Th, int *l, int 
 
     *l = 0;
 
-    HANDLE_ERROR(cudaMalloc((void **)&mutex_cuda, nc * nr * sizeof(int)));
+    HANDLE_ERROR(cudaMalloc((void **)&mutex_cuda, mixed_matrix_size * sizeof(int)));
     HANDLE_ERROR(cudaMalloc((void **)&nprime_cuda, 1 * sizeof(int)));
     HANDLE_ERROR(cudaMalloc((void **)&SepSet_cuda, sepset_size * sizeof(int)));
-    HANDLE_ERROR(cudaMalloc((void **)&GPrime_cuda, nc * nr * sizeof(int)));
+    HANDLE_ERROR(cudaMalloc((void **)&GPrime_cuda, mixed_matrix_size * sizeof(int)));
     HANDLE_ERROR(cudaMalloc((void **)&C_cuda, nc * nr * sizeof(double)));
-    HANDLE_ERROR(cudaMalloc((void **)&G_cuda, nc * nr * sizeof(int)));
-    HANDLE_ERROR(cudaMalloc((void **)&pMax_cuda, nc * nr * sizeof(float)));
+    HANDLE_ERROR(cudaMalloc((void **)&G_cuda, mixed_matrix_size * sizeof(int)));
+    HANDLE_ERROR(cudaMalloc((void **)&pMax_cuda, mixed_matrix_size * sizeof(float)));
     // copy correlation matrix from CPU to GPU
     HANDLE_ERROR(cudaMemcpy(C_cuda, C, nc * nr * sizeof(float), cudaMemcpyHostToDevice));
     // initialize a 0 matrix
-    HANDLE_ERROR(cudaMemset(mutex_cuda, 0, nc * nr * sizeof(int)));
+    HANDLE_ERROR(cudaMemset(mutex_cuda, 0, mixed_matrix_size * sizeof(int)));
 
     CudaCheckError();
     //----------------------------------------------------------
@@ -286,23 +288,30 @@ __global__ void SepSet_initialize(int *SepSet, int size)
     SepSet[row * ML + tx] = -1;
 }
 
-__global__ void cal_Indepl0(double *C, int *G, double th, double *pMax, int nr, int nc)
+__global__ void cal_Indepl0(double *C, int *G, double th, double *pMax, int m, int p, int w)
 {
+    int nr = m + p;
+    int nc = w + p;
     int row = blockDim.x * bx + tx;
     int col = blockDim.y * by + ty;
-    if (row < nr && col < nc)
+    if (row < nr && col < nc && ((row < m) || (col > w)))
     {
+        // global indices of variables
+        int XIdx = row;
+        int YIdx = (col < w) ? (XIdx + col) : (m + col - w);
+
         double res = C[row * nc + col];
         res = abs(0.5 * log(abs((1 + res) / (1 - res))));
         if (res < th)
         {
             pMax[row * nc + col] = res;
-            // we store G in sparse form
-            G[row * nc + col] = 0;
+            G[mixed_matrix_size(XIdx, YIdx, m, p, w)] = 0;
+            G[mixed_matrix_size(YIdx, XIdx, m, p, w)] = 0;
         }
         else
         {
-            G[row * n + col] = 1;
+            G[mixed_matrix_size(XIdx, YIdx, m, p, w)] = 1;
+            G[mixed_matrix_size(YIdx, XIdx, m, p, w)] = 1;
         }
     }
 }
@@ -6321,7 +6330,12 @@ __device__ void pseudoinversel14(double M2[][14], double M2Inv[][14], double v[]
 
 __global__ void scan_compact(int *G_Compact, const int *G, const int n, int *nprime)
 {
+    // we should have nr blocks.
     const int row = by;
+    // here we are determining the number of sections
+    // that the current row of G will be split into.
+    // blockDim.x is 1024
+    // the row length depends on whether we are in a marker or a phenotype row
     const int section = (n + blockDim.x - 1) / blockDim.x;
     int thid = 0;
     int tmp = 0;
@@ -6472,19 +6486,19 @@ __device__ void IthCombination(int out[], int N, int P, int L)
     out[P1] = out[P1 - 1] + L - k;
 }
 
-__device__ long long int sepset_index(int XIdx, int YIdx, int m, int p, int w)
+__device__ long long int mixed_matrix_index(int XIdx, int YIdx, int m, int p, int w)
 {
-    int marker_degree = 2 * w + p;
-    int phen_degree = m + p;
+    int max_marker_degree = 2 * w + p;
+    int max_phen_degree = m + p;
     if (XIdx < m)
     {
         int relY = YIdx - (XIdx - w);
-        return ((long long int)XIdx * (long long int)marker_degree + (long long int)relY) * ML;
+        return ((long long int)XIdx * (long long int)max_marker_degree + (long long int)relY) * ML;
     }
     else
     {
-        long long int marker_part = m * marker_degree;
-        long long int phen_part = (XIdx - m) * phen_degree;
+        long long int marker_part = m * max_marker_degree;
+        long long int phen_part = (XIdx - m) * max_phen_degree;
         return (marker_part + phen_part + (long long int)YIdx) * ML;
     }
 }

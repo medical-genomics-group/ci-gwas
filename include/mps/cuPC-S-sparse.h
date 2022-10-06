@@ -49,7 +49,7 @@
 #define ML 14
 
 //==========================> Function Declaration <==========================
-__global__ void cal_Indepl0(double *C, int *G, double th, double *pMax, int n);
+__global__ void cal_Indepl0(double *C, int *G, double th, double *pMax, int m, int p, int w);
 __global__ void cal_Indepl1(double *C, int *G, int *GPrime, int *mutex, int *Sepset, double *pMax,
                             double th, int nr, int nc);
 __global__ void cal_Indepl3(double *C, int *G, int *GPrime, int *mutex, int *Sepset, double *pMax,
@@ -113,6 +113,6 @@ __device__ void BINOM(int n, int k, int *out);
 __device__ void IthCombination(int out[], int N, int P, int L);
 __device__ double PYTHAG(double a, double b);
 __device__ void inverse(double M2[][3], double M2Inv[][3]);
-__device__ long long int sepset_index(int XIdx, int YIdx, int m, int p, int w)
+__device__ long long int mixed_matrix_index(int XIdx, int YIdx, int m, int p, int w)
 
 #endif /* CUPC_S_H_ */
