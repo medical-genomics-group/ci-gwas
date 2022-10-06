@@ -294,7 +294,7 @@ __global__ void cal_Indepl0(double *C, int *G, double th, double *pMax, int m, i
     int nc = w + p;
     int row = blockDim.x * bx + tx;
     int col = blockDim.y * by + ty;
-    if (row < nr && col < nc && ((row < m) || (col > w)))
+    if (row < nr && col < nc && ((row < (m - w)) || (col > w) || (col < (m - row - 1))))
     {
         // global indices of variables
         int XIdx = row;

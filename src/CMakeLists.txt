@@ -1,6 +1,10 @@
 file(GLOB HEADER_LIST CONFIGURE_DEPENDS "${MPS_SOURCE_DIR}/include/mps/*.h")
 # set(HEADER_LIST "${MPS_SOURCE_DIR}/include/mps/*.h")
 
+add_library(cuPCsparse STATIC cuPC-S-sparse.cu cu_test_helpers.cu ${HEADER_LIST})
+target_include_directories(cuPCsparse PUBLIC ../include)
+target_compile_features(cuPCsparse PUBLIC cxx_std_17)
+
 add_library(cuPC STATIC cuPC-S.cu ${HEADER_LIST})
 target_include_directories(cuPC PUBLIC ../include)
 target_compile_features(cuPC PUBLIC cxx_std_17)
