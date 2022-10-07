@@ -49,60 +49,60 @@
 #define ML 14
 
 //==========================> Function Declaration <==========================
-__global__ void cal_Indepl0(double *C, int *G, double th, double *pMax, int m, int p, int w);
-__global__ void cal_Indepl1(double *C, int *G, int *GPrime, int *mutex, int *Sepset, double *pMax,
-                            double th, int n);
-__global__ void cal_Indepl3(double *C, int *G, int *GPrime, int *mutex, int *Sepset, double *pMax,
-                            int n, double th);
-__global__ void cal_Indepl4(double *C, int *G, int *GPrime, int *mutex, int *Sepset, double *pMax,
-                            int n, double th);
-__global__ void cal_Indepl5(double *C, int *G, int *GPrime, int *mutex, int *Sepset, double *pMax,
-                            int n, double th);
-__global__ void cal_Indepl2(double *C, int *G, int *GPrime, int *mutex, int *Sepset, double *pMax,
-                            int n, double th);
-__global__ void cal_Indepl6(double *C, int *G, int *GPrime, int *mutex, int *Sepset, double *pMax,
-                            int n, double th);
-__global__ void cal_Indepl7(double *C, int *G, int *GPrime, int *mutex, int *Sepset, double *pMax,
-                            int n, double th);
-__global__ void cal_Indepl8(double *C, int *G, int *GPrime, int *mutex, int *Sepset, double *pMax,
-                            int n, double th);
-__global__ void cal_Indepl9(double *C, int *G, int *GPrime, int *mutex, int *Sepset, double *pMax,
-                            int n, double th);
-__global__ void cal_Indepl10(double *C, int *G, int *GPrime, int *mutex, int *Sepset, double *pMax,
-                             int n, double th);
-__global__ void cal_Indepl11(double *C, int *G, int *GPrime, int *mutex, int *Sepset, double *pMax,
-                             int n, double th);
-__global__ void cal_Indepl12(double *C, int *G, int *GPrime, int *mutex, int *Sepset, double *pMax,
-                             int n, double th);
-__global__ void cal_Indepl13(double *C, int *G, int *GPrime, int *mutex, int *Sepset, double *pMax,
-                             int n, double th);
-__global__ void cal_Indepl14(double *C, int *G, int *GPrime, int *mutex, int *Sepset, double *pMax,
-                             int n, double th);
-__device__ void pseudoinversel2(double M2[][2], double M2Inv[][2]);
-__device__ void pseudoinversel3(double M2[][3], double M2Inv[][3]);
-__device__ void pseudoinversel4(double M2[][4], double M2Inv[][4], double v[][4], double *rv1,
-                                double *w, double res1[][4]);
-__device__ void pseudoinversel5(double M2[][5], double M2Inv[][5], double v[][5], double *rv1,
-                                double *w, double res1[][5]);
-__device__ void pseudoinversel6(double M2[][6], double M2Inv[][6], double v[][6], double *rv1,
-                                double *w, double res1[][6]);
-__device__ void pseudoinversel7(double M2[][7], double M2Inv[][7], double v[][7], double *rv1,
-                                double *w, double res1[][7]);
-__device__ void pseudoinversel8(double M2[][8], double M2Inv[][8], double v[][8], double *rv1,
-                                double *w, double res1[][8]);
-__device__ void pseudoinversel9(double M2[][9], double M2Inv[][9], double v[][9], double *rv1,
-                                double *w, double res1[][9]);
-__device__ void pseudoinversel10(double M2[][10], double M2Inv[][10], double v[][10], double *rv1,
-                                 double *w, double res1[][10]);
-__device__ void pseudoinversel11(double M2[][11], double M2Inv[][11], double v[][11], double *rv1,
-                                 double *w, double res1[][11]);
-__device__ void pseudoinversel12(double M2[][12], double M2Inv[][12], double v[][12], double *rv1,
-                                 double *w, double res1[][12]);
-__device__ void pseudoinversel13(double M2[][13], double M2Inv[][13], double v[][13], double *rv1,
-                                 double *w, double res1[][13]);
-__device__ void pseudoinversel14(double M2[][14], double M2Inv[][14], double v[][14], double *rv1,
-                                 double *w, double res1[][14]);
-extern "C" void Skeleton(float *C, int *M, int *P, int *W, int *G, double *Th, int *l, int *maxlevel, float *pMax,
+__global__ void cal_Indepl0(float *C, int *G, float th, float *pMax, int m, int p, int w);
+__global__ void cal_Indepl1(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
+                            float th, int n);
+__global__ void cal_Indepl3(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
+                            int n, float th);
+__global__ void cal_Indepl4(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
+                            int n, float th);
+__global__ void cal_Indepl5(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
+                            int n, float th);
+__global__ void cal_Indepl2(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
+                            int n, float th);
+__global__ void cal_Indepl6(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
+                            int n, float th);
+__global__ void cal_Indepl7(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
+                            int n, float th);
+__global__ void cal_Indepl8(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
+                            int n, float th);
+__global__ void cal_Indepl9(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
+                            int n, float th);
+__global__ void cal_Indepl10(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
+                             int n, float th);
+__global__ void cal_Indepl11(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
+                             int n, float th);
+__global__ void cal_Indepl12(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
+                             int n, float th);
+__global__ void cal_Indepl13(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
+                             int n, float th);
+__global__ void cal_Indepl14(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
+                             int n, float th);
+__device__ void pseudoinversel2(float M2[][2], float M2Inv[][2]);
+__device__ void pseudoinversel3(float M2[][3], float M2Inv[][3]);
+__device__ void pseudoinversel4(float M2[][4], float M2Inv[][4], float v[][4], float *rv1,
+                                float *w, float res1[][4]);
+__device__ void pseudoinversel5(float M2[][5], float M2Inv[][5], float v[][5], float *rv1,
+                                float *w, float res1[][5]);
+__device__ void pseudoinversel6(float M2[][6], float M2Inv[][6], float v[][6], float *rv1,
+                                float *w, float res1[][6]);
+__device__ void pseudoinversel7(float M2[][7], float M2Inv[][7], float v[][7], float *rv1,
+                                float *w, float res1[][7]);
+__device__ void pseudoinversel8(float M2[][8], float M2Inv[][8], float v[][8], float *rv1,
+                                float *w, float res1[][8]);
+__device__ void pseudoinversel9(float M2[][9], float M2Inv[][9], float v[][9], float *rv1,
+                                float *w, float res1[][9]);
+__device__ void pseudoinversel10(float M2[][10], float M2Inv[][10], float v[][10], float *rv1,
+                                 float *w, float res1[][10]);
+__device__ void pseudoinversel11(float M2[][11], float M2Inv[][11], float v[][11], float *rv1,
+                                 float *w, float res1[][11]);
+__device__ void pseudoinversel12(float M2[][12], float M2Inv[][12], float v[][12], float *rv1,
+                                 float *w, float res1[][12]);
+__device__ void pseudoinversel13(float M2[][13], float M2Inv[][13], float v[][13], float *rv1,
+                                 float *w, float res1[][13]);
+__device__ void pseudoinversel14(float M2[][14], float M2Inv[][14], float v[][14], float *rv1,
+                                 float *w, float res1[][14]);
+extern "C" void Skeleton(float *C, int *M, int *P, int *W, int *G, float *Th, int *l, int *maxlevel, float *pMax,
                          int *SepSet);
 
 __global__ void Initialize(int *Mat, int n);
@@ -111,8 +111,8 @@ __global__ void SepSet_initialize(int *SepSet, int size);
 
 __device__ void BINOM(int n, int k, int *out);
 __device__ void IthCombination(int out[], int N, int P, int L);
-__device__ double PYTHAG(double a, double b);
-__device__ void inverse(double M2[][3], double M2Inv[][3]);
+__device__ float PYTHAG(float a, float b);
+__device__ void inverse(float M2[][3], float M2Inv[][3]);
 __device__ long long int mixed_matrix_index(int XIdx, int YIdx, int m, int p, int w);
 
 #endif /* CUPC_S_H_ */

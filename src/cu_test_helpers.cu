@@ -6,7 +6,7 @@ void test_cal_Indepl0(const float *C, const int *M, const int *P, const int *W, 
 {
     float *C_cuda;
     int *G_cuda;
-    double *pMax_cuda;
+    float *pMax_cuda;
 
     // num phen
     int p = *P;
@@ -25,7 +25,7 @@ void test_cal_Indepl0(const float *C, const int *M, const int *P, const int *W, 
 
     HANDLE_ERROR(cudaMalloc((void **)&C_cuda, nc * nr * sizeof(float)));
     HANDLE_ERROR(cudaMalloc((void **)&G_cuda, mixed_matrix_size * sizeof(int)));
-    HANDLE_ERROR(cudaMalloc((void **)&pMax_cuda, mixed_matrix_size * sizeof(int)));
+    HANDLE_ERROR(cudaMalloc((void **)&pMax_cuda, mixed_matrix_size * sizeof(float)));
     // copy correlation matrix from CPU to GPU
     HANDLE_ERROR(cudaMemcpy(C_cuda, C, nc * nr * sizeof(float), cudaMemcpyHostToDevice));
     CudaCheckError();
@@ -43,7 +43,7 @@ void test_cal_Indepl0(const float *C, const int *M, const int *P, const int *W, 
     }
     else
     {
-        BLOCKS_PER_GRID = dim3(ceil(((double)nr) / 32.0), ceil(((double)nc) / 32.0), 1);
+        BLOCKS_PER_GRID = dim3(ceil(((float)nr) / 32.0), ceil(((float)nc) / 32.0), 1);
         THREADS_PER_BLOCK = dim3(32, 32, 1);
         cal_Indepl0<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(C_cuda, G_cuda, Th[0],
                                                             pMax_cuda, m, p, w);

@@ -20,12 +20,12 @@
 //@param Ncol       = Number of Col in Nbr matrix
 //============================================================================
 
-void Skeleton(float *C, int *M, int *P, int *W, int *G, double *Th, int *l, int *maxlevel, float *pMax,
+void Skeleton(float *C, int *M, int *P, int *W, int *G, float *Th, int *l, int *maxlevel, float *pMax,
               int *SepSet)
 {
     // we expect C to be in row major format
-    double *C_cuda; // Copy of C array in GPU
-    double *pMax_cuda;
+    float *C_cuda; // Copy of C array in GPU
+    float *pMax_cuda;
     int *G_cuda; // Copy of G Array in GPU
     int *nprime_cuda;
     int *SepSet_cuda;
@@ -62,7 +62,7 @@ void Skeleton(float *C, int *M, int *P, int *W, int *G, double *Th, int *l, int 
     HANDLE_ERROR(cudaMalloc((void **)&nprime_cuda, 1 * sizeof(int)));
     HANDLE_ERROR(cudaMalloc((void **)&SepSet_cuda, sepset_size * sizeof(int)));
     HANDLE_ERROR(cudaMalloc((void **)&GPrime_cuda, mixed_matrix_size * sizeof(int)));
-    HANDLE_ERROR(cudaMalloc((void **)&C_cuda, nc * nr * sizeof(double)));
+    HANDLE_ERROR(cudaMalloc((void **)&C_cuda, nc * nr * sizeof(float)));
     HANDLE_ERROR(cudaMalloc((void **)&G_cuda, mixed_matrix_size * sizeof(int)));
     HANDLE_ERROR(cudaMalloc((void **)&pMax_cuda, mixed_matrix_size * sizeof(float)));
     // copy correlation matrix from CPU to GPU
@@ -91,7 +91,7 @@ void Skeleton(float *C, int *M, int *P, int *W, int *G, double *Th, int *l, int 
             }
             else
             {
-                BLOCKS_PER_GRID = dim3(ceil(((double)nr) / 32.0), ceil(((double)nc) / 32.0), 1);
+                BLOCKS_PER_GRID = dim3(ceil(((float)nr) / 32.0), ceil(((float)nc) / 32.0), 1);
                 THREADS_PER_BLOCK = dim3(32, 32, 1);
                 cal_Indepl0<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(C_cuda, G_cuda, Th[0],
                                                                     pMax_cuda, m, p, w);
@@ -257,9 +257,9 @@ void Skeleton(float *C, int *M, int *P, int *W, int *G, double *Th, int *l, int 
     // Copy separation set from GPU to CPU
     HANDLE_ERROR(cudaMemcpy(SepSet, SepSet_cuda, n * n * ML * sizeof(int), cudaMemcpyDeviceToHost));
     // Copy  Pmax from GPU to CPU
-    HANDLE_ERROR(cudaMemcpy(pMax, pMax_cuda, n * n * sizeof(double), cudaMemcpyDeviceToHost));
+    HANDLE_ERROR(cudaMemcpy(pMax, pMax_cuda, n * n * sizeof(float), cudaMemcpyDeviceToHost));
     // Preprocess pMax
-    double temp = 0;
+    float temp = 0;
     for (int i = 0; i < n; i++)
     {
         pMax[i * n + i] = 1;
@@ -293,7 +293,7 @@ __global__ void SepSet_initialize(int *SepSet, int size)
     SepSet[row * ML + tx] = -1;
 }
 
-__global__ void cal_Indepl0(double *C, int *G, double th, double *pMax, int m, int p, int w)
+__global__ void cal_Indepl0(float *C, int *G, float th, float *pMax, int m, int p, int w)
 {
     int nr = m + p;
     int nc = w + p;
@@ -302,7 +302,7 @@ __global__ void cal_Indepl0(double *C, int *G, double th, double *pMax, int m, i
 
     if (row == 0 && col == 0)
     {
-        for (int i=0; i < nr * nc; ++i)
+        for (int i = 0; i < nr * nc; ++i)
         {
             printf("%f, ", C[i]);
         }
@@ -315,7 +315,7 @@ __global__ void cal_Indepl0(double *C, int *G, double th, double *pMax, int m, i
         int XIdx = row;
         int YIdx = (col < w) ? (XIdx + col) : (m + col - w);
 
-        double res = C[row * nc + col];
+        float res = C[row * nc + col];
         res = abs(0.5 * log(abs((1 + res) / (1 - res))));
         if (res < th)
         {
@@ -337,8 +337,8 @@ __global__ void cal_Indepl0(double *C, int *G, double th, double *pMax, int m, i
     }
 }
 
-__global__ void cal_Indepl1(double *C, int *G, int *GPrime, int *mutex, int *Sepset, double *pMax,
-                            double th, int n)
+__global__ void cal_Indepl1(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
+                            float th, int n)
 {
     int YIdx;
     int XIdx = by;
@@ -348,10 +348,10 @@ __global__ void cal_Indepl1(double *C, int *G, int *GPrime, int *mutex, int *Sep
     int NumberOfJump;
     int NumOfGivenJump;
     __shared__ int NoEdgeFlag;
-    double M0;
-    double H[2][2];
-    double M1[2];
-    double rho, Z;
+    float M0;
+    float H[2][2];
+    float M1[2];
+    float rho, Z;
     extern __shared__ int G_Chunk[];
 
     NoEdgeFlag = 0;
@@ -434,8 +434,8 @@ __global__ void cal_Indepl1(double *C, int *G, int *GPrime, int *mutex, int *Sep
     }
 }
 
-__global__ void cal_Indepl2(double *C, int *G, int *GPrime, int *mutex, int *Sepset, double *pMax,
-                            int n, double th)
+__global__ void cal_Indepl2(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
+                            int n, float th)
 {
     int YIdx;
     int XIdx = by;
@@ -446,14 +446,14 @@ __global__ void cal_Indepl2(double *C, int *G, int *GPrime, int *mutex, int *Sep
     int NumOfGivenJump;
     int NumOfComb;
     __shared__ int NoEdgeFlag;
-    double M0;
-    double M1[2][2];
-    double M2[2][2];
-    double M2Inv[2][2];
-    double M1MulM2Inv[2][2];
-    double H[2][2];
-    double rho;
-    double Z;
+    float M0;
+    float M1[2][2];
+    float M2[2][2];
+    float M2Inv[2][2];
+    float M1MulM2Inv[2][2];
+    float H[2][2];
+    float rho;
+    float Z;
     // Lock WriteSepSetLock;
 
     extern __shared__ int G_Chunk[];
@@ -563,8 +563,8 @@ __global__ void cal_Indepl2(double *C, int *G, int *GPrime, int *mutex, int *Sep
     }
 }
 
-__global__ void cal_Indepl3(double *C, int *G, int *GPrime, int *mutex, int *Sepset, double *pMax,
-                            int n, double th)
+__global__ void cal_Indepl3(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
+                            int n, float th)
 {
     int YIdx;
     int XIdx = by;
@@ -575,14 +575,14 @@ __global__ void cal_Indepl3(double *C, int *G, int *GPrime, int *mutex, int *Sep
     int NumOfComb;
     __shared__ int NoEdgeFlag;
     int NbrIdx[3];
-    double M0;
-    double M1[2][3];
-    double M2[3][3];
-    double M2Inv[3][3];
-    double M1MulM2Inv[2][3];
-    double H[2][2];
-    double rho;
-    double Z;
+    float M0;
+    float M1[2][3];
+    float M2[3][3];
+    float M2Inv[3][3];
+    float M1MulM2Inv[2][3];
+    float H[2][2];
+    float rho;
+    float Z;
     // Lock WriteSepSetLock;
     extern __shared__ int G_Chunk[];
     NoEdgeFlag = 0;
@@ -713,8 +713,8 @@ __global__ void cal_Indepl3(double *C, int *G, int *GPrime, int *mutex, int *Sep
     }
 }
 
-__global__ void cal_Indepl4(double *C, int *G, int *GPrime, int *mutex, int *Sepset, double *pMax,
-                            int n, double th)
+__global__ void cal_Indepl4(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
+                            int n, float th)
 {
     int YIdx;
     int XIdx = by;
@@ -726,18 +726,18 @@ __global__ void cal_Indepl4(double *C, int *G, int *GPrime, int *mutex, int *Sep
     __shared__ int NoEdgeFlag;
     int NbrIdx[4];
 
-    double M0;
-    double M1[2][4];
-    double M2[4][4];
-    double M2Inv[4][4];
-    double M1MulM2Inv[2][4];
-    double H[2][2];
-    double rho;
-    double Z;
+    float M0;
+    float M1[2][4];
+    float M2[4][4];
+    float M2Inv[4][4];
+    float M1MulM2Inv[2][4];
+    float H[2][2];
+    float rho;
+    float Z;
 
-    double v[4][4];
-    double w[4], rv1[4];
-    double res1[4][4];
+    float v[4][4];
+    float w[4], rv1[4];
+    float res1[4][4];
     // Lock WriteSepSetLock;
     extern __shared__ int G_Chunk[];
 
@@ -882,8 +882,8 @@ __global__ void cal_Indepl4(double *C, int *G, int *GPrime, int *mutex, int *Sep
     }
 }
 
-__global__ void cal_Indepl5(double *C, int *G, int *GPrime, int *mutex, int *Sepset, double *pMax,
-                            int n, double th)
+__global__ void cal_Indepl5(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
+                            int n, float th)
 {
     int YIdx;
     int XIdx = by;
@@ -895,19 +895,19 @@ __global__ void cal_Indepl5(double *C, int *G, int *GPrime, int *mutex, int *Sep
     __shared__ int NoEdgeFlag;
     int NbrIdx[5];
 
-    double M0;
-    double M1[2][5];
-    double M2[5][5];
-    double M2Inv[5][5];
-    double M1MulM2Inv[2][5];
-    double H[2][2];
-    double rho;
-    double Z;
+    float M0;
+    float M1[2][5];
+    float M2[5][5];
+    float M2Inv[5][5];
+    float M1MulM2Inv[2][5];
+    float H[2][2];
+    float rho;
+    float Z;
     extern __shared__ int G_Chunk[];
     // pseudo-inverse parameter
-    double v[5][5];
-    double w[5], rv1[5];
-    double res1[5][5];
+    float v[5][5];
+    float w[5], rv1[5];
+    float res1[5][5];
     NoEdgeFlag = 0;
     SizeOfArr = GPrime[XIdx * n + n - 1];
     if (SizeOfArr <= 5)
@@ -1065,8 +1065,8 @@ __global__ void cal_Indepl5(double *C, int *G, int *GPrime, int *mutex, int *Sep
     }
 }
 
-__global__ void cal_Indepl6(double *C, int *G, int *GPrime, int *mutex, int *Sepset, double *pMax,
-                            int n, double th)
+__global__ void cal_Indepl6(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
+                            int n, float th)
 {
     int YIdx;
     int XIdx = by;
@@ -1078,19 +1078,19 @@ __global__ void cal_Indepl6(double *C, int *G, int *GPrime, int *mutex, int *Sep
     __shared__ int NoEdgeFlag;
     int NbrIdx[6];
 
-    double M0;
-    double M1[2][6];
-    double M2[6][6];
-    double M2Inv[6][6];
-    double M1MulM2Inv[2][6];
-    double H[2][2];
-    double rho;
-    double Z;
+    float M0;
+    float M1[2][6];
+    float M2[6][6];
+    float M2Inv[6][6];
+    float M1MulM2Inv[2][6];
+    float H[2][2];
+    float rho;
+    float Z;
     extern __shared__ int G_Chunk[];
     // pseudo-inverse parameter
-    double v[6][6];
-    double w[6], rv1[6];
-    double res1[6][6];
+    float v[6][6];
+    float w[6], rv1[6];
+    float res1[6][6];
 
     NoEdgeFlag = 0;
     SizeOfArr = GPrime[XIdx * n + n - 1];
@@ -1264,8 +1264,8 @@ __global__ void cal_Indepl6(double *C, int *G, int *GPrime, int *mutex, int *Sep
     }
 }
 
-__global__ void cal_Indepl7(double *C, int *G, int *GPrime, int *mutex, int *Sepset, double *pMax,
-                            int n, double th)
+__global__ void cal_Indepl7(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
+                            int n, float th)
 {
     int YIdx;
     int XIdx = by;
@@ -1277,18 +1277,18 @@ __global__ void cal_Indepl7(double *C, int *G, int *GPrime, int *mutex, int *Sep
     __shared__ int NoEdgeFlag;
     int NbrIdx[7];
 
-    double M0;
-    double M1[2][7];
-    double M2[7][7];
-    double M2Inv[7][7];
-    double M1MulM2Inv[2][7];
-    double H[2][2];
-    double rho;
-    double Z;
+    float M0;
+    float M1[2][7];
+    float M2[7][7];
+    float M2Inv[7][7];
+    float M1MulM2Inv[2][7];
+    float H[2][2];
+    float rho;
+    float Z;
     // pseudo-inverse parameter
-    double v[7][7];
-    double w[7], rv1[7];
-    double res1[7][7];
+    float v[7][7];
+    float w[7], rv1[7];
+    float res1[7][7];
 
     extern __shared__ int G_Chunk[];
 
@@ -1483,8 +1483,8 @@ __global__ void cal_Indepl7(double *C, int *G, int *GPrime, int *mutex, int *Sep
     }
 }
 
-__global__ void cal_Indepl8(double *C, int *G, int *GPrime, int *mutex, int *Sepset, double *pMax,
-                            int n, double th)
+__global__ void cal_Indepl8(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
+                            int n, float th)
 {
     int YIdx;
     int XIdx = by;
@@ -1496,18 +1496,18 @@ __global__ void cal_Indepl8(double *C, int *G, int *GPrime, int *mutex, int *Sep
     __shared__ int NoEdgeFlag;
     int NbrIdx[8];
 
-    double M0;
-    double M1[2][8];
-    double M2[8][8];
-    double M2Inv[8][8];
-    double M1MulM2Inv[2][8];
-    double H[2][2];
-    double rho;
-    double Z;
+    float M0;
+    float M1[2][8];
+    float M2[8][8];
+    float M2Inv[8][8];
+    float M1MulM2Inv[2][8];
+    float H[2][2];
+    float rho;
+    float Z;
     // pseudo-inverse parameter
-    double v[8][8];
-    double w[8], rv1[8];
-    double res1[8][8];
+    float v[8][8];
+    float w[8], rv1[8];
+    float res1[8][8];
 
     extern __shared__ int G_Chunk[];
 
@@ -1719,8 +1719,8 @@ __global__ void cal_Indepl8(double *C, int *G, int *GPrime, int *mutex, int *Sep
     }
 }
 
-__global__ void cal_Indepl9(double *C, int *G, int *GPrime, int *mutex, int *Sepset, double *pMax,
-                            int n, double th)
+__global__ void cal_Indepl9(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
+                            int n, float th)
 {
     int YIdx;
     int XIdx = by;
@@ -1732,18 +1732,18 @@ __global__ void cal_Indepl9(double *C, int *G, int *GPrime, int *mutex, int *Sep
     __shared__ int NoEdgeFlag;
     int NbrIdx[9];
 
-    double M0;
-    double M1[2][9];
-    double M2[9][9];
-    double M2Inv[9][9];
-    double M1MulM2Inv[2][9];
-    double H[2][2];
-    double rho;
-    double Z;
+    float M0;
+    float M1[2][9];
+    float M2[9][9];
+    float M2Inv[9][9];
+    float M1MulM2Inv[2][9];
+    float H[2][2];
+    float rho;
+    float Z;
     // pseudo-inverse parameter
-    double v[9][9];
-    double w[9], rv1[9];
-    double res1[9][9];
+    float v[9][9];
+    float w[9], rv1[9];
+    float res1[9][9];
 
     extern __shared__ int G_Chunk[];
 
@@ -1896,8 +1896,8 @@ __global__ void cal_Indepl9(double *C, int *G, int *GPrime, int *mutex, int *Sep
     }
 }
 
-__global__ void cal_Indepl10(double *C, int *G, int *GPrime, int *mutex, int *Sepset, double *pMax,
-                             int n, double th)
+__global__ void cal_Indepl10(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
+                             int n, float th)
 {
     int YIdx;
     int XIdx = by;
@@ -1909,18 +1909,18 @@ __global__ void cal_Indepl10(double *C, int *G, int *GPrime, int *mutex, int *Se
     __shared__ int NoEdgeFlag;
     int NbrIdx[10];
 
-    double M0;
-    double M1[2][10];
-    double M2[10][10];
-    double M2Inv[10][10];
-    double M1MulM2Inv[2][10];
-    double H[2][2];
-    double rho;
-    double Z;
+    float M0;
+    float M1[2][10];
+    float M2[10][10];
+    float M2Inv[10][10];
+    float M1MulM2Inv[2][10];
+    float H[2][2];
+    float rho;
+    float Z;
     // pseudo-inverse parameter
-    double v[10][10];
-    double w[10], rv1[10];
-    double res1[10][10];
+    float v[10][10];
+    float w[10], rv1[10];
+    float res1[10][10];
 
     extern __shared__ int G_Chunk[];
 
@@ -2075,8 +2075,8 @@ __global__ void cal_Indepl10(double *C, int *G, int *GPrime, int *mutex, int *Se
     }
 }
 
-__global__ void cal_Indepl11(double *C, int *G, int *GPrime, int *mutex, int *Sepset, double *pMax,
-                             int n, double th)
+__global__ void cal_Indepl11(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
+                             int n, float th)
 {
     int YIdx;
     int XIdx = by;
@@ -2088,18 +2088,18 @@ __global__ void cal_Indepl11(double *C, int *G, int *GPrime, int *mutex, int *Se
     __shared__ int NoEdgeFlag;
     int NbrIdx[11];
 
-    double M0;
-    double M1[2][11];
-    double M2[11][11];
-    double M2Inv[11][11];
-    double M1MulM2Inv[2][11];
-    double H[2][2];
-    double rho;
-    double Z;
+    float M0;
+    float M1[2][11];
+    float M2[11][11];
+    float M2Inv[11][11];
+    float M1MulM2Inv[2][11];
+    float H[2][2];
+    float rho;
+    float Z;
     // pseudo-inverse parameter
-    double v[11][11];
-    double w[11], rv1[11];
-    double res1[11][11];
+    float v[11][11];
+    float w[11], rv1[11];
+    float res1[11][11];
 
     extern __shared__ int G_Chunk[];
 
@@ -2256,8 +2256,8 @@ __global__ void cal_Indepl11(double *C, int *G, int *GPrime, int *mutex, int *Se
     }
 }
 
-__global__ void cal_Indepl12(double *C, int *G, int *GPrime, int *mutex, int *Sepset, double *pMax,
-                             int n, double th)
+__global__ void cal_Indepl12(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
+                             int n, float th)
 {
     int YIdx;
     int XIdx = by;
@@ -2269,18 +2269,18 @@ __global__ void cal_Indepl12(double *C, int *G, int *GPrime, int *mutex, int *Se
     __shared__ int NoEdgeFlag;
     int NbrIdx[12];
 
-    double M0;
-    double M1[2][12];
-    double M2[12][12];
-    double M2Inv[12][12];
-    double M1MulM2Inv[2][12];
-    double H[2][2];
-    double rho;
-    double Z;
+    float M0;
+    float M1[2][12];
+    float M2[12][12];
+    float M2Inv[12][12];
+    float M1MulM2Inv[2][12];
+    float H[2][2];
+    float rho;
+    float Z;
     // pseudo-inverse parameter
-    double v[12][12];
-    double w[12], rv1[12];
-    double res1[12][12];
+    float v[12][12];
+    float w[12], rv1[12];
+    float res1[12][12];
 
     extern __shared__ int G_Chunk[];
 
@@ -2438,8 +2438,8 @@ __global__ void cal_Indepl12(double *C, int *G, int *GPrime, int *mutex, int *Se
     }
 }
 
-__global__ void cal_Indepl13(double *C, int *G, int *GPrime, int *mutex, int *Sepset, double *pMax,
-                             int n, double th)
+__global__ void cal_Indepl13(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
+                             int n, float th)
 {
     int YIdx;
     int XIdx = by;
@@ -2451,18 +2451,18 @@ __global__ void cal_Indepl13(double *C, int *G, int *GPrime, int *mutex, int *Se
     __shared__ int NoEdgeFlag;
     int NbrIdx[13];
 
-    double M0;
-    double M1[2][13];
-    double M2[13][13];
-    double M2Inv[13][13];
-    double M1MulM2Inv[2][13];
-    double H[2][2];
-    double rho;
-    double Z;
+    float M0;
+    float M1[2][13];
+    float M2[13][13];
+    float M2Inv[13][13];
+    float M1MulM2Inv[2][13];
+    float H[2][2];
+    float rho;
+    float Z;
     // pseudo-inverse parameter
-    double v[13][13];
-    double w[13], rv1[13];
-    double res1[13][13];
+    float v[13][13];
+    float w[13], rv1[13];
+    float res1[13][13];
 
     extern __shared__ int G_Chunk[];
 
@@ -2622,8 +2622,8 @@ __global__ void cal_Indepl13(double *C, int *G, int *GPrime, int *mutex, int *Se
     }
 }
 
-__global__ void cal_Indepl14(double *C, int *G, int *GPrime, int *mutex, int *Sepset, double *pMax,
-                             int n, double th)
+__global__ void cal_Indepl14(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
+                             int n, float th)
 {
     int YIdx;
     int XIdx = by;
@@ -2635,18 +2635,18 @@ __global__ void cal_Indepl14(double *C, int *G, int *GPrime, int *mutex, int *Se
     __shared__ int NoEdgeFlag;
     int NbrIdx[14];
 
-    double M0;
-    double M1[2][14];
-    double M2[14][14];
-    double M2Inv[14][14];
-    double M1MulM2Inv[2][14];
-    double H[2][2];
-    double rho;
-    double Z;
+    float M0;
+    float M1[2][14];
+    float M2[14][14];
+    float M2Inv[14][14];
+    float M1MulM2Inv[2][14];
+    float H[2][2];
+    float rho;
+    float Z;
     // pseudo-inverse parameter
-    double v[14][14];
-    double w[14], rv1[14];
-    double res1[14][14];
+    float v[14][14];
+    float w[14], rv1[14];
+    float res1[14][14];
 
     extern __shared__ int G_Chunk[];
 
@@ -2848,9 +2848,9 @@ __global__ void Compact(int *G_Compact, const int *G, const int *G_ScanRes, int 
     }
 }
 
-__device__ double PYTHAG(double a, double b)
+__device__ float PYTHAG(float a, float b)
 {
-    double at = fabs(a), bt = fabs(b), ct, result;
+    float at = fabs(a), bt = fabs(b), ct, result;
 
     if (at > bt)
     {
@@ -2869,20 +2869,20 @@ __device__ double PYTHAG(double a, double b)
     return (result);
 }
 
-__device__ void pseudoinversel2(double M2[][2], double M2Inv[][2])
+__device__ void pseudoinversel2(float M2[][2], float M2Inv[][2])
 {
-    double A[2][2];
-    double M[2][2];
-    double L[2][2];
-    double newL[2][2];
-    double temp[2][2];
-    double temp1[2][2];
-    double temp2[2][2];
-    double temp3[2][2];
+    float A[2][2];
+    float M[2][2];
+    float L[2][2];
+    float newL[2][2];
+    float temp[2][2];
+    float temp1[2][2];
+    float temp2[2][2];
+    float temp3[2][2];
 
-    double tol = 999.99;
-    double aux = 0.0;
-    double det = 0.0;
+    float tol = 999.99;
+    float aux = 0.0;
+    float det = 0.0;
 
     int r = 0;
     int size = 2;
@@ -3057,20 +3057,20 @@ __device__ void pseudoinversel2(double M2[][2], double M2Inv[][2])
     }
 }
 
-__device__ void pseudoinversel3(double M2[][3], double M2Inv[][3])
+__device__ void pseudoinversel3(float M2[][3], float M2Inv[][3])
 {
-    double A[3][3];
-    double M[3][3];
-    double tempM[3][3];
-    double L[3][3];
-    double newL[3][3];
-    double temp[3][3];
-    double temp1[3][3];
-    double temp2[3][3];
-    double temp3[3][3];
+    float A[3][3];
+    float M[3][3];
+    float tempM[3][3];
+    float L[3][3];
+    float newL[3][3];
+    float temp[3][3];
+    float temp1[3][3];
+    float temp2[3][3];
+    float temp3[3][3];
 
-    double tol = 999.99;
-    double det = 0.0;
+    float tol = 999.99;
+    float det = 0.0;
 
     int r = 0;
     int size = 3;
@@ -3248,13 +3248,13 @@ __device__ void pseudoinversel3(double M2[][3], double M2Inv[][3])
     }
 }
 
-__device__ void pseudoinversel4(double M2[][4], double M2Inv[][4], double v[][4], double *rv1,
-                                double *w, double res1[][4])
+__device__ void pseudoinversel4(float M2[][4], float M2Inv[][4], float v[][4], float *rv1,
+                                float *w, float res1[][4])
 {
     int m = 4;
     int flag, its, i, j, jj, k, l, nm;
-    double c, f, h, s, x, y, z;
-    double anorm = 0.0, g = 0.0, scale = 0.0;
+    float c, f, h, s, x, y, z;
+    float anorm = 0.0, g = 0.0, scale = 0.0;
     /* Householder reduction to bidiagonal form */
     for (i = 0; i < m; i++)
     {
@@ -3339,7 +3339,7 @@ __device__ void pseudoinversel4(double M2[][4], double M2Inv[][4], double v[][4]
             {
                 for (j = l; j < m; j++)
                     v[j][i] = (M2[i][j] / M2[i][l]) / g;
-                /* double division to avoid underflow */
+                /* float division to avoid underflow */
                 for (j = l; j < m; j++)
                 {
                     for (s = 0.0, k = l; k < m; k++)
@@ -3530,13 +3530,13 @@ __device__ void pseudoinversel4(double M2[][4], double M2Inv[][4], double v[][4]
     }
 }
 
-__device__ void pseudoinversel5(double M2[][5], double M2Inv[][5], double v[][5], double *rv1,
-                                double *w, double res1[][5])
+__device__ void pseudoinversel5(float M2[][5], float M2Inv[][5], float v[][5], float *rv1,
+                                float *w, float res1[][5])
 {
     int m = 5;
     int flag, its, i, j, jj, k, l, nm;
-    double c, f, h, s, x, y, z;
-    double anorm = 0.0, g = 0.0, scale = 0.0;
+    float c, f, h, s, x, y, z;
+    float anorm = 0.0, g = 0.0, scale = 0.0;
     /* Householder reduction to bidiagonal form */
     for (i = 0; i < m; i++)
     {
@@ -3621,7 +3621,7 @@ __device__ void pseudoinversel5(double M2[][5], double M2Inv[][5], double v[][5]
             {
                 for (j = l; j < m; j++)
                     v[j][i] = (M2[i][j] / M2[i][l]) / g;
-                /* double division to avoid underflow */
+                /* float division to avoid underflow */
                 for (j = l; j < m; j++)
                 {
                     for (s = 0.0, k = l; k < m; k++)
@@ -3811,13 +3811,13 @@ __device__ void pseudoinversel5(double M2[][5], double M2Inv[][5], double v[][5]
         }
     }
 }
-__device__ void pseudoinversel6(double M2[][6], double M2Inv[][6], double v[][6], double *rv1,
-                                double *w, double res1[][6])
+__device__ void pseudoinversel6(float M2[][6], float M2Inv[][6], float v[][6], float *rv1,
+                                float *w, float res1[][6])
 {
     int m = 6;
     int flag, its, i, j, jj, k, l, nm;
-    double c, f, h, s, x, y, z;
-    double anorm = 0.0, g = 0.0, scale = 0.0;
+    float c, f, h, s, x, y, z;
+    float anorm = 0.0, g = 0.0, scale = 0.0;
     /* Householder reduction to bidiagonal form */
     for (i = 0; i < m; i++)
     {
@@ -3902,7 +3902,7 @@ __device__ void pseudoinversel6(double M2[][6], double M2Inv[][6], double v[][6]
             {
                 for (j = l; j < m; j++)
                     v[j][i] = (M2[i][j] / M2[i][l]) / g;
-                /* double division to avoid underflow */
+                /* float division to avoid underflow */
                 for (j = l; j < m; j++)
                 {
                     for (s = 0.0, k = l; k < m; k++)
@@ -4093,13 +4093,13 @@ __device__ void pseudoinversel6(double M2[][6], double M2Inv[][6], double v[][6]
     }
 }
 
-__device__ void pseudoinversel7(double M2[][7], double M2Inv[][7], double v[][7], double *rv1,
-                                double *w, double res1[][7])
+__device__ void pseudoinversel7(float M2[][7], float M2Inv[][7], float v[][7], float *rv1,
+                                float *w, float res1[][7])
 {
     int m = 7;
     int flag, its, i, j, jj, k, l, nm;
-    double c, f, h, s, x, y, z;
-    double anorm = 0.0, g = 0.0, scale = 0.0;
+    float c, f, h, s, x, y, z;
+    float anorm = 0.0, g = 0.0, scale = 0.0;
     /* Householder reduction to bidiagonal form */
     for (i = 0; i < m; i++)
     {
@@ -4184,7 +4184,7 @@ __device__ void pseudoinversel7(double M2[][7], double M2Inv[][7], double v[][7]
             {
                 for (j = l; j < m; j++)
                     v[j][i] = (M2[i][j] / M2[i][l]) / g;
-                /* double division to avoid underflow */
+                /* float division to avoid underflow */
                 for (j = l; j < m; j++)
                 {
                     for (s = 0.0, k = l; k < m; k++)
@@ -4375,13 +4375,13 @@ __device__ void pseudoinversel7(double M2[][7], double M2Inv[][7], double v[][7]
     }
 }
 
-__device__ void pseudoinversel8(double M2[][8], double M2Inv[][8], double v[][8], double *rv1,
-                                double *w, double res1[][8])
+__device__ void pseudoinversel8(float M2[][8], float M2Inv[][8], float v[][8], float *rv1,
+                                float *w, float res1[][8])
 {
     int m = 8;
     int flag, its, i, j, jj, k, l, nm;
-    double c, f, h, s, x, y, z;
-    double anorm = 0.0, g = 0.0, scale = 0.0;
+    float c, f, h, s, x, y, z;
+    float anorm = 0.0, g = 0.0, scale = 0.0;
     /* Householder reduction to bidiagonal form */
     for (i = 0; i < m; i++)
     {
@@ -4466,7 +4466,7 @@ __device__ void pseudoinversel8(double M2[][8], double M2Inv[][8], double v[][8]
             {
                 for (j = l; j < m; j++)
                     v[j][i] = (M2[i][j] / M2[i][l]) / g;
-                /* double division to avoid underflow */
+                /* float division to avoid underflow */
                 for (j = l; j < m; j++)
                 {
                     for (s = 0.0, k = l; k < m; k++)
@@ -4657,13 +4657,13 @@ __device__ void pseudoinversel8(double M2[][8], double M2Inv[][8], double v[][8]
     }
 }
 
-__device__ void pseudoinversel9(double M2[][9], double M2Inv[][9], double v[][9], double *rv1,
-                                double *w, double res1[][9])
+__device__ void pseudoinversel9(float M2[][9], float M2Inv[][9], float v[][9], float *rv1,
+                                float *w, float res1[][9])
 {
     int m = 9;
     int flag, its, i, j, jj, k, l, nm;
-    double c, f, h, s, x, y, z;
-    double anorm = 0.0, g = 0.0, scale = 0.0;
+    float c, f, h, s, x, y, z;
+    float anorm = 0.0, g = 0.0, scale = 0.0;
     /* Householder reduction to bidiagonal form */
     for (i = 0; i < m; i++)
     {
@@ -4748,7 +4748,7 @@ __device__ void pseudoinversel9(double M2[][9], double M2Inv[][9], double v[][9]
             {
                 for (j = l; j < m; j++)
                     v[j][i] = (M2[i][j] / M2[i][l]) / g;
-                /* double division to avoid underflow */
+                /* float division to avoid underflow */
                 for (j = l; j < m; j++)
                 {
                     for (s = 0.0, k = l; k < m; k++)
@@ -4939,13 +4939,13 @@ __device__ void pseudoinversel9(double M2[][9], double M2Inv[][9], double v[][9]
     }
 }
 
-__device__ void pseudoinversel10(double M2[][10], double M2Inv[][10], double v[][10], double *rv1,
-                                 double *w, double res1[][10])
+__device__ void pseudoinversel10(float M2[][10], float M2Inv[][10], float v[][10], float *rv1,
+                                 float *w, float res1[][10])
 {
     int m = 10;
     int flag, its, i, j, jj, k, l, nm;
-    double c, f, h, s, x, y, z;
-    double anorm = 0.0, g = 0.0, scale = 0.0;
+    float c, f, h, s, x, y, z;
+    float anorm = 0.0, g = 0.0, scale = 0.0;
     /* Householder reduction to bidiagonal form */
     for (i = 0; i < m; i++)
     {
@@ -5030,7 +5030,7 @@ __device__ void pseudoinversel10(double M2[][10], double M2Inv[][10], double v[]
             {
                 for (j = l; j < m; j++)
                     v[j][i] = (M2[i][j] / M2[i][l]) / g;
-                /* double division to avoid underflow */
+                /* float division to avoid underflow */
                 for (j = l; j < m; j++)
                 {
                     for (s = 0.0, k = l; k < m; k++)
@@ -5221,13 +5221,13 @@ __device__ void pseudoinversel10(double M2[][10], double M2Inv[][10], double v[]
     }
 }
 
-__device__ void pseudoinversel11(double M2[][11], double M2Inv[][11], double v[][11], double *rv1,
-                                 double *w, double res1[][11])
+__device__ void pseudoinversel11(float M2[][11], float M2Inv[][11], float v[][11], float *rv1,
+                                 float *w, float res1[][11])
 {
     int m = 11;
     int flag, its, i, j, jj, k, l, nm;
-    double c, f, h, s, x, y, z;
-    double anorm = 0.0, g = 0.0, scale = 0.0;
+    float c, f, h, s, x, y, z;
+    float anorm = 0.0, g = 0.0, scale = 0.0;
     /* Householder reduction to bidiagonal form */
     for (i = 0; i < m; i++)
     {
@@ -5312,7 +5312,7 @@ __device__ void pseudoinversel11(double M2[][11], double M2Inv[][11], double v[]
             {
                 for (j = l; j < m; j++)
                     v[j][i] = (M2[i][j] / M2[i][l]) / g;
-                /* double division to avoid underflow */
+                /* float division to avoid underflow */
                 for (j = l; j < m; j++)
                 {
                     for (s = 0.0, k = l; k < m; k++)
@@ -5503,13 +5503,13 @@ __device__ void pseudoinversel11(double M2[][11], double M2Inv[][11], double v[]
     }
 }
 
-__device__ void pseudoinversel12(double M2[][12], double M2Inv[][12], double v[][12], double *rv1,
-                                 double *w, double res1[][12])
+__device__ void pseudoinversel12(float M2[][12], float M2Inv[][12], float v[][12], float *rv1,
+                                 float *w, float res1[][12])
 {
     int m = 12;
     int flag, its, i, j, jj, k, l, nm;
-    double c, f, h, s, x, y, z;
-    double anorm = 0.0, g = 0.0, scale = 0.0;
+    float c, f, h, s, x, y, z;
+    float anorm = 0.0, g = 0.0, scale = 0.0;
     /* Householder reduction to bidiagonal form */
     for (i = 0; i < m; i++)
     {
@@ -5594,7 +5594,7 @@ __device__ void pseudoinversel12(double M2[][12], double M2Inv[][12], double v[]
             {
                 for (j = l; j < m; j++)
                     v[j][i] = (M2[i][j] / M2[i][l]) / g;
-                /* double division to avoid underflow */
+                /* float division to avoid underflow */
                 for (j = l; j < m; j++)
                 {
                     for (s = 0.0, k = l; k < m; k++)
@@ -5785,13 +5785,13 @@ __device__ void pseudoinversel12(double M2[][12], double M2Inv[][12], double v[]
     }
 }
 
-__device__ void pseudoinversel13(double M2[][13], double M2Inv[][13], double v[][13], double *rv1,
-                                 double *w, double res1[][13])
+__device__ void pseudoinversel13(float M2[][13], float M2Inv[][13], float v[][13], float *rv1,
+                                 float *w, float res1[][13])
 {
     int m = 13;
     int flag, its, i, j, jj, k, l, nm;
-    double c, f, h, s, x, y, z;
-    double anorm = 0.0, g = 0.0, scale = 0.0;
+    float c, f, h, s, x, y, z;
+    float anorm = 0.0, g = 0.0, scale = 0.0;
     /* Householder reduction to bidiagonal form */
     for (i = 0; i < m; i++)
     {
@@ -5876,7 +5876,7 @@ __device__ void pseudoinversel13(double M2[][13], double M2Inv[][13], double v[]
             {
                 for (j = l; j < m; j++)
                     v[j][i] = (M2[i][j] / M2[i][l]) / g;
-                /* double division to avoid underflow */
+                /* float division to avoid underflow */
                 for (j = l; j < m; j++)
                 {
                     for (s = 0.0, k = l; k < m; k++)
@@ -6067,13 +6067,13 @@ __device__ void pseudoinversel13(double M2[][13], double M2Inv[][13], double v[]
     }
 }
 
-__device__ void pseudoinversel14(double M2[][14], double M2Inv[][14], double v[][14], double *rv1,
-                                 double *w, double res1[][14])
+__device__ void pseudoinversel14(float M2[][14], float M2Inv[][14], float v[][14], float *rv1,
+                                 float *w, float res1[][14])
 {
     int m = 14;
     int flag, its, i, j, jj, k, l, nm;
-    double c, f, h, s, x, y, z;
-    double anorm = 0.0, g = 0.0, scale = 0.0;
+    float c, f, h, s, x, y, z;
+    float anorm = 0.0, g = 0.0, scale = 0.0;
     /* Householder reduction to bidiagonal form */
     for (i = 0; i < m; i++)
     {
@@ -6158,7 +6158,7 @@ __device__ void pseudoinversel14(double M2[][14], double M2Inv[][14], double v[]
             {
                 for (j = l; j < m; j++)
                     v[j][i] = (M2[i][j] / M2[i][l]) / g;
-                /* double division to avoid underflow */
+                /* float division to avoid underflow */
                 for (j = l; j < m; j++)
                 {
                     for (s = 0.0, k = l; k < m; k++)
@@ -6433,12 +6433,12 @@ __global__ void scan_compact(int *G_Compact, const int *G, const int n, int *npr
     }
 }
 
-__device__ void inverse(double M2[][3], double M2Inv[][3])
+__device__ void inverse(float M2[][3], float M2Inv[][3])
 {
-    double det = M2[0][0] * (M2[2][2] * M2[1][1]) - M2[0][0] * (M2[2][1] * M2[1][2]) -
-                 M2[1][0] * (M2[2][2] * M2[0][1]) + M2[1][0] * (M2[2][1] * M2[0][2]) +
-                 M2[2][0] * (M2[1][2] * M2[0][1]) - M2[2][0] * (M2[1][1] * M2[0][2]);
-    double tmp = 1.0 / det;
+    float det = M2[0][0] * (M2[2][2] * M2[1][1]) - M2[0][0] * (M2[2][1] * M2[1][2]) -
+                M2[1][0] * (M2[2][2] * M2[0][1]) + M2[1][0] * (M2[2][1] * M2[0][2]) +
+                M2[2][0] * (M2[1][2] * M2[0][1]) - M2[2][0] * (M2[1][1] * M2[0][2]);
+    float tmp = 1.0 / det;
     M2Inv[0][0] = tmp * (M2[1][1] * M2[2][2] - M2[1][2] * M2[2][1]);
     M2Inv[0][1] = tmp * (M2[0][2] * M2[2][1] - M2[0][1] * M2[2][2]);
     M2Inv[0][2] = tmp * (M2[0][1] * M2[1][2] - M2[0][2] * M2[1][1]);
