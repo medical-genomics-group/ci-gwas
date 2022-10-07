@@ -6498,12 +6498,12 @@ __device__ long long int mixed_matrix_index(int XIdx, int YIdx, int m, int p, in
     if (XIdx < m)
     {
         int relY = YIdx - (XIdx - w);
-        return ((long long int)XIdx * (long long int)max_marker_degree + (long long int)relY) * ML;
+        return ((long long int)XIdx * (long long int)max_marker_degree + (long long int)relY);
     }
     else
     {
         long long int marker_part = m * max_marker_degree;
         long long int phen_part = (XIdx - m) * max_phen_degree;
-        return (marker_part + phen_part + (long long int)YIdx) * ML;
+        return (marker_part + phen_part + (long long int)YIdx);
     }
 }
