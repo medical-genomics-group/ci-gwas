@@ -7,18 +7,18 @@
 
 const int NUMBER_OF_LEVELS = 50;
 
-auto std_normal_qnorm(const double p) -> double
+auto std_normal_qnorm(const float p) -> float
 {
     boost::math::normal dist(0.0, 1.0);
     return quantile(dist, p);
 }
 
-auto threshold_array(const int n, const double alpha) -> std::array<double, NUMBER_OF_LEVELS>
+auto threshold_array(const int n, const float alpha) -> std::array<float, NUMBER_OF_LEVELS>
 {
-    std::array<double, NUMBER_OF_LEVELS> thr{0.0};
+    std::array<float, NUMBER_OF_LEVELS> thr{0.0};
     // my loop range is exclusive of the last i, so I don't subtract one here
     const int n_thr = (NUMBER_OF_LEVELS < (n - 3)) ? NUMBER_OF_LEVELS : n;
-    const double half = 0.5;
+    const float half = 0.5;
     for (size_t i = 0; i < n_thr; i++)
     {
         thr[i] = abs(std_normal_qnorm(half * alpha) / sqrt(n - i - 3));
@@ -28,7 +28,7 @@ auto threshold_array(const int n, const double alpha) -> std::array<double, NUMB
 
 TEST(cuPCSparseTests, CalIndepL1SingleBlock)
 {
-    const double alpha = 0.1;
+    const float alpha = 0.1;
     int w = CUPCT1_W;
     int p = CUPCT1_P;
     int m = CUPCT1_M;
@@ -36,7 +36,7 @@ TEST(cuPCSparseTests, CalIndepL1SingleBlock)
     int max_phen_degree = m + p;
     size_t mixed_matrix_size = max_marker_degree * m + max_phen_degree * p;
     std::vector<int> G(mixed_matrix_size, 0);
-    std::array<double, NUMBER_OF_LEVELS> Th = threshold_array(m + p, alpha);
+    std::array<float, NUMBER_OF_LEVELS> Th = threshold_array(m + p, alpha);
 
     test_cal_Indepl0(
         &cupct1_c[0],

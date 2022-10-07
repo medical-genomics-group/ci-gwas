@@ -300,20 +300,11 @@ __global__ void cal_Indepl0(float *C, int *G, float th, float *pMax, int m, int 
     int row = blockDim.x * bx + tx;
     int col = blockDim.y * by + ty;
 
-    if (row == 0 && col == 0)
-    {
-        for (int i = 0; i < nr * nc; ++i)
-        {
-            printf("%f, ", C[i]);
-        }
-        printf("\n");
-    }
-
     if (row < nr && col < nc && ((row < (m - w)) || (col > w) || (col < (m - row - 1))))
     {
         // global indices of variables
         int XIdx = row;
-        int YIdx = (col < w) ? (XIdx + col) : (m + col - w);
+        int YIdx = (col < w) ? (XIdx + col + 1) : (m + col - w);
 
         float res = C[row * nc + col];
         res = abs(0.5 * log(abs((1 + res) / (1 - res))));
