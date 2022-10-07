@@ -299,6 +299,16 @@ __global__ void cal_Indepl0(double *C, int *G, double th, double *pMax, int m, i
     int nc = w + p;
     int row = blockDim.x * bx + tx;
     int col = blockDim.y * by + ty;
+
+    if (row == 0 && col == 0)
+    {
+        for (int i=0; i < nr * nc; ++i)
+        {
+            printf("%f, ", C[i]);
+        }
+        printf("\n");
+    }
+
     if (row < nr && col < nc && ((row < (m - w)) || (col > w) || (col < (m - row - 1))))
     {
         // global indices of variables
@@ -312,11 +322,17 @@ __global__ void cal_Indepl0(double *C, int *G, double th, double *pMax, int m, i
             pMax[mixed_matrix_index(XIdx, YIdx, m, p, w)] = res;
             G[mixed_matrix_index(XIdx, YIdx, m, p, w)] = 0;
             G[mixed_matrix_index(YIdx, XIdx, m, p, w)] = 0;
+            int gc1 = mixed_matrix_index(XIdx, YIdx, m, p, w);
+            int gc2 = mixed_matrix_index(YIdx, XIdx, m, p, w);
+            printf("Setting to 0 | cr:%i cc:%i v1:%i v2:%i gix1:%i gix2:%i res:%.2f th:%.2f \n", row, col, XIdx, YIdx, gc1, gc2, res, th);
         }
         else
         {
             G[mixed_matrix_index(XIdx, YIdx, m, p, w)] = 1;
             G[mixed_matrix_index(YIdx, XIdx, m, p, w)] = 1;
+            int gc1 = mixed_matrix_index(XIdx, YIdx, m, p, w);
+            int gc2 = mixed_matrix_index(YIdx, XIdx, m, p, w);
+            printf("Setting to 1 | cr:%i cc:%i v1:%i v2:%i gix1:%i gix2:%i \n", row, col, XIdx, YIdx, gc1, gc2);
         }
     }
 }
@@ -6497,7 +6513,7 @@ __device__ long long int mixed_matrix_index(int XIdx, int YIdx, int m, int p, in
     int max_phen_degree = m + p;
     if (XIdx < m)
     {
-        int relY = YIdx - (XIdx - w);
+        int relY = (YIdx < m) ? (YIdx - XIdx + w) : (2 * w + YIdx - m);
         return ((long long int)XIdx * (long long int)max_marker_degree + (long long int)relY);
     }
     else

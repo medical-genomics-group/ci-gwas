@@ -2,9 +2,9 @@
 #include <mps/cu_test_helpers.h>
 #include <mps/gpuerrors.h>
 
-void test_cal_Indepl0(const float *C, const int *M, const int *P, const int *W, int *G, const double *Th)
+void test_cal_Indepl0(const float *C, const int *M, const int *P, const int *W, int *G, const float *Th)
 {
-    double *C_cuda;
+    float *C_cuda;
     int *G_cuda;
     double *pMax_cuda;
 
@@ -23,7 +23,7 @@ void test_cal_Indepl0(const float *C, const int *M, const int *P, const int *W, 
     int max_phen_degree = m + p;
     int mixed_matrix_size = max_marker_degree * m + max_phen_degree * p;
 
-    HANDLE_ERROR(cudaMalloc((void **)&C_cuda, nc * nr * sizeof(double)));
+    HANDLE_ERROR(cudaMalloc((void **)&C_cuda, nc * nr * sizeof(float)));
     HANDLE_ERROR(cudaMalloc((void **)&G_cuda, mixed_matrix_size * sizeof(int)));
     HANDLE_ERROR(cudaMalloc((void **)&pMax_cuda, mixed_matrix_size * sizeof(int)));
     // copy correlation matrix from CPU to GPU

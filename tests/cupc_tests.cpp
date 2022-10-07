@@ -39,7 +39,7 @@ TEST(cuPCSparseTests, CalIndepL1SingleBlock)
     std::array<double, NUMBER_OF_LEVELS> Th = threshold_array(m + p, alpha);
 
     test_cal_Indepl0(
-        cupct1_c,
+        &cupct1_c[0],
         &m,
         &p,
         &w,
