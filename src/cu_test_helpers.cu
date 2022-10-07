@@ -2,7 +2,7 @@
 #include <mps/cu_test_helpers.h>
 #include <mps/gpuerrors.h>
 
-void test_cal_Indepl0(float *C, int *M, int *P, int *W, int *G, double *Th)
+void test_cal_Indepl0(const float *C, const int *M, const int *P, const int *W, int *G, const double *Th)
 {
     double *C_cuda;
     int *G_cuda;

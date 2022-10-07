@@ -131,7 +131,7 @@ void Skeleton(float *C, int *M, int *P, int *W, int *G, double *Th, int *l, int 
                 THREADS_PER_BLOCK = dim3(ParGivenL1, 1, 1);
                 // HANDLE_ERROR( cudaMalloc((void**)&SepSet_cuda,  n * n * 1 * sizeof(int)) );
                 cal_Indepl1<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, Th[1], nr, nc);
+                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, Th[1], n);
                 // HANDLE_ERROR( cudaFree(SepSet_cuda) );
                 CudaCheckError();
                 HANDLE_ERROR(cudaDeviceSynchronize());

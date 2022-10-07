@@ -36,7 +36,7 @@ TEST(cuPCSparseTests, CalIndepL1SingleBlock)
     int max_phen_degree = m + p;
     size_t mixed_matrix_size = max_marker_degree * m + max_phen_degree * p;
     std::vector<int> G(mixed_matrix_size, 0);
-    std::array<double, NUMBER_OF_LEVELS> Th = threshold_array(p + m, alpha);
+    std::array<double, NUMBER_OF_LEVELS> Th = threshold_array(m + p, alpha);
 
     test_cal_Indepl0(
         bmt2_sparse_corrs,
@@ -45,4 +45,11 @@ TEST(cuPCSparseTests, CalIndepL1SingleBlock)
         &w,
         G.data(),
         Th.data());
+
+    for (auto e : Th)
+    {
+        printf("%f \n", e);
+    }
+
+    ASSERT_EQ(1, 2);
 }
