@@ -26,7 +26,7 @@ auto threshold_array(const int n, const float alpha) -> std::array<float, NUMBER
     return thr;
 }
 
-TEST(cuPCSparseTests, CalIndepL1SingleBlock)
+TEST(cuPCSparseTests, CalIndepL0SingleBlock)
 {
     const float alpha = 0.1;
     int w = CUPCT1_W;
