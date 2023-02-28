@@ -6515,7 +6515,7 @@ __device__ long long int sparse_adjacency_matrix_index(int XIdx, int YIdx, int m
     /* Marker row with 2w + p cols */
     if (XIdx < m)
     {
-        int rely;
+        int relY;
         /* y is phenotype */
         if (YIdx > m)
         {

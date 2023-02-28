@@ -113,6 +113,6 @@ __device__ void BINOM(int n, int k, int *out);
 __device__ void IthCombination(int out[], int N, int P, int L);
 __device__ float PYTHAG(float a, float b);
 __device__ void inverse(float M2[][3], float M2Inv[][3]);
-__device__ long long int mixed_matrix_index(int XIdx, int YIdx, int m, int p, int w);
+__device__ long long int sparse_adjacency_matrix_index(int XIdx, int YIdx, int m, int p, int w);
 
 #endif /* CUPC_S_H_ */
