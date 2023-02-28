@@ -6498,6 +6498,16 @@ __device__ void IthCombination(int out[], int N, int P, int L)
     out[P1] = out[P1 - 1] + L - k;
 }
 
+/**
+ * @brief Compute index into sparse linear mixed genotype+phenotype matrix.
+ *
+ * @param XIdx row index in full (not sparse) genotype+phenotype matrix
+ * @param YIdx col index in full (not sparse) genotype+phenotype matrix
+ * @param m number of markers in matrix
+ * @param p number of phenotypes in matrix
+ * @param w marker distance that defines band-width
+ * @return __device__
+ */
 __device__ long long int mixed_matrix_index(int XIdx, int YIdx, int m, int p, int w)
 {
     int max_marker_degree = 2 * w + p;
