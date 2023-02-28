@@ -310,19 +310,19 @@ __global__ void cal_Indepl0(float *C, int *G, float th, float *pMax, int m, int 
         res = abs(0.5 * log(abs((1 + res) / (1 - res))));
         if (res < th)
         {
-            pMax[mixed_matrix_index(XIdx, YIdx, m, p, w)] = res;
-            G[mixed_matrix_index(XIdx, YIdx, m, p, w)] = 0;
-            G[mixed_matrix_index(YIdx, XIdx, m, p, w)] = 0;
-            int gc1 = mixed_matrix_index(XIdx, YIdx, m, p, w);
-            int gc2 = mixed_matrix_index(YIdx, XIdx, m, p, w);
+            pMax[sparse_adjacency_matrix_index(XIdx, YIdx, m, p, w)] = res;
+            G[sparse_adjacency_matrix_index(XIdx, YIdx, m, p, w)] = 0;
+            G[sparse_adjacency_matrix_index(YIdx, XIdx, m, p, w)] = 0;
+            int gc1 = sparse_adjacency_matrix_index(XIdx, YIdx, m, p, w);
+            int gc2 = sparse_adjacency_matrix_index(YIdx, XIdx, m, p, w);
             printf("Setting to 0 | cr:%i cc:%i v1:%i v2:%i gix1:%i gix2:%i res:%.2f th:%.2f \n", row, col, XIdx, YIdx, gc1, gc2, res, th);
         }
         else
         {
-            G[mixed_matrix_index(XIdx, YIdx, m, p, w)] = 1;
-            G[mixed_matrix_index(YIdx, XIdx, m, p, w)] = 1;
-            int gc1 = mixed_matrix_index(XIdx, YIdx, m, p, w);
-            int gc2 = mixed_matrix_index(YIdx, XIdx, m, p, w);
+            G[sparse_adjacency_matrix_index(XIdx, YIdx, m, p, w)] = 1;
+            G[sparse_adjacency_matrix_index(YIdx, XIdx, m, p, w)] = 1;
+            int gc1 = sparse_adjacency_matrix_index(XIdx, YIdx, m, p, w);
+            int gc2 = sparse_adjacency_matrix_index(YIdx, XIdx, m, p, w);
             printf("Setting to 1 | cr:%i cc:%i v1:%i v2:%i gix1:%i gix2:%i \n", row, col, XIdx, YIdx, gc1, gc2);
         }
     }
@@ -6499,25 +6499,42 @@ __device__ void IthCombination(int out[], int N, int P, int L)
 }
 
 /**
- * @brief Compute index into sparse linear mixed genotype+phenotype matrix.
+ * @brief Compute index into sparse linear mixed genotype+phenotype adjacency matrix.
  *
- * @param XIdx row index in full (not sparse) genotype+phenotype matrix
- * @param YIdx col index in full (not sparse) genotype+phenotype matrix
+ * @param XIdx row index in full (not sparse) genotype+phenotype adjacency matrix
+ * @param YIdx col index in full (not sparse) genotype+phenotype adjacency matrix
  * @param m number of markers in matrix
  * @param p number of phenotypes in matrix
  * @param w marker distance that defines band-width
  * @return __device__
  */
-__device__ long long int mixed_matrix_index(int XIdx, int YIdx, int m, int p, int w)
+__device__ long long int sparse_adjacency_matrix_index(int XIdx, int YIdx, int m, int p, int w)
 {
     int max_marker_degree = 2 * w + p;
     int max_phen_degree = m + p;
+    /* Marker row with 2w + p cols */
     if (XIdx < m)
     {
-        int relY = (YIdx < m) ? (YIdx - XIdx + w) : (2 * w + YIdx - m);
+        int rely;
+        /* y is phenotype */
+        if (YIdx > m)
+        {
+            relY = 2 * w + YIdx - m;
+        }
+        /* y is marker upstream of x */
+        else if (YIdx < XIdx)
+        {
+            relY = w - (XIdx - YIdx);
+        }
+        /* y is marker downstream of x */
+        else
+        {
+            relY = w + YIdx - XIdx - 1;
+        }
         return ((long long int)XIdx * (long long int)max_marker_degree + (long long int)relY);
     }
     else
+    /* Phenotype row with m + p cols */
     {
         long long int marker_part = m * max_marker_degree;
         long long int phen_part = (XIdx - m) * max_phen_degree;
