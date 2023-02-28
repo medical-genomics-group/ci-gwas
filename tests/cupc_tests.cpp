@@ -78,11 +78,13 @@ TEST(cuPCSparseTests, CalIndepL0MultiBlock)
         G.data(),
         Th.data());
 
-    // printf("ix | obs | exp \n");
-    // for (size_t i = 0; i < CUPCT2_ADJSIZE; ++i)
-    // {
-    //     printf("%i | %i | %i \n", i, G[i], cupct2_g[i]);
-    // }
+    printf("ix | obs | exp \n");
+    for (size_t i = 0; i < CUPCT2_ADJSIZE; ++i)
+    {
+        if (G[i] != cupct2_g[i]) {
+            printf("%i | %i | %i \n", i, G[i], cupct2_g[i]);
+        }
+    }
 
     for (size_t i = 0; i < CUPCT2_ADJSIZE; ++i)
     {
