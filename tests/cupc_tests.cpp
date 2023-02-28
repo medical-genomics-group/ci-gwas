@@ -46,10 +46,10 @@ TEST(cuPCSparseTests, CalIndepL1SingleBlock)
         G.data(),
         Th.data());
 
-    printf("obs | exp \n");
+    printf("ix | obs | exp \n");
     for (size_t i = 0; i < 59; ++i)
     {
-        printf("%i | %i \n", G[i], cupct1_g[i]);
+        printf("%i | %i | %i \n", i, G[i], cupct1_g[i]);
     }
 
     for (size_t i = 0; i < 59; ++i)
