@@ -46,14 +46,46 @@ TEST(cuPCSparseTests, CalIndepL0SingleBlock)
         G.data(),
         Th.data());
 
-    printf("ix | obs | exp \n");
-    for (size_t i = 0; i < 59; ++i)
-    {
-        printf("%i | %i | %i \n", i, G[i], cupct1_g[i]);
-    }
+    // printf("ix | obs | exp \n");
+    // for (size_t i = 0; i < CUPCT1_ADJSIZE; ++i)
+    // {
+    //     printf("%i | %i | %i \n", i, G[i], cupct1_g[i]);
+    // }
 
-    for (size_t i = 0; i < 59; ++i)
+    for (size_t i = 0; i < CUPCT1_ADJSIZE; ++i)
     {
         EXPECT_EQ(G[i], cupct1_g[i]);
+    }
+}
+
+TEST(cuPCSparseTests, CalIndepL0MultiBlock)
+{
+    const float alpha = 0.1;
+    int w = CUPCT2_W;
+    int p = CUPCT2_P;
+    int m = CUPCT2_M;
+    int max_marker_degree = 2 * w + p;
+    int max_phen_degree = m + p;
+    size_t mixed_matrix_size = max_marker_degree * m + max_phen_degree * p;
+    std::vector<int> G(mixed_matrix_size, 0);
+    std::array<float, NUMBER_OF_LEVELS> Th = threshold_array(m + p, alpha);
+
+    test_cal_Indepl0(
+        &cupct2_c[0],
+        &m,
+        &p,
+        &w,
+        G.data(),
+        Th.data());
+
+    // printf("ix | obs | exp \n");
+    // for (size_t i = 0; i < CUPCT2_ADJSIZE; ++i)
+    // {
+    //     printf("%i | %i | %i \n", i, G[i], cupct2_g[i]);
+    // }
+
+    for (size_t i = 0; i < CUPCT2_ADJSIZE; ++i)
+    {
+        EXPECT_EQ(G[i], cupct2_g[i]);
     }
 }
