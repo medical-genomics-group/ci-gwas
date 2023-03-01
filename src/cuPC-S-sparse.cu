@@ -300,7 +300,8 @@ __global__ void cal_Indepl0(float *C, int *G, float th, float *pMax, int m, int 
     int row = blockDim.x * bx + tx;
     int col = blockDim.y * by + ty;
 
-    if (row < nr && col < nc && ((row < (m - w)) || (col > w) || (col < (m - row - 1))))
+    /* Check if row and col in matrix bounds && */
+    if (row < nr && col < nc && ((row < (m - w)) || (col >= w) || (col < (m - row - 1))))
     {
         // global indices of variables
         int XIdx = row;
