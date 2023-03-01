@@ -73,6 +73,7 @@ void Skeleton(float *C, int *M, int *P, int *W, int *G, float *Th, int *l, int *
     CudaCheckError();
 
     // !!!!!!!!!!!!!! this is just here for compilation reasons for the time being !!!!!!!!!!!!!!!
+    // n is number of variables in cuPC-S
     int n = 8;
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -97,6 +98,7 @@ void Skeleton(float *C, int *M, int *P, int *W, int *G, float *Th, int *l, int *
                                                                     pMax_cuda, m, p, w);
                 CudaCheckError();
             }
+            // TODO: check SepSet dimensions again after you understand how L > 0 works
             BLOCKS_PER_GRID = dim3(sepset_n_rows, 1, 1);
             THREADS_PER_BLOCK = dim3(ML, 1, 1);
             SepSet_initialize<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(SepSet_cuda, nr);
@@ -108,10 +110,10 @@ void Skeleton(float *C, int *M, int *P, int *W, int *G, float *Th, int *l, int *
 
             //================================> Start Scan Process <===============================
             HANDLE_ERROR(cudaMemset(nprime_cuda, 0, 1 * sizeof(int)));
-            BLOCKS_PER_GRID = dim3(1, n, 1);
+            BLOCKS_PER_GRID = dim3(1, nr, 1);
             THREADS_PER_BLOCK = dim3(1024, 1, 1);
-            scan_compact<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, n * sizeof(int)>>>(
-                GPrime_cuda, G_cuda, n, nprime_cuda);
+            scan_compact<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nr * sizeof(int)>>>(
+                GPrime_cuda, G_cuda, nr, nprime_cuda);
             CudaCheckError();
             HANDLE_ERROR(cudaMemcpy(&nprime, nprime_cuda, 1 * sizeof(int), cudaMemcpyDeviceToHost));
 
@@ -6341,37 +6343,47 @@ __device__ void pseudoinversel14(float M2[][14], float M2Inv[][14], float v[][14
     }
 }
 
-__global__ void scan_compact(int *G_Compact, const int *G, const int n, int *nprime)
+/**
+ * @brief Computes compacted form of adjacency matrix
+ *
+ * @param G_Compact compacted adjacency matrix (the output)
+ * @param G non-compacted adjacency matrix
+ * @param n number of variables
+ * @param nprime maximum degree in adjacency matrix
+ * @param m number of markers
+ * @param p number of phenotypes
+ * @param w band-width of correlation matrix
+ */
+__global__ void scan_compact(int *G_Compact, const int *G, const int n, int *nprime, int m, int p, int w)
 {
-    // we should have nr blocks.
+    // we have on thread block per row.
     const int row = by;
-    // here we are determining the number of sections
-    // that the current row of G will be split into.
-    // blockDim.x is 1024
-    // the row length depends on whether we are in a marker or a phenotype row
-    const int section = (n + blockDim.x - 1) / blockDim.x;
+    const long int row_start_ix = sparse_adjacency_matrix_row_start_linear_index(row, m, p, w);
+    const int row_len = sparse_adjacency_matrix_row_length(row, m, p, w);
+    // number of sections of size  blockDim.x that the currect row will be split into for parallel processing
+    const int num_sections = (row_len + blockDim.x - 1) / blockDim.x;
     int thid = 0;
     int tmp = 0;
     int stepSize = 0;
     extern __shared__ int G_shared[];
     // copy a row of data into shared memory
-    for (int cnt = 0; cnt < section; cnt++)
+    for (int cnt = 0; cnt < num_sections; cnt++)
     {
         thid = tx + blockDim.x * cnt;
-        if (thid < n)
+        if (thid < row_len)
         {
-            G_shared[thid] = G[row * n + thid];
+            G_shared[thid] = G[row_start_ix + thid];
         }
     }
 
     __syncthreads();
-    for (int sec = 0; sec < section; sec++)
+    for (int sec = 0; sec < num_sections; sec++)
     {
         thid = tx + blockDim.x * sec;
-        stepSize = ((n - sec * blockDim.x) / blockDim.x) > 0 ? blockDim.x : (n - sec * blockDim.x);
+        stepSize = ((row_len - sec * blockDim.x) / blockDim.x) > 0 ? blockDim.x : (row_len - sec * blockDim.x);
         for (int step = 1; step < stepSize; step = step * 2)
         {
-            if (thid < n)
+            if (thid < row_len)
             {
                 if (tx < step)
                 {
@@ -6383,25 +6395,26 @@ __global__ void scan_compact(int *G_Compact, const int *G, const int n, int *npr
                 }
             }
             __syncthreads();
-            if (thid < n)
+            if (thid < row_len)
             {
                 G_shared[thid] = tmp;
             }
             __syncthreads();
         }
-        if (thid == (blockDim.x * (sec + 1) - 1) && sec != (section - 1))
+        if (thid == (blockDim.x * (sec + 1) - 1) && sec != (num_sections - 1))
         {
             G_shared[thid + 1] = G_shared[thid + 1] + G_shared[thid];
         }
         __syncthreads();
     }
     // ===============> Compact <===============
+    // this is row_size in G', i.e. the degree of the node
     const int row_size = G_shared[n - 1];
 
-    for (int sec = 0; sec < section; sec++)
+    for (int sec = 0; sec < num_sections; sec++)
     {
         thid = tx + blockDim.x * sec;
-        if (thid < n && thid > 0)
+        if (thid < row_len && thid > 0)
         {
             if (G_shared[thid] != G_shared[thid - 1])
             {
@@ -6414,6 +6427,7 @@ __global__ void scan_compact(int *G_Compact, const int *G, const int n, int *npr
             if (thid == n - 1)
             {
                 atomicMax(nprime, G_shared[n - 1]);
+                // last value in row stores node degree
                 G_Compact[row * n + n - 1] = G_shared[n - 1];
             }
         }
@@ -6500,14 +6514,60 @@ __device__ void IthCombination(int out[], int N, int P, int L)
 }
 
 /**
- * @brief Compute index into sparse linear mixed genotype+phenotype adjacency matrix.
+ * @brief Returns linear index of first value in given row of sparse adjacency matrix
+ *
+ * @param row_ix index of the row
+ * @param m number of markers in matrix
+ * @param p number of phenotypes in matrix
+ * @param w marker distance that defines band-width
+ * @return long int linear index of first value in row
+ */
+__device__ long int sparse_adjacency_matrix_row_start_linear_index(int row_ix, int m, int p, int w)
+{
+    int max_marker_degree = 2 * w + p;
+    int max_phen_degree = m + p;
+
+    if (row_ix < m)
+    {
+        return (long int)row_ix * (long int)max_marker_degree;
+    }
+    else
+    {
+        long int phen_ix = row_ix - m;
+        return (long int)m * (long int)max_marker_degree + phen_ix * (long int)max_phen_degree;
+    }
+}
+
+/**
+ * @brief Returns length of a given row in a sparse adjacency matrix
+ *
+ * @param row_ix index of the row
+ * @param m number of markers in matrix
+ * @param p number of phenotypes in matrix
+ * @param w marker distance that defines band-width
+ * @return int length of row
+ */
+__device__ int sparse_adjacency_matrix_row_length(int row_ix, int m, int p, int w)
+{
+    if (row_ix < m)
+    {
+        return 2 * w + p;
+    }
+    else
+    {
+        return m + p;
+    }
+}
+
+/**
+ * @brief Computes linear index into sparse linear mixed genotype+phenotype adjacency matrix
  *
  * @param XIdx row index in full (not sparse) genotype+phenotype adjacency matrix
  * @param YIdx col index in full (not sparse) genotype+phenotype adjacency matrix
  * @param m number of markers in matrix
  * @param p number of phenotypes in matrix
  * @param w marker distance that defines band-width
- * @return __device__
+ * @return long long int linear index of value
  */
 __device__ long long int sparse_adjacency_matrix_index(int XIdx, int YIdx, int m, int p, int w)
 {
