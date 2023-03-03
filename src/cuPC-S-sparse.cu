@@ -50,6 +50,7 @@ void Skeleton(float *C, int *M, int *P, int *W, int *G, float *Th, int *l, int *
     // has extra column that stores the degree
     int compact_adj_mat_size = max_marker_degree * m + max_phen_degree * p + m + p;
 
+    // why is this here?
     int nprime = 0;
     dim3 BLOCKS_PER_GRID;
     dim3 THREADS_PER_BLOCK;
@@ -113,9 +114,12 @@ void Skeleton(float *C, int *M, int *P, int *W, int *G, float *Th, int *l, int *
             HANDLE_ERROR(cudaMemset(nprime_cuda, 0, 1 * sizeof(int)));
             BLOCKS_PER_GRID = dim3(1, nr, 1);
             THREADS_PER_BLOCK = dim3(1024, 1, 1);
+            // TODO: call first for markers and then for phenotypes,
+            // to request less memory for marker processing.
             scan_compact<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nr * sizeof(int)>>>(
                 GPrime_cuda, G_cuda, nr, nprime_cuda);
             CudaCheckError();
+            // why copy that back?
             HANDLE_ERROR(cudaMemcpy(&nprime, nprime_cuda, 1 * sizeof(int), cudaMemcpyDeviceToHost));
 
             //================================> Begin The Gaussian CI Test
