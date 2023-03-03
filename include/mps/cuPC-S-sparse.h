@@ -113,6 +113,7 @@ __device__ void BINOM(int n, int k, int *out);
 __device__ void IthCombination(int out[], int N, int P, int L);
 __device__ float PYTHAG(float a, float b);
 __device__ void inverse(float M2[][3], float M2Inv[][3]);
+__device__ int variable_id_from_sparse_adjacency_matrix_col_ix(int row_ix, int col_ix, int m, int p, int w);
 __device__ long long int sparse_adjacency_matrix_index(int XIdx, int YIdx, int m, int p, int w);
 __device__ int sparse_adjacency_matrix_row_length(int row_ix, int m, int p, int w);
 __device__ long int sparse_adjacency_matrix_row_start_linear_index(int row_ix, int m, int p, int w);

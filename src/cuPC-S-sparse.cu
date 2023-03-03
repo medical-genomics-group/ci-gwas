@@ -100,7 +100,6 @@ void Skeleton(float *C, int *M, int *P, int *W, int *G, float *Th, int *l, int *
                                                                     pMax_cuda, m, p, w);
                 CudaCheckError();
             }
-            // TODO: check SepSet dimensions again after you understand how L > 0 works
             BLOCKS_PER_GRID = dim3(corr_mat_size, 1, 1);
             THREADS_PER_BLOCK = dim3(ML, 1, 1);
             SepSet_initialize<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(SepSet_cuda, corr_mat_size);
@@ -6411,7 +6410,7 @@ __global__ void scan_compact(int *G_Compact, const int *G, const int n, int *npr
     }
     // ===============> Compact <===============
     // this is row_size in G', i.e. the degree of the node
-    const int row_size = G_shared[n - 1];
+    const int row_size = G_shared[row_len - 1];
 
     for (int sec = 0; sec < num_sections; sec++)
     {
@@ -6428,17 +6427,20 @@ __global__ void scan_compact(int *G_Compact, const int *G, const int n, int *npr
             }
             if (thid == n - 1)
             {
-                atomicMax(nprime, G_shared[n - 1]);
+                atomicMax(nprime, G_shared[row_len - 1]);
                 // last value in row stores node degree
-                G_Compact[row * n + n - 1] = G_shared[n - 1];
+                G_Compact[row_start_ix + row_len - 1] = G_shared[row_len - 1];
             }
         }
     }
 
-    if (tx == 0 && G[row * n] == 1)
-    {
-        G_Compact[row * n] = 0;
-    }
+    // I don't understand why this is here. Will comment for now, figure out in
+    // tests if it is important
+
+    // if (tx == 0 && G[row * n] == 1)
+    // {
+    //     G_Compact[row * n] = 0;
+    // }
 }
 
 __device__ void inverse(float M2[][3], float M2Inv[][3])
