@@ -45,10 +45,10 @@ void Skeleton(float *C, int *M, int *P, int *W, int *G, float *Th, int *l, int *
 
     int max_marker_degree = 2 * w + p;
     int max_phen_degree = m + p;
-    int mixed_matrix_size = max_marker_degree * m + max_phen_degree * p;
-    // sepset dims
-    int sepset_n_rows = max_marker_degree * m + max_phen_degree * p;
-    int sepset_size = sepset_n_rows * ML;
+    int corr_mat_size = nc * nr;
+    int adj_mat_size = max_marker_degree * m + max_phen_degree * p;
+    // has extra column that stores the degree
+    int compact_adj_mat_size = max_marker_degree * m + max_phen_degree * p + m + p;
 
     int nprime = 0;
     dim3 BLOCKS_PER_GRID;
@@ -58,17 +58,19 @@ void Skeleton(float *C, int *M, int *P, int *W, int *G, float *Th, int *l, int *
 
     *l = 0;
 
-    HANDLE_ERROR(cudaMalloc((void **)&mutex_cuda, mixed_matrix_size * sizeof(int)));
+    // this was int before. Could make it same size as C.
+    HANDLE_ERROR(cudaMalloc((void **)&mutex_cuda, corr_mat_size * sizeof(short int)));
     HANDLE_ERROR(cudaMalloc((void **)&nprime_cuda, 1 * sizeof(int)));
-    HANDLE_ERROR(cudaMalloc((void **)&SepSet_cuda, sepset_size * sizeof(int)));
-    HANDLE_ERROR(cudaMalloc((void **)&GPrime_cuda, mixed_matrix_size * sizeof(int)));
-    HANDLE_ERROR(cudaMalloc((void **)&C_cuda, nc * nr * sizeof(float)));
-    HANDLE_ERROR(cudaMalloc((void **)&G_cuda, mixed_matrix_size * sizeof(int)));
-    HANDLE_ERROR(cudaMalloc((void **)&pMax_cuda, mixed_matrix_size * sizeof(float)));
+    HANDLE_ERROR(cudaMalloc((void **)&SepSet_cuda, corr_mat_size * ML * sizeof(int)));
+    HANDLE_ERROR(cudaMalloc((void **)&GPrime_cuda, compact_adj_mat_size * sizeof(int)));
+    HANDLE_ERROR(cudaMalloc((void **)&C_cuda, corr_mat_size * sizeof(float)));
+    HANDLE_ERROR(cudaMalloc((void **)&G_cuda, adj_mat_size * sizeof(int)));
+    // Could make it same size as C
+    HANDLE_ERROR(cudaMalloc((void **)&pMax_cuda, corr_mat_size * sizeof(float)));
     // copy correlation matrix from CPU to GPU
-    HANDLE_ERROR(cudaMemcpy(C_cuda, C, nc * nr * sizeof(float), cudaMemcpyHostToDevice));
+    HANDLE_ERROR(cudaMemcpy(C_cuda, C, corr_mat_size * sizeof(float), cudaMemcpyHostToDevice));
     // initialize a 0 matrix
-    HANDLE_ERROR(cudaMemset(mutex_cuda, 0, mixed_matrix_size * sizeof(int)));
+    HANDLE_ERROR(cudaMemset(mutex_cuda, (short int)0, corr_mat_size * sizeof(short int)));
 
     CudaCheckError();
 
@@ -99,9 +101,9 @@ void Skeleton(float *C, int *M, int *P, int *W, int *G, float *Th, int *l, int *
                 CudaCheckError();
             }
             // TODO: check SepSet dimensions again after you understand how L > 0 works
-            BLOCKS_PER_GRID = dim3(sepset_n_rows, 1, 1);
+            BLOCKS_PER_GRID = dim3(corr_mat_size, 1, 1);
             THREADS_PER_BLOCK = dim3(ML, 1, 1);
-            SepSet_initialize<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(SepSet_cuda, nr);
+            SepSet_initialize<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(SepSet_cuda, corr_mat_size);
             CudaCheckError();
         }
         else
@@ -6418,11 +6420,11 @@ __global__ void scan_compact(int *G_Compact, const int *G, const int n, int *npr
         {
             if (G_shared[thid] != G_shared[thid - 1])
             {
-                G_Compact[row * n + G_shared[thid] - 1] = thid;
+                G_Compact[row_start_ix + G_shared[thid] - 1] = variable_id_from_sparse_adjacency_matrix_col_ix(row, thid, m, p, w);
             }
             if (thid >= row_size && thid != n - 1)
             {
-                G_Compact[row * n + thid] = 0;
+                G_Compact[row_start_ix + thid] = 0;
             }
             if (thid == n - 1)
             {
@@ -6511,6 +6513,42 @@ __device__ void IthCombination(int out[], int N, int P, int L)
         k = k - R;
     }
     out[P1] = out[P1 - 1] + L - k;
+}
+
+/**
+ * @brief Returns id of variable mapped to by given column in given row in sparse adjacency matrix
+ *
+ * @param row_ix index of row
+ * @param col_ix index of column
+ * @param m number of markers in matrix
+ * @param p number of phenotypes in matrix
+ * @param w marker distance that defines band-width
+ * @return __device__
+ */
+__device__ int variable_id_from_sparse_adjacency_matrix_col_ix(int row_ix, int col_ix, int m, int p, int w)
+{
+    int max_marker_degree = 2 * w + p;
+    int max_phen_degree = m + p;
+
+    if (row_ix < m)
+    {
+        if (col_ix < w)
+        {
+            return row_ix - (w - col_ix);
+        }
+        else if (col_ix < (2 * w))
+        {
+            return row_ix + (col_ix - w + 1);
+        }
+        else
+        {
+            return m + col_ix - 2 * w;
+        }
+    }
+    else
+    {
+        return col_ix;
+    }
 }
 
 /**
