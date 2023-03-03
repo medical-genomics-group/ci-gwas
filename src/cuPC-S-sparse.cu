@@ -6363,6 +6363,7 @@ __global__ void scan_compact(int *G_Compact, const int *G, const int n, int *npr
     const int row_len = sparse_adjacency_matrix_row_length(row, m, p, w);
     // number of sections of size  blockDim.x that the currect row will be split into for parallel processing
     const int num_sections = (row_len + blockDim.x - 1) / blockDim.x;
+    const int ix_of_degree = row_len - 1;
     int thid = 0;
     int tmp = 0;
     int stepSize = 0;
@@ -6410,7 +6411,7 @@ __global__ void scan_compact(int *G_Compact, const int *G, const int n, int *npr
     }
     // ===============> Compact <===============
     // this is row_size in G', i.e. the degree of the node
-    const int row_size = G_shared[row_len - 1];
+    const int row_size = G_shared[ix_of_degree];
 
     for (int sec = 0; sec < num_sections; sec++)
     {
@@ -6421,15 +6422,15 @@ __global__ void scan_compact(int *G_Compact, const int *G, const int n, int *npr
             {
                 G_Compact[row_start_ix + G_shared[thid] - 1] = variable_id_from_sparse_adjacency_matrix_col_ix(row, thid, m, p, w);
             }
-            if (thid >= row_size && thid != n - 1)
+            if (thid >= row_size && thid != ix_of_degree)
             {
                 G_Compact[row_start_ix + thid] = 0;
             }
             if (thid == n - 1)
             {
-                atomicMax(nprime, G_shared[row_len - 1]);
+                atomicMax(nprime, G_shared[ix_of_degree]);
                 // last value in row stores node degree
-                G_Compact[row_start_ix + row_len - 1] = G_shared[row_len - 1];
+                G_Compact[row_start_ix + ix_of_degree] = G_shared[ix_of_degree];
             }
         }
     }
