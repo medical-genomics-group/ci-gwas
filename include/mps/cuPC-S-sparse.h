@@ -106,7 +106,7 @@ extern "C" void Skeleton(float *C, int *M, int *P, int *W, int *G, float *Th, in
                          int *SepSet);
 
 __global__ void Initialize(int *Mat, int n);
-__global__ void scan_compact(int *G_Compact, const int *G, const int n, int *nprime);
+__global__ void scan_compact(int *G_Compact, const int *G, int *nprime, const int m, const int p, const int w);
 __global__ void SepSet_initialize(int *SepSet, int size);
 
 __device__ void BINOM(int n, int k, int *out);

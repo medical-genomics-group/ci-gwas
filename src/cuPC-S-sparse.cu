@@ -6355,7 +6355,7 @@ __device__ void pseudoinversel14(float M2[][14], float M2Inv[][14], float v[][14
  * @param p number of phenotypes
  * @param w band-width of correlation matrix
  */
-__global__ void scan_compact(int *G_Compact, const int *G, const int n, int *nprime, int m, int p, int w)
+__global__ void scan_compact(int *G_Compact, const int *G, int *nprime, const int m, const int p, const int w)
 {
     // we have on thread block per row.
     const int row = by;
