@@ -20,7 +20,6 @@ void marker_corr_mat_antidiag_sums(const size_t num_markers, const float *marker
     {
         for (size_t update_ix = 0; update_ix < row_size; update_ix++)
         {
-            printf("%i, %i, %i\n", row, 2 * row + update_ix, row_start_ix + update_ix);
             sums[2 * row + update_ix] += marker_corrs[row_start_ix + update_ix];
         }
 
