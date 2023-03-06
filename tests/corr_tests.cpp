@@ -25,6 +25,17 @@ auto sparse_corr_matrix_size(
     return (corr_width + num_phen) * (num_phen + num_markers);
 }
 
+TEST(AntiDiagSums, ExpectedReturnVals)
+{
+    float sums[11];
+    memset(sums, 0.0, sizeof(sums));
+    marker_corr_mat_antidiag_sums(BMT2_NUM_MARKERS, bmt2_marker_corrs, sums);
+    for (size_t i = 0; i < 11; i++)
+    {
+        EXPECT_NEAR(sums[i], bmt2_marker_corr_antidiag_sums[i], 0.00001);
+    }
+}
+
 TEST(SparseCorrTest, ExpectedReturnVals)
 {
     const size_t corr_width = 3;

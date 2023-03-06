@@ -1,6 +1,15 @@
 #pragma once
 
-void cu_ix_from_linear(const size_t lin_ix, const size_t num_rows, size_t *row_ix, size_t *col_ix);
+void marker_corr_mat_antidiag_sums(
+    const size_t num_markers,
+    const float *marker_corrs,
+    float *sums);
+
+void cu_ix_from_linear(
+    const size_t lin_ix,
+    const size_t num_rows,
+    size_t *row_ix,
+    size_t *col_ix);
 
 void cu_marker_corr_pearson_npn(
     const unsigned char *marker_vals,

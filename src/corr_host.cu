@@ -11,6 +11,24 @@
 
 using byte = unsigned char;
 
+void marker_corr_mat_antidiag_sums(const size_t num_markers, const float *marker_corrs, float *sums)
+{
+    const size_t num_antidiags = 2 * num_markers - 3;
+    size_t row_start_ix = 0;
+    size_t row_size = num_markers - 1;
+
+    for (size_t row = 0; row < (num_markers - 1); row++)
+    {
+        for (size_t update_ix = 0; update_ix <= row_size; update_ix++)
+        {
+            sums[2 * row + update_ix] += marker_corrs[row_start_ix + update_ix];
+        }
+
+        row_start_ix += row_size;
+        --row_size;
+    }
+}
+
 void cu_ix_from_linear(const size_t lin_ix, const size_t num_rows, size_t *row_ix, size_t *col_ix)
 {
     size_t *gpu_rix, *gpu_cix;
