@@ -122,11 +122,6 @@ TEST(CuMarkerCorrPearsonBatchedTest, ExpectedReturnVals)
         stripe_width,
         marker_corr);
 
-    for (size_t i = 0; i < marker_cm_size; ++i)
-    {
-        std::cerr << marker_corr[i] << " " << bmt2_marker_corrs_pearson[i] << std::endl;
-    }
-
     for (size_t i = 0; i < marker_cm_size; i++)
     {
         EXPECT_NEAR(marker_corr[i], bmt2_marker_corrs_pearson[i], 0.00001);
