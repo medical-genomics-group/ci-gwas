@@ -13,6 +13,44 @@
 #include <string>
 #include <vector>
 
+const std::string ANTIDIAGSUMS_USAGE = R"(
+Compute sums of anti-diagonals of marker correlation matrix.
+
+usage: mps anti-diag-sums <corrs>
+
+arguments:
+    corrs    marker correlation matrix computes with `mps mcorrk` or `mps mcorrp`
+)";
+
+const int ANTIDIAGSUMS_NARGS = 3;
+
+void anti_diag_sums(int argc, char *argv[])
+{
+    if (argc < ANTIDIAGSUMS_NARGS)
+    {
+        std::cout << ANTIDIAGSUMS_NARGS << std::endl;
+        exit(1);
+    }
+
+    // check that path is valid
+    std::string fpath = (std::string)argv[2];
+    if (!path_exists(fpath))
+    {
+        std::cout << "file or directory not found: " << fpath << std::endl;
+        exit(1);
+    }
+
+    std::vector<float> read = read_floats_from_binary(fpath);
+    // get num markers from size of array
+    // size_t
+
+    // Using a for loop with index
+    for (std::size_t i = 0; i < read.size(); ++i)
+    {
+        std::cout << read[i] << "\n";
+    }
+}
+
 const std::string PREP_USAGE = R"(
 Prepare input (PLINK) .bed file for mps.
 
@@ -365,11 +403,10 @@ void scorr(int argc, char *argv[])
 
     assert((phen.num_samples == num_individuals) && "number of phen values != number of individuals in dim");
 
-
     printf("num_individuals: %u \n", num_individuals);
     printf("num_phen: %u \n", num_phen);
     printf("num_markers: %u \n", num_markers);
-    
+
     double device_mem_bytes = device_mem_gb * std::pow(10, 9);
     size_t upper_bound_batch_size =
         std::floor(
