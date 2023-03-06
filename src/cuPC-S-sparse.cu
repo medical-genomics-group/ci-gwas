@@ -116,8 +116,10 @@ void Skeleton(float *C, int *M, int *P, int *W, int *G, float *Th, int *l, int *
             THREADS_PER_BLOCK = dim3(1024, 1, 1);
             // TODO: call first for markers and then for phenotypes,
             // to request less memory for marker processing.
+            /*
             scan_compact<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nr * sizeof(int)>>>(
                 GPrime_cuda, G_cuda, nr, nprime_cuda);
+            */
             CudaCheckError();
             // why copy that back?
             HANDLE_ERROR(cudaMemcpy(&nprime, nprime_cuda, 1 * sizeof(int), cudaMemcpyDeviceToHost));
@@ -6430,7 +6432,7 @@ __global__ void scan_compact(int *G_Compact, const int *G, int *nprime, const in
             {
                 G_Compact[row_start_ix + thid] = 0;
             }
-            if (thid == n - 1)
+            if (thid == ix_of_degree)
             {
                 atomicMax(nprime, G_shared[ix_of_degree]);
                 // last value in row stores node degree
