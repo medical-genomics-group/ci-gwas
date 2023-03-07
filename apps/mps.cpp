@@ -709,6 +709,7 @@ commands:
     corr    Compute the marker/phenotype correlation matrix
     mcorrk  Compute pearson correlations between markers as sin(pi / 2 tau_b)
     mcorrp  Compute pearson correlations between markers
+    ads     Compute sums of anti-diagonals of marker correlation matrix
     cups    use cuPC to compute the parent set for each phenotype
 
 contact:
@@ -756,6 +757,10 @@ auto main(int argc, char *argv[]) -> int
     else if (cmd == "scorr")
     {
         scorr(argc, argv);
+    }
+    else if (cmd == "ads")
+    {
+        anti_diag_sums(argc, argv);
     }
     else
     {
