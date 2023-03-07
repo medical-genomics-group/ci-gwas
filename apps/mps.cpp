@@ -64,12 +64,22 @@ void anti_diag_sums(int argc, char *argv[])
         exit(1);
     }
 
+    printf("Loading correlations\n");
+    fflush(stdout);
     std::vector<float> corrs = read_floats_from_binary(fpath);
     // get num markers from size of array
+
     size_t num_markers = num_variables_from_matrix_size(corrs.size());
+    printf("Corr matrix has %i markers \n", num_markers);
+    fflush(stdout);
     size_t num_anti_diagonals = 2 * num_markers - 3;
+
+    printf("Allocating output vector\n");
+    fflush(stdout);
     std::vector<float> sums(num_anti_diagonals, 0.0);
 
+    printf("Computing antidiag sums\n");
+    fflush(stdout);
     marker_corr_mat_antidiag_sums(num_markers, corrs.data(), sums.data());
 
     std::filesystem::path path(fpath);
