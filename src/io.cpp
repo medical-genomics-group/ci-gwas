@@ -163,8 +163,7 @@ void write_single_column_file_with_suffix(
     std::ofstream fout;
     fout.open(outpath, std::ios::out);
 
-    printf("Writing to: %s", outpath);
-    fflush(stdout);
+    std::cout << "Writing to: " << outpath << std::endl;
 
     for (size_t i = 0; i < data.size(); ++i)
     {
