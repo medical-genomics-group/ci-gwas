@@ -32,9 +32,9 @@ auto path_exists(const std::string path) -> bool
  *
  * @return int
  */
-auto num_variables_from_matrix_size(const int num_matrix_entries) -> int
+auto num_variables_from_matrix_size(const size_t num_matrix_entries) -> size_t
 {
-    return (1 + (int)sqrt(1 + 8 * num_matrix_entries)) / 2;
+    return (1 + (size_t)sqrt(1.0 + 8.0 * (long double)num_matrix_entries)) / 2;
 }
 
 const std::string ANTIDIAGSUMS_USAGE = R"(
