@@ -25,6 +25,6 @@ macro(package_add_test TESTNAME)
 endmacro()
 
 package_add_test(corr_tests corr_tests.cpp)
-#package_add_test(prep_tests prep_tests.cpp)
-#package_add_test(io_tests io_tests.cpp)
+package_add_test(prep_tests prep_tests.cpp)
+package_add_test(io_tests io_tests.cpp)
 # package_add_test(cupc_tests cupc_tests.cpp)

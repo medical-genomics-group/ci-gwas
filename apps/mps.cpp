@@ -9,9 +9,20 @@
 
 #include <array>
 #include <cassert>
+#include <filesystem>
 #include <iostream>
 #include <string>
 #include <vector>
+
+/**
+ * @brief Compute number of variables from upper triangular matrix (diag excluded)
+ *
+ * @return int
+ */
+auto num_variables_from_matrix_size(const int num_matrix_entries) -> int
+{
+    return (1 + (int)sqrt(1 + 8 * num_matrix_entries)) / 2;
+}
 
 const std::string ANTIDIAGSUMS_USAGE = R"(
 Compute sums of anti-diagonals of marker correlation matrix.
@@ -40,15 +51,19 @@ void anti_diag_sums(int argc, char *argv[])
         exit(1);
     }
 
-    std::vector<float> read = read_floats_from_binary(fpath);
+    std::vector<float> corrs = read_floats_from_binary(fpath);
     // get num markers from size of array
-    // size_t
+    size_t num_markers = num_variables_from_matrix_size(corrs.size());
+    size_t num_anti_diagonals = 2 * num_markers - 3;
+    std::vector<float> sums(num_anti_diagonals, 0.0);
 
-    // Using a for loop with index
-    for (std::size_t i = 0; i < read.size(); ++i)
-    {
-        std::cout << read[i] << "\n";
-    }
+    marker_corr_mat_antidiag_sums(num_markers, corrs.data(), sums.data());
+
+    std::filesystem::path path(fpath);
+    std::string dir = path.parent_path().string();
+    std::string file = path.filename().string();
+
+    write_single_column_file_with_suffix(sums, dir, file, ".ads");
 }
 
 const std::string PREP_USAGE = R"(

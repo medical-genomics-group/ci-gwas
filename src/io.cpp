@@ -147,28 +147,25 @@ void write_bed(
 void write_means(
     const std::vector<float> &chr_marker_means, const std::string out_dir, const std::string chr_id)
 {
-    std::string outpath = make_path(out_dir, chr_id, ".means");
-    std::ofstream fout;
-    fout.open(outpath, std::ios::out);
-
-    for (size_t i = 0; i < chr_marker_means.size(); ++i)
-    {
-        fout << chr_marker_means[i] << std::endl;
-    }
-
-    fout.close();
+    write_single_column_file_with_suffix(chr_marker_means, out_dir, chr_id, ".means");
 }
 
 void write_stds(
     const std::vector<float> &chr_marker_stds, const std::string out_dir, const std::string chr_id)
 {
-    std::string outpath = make_path(out_dir, chr_id, ".stds");
+    write_single_column_file_with_suffix(chr_marker_stds, out_dir, chr_id, ".stds");
+}
+
+void write_single_column_file_with_suffix(
+    const std::vector<float> &data, const std::string out_dir, const std::string file_stem, const std::string suffix)
+{
+    std::string outpath = make_path(out_dir, file_stem, suffix);
     std::ofstream fout;
     fout.open(outpath, std::ios::out);
 
-    for (size_t i = 0; i < chr_marker_stds.size(); ++i)
+    for (size_t i = 0; i < data.size(); ++i)
     {
-        fout << chr_marker_stds[i] << std::endl;
+        fout << data[i] << std::endl;
     }
 
     fout.close();
