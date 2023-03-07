@@ -52,7 +52,11 @@ auto make_path(const std::string out_dir, const std::string chr_id, const std::s
 {
     std::string filename = chr_id + suffix;
     std::string outpath;
-    if (out_dir.back() != '/')
+    if (out_dir.empty())
+    {
+        outpath = out_dir + filename;
+    }
+    else if (out_dir.back() != '/')
     {
         outpath = out_dir + '/' + filename;
     }
