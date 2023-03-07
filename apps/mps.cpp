@@ -15,6 +15,19 @@
 #include <vector>
 
 /**
+ * @brief Check if path exists.
+ *
+ * @param path
+ * @return true if path exists
+ * @return false if it doesn't
+ */
+auto path_exists(const std::string path) -> bool
+{
+    struct stat buffer;
+    return (stat(path.c_str(), &buffer) == 0);
+}
+
+/**
  * @brief Compute number of variables from upper triangular matrix (diag excluded)
  *
  * @return int
@@ -81,12 +94,6 @@ arguments:
     outdir  output directory for processed .bed
     mem_gb  maximal amount of memory available in Gb
 )";
-
-auto path_exists(const std::string path) -> bool
-{
-    struct stat buffer;
-    return (stat(path.c_str(), &buffer) == 0);
-}
 
 // TODO: this should also parse .phen files and make sure that no info is missing and order checks
 // out
