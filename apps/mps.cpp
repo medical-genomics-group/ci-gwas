@@ -52,7 +52,7 @@ void anti_diag_sums(int argc, char *argv[])
 {
     if (argc < ANTIDIAGSUMS_NARGS)
     {
-        std::cout << ANTIDIAGSUMS_NARGS << std::endl;
+        std::cout << ANTIDIAGSUMS_USAGE << std::endl;
         exit(1);
     }
 
