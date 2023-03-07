@@ -162,6 +162,7 @@ void mcorrk(int argc, char *argv[])
     size_t num_markers = dims[1];
 
     printf("Loading .bed \n");
+    fflush(stdout);
 
     // .bed
     std::string bed_path = make_path(out_dir, chr_id, ".bed");
@@ -192,6 +193,7 @@ void mcorrk(int argc, char *argv[])
         printf("max_batch_size: %zu (%zu bytes \n)", max_batch_size, mb_bytes);
 
         printf("Device mem < required mem; Running tiled routine. \n");
+        fflush(stdout);
 
         printf("arg1: %p \n", marker_vals.data());
         printf("arg2: %i \n", num_markers);
@@ -209,12 +211,14 @@ void mcorrk(int argc, char *argv[])
     else
     {
         printf("Calling correlation main\n");
+        fflush(stdout);
         // compute correlations
         cu_marker_corr_pearson_npn(marker_vals.data(), num_markers, num_individuals,
                                    marker_corr.data());
     }
 
     printf("Writing results\n");
+    fflush(stdout);
     // write results
     write_floats_to_binary(marker_corr.data(), marker_corr_mat_size,
                            make_path(out_dir, chr_id, "_marker_corrk.bin"));
@@ -278,6 +282,7 @@ void mcorrp(int argc, char *argv[])
     size_t num_markers = dims[1];
 
     printf("Loading .bed \n");
+    fflush(stdout);
 
     // .bed
     std::string bed_path = make_path(out_dir, chr_id, ".bed");
@@ -287,6 +292,7 @@ void mcorrp(int argc, char *argv[])
     read_n_bytes_from_binary(bed_path, nbytes_marker_vals, marker_vals);
 
     printf("Loading means \n");
+    fflush(stdout);
 
     // .means
     std::string means_path = make_path(out_dir, chr_id, ".means");
@@ -294,6 +300,7 @@ void mcorrp(int argc, char *argv[])
     assert((marker_means.size() == num_markers) && "number of marker means != num markers");
 
     printf("Loading stds \n");
+    fflush(stdout);
 
     // .stds
     std::string stds_path = make_path(out_dir, chr_id, ".stds");
@@ -317,6 +324,7 @@ void mcorrp(int argc, char *argv[])
         size_t batch_nrows = max_batch_size / 2;
 
         printf("Device mem < required mem; Running tiled routine. \n");
+        fflush(stdout);
 
         cu_marker_corr_pearson_batched(marker_vals.data(), num_markers, num_individuals,
                                        marker_means.data(), marker_stds.data(), batch_nrows,
@@ -325,12 +333,14 @@ void mcorrp(int argc, char *argv[])
     else
     {
         printf("Calling correlation main\n");
+        fflush(stdout);
         // compute correlations
         cu_marker_corr_pearson(marker_vals.data(), num_markers, num_individuals,
                                marker_means.data(), marker_stds.data(), marker_corr.data());
     }
 
     printf("Writing results\n");
+    fflush(stdout);
     // write results
     write_floats_to_binary(marker_corr.data(), marker_corr_mat_size,
                            make_path(out_dir, chr_id, "_marker_corrp.bin"));
