@@ -59,7 +59,7 @@ TEST(LoadBlocks, ExpectedResults)
     }
 }
 
-TEST(LoadBedBlock., ExpectedResults)
+TEST(LoadBedBlock, ExpectedResults)
 {
     MarkerBlock block(1, 2);
     BedDims dims(10, 5);
