@@ -3,6 +3,36 @@
 #include <string>
 #include <vector>
 
+const int BED_PREFIX_BYTES = 3;
+
+class BedDims
+{
+  private:
+    size_t num_samples;
+    size_t num_markers;
+
+  public:
+    BedDims(size_t num_samples, size_t num_markers)
+        : num_samples(num_samples), num_markers(num_markers)
+    {
+    }
+
+    size_t get_num_markers() const
+    {
+        return num_markers;
+    }
+
+    size_t get_num_samples() const
+    {
+        return num_samples;
+    }
+
+    size_t bytes_per_col() const
+    {
+        return (num_samples + 3) / 4;
+    }
+};
+
 class MarkerBlock
 {
   private:
@@ -20,39 +50,49 @@ class MarkerBlock
         return (this->first_marker_ix == other.first_marker_ix) && (this->last_marker_ix == other.last_marker_ix);
     }
 
-    const size_t get_first_marker_ix()
+    size_t get_first_marker_ix() const
     {
         return first_marker_ix;
     }
 
-    const size_t get_last_marker_ix()
+    size_t get_last_marker_ix() const
     {
         return last_marker_ix;
     }
+
+    size_t block_size() const
+    {
+        return last_marker_ix - first_marker_ix + 1;
+    }
 };
+
+std::vector<unsigned char> read_block_from_bed(
+    std::string path,
+    MarkerBlock block,
+    BedDims dims);
 
 void split_line(
     std::string line,
     std::string *buf,
     size_t ncols);
 
-auto split_line(
-    std::string line) -> std::vector<std::string>;
+std::vector<std::string> split_line(
+    std::string line);
 
-auto make_path(
+std::string make_path(
     std::string out_dir,
     std::string chr_id,
-    std::string suffix) -> std::string;
+    std::string suffix);
 
-auto read_ints_from_lines(
-    std::string path) -> std::vector<int>;
+std::vector<int> read_ints_from_lines(
+    std::string path);
 
 void read_floats_from_lines(
     std::string path,
     std::vector<float> &dest);
 
-auto read_floats_from_lines(
-    std::string path) -> std::vector<float>;
+std::vector<float> read_floats_from_lines(
+    std::string path);
 
 void write_bed(
     const std::vector<unsigned char> &out_buf,
@@ -89,8 +129,8 @@ void read_n_bytes_from_binary(
     const size_t nbytes,
     std::vector<unsigned char> &dest);
 
-auto read_floats_from_binary(
-    const std::string path) -> std::vector<float>;
+std::vector<float> read_floats_from_binary(
+    const std::string path);
 
 void write_floats_to_binary(
     const float *data,

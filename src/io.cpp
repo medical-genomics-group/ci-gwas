@@ -103,7 +103,7 @@ void read_floats_from_lines(const std::string path, std::vector<float> &dest)
     }
 }
 
-auto read_floats_from_lines(const std::string path) -> std::vector<float>
+std::vector<float> read_floats_from_lines(const std::string path)
 {
     std::string line;
     std::ifstream fin(path);
@@ -117,7 +117,7 @@ auto read_floats_from_lines(const std::string path) -> std::vector<float>
     return res;
 }
 
-auto read_ints_from_lines(const std::string path) -> std::vector<int>
+std::vector<int> read_ints_from_lines(const std::string path)
 {
     std::string line;
     std::ifstream fin(path);
@@ -131,7 +131,7 @@ auto read_ints_from_lines(const std::string path) -> std::vector<int>
     return res;
 }
 
-auto read_floats_from_binary(const std::string path) -> std::vector<float>
+std::vector<float> read_floats_from_binary(const std::string path)
 {
     float f;
     std::ifstream fin(path, std::ios::binary);
@@ -140,6 +140,19 @@ auto read_floats_from_binary(const std::string path) -> std::vector<float>
     while (fin.read(reinterpret_cast<char *>(&f), sizeof(float)))
         res.push_back(f);
 
+    return res;
+}
+
+std::vector<unsigned char> read_block_from_bed(
+    std::string path,
+    MarkerBlock block,
+    BedDims dims)
+{
+    unsigned char b;
+    std::vector<unsigned char> res = {};
+    std::ifstream fin(path, std::ios::binary);
+    fin.seekg(BED_PREFIX_BYTES + dims.bytes_per_col() * block.get_first_marker_ix());
+    fin.read(reinterpret_cast<char *>(res.data()), dims.bytes_per_col() * block.block_size());
     return res;
 }
 
