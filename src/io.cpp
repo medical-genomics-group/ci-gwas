@@ -3,10 +3,26 @@
 #include <mps/io.h>
 
 #include <cassert>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <iterator>
 #include <sstream>
+#include <sys/stat.h>
+
+BedDims::BedDims(std::string path)
+{
+    std::vector<int> dims = read_ints_from_lines(path);
+    size_t ndims = dims.size();
+    if (ndims != 2)
+    {
+        std::cout << "Invalid .dims file: found " << ndims << "dimensions instead of two."
+                  << std::endl;
+        exit(1);
+    }
+    num_samples = dims[0];
+    num_markers = dims[1];
+}
 
 std::vector<std::string> split_line(std::string line)
 {
@@ -117,6 +133,29 @@ std::vector<float> read_floats_from_lines(const std::string path)
     return res;
 }
 
+std::vector<float> read_floats_from_line_range(const std::string path, size_t first, size_t last)
+{
+    std::string line;
+    std::ifstream fin(path);
+    std::vector<float> res = {};
+
+    size_t line_ix = 0;
+    while (std::getline(fin, line))
+    {
+        if (line_ix > last)
+        {
+            break;
+        }
+        else if (line_ix >= first)
+        {
+            res.push_back(std::stof(line));
+        }
+        ++line_ix;
+    }
+
+    return res;
+}
+
 std::vector<int> read_ints_from_lines(const std::string path)
 {
     std::string line;
@@ -218,4 +257,35 @@ void write_dims(
     fout << num_individuals << std::endl;
     fout << num_markers << std::endl;
     fout.close();
+}
+
+void check_path(const std::string path)
+{
+    if (!path_exists(path))
+    {
+        std::cout << "file or directory not found: " << path << std::endl;
+        exit(1);
+    }
+}
+
+void check_prepped_bed_path(const std::string basepath)
+{
+    std::string req_suffixes[2] = {".bed", ".dims", ".means", ".stds"};
+    for (auto &suffix : req_suffixes)
+    {
+        check_path(basepath + suffix);
+    }
+}
+
+/**
+ * @brief Check if path exists.
+ *
+ * @param path
+ * @return true if path exists
+ * @return false if it doesn't
+ */
+bool path_exists(const std::string path)
+{
+    struct stat buffer;
+    return (stat(path.c_str(), &buffer) == 0);
 }

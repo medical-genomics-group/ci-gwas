@@ -5,6 +5,38 @@
 
 const int BED_PREFIX_BYTES = 3;
 
+class BfilesBase
+{
+  private:
+    std::string base;
+
+  public:
+    BfilesBase(std::string path)
+        : base(path)
+    {
+    }
+
+    std::string dims() const
+    {
+        return base + ".dims";
+    }
+
+    std::string bed() const
+    {
+        return base + ".bed";
+    }
+
+    std::string means() const
+    {
+        return base + ".means";
+    }
+
+    std::string stds() const
+    {
+        return base + ".stds";
+    }
+};
+
 class BedDims
 {
   private:
@@ -16,6 +48,8 @@ class BedDims
         : num_samples(num_samples), num_markers(num_markers)
     {
     }
+
+    BedDims(std::string path);
 
     size_t get_num_markers() const
     {
@@ -65,6 +99,11 @@ class MarkerBlock
         return last_marker_ix - first_marker_ix + 1;
     }
 };
+
+std::vector<float> read_floats_from_line_range(
+    const std::string path,
+    size_t first,
+    size_t last);
 
 std::vector<unsigned char> read_block_from_bed(
     std::string path,
@@ -138,4 +177,13 @@ void write_floats_to_binary(
     const std::string path);
 
 std::vector<MarkerBlock> read_blocks_from_file(
+    const std::string path);
+
+void check_prepped_bed_path(
+    const std::string basepath);
+
+void check_path(
+    const std::string path);
+
+bool path_exists(
     const std::string path);

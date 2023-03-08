@@ -1,3 +1,4 @@
+#include "cuPC/cuPC-S.h"
 #include <math.h>
 #include <mps/bim.h>
 #include <mps/corr_host.h>
@@ -5,26 +6,35 @@
 #include <mps/io.h>
 #include <mps/phen.h>
 #include <mps/prep.h>
-#include <sys/stat.h>
 
 #include <array>
+#include <boost/math/distributions/normal.hpp>
 #include <cassert>
 #include <filesystem>
 #include <iostream>
 #include <string>
+#include <sys/stat.h>
 #include <vector>
 
-/**
- * @brief Check if path exists.
- *
- * @param path
- * @return true if path exists
- * @return false if it doesn't
- */
-auto path_exists(const std::string path) -> bool
+const int NUMBER_OF_LEVELS = 14;
+
+auto std_normal_qnorm(const double p) -> double
 {
-    struct stat buffer;
-    return (stat(path.c_str(), &buffer) == 0);
+    boost::math::normal dist(0.0, 1.0);
+    return quantile(dist, p);
+}
+
+auto threshold_array(const int n, const double alpha) -> std::array<double, NUMBER_OF_LEVELS>
+{
+    std::array<double, NUMBER_OF_LEVELS> thr{0.0};
+    // my loop range is exclusive of the last i, so I don't subtract one here
+    const int n_thr = (NUMBER_OF_LEVELS < (n - 3)) ? NUMBER_OF_LEVELS : n;
+    const double half = 0.5;
+    for (size_t i = 0; i < n_thr; i++)
+    {
+        thr[i] = abs(std_normal_qnorm(half * alpha) / sqrt(n - i - 3));
+    }
+    return thr;
 }
 
 /**
@@ -35,6 +45,153 @@ auto path_exists(const std::string path) -> bool
 auto num_variables_from_matrix_size(const size_t num_matrix_entries) -> size_t
 {
     return (1 + (size_t)sqrt(1.0 + 8.0 * (long double)num_matrix_entries)) / 2;
+}
+
+const std::string BDPC_USAGE = R"(
+Run cuPC on block diagonal genomic covariance matrix.
+
+usage: mps bdpc <.phen> <bfiles> <.blocks>
+
+arguments:
+    .phen       path to standardized phenotype csv
+    bfiles      stem of .bed, .means, .stds, .dims files
+    .blocks     file with genomic block definitions
+)";
+
+const int BDPC_NARGS = 5;
+
+void block_diagonal_pc(int argc, char *argv[])
+{
+    if (argc < BDPC_NARGS)
+    {
+        std::cout << BDPC_USAGE << std::endl;
+        exit(1);
+    }
+
+    std::string phen_path = argv[2];
+    std::string bed_base_path = argv[3];
+    std::string block_path = argv[5];
+
+    check_prepped_bed_path(bed_base_path);
+    check_path(phen_path);
+    check_path(block_path);
+
+    Phen phen = load_phen(phen_path);
+    BfilesBase bfiles(bed_base_path);
+    BedDims dims(bfiles.dims());
+
+    if (phen.get_num_samples() != dims.get_num_samples())
+    {
+        std::cout << "different num samples in phen and dims" << std::endl;
+        exit(1);
+    }
+
+    size_t num_phen = phen.get_num_phen();
+    // TODO: testcase for num_phen = 1;
+    size_t phen_corr_mat_size = num_phen * (num_phen - 1) / 2;
+    std::vector<float> phen_corr(phen_corr_mat_size, 0.0);
+    std::vector<MarkerBlock> blocks = read_blocks_from_file(block_path);
+
+    for (auto &block : blocks)
+    {
+        size_t num_markers = block.block_size();
+        size_t num_individuals = dims.get_num_samples();
+
+        // load block data
+        std::vector<unsigned char> bedblock = read_block_from_bed(bfiles.bed(), block, dims);
+        std::vector<float> means = read_floats_from_line_range(bfiles.means(), block.get_first_marker_ix(), block.get_first_marker_ix());
+        std::vector<float> stds = read_floats_from_line_range(bfiles.stds(), block.get_first_marker_ix(), block.get_first_marker_ix());
+
+        // allocate correlation result arrays
+        size_t marker_corr_mat_size = num_markers * (num_markers - 1) / 2;
+        std::vector<float> marker_corr(marker_corr_mat_size, 0.0);
+
+        size_t marker_phen_corr_mat_size = num_markers * num_phen;
+        std::vector<float> marker_phen_corr(marker_phen_corr_mat_size, 0.0);
+
+        printf("Calling correlation main\n");
+        // compute correlations
+        cu_corr_pearson_npn(
+            bedblock.data(),
+            phen.data.data(),
+            num_markers,
+            num_individuals,
+            num_phen,
+            means.data(),
+            stds.data(),
+            marker_corr.data(),
+            marker_phen_corr.data(),
+            phen_corr.data());
+
+        // make n2 matrix to please cuPC
+        size_t num_var = num_markers + num_phen;
+        std::vector<float> sq_corrs(num_var * num_var, 1.0);
+
+        size_t sq_row_ix = 0;
+        size_t sq_col_ix = 1;
+        for (size_t i = 0; i < marker_corr_mat_size; ++i)
+        {
+            sq_corrs[num_var * sq_row_ix + sq_col_ix] = marker_corr[i];
+            sq_corrs[num_var * sq_col_ix + sq_row_ix] = marker_corr[i];
+            if (sq_col_ix == num_markers - 1)
+            {
+                ++sq_row_ix;
+                sq_col_ix = sq_row_ix + 1;
+            }
+            else
+            {
+                ++sq_col_ix;
+            }
+        }
+
+        sq_row_ix = 0;
+        sq_col_ix = num_markers;
+        for (size_t i = 0; i < marker_phen_corr_mat_size; ++i)
+        {
+            sq_corrs[num_var * sq_row_ix + sq_col_ix] = marker_phen_corr[i];
+            sq_corrs[num_var * sq_col_ix + sq_row_ix] = marker_phen_corr[i];
+            if (sq_col_ix == (num_var - 1))
+            {
+                sq_col_ix = num_markers;
+                ++sq_row_ix;
+            }
+            else
+            {
+                ++sq_col_ix;
+            }
+        }
+
+        size_t sq_row_ix = num_markers;
+        size_t sq_col_ix = num_markers + 1;
+        for (size_t i = 0; i < phen_corr_mat_size; ++i)
+        {
+            sq_corrs[num_var * sq_row_ix + sq_col_ix] = phen_corr[i];
+            sq_corrs[num_var * sq_col_ix + sq_row_ix] = phen_corr[i];
+            if (sq_col_ix == (num_var - 1))
+            {
+                ++sq_row_ix;
+                sq_col_ix = sq_row_ix + 1;
+            }
+            else
+            {
+                ++sq_col_ix;
+            }
+        }
+
+        // call cuPC
+        const int n = num_individuals;
+        int p = num_var;
+        const double alpha = 0.05;
+        int max_level = 14;
+        const size_t sepset_size = p * p * 14;
+        const size_t g_size = num_var * num_var;
+        std::vector<double> pmax(g_size, 0.0);
+        std::vector<int> G(g_size, 1);
+        std::vector<int> sepset(sepset_size, 0);
+        std::array<double, NUMBER_OF_LEVELS> Th = threshold_array(n, alpha);
+        int l = 0;
+        Skeleton(sq_corrs.data(), &p, G.data(), Th.data(), &l, &max_level, pmax.data(), sepset.data());
+    }
 }
 
 const std::string ANTIDIAGSUMS_USAGE = R"(

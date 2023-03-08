@@ -11,7 +11,7 @@ macro(package_add_test TESTNAME)
     add_executable(${TESTNAME} ${ARGN})
     # link the Google test infrastructure, mocking library, and a default main function to
     # the test executable.  Remove g_test_main if writing your own main function.
-    target_link_libraries(${TESTNAME} cuPCsparse gtest gmock gtest_main corr prep io)
+    target_link_libraries(${TESTNAME} cuPC gtest gmock gtest_main corr prep io)
     target_include_directories(${TESTNAME} PRIVATE ../include)
     set_source_files_properties(${TESTNAME} PROPERTIES LANGUAGE CUDA)
     # gtest_discover_tests replaces gtest_add_tests,
