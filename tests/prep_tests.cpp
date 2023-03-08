@@ -13,7 +13,7 @@ TEST(BimStat, MarkersInDistance)
     EXPECT_EQ(num_markers_within_distance("../../tests/test_files/distance.bim", 3000), 2);
 }
 
-TEST(CountLines ExpectedReturnVals)
+TEST(CountLines, ExpectedReturnVals)
 {
     EXPECT_EQ(count_lines("../../tests/test_files/small.fam"), 10);
 }
