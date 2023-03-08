@@ -148,11 +148,11 @@ std::vector<unsigned char> read_block_from_bed(
     MarkerBlock block,
     BedDims dims)
 {
-    unsigned char b;
-    std::vector<unsigned char> res = {};
+    size_t block_bytes = dims.bytes_per_col() * block.block_size();
+    std::vector<unsigned char> res(block_bytes, 0);
     std::ifstream fin(path, std::ios::binary);
     fin.seekg(BED_PREFIX_BYTES + dims.bytes_per_col() * block.get_first_marker_ix());
-    fin.read(reinterpret_cast<char *>(res.data()), dims.bytes_per_col() * block.block_size());
+    fin.read(reinterpret_cast<char *>(res.data()), block_bytes);
     return res;
 }
 
