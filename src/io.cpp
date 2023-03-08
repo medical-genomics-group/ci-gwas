@@ -35,7 +35,7 @@ void split_line(std::string line, std::string *buf, size_t ncols)
     }
 }
 
-auto count_lines(std::string file_path) -> int
+int count_lines(const std::string file_path)
 {
     int number_of_lines = 0;
     std::string line;
@@ -65,6 +65,22 @@ auto make_path(const std::string out_dir, const std::string chr_id, const std::s
         outpath = out_dir + filename;
     }
     return outpath;
+}
+
+std::vector<MarkerBlock> read_blocks_from_file(const std::string path)
+{
+    std::string block_line[2];
+    std::string line;
+    std::ifstream block_file(path);
+    std::vector<MarkerBlock> blocks;
+
+    while (std::getline(block_file, line))
+    {
+        split_line(line, block_line, 2);
+        blocks.push_back(MarkerBlock(std::stoi(block_line[0]), std::stoi(block_line[1])));
+    }
+
+    return blocks;
 }
 
 // TODO: I don't ever need dest to have dynamic size, this should accept arrays

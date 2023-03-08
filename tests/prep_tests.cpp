@@ -8,17 +8,17 @@
 #include <iostream>
 #include <string>
 
-TEST(BimStatTest, MarkersInDistance)
+TEST(BimStat MarkersInDistance)
 {
     EXPECT_EQ(num_markers_within_distance("../../tests/test_files/distance.bim", 3000), 2);
 }
 
-TEST(CountLinesTest, ExpectedReturnVals)
+TEST(CountLines ExpectedReturnVals)
 {
     EXPECT_EQ(count_lines("../../tests/test_files/small.fam"), 10);
 }
 
-TEST(SplitBimLineTest, ExpectedReturnVals)
+TEST(SplitBimLine ExpectedReturnVals)
 {
     std::string bim_line[6];
     std::string str = "19      rs150203985     0       240963  A       G";
@@ -30,7 +30,7 @@ TEST(SplitBimLineTest, ExpectedReturnVals)
     }
 }
 
-TEST(PrepBimTest, ExpectedReturnVals)
+TEST(PrepBim ExpectedReturnVals)
 {
     bimInfo exp;
     exp.number_of_lines = 5;
@@ -51,7 +51,7 @@ TEST(PrepBimTest, ExpectedReturnVals)
     EXPECT_TRUE(std::filesystem::remove("../../tests/test_files/1.bim"));
 }
 
-TEST(ParseBedDeathTest, WrongMagicNumberOne)
+TEST(ParseBedDeath WrongMagicNumberOne)
 {
     ASSERT_DEATH(
         {
@@ -65,7 +65,7 @@ TEST(ParseBedDeathTest, WrongMagicNumberOne)
         "unexpected magic number in bed file.");
 }
 
-TEST(ParseBedDeathTest, WrongMagicNumberTwo)
+TEST(ParseBedDeath WrongMagicNumberTwo)
 {
     ASSERT_DEATH(
         {
@@ -79,7 +79,7 @@ TEST(ParseBedDeathTest, WrongMagicNumberTwo)
         "unexpected magic number in bed file.");
 }
 
-TEST(ParseBedDeathTest, WrongMagicNumberThree)
+TEST(ParseBedDeath WrongMagicNumberThree)
 {
     ASSERT_DEATH(
         {

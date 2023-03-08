@@ -3,6 +3,31 @@
 #include <string>
 #include <vector>
 
+class MarkerBlock
+{
+  private:
+    size_t first_marker_ix;
+    size_t last_marker_ix;
+
+  public:
+    MarkerBlock(size_t ix1, size_t ix2)
+        : first_marker_ix(ix1), last_marker_ix(ix2)
+    {
+    }
+    size_t get_first_marker_ix();
+    size_t get_last_marker_ix();
+};
+
+size_t MarkerBlock::get_first_marker_ix()
+{
+    return this->first_marker_ix;
+}
+
+size_t MarkerBlock::get_last_marker_ix()
+{
+    return this->last_marker_ix;
+}
+
 void split_line(
     std::string line,
     std::string *buf,
@@ -47,8 +72,8 @@ void write_single_column_file_with_suffix(
     const std::string file_stem,
     const std::string suffix);
 
-auto count_lines(
-    std::string file_path) -> int;
+int count_lines(
+    const std::string file_path);
 
 void write_dims(
     const size_t num_individuals,
@@ -67,4 +92,7 @@ auto read_floats_from_binary(
 void write_floats_to_binary(
     const float *data,
     const size_t nvals,
+    const std::string path);
+
+std::vector<MarkerBlock> read_blocks_from_file(
     const std::string path);

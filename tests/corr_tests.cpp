@@ -4,7 +4,7 @@
 #include <test_data/bed_marker_test_set.h>
 
 // Demonstrate some basic assertions.
-TEST(HelloTest, BasicAssertions)
+TEST(Hello BasicAssertions)
 {
     // Expect two strings not to be equal.
     EXPECT_STRNE("hello", "world");
@@ -36,7 +36,7 @@ TEST(AntiDiagSums, ExpectedReturnVals)
     }
 }
 
-TEST(SparseCorrTest, ExpectedReturnVals)
+TEST(SparseCorr ExpectedReturnVals)
 {
     const size_t corr_width = 3;
     const size_t batch_size = 5;
@@ -63,7 +63,7 @@ TEST(SparseCorrTest, ExpectedReturnVals)
     }
 }
 
-TEST(RowColIxFromLinearTest, ExpectedReturnVals3Markers)
+TEST(RowColIxFromLinear ExpectedReturnVals3Markers)
 {
     size_t row_ix, col_ix;
     size_t num_rows = 3;
@@ -81,7 +81,7 @@ TEST(RowColIxFromLinearTest, ExpectedReturnVals3Markers)
     EXPECT_EQ(col_ix, 2);
 }
 
-TEST(RowColIxFromLinearTest, ExpectedReturnVals7603Markers)
+TEST(RowColIxFromLinear ExpectedReturnVals7603Markers)
 {
     size_t row_ix, col_ix;
     size_t num_rows = 7603;
@@ -103,7 +103,7 @@ TEST(RowColIxFromLinearTest, ExpectedReturnVals7603Markers)
     EXPECT_EQ(col_ix, 7601);
 }
 
-TEST(CuMarkerCorrPearsonBatchedTest, ExpectedReturnVals)
+TEST(CuMarkerCorrPearsonBatched ExpectedReturnVals)
 {
     const size_t num_markers = BMT2_NUM_MARKERS;
     const size_t num_individuals = BMT2_NUM_INDIVIDUALS;
@@ -128,7 +128,7 @@ TEST(CuMarkerCorrPearsonBatchedTest, ExpectedReturnVals)
     }
 }
 
-TEST(CuMarkerCorrPearsonNpnBatchedTest, ExpectedReturnVals)
+TEST(CuMarkerCorrPearsonNpnBatched ExpectedReturnVals)
 {
     const size_t num_markers = BMT2_NUM_MARKERS;
     const size_t num_individuals = BMT2_NUM_INDIVIDUALS;
@@ -147,7 +147,7 @@ TEST(CuMarkerCorrPearsonNpnBatchedTest, ExpectedReturnVals)
     }
 }
 
-TEST(CuCorrPearsonNpnTest, ExpectedReturnVals)
+TEST(CuCorrPearsonNpn ExpectedReturnVals)
 {
     const size_t num_markers = BMT_NUM_MARKERS;
     const size_t num_individuals = BMT_NUM_INDIVIDUALS;
@@ -196,7 +196,7 @@ TEST(CuCorrPearsonNpnTest, ExpectedReturnVals)
     }
 }
 
-TEST(CuCorrNpnBatchedTest, ExpectedReturnVals)
+TEST(CuCorrNpnBatched ExpectedReturnVals)
 {
     const size_t num_markers = BMT2_NUM_MARKERS;
     const size_t num_individuals = BMT2_NUM_INDIVIDUALS;
@@ -242,7 +242,7 @@ TEST(CuCorrNpnBatchedTest, ExpectedReturnVals)
     }
 }
 
-TEST(CuMarkerPearsonTest, ExpectedReturnVals3Markers)
+TEST(CuMarkerPearson ExpectedReturnVals3Markers)
 {
     const size_t num_markers = BMT_NUM_MARKERS;
     const size_t num_individuals = BMT_NUM_INDIVIDUALS;
@@ -263,7 +263,7 @@ TEST(CuMarkerPearsonTest, ExpectedReturnVals3Markers)
     }
 }
 
-TEST(CuMarkerPearsonTest, ExpectedReturnVals7Markers)
+TEST(CuMarkerPearson ExpectedReturnVals7Markers)
 {
     const size_t num_markers = BMT2_NUM_MARKERS;
     const size_t num_individuals = BMT2_NUM_INDIVIDUALS;
