@@ -18,23 +18,6 @@ class MarkerBlock
     size_t get_last_marker_ix();
 };
 
-size_t MarkerBlock::get_first_marker_ix()
-{
-    return this->first_marker_ix;
-}
-
-size_t MarkerBlock::get_last_marker_ix()
-{
-    return this->last_marker_ix;
-}
-
-bool operator==(MarkerBlock &lhs, MarkerBlock &rhs)
-{
-    return (
-               lhs.get_first_marker_ix() == rhs.get_first_marker_ix()) &&
-           (lhs.get_last_marker_ix() == rhs.get_last_marker_ix());
-}
-
 void split_line(
     std::string line,
     std::string *buf,
