@@ -14,8 +14,21 @@ class MarkerBlock
         : first_marker_ix(ix1), last_marker_ix(ix2)
     {
     }
-    size_t get_first_marker_ix();
-    size_t get_last_marker_ix();
+
+    bool operator==(const MarkerBlock &other) const
+    {
+        return (this->first_marker_ix == other.first_marker_ix) && (this->last_marker_ix == other.last_marker_ix);
+    }
+
+    const size_t get_first_marker_ix()
+    {
+        return first_marker_ix;
+    }
+
+    const size_t get_last_marker_ix()
+    {
+        return last_marker_ix;
+    }
 };
 
 void split_line(
