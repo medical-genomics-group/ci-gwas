@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-TEST(LoadBinary ExpectedResults)
+TEST(LoadBinary, ExpectedResults)
 {
     size_t nbytes = 5;
     std::vector<unsigned char> exp = {0x6c, 0x1b, 0x01, 0xea, 0x8f};
@@ -18,7 +18,7 @@ TEST(LoadBinary ExpectedResults)
     }
 }
 
-TEST(ReadFloatsFromLines ExpectedResults)
+TEST(ReadFloatsFromLines, ExpectedResults)
 {
     std::vector<float> exp_vals = {0.72031609, 0.59822862, 0.47614114, -0.62264611,
                                    -1.110996, -1.23308348, 2.06327829, 0.59822862,
@@ -33,7 +33,7 @@ TEST(ReadFloatsFromLines ExpectedResults)
     }
 }
 
-TEST(FloatToAndFromBinary ExpectedResults)
+TEST(FloatToAndFromBinary, ExpectedResults)
 {
     std::vector<float> data = {0.0, -1.1, 2.2, -3.3, 4.4};
     std::string loc = "../../tests/test_files/floats.bin";
