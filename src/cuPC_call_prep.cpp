@@ -13,7 +13,7 @@ std::vector<float> threshold_array(const int n, const float alpha)
     std::vector<float> thr;
     // my loop range is exclusive of the last i, so I don't subtract one here
     const float half = 0.5;
-    for (size_t i = 0; i < NUMBER_OF_LEVELS; i++)
+    for (size_t i = 0; i < NUMBER_OF_LEVELS + 1; i++)
     {
         thr.push_back(abs(std_normal_qnorm(half * alpha) / sqrt(n - i - 3)));
     }
