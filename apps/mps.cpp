@@ -71,10 +71,18 @@ void block_diagonal_pc(int argc, char *argv[])
     std::vector<float> phen_corr(phen_corr_mat_size, 0.0);
     std::vector<MarkerBlock> blocks = read_blocks_from_file(block_path);
 
-    for (auto &block : blocks)
+    std::cout << "Found " << blocks.size() << "blocks." << std::endl;
+
+    for (size_t bid = 0; bid < blocks.size(); bid++)
     {
+        MarkerBlock block = blocks[bid];
+
+        std::cout << "Processing block " << bid << std::endl;
+
         size_t num_markers = block.block_size();
         size_t num_individuals = dims.get_num_samples();
+
+        std::cout << "Loading data" << std::endl;
 
         // load block data
         std::vector<unsigned char> bedblock = read_block_from_bed(bfiles.bed(), block, dims);
@@ -88,7 +96,8 @@ void block_diagonal_pc(int argc, char *argv[])
         size_t marker_phen_corr_mat_size = num_markers * num_phen;
         std::vector<float> marker_phen_corr(marker_phen_corr_mat_size, 0.0);
 
-        printf("Calling correlation main\n");
+        std::cout << "Computing correlations" << std::endl;
+
         // compute correlations
         cu_corr_pearson_npn(
             bedblock.data(),
@@ -101,6 +110,8 @@ void block_diagonal_pc(int argc, char *argv[])
             marker_corr.data(),
             marker_phen_corr.data(),
             phen_corr.data());
+
+        std::cout << "Reformating corrs to n2 format" << std::endl;
 
         // make n2 matrix to please cuPC
         size_t num_var = num_markers + num_phen;
@@ -157,6 +168,8 @@ void block_diagonal_pc(int argc, char *argv[])
                 ++sq_col_ix;
             }
         }
+
+        std::cout << "Running cuPC" << std::endl;
 
         // call cuPC
         const int n = num_individuals;
@@ -915,6 +928,10 @@ auto main(int argc, char *argv[]) -> int
     else if (cmd == "ads")
     {
         anti_diag_sums(argc, argv);
+    }
+    else if (cmd == "bdpc")
+    {
+        block_diagonal_pc(argc, argv);
     }
     else
     {
