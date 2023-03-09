@@ -161,8 +161,8 @@ void block_diagonal_pc(int argc, char *argv[])
             }
         }
 
-        size_t sq_row_ix = num_markers;
-        size_t sq_col_ix = num_markers + 1;
+        sq_row_ix = num_markers;
+        sq_col_ix = num_markers + 1;
         for (size_t i = 0; i < phen_corr_mat_size; ++i)
         {
             sq_corrs[num_var * sq_row_ix + sq_col_ix] = phen_corr[i];
