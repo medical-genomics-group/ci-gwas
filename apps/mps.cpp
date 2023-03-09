@@ -35,9 +35,10 @@ arguments:
     .phen       path to standardized phenotype csv
     bfiles      stem of .bed, .means, .stds, .dims files
     .blocks     file with genomic block definitions
+    alpha       significance level
 )";
 
-const int BDPC_NARGS = 5;
+const int BDPC_NARGS = 6;
 
 void block_diagonal_pc(int argc, char *argv[])
 {
@@ -47,13 +48,20 @@ void block_diagonal_pc(int argc, char *argv[])
         exit(1);
     }
 
+    std::cout << "Starting bdpc" << std::endl;
+
     std::string phen_path = argv[2];
     std::string bed_base_path = argv[3];
-    std::string block_path = argv[5];
+    std::string block_path = argv[4];
+    double alpha = std::stod(argv[5]);
+
+    std::cout << "Checking input paths"<< std::endl;
 
     check_prepped_bed_path(bed_base_path);
     check_path(phen_path);
     check_path(block_path);
+
+
 
     Phen phen = load_phen(phen_path);
     BfilesBase bfiles(bed_base_path);
@@ -69,20 +77,30 @@ void block_diagonal_pc(int argc, char *argv[])
     // TODO: testcase for num_phen = 1;
     size_t phen_corr_mat_size = num_phen * (num_phen - 1) / 2;
     std::vector<float> phen_corr(phen_corr_mat_size, 0.0);
+
+    std::cout << "Loading blocks" << std::endl;
     std::vector<MarkerBlock> blocks = read_blocks_from_file(block_path);
 
-    std::cout << "Found " << blocks.size() << "blocks." << std::endl;
+    std::cout << "Found " << blocks.size() << " blocks." << std::endl;
+
+    size_t num_individuals = dims.get_num_samples();
+    std::vector<double> Th = threshold_array(num_individuals, alpha);
+ 
+    std::cout << "Number of levels: " << NUMBER_OF_LEVELS << std::endl;
+
+    std::cout << "Setting level thr for cuPC: " << std::endl;
+    for (int i = 0; i < NUMBER_OF_LEVELS; ++i)
+    {
+        std::cout << "\t Level: " << i << " thr: " << Th[i] << std::endl;
+    }
 
     for (size_t bid = 0; bid < blocks.size(); bid++)
     {
         MarkerBlock block = blocks[bid];
 
-        std::cout << "Processing block " << bid << std::endl;
-
         size_t num_markers = block.block_size();
-        size_t num_individuals = dims.get_num_samples();
 
-        std::cout << "Loading data" << std::endl;
+        std::cout << "Loading bed data" << std::endl;
 
         // load block data
         std::vector<unsigned char> bedblock = read_block_from_bed(bfiles.bed(), block, dims);
@@ -172,16 +190,13 @@ void block_diagonal_pc(int argc, char *argv[])
         std::cout << "Running cuPC" << std::endl;
 
         // call cuPC
-        const int n = num_individuals;
         int p = num_var;
-        const double alpha = 0.05;
         int max_level = 14;
         const size_t sepset_size = p * p * 14;
         const size_t g_size = num_var * num_var;
         std::vector<double> pmax(g_size, 0.0);
         std::vector<int> G(g_size, 1);
         std::vector<int> sepset(sepset_size, 0);
-        std::array<double, NUMBER_OF_LEVELS> Th = threshold_array(n, alpha);
         int l = 0;
         Skeleton(sq_corrs.data(), &p, G.data(), Th.data(), &l, &max_level, pmax.data(), sepset.data());
     }
