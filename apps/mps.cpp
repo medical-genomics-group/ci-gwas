@@ -20,8 +20,9 @@ const int NUMBER_OF_LEVELS = 14;
 
 auto std_normal_qnorm(const double p) -> double
 {
-    boost::math::normal dist(0.0, 1.0);
-    return quantile(dist, p);
+    return 1.0;
+    //boost::math::normal dist(0.0, 1.0);
+    //return quantile(dist, p);
 }
 
 auto threshold_array(const int n, const double alpha) -> std::array<double, NUMBER_OF_LEVELS>
@@ -125,14 +126,15 @@ void block_diagonal_pc(int argc, char *argv[])
 
         // make n2 matrix to please cuPC
         size_t num_var = num_markers + num_phen;
-        std::vector<float> sq_corrs(num_var * num_var, 1.0);
+        // TODO: make this float, if cuPC is happy with that
+        std::vector<double> sq_corrs(num_var * num_var, 1.0);
 
         size_t sq_row_ix = 0;
         size_t sq_col_ix = 1;
         for (size_t i = 0; i < marker_corr_mat_size; ++i)
         {
-            sq_corrs[num_var * sq_row_ix + sq_col_ix] = marker_corr[i];
-            sq_corrs[num_var * sq_col_ix + sq_row_ix] = marker_corr[i];
+            sq_corrs[num_var * sq_row_ix + sq_col_ix] = (double)marker_corr[i];
+            sq_corrs[num_var * sq_col_ix + sq_row_ix] = (double)marker_corr[i];
             if (sq_col_ix == num_markers - 1)
             {
                 ++sq_row_ix;
@@ -148,8 +150,8 @@ void block_diagonal_pc(int argc, char *argv[])
         sq_col_ix = num_markers;
         for (size_t i = 0; i < marker_phen_corr_mat_size; ++i)
         {
-            sq_corrs[num_var * sq_row_ix + sq_col_ix] = marker_phen_corr[i];
-            sq_corrs[num_var * sq_col_ix + sq_row_ix] = marker_phen_corr[i];
+            sq_corrs[num_var * sq_row_ix + sq_col_ix] = (double)marker_phen_corr[i];
+            sq_corrs[num_var * sq_col_ix + sq_row_ix] = (double)marker_phen_corr[i];
             if (sq_col_ix == (num_var - 1))
             {
                 sq_col_ix = num_markers;
@@ -165,8 +167,8 @@ void block_diagonal_pc(int argc, char *argv[])
         sq_col_ix = num_markers + 1;
         for (size_t i = 0; i < phen_corr_mat_size; ++i)
         {
-            sq_corrs[num_var * sq_row_ix + sq_col_ix] = phen_corr[i];
-            sq_corrs[num_var * sq_col_ix + sq_row_ix] = phen_corr[i];
+            sq_corrs[num_var * sq_row_ix + sq_col_ix] = (double)phen_corr[i];
+            sq_corrs[num_var * sq_col_ix + sq_row_ix] = (double)phen_corr[i];
             if (sq_col_ix == (num_var - 1))
             {
                 ++sq_row_ix;
