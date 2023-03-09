@@ -53,15 +53,13 @@ void block_diagonal_pc(int argc, char *argv[])
     std::string phen_path = argv[2];
     std::string bed_base_path = argv[3];
     std::string block_path = argv[4];
-    double alpha = std::stod(argv[5]);
+    float alpha = std::stod(argv[5]);
 
-    std::cout << "Checking input paths"<< std::endl;
+    std::cout << "Checking input paths" << std::endl;
 
     check_prepped_bed_path(bed_base_path);
     check_path(phen_path);
     check_path(block_path);
-
-
 
     Phen phen = load_phen(phen_path);
     BfilesBase bfiles(bed_base_path);
@@ -84,8 +82,8 @@ void block_diagonal_pc(int argc, char *argv[])
     std::cout << "Found " << blocks.size() << " blocks." << std::endl;
 
     size_t num_individuals = dims.get_num_samples();
-    std::vector<double> Th = threshold_array(num_individuals, alpha);
- 
+    std::vector<float> Th = threshold_array(num_individuals, alpha);
+
     std::cout << "Number of levels: " << NUMBER_OF_LEVELS << std::endl;
 
     std::cout << "Setting level thr for cuPC: " << std::endl;
@@ -134,14 +132,14 @@ void block_diagonal_pc(int argc, char *argv[])
         // make n2 matrix to please cuPC
         size_t num_var = num_markers + num_phen;
         // TODO: make this float, if cuPC is happy with that
-        std::vector<double> sq_corrs(num_var * num_var, 1.0);
+        std::vector<float> sq_corrs(num_var * num_var, 1.0);
 
         size_t sq_row_ix = 0;
         size_t sq_col_ix = 1;
         for (size_t i = 0; i < marker_corr_mat_size; ++i)
         {
-            sq_corrs[num_var * sq_row_ix + sq_col_ix] = (double)marker_corr[i];
-            sq_corrs[num_var * sq_col_ix + sq_row_ix] = (double)marker_corr[i];
+            sq_corrs[num_var * sq_row_ix + sq_col_ix] = (float)marker_corr[i];
+            sq_corrs[num_var * sq_col_ix + sq_row_ix] = (float)marker_corr[i];
             if (sq_col_ix == num_markers - 1)
             {
                 ++sq_row_ix;
@@ -157,8 +155,8 @@ void block_diagonal_pc(int argc, char *argv[])
         sq_col_ix = num_markers;
         for (size_t i = 0; i < marker_phen_corr_mat_size; ++i)
         {
-            sq_corrs[num_var * sq_row_ix + sq_col_ix] = (double)marker_phen_corr[i];
-            sq_corrs[num_var * sq_col_ix + sq_row_ix] = (double)marker_phen_corr[i];
+            sq_corrs[num_var * sq_row_ix + sq_col_ix] = (float)marker_phen_corr[i];
+            sq_corrs[num_var * sq_col_ix + sq_row_ix] = (float)marker_phen_corr[i];
             if (sq_col_ix == (num_var - 1))
             {
                 sq_col_ix = num_markers;
@@ -174,8 +172,8 @@ void block_diagonal_pc(int argc, char *argv[])
         sq_col_ix = num_markers + 1;
         for (size_t i = 0; i < phen_corr_mat_size; ++i)
         {
-            sq_corrs[num_var * sq_row_ix + sq_col_ix] = (double)phen_corr[i];
-            sq_corrs[num_var * sq_col_ix + sq_row_ix] = (double)phen_corr[i];
+            sq_corrs[num_var * sq_row_ix + sq_col_ix] = (float)phen_corr[i];
+            sq_corrs[num_var * sq_col_ix + sq_row_ix] = (float)phen_corr[i];
             if (sq_col_ix == (num_var - 1))
             {
                 ++sq_row_ix;
@@ -194,7 +192,7 @@ void block_diagonal_pc(int argc, char *argv[])
         int max_level = 14;
         const size_t sepset_size = p * p * 14;
         const size_t g_size = num_var * num_var;
-        std::vector<double> pmax(g_size, 0.0);
+        std::vector<float> pmax(g_size, 0.0);
         std::vector<int> G(g_size, 1);
         std::vector<int> sepset(sepset_size, 0);
         int l = 0;
@@ -325,7 +323,7 @@ void mcorrk(int argc, char *argv[])
         exit(1);
     }
 
-    double device_mem_gb = atof(argv[4]);
+    float device_mem_gb = atof(argv[4]);
     size_t device_mem_bytes = device_mem_gb * std::pow(10, 9);
 
     // check that paths are valid
@@ -380,7 +378,7 @@ void mcorrk(int argc, char *argv[])
     if (req_mem_bytes > device_mem_bytes)
     {
         // figure out batch size
-        double b = num_individuals / 4 - 2;
+        float b = num_individuals / 4 - 2;
         size_t max_batch_size = (size_t)((-b + std::sqrt(b * b + 8 * device_mem_bytes)) / 4);
         size_t batch_nrows = max_batch_size / 2;
 
@@ -445,7 +443,7 @@ void mcorrp(int argc, char *argv[])
         exit(1);
     }
 
-    double device_mem_gb = atof(argv[4]);
+    float device_mem_gb = atof(argv[4]);
     size_t device_mem_bytes = device_mem_gb * std::pow(10, 9);
 
     // check that paths are valid
@@ -516,7 +514,7 @@ void mcorrp(int argc, char *argv[])
     if (req_mem_bytes > device_mem_bytes)
     {
         // figure out batch size
-        double b = num_individuals / 4 - 2;
+        float b = num_individuals / 4 - 2;
         size_t max_batch_size = (size_t)((-b + std::sqrt(b * b + 8 * device_mem_bytes)) / 4);
         size_t batch_nrows = max_batch_size / 2;
 
@@ -584,7 +582,7 @@ void scorr(int argc, char *argv[])
             exit(1);
         }
     }
-    double device_mem_gb = atof(argv[4]);
+    float device_mem_gb = atof(argv[4]);
     unsigned long dthr = atol(argv[5]);
     size_t corr_width = num_markers_within_distance(make_path(out_dir, chr_id, ".bim"), dthr);
     printf("Determined corr width: %u \n", corr_width);
@@ -614,7 +612,7 @@ void scorr(int argc, char *argv[])
     printf("num_phen: %u \n", num_phen);
     printf("num_markers: %u \n", num_markers);
 
-    double device_mem_bytes = device_mem_gb * std::pow(10, 9);
+    float device_mem_bytes = device_mem_gb * std::pow(10, 9);
     size_t upper_bound_batch_size =
         std::floor(
             (device_mem_bytes / 4 - (num_phen * num_individuals)) /
@@ -709,7 +707,7 @@ void corr(int argc, char *argv[])
         exit(1);
     }
 
-    double device_mem_gb = atof(argv[4]);
+    float device_mem_gb = atof(argv[4]);
 
     // check that paths are valid
     // TODO: figure out how to glob files and check that at least one .phen is present
@@ -810,10 +808,10 @@ void corr(int argc, char *argv[])
     {
         // TODO: this is probably not exactly correct
         // figure out batch size
-        double b = (double)num_individuals / 4.0;
+        float b = (float)num_individuals / 4.0;
         size_t max_batch_size =
-            (size_t)(-b + std::sqrt(b * b - (4.0 * (double)num_individuals * (double)num_phen -
-                                             (double)device_mem_bytes)));
+            (size_t)(-b + std::sqrt(b * b - (4.0 * (float)num_individuals * (float)num_phen -
+                                             (float)device_mem_bytes)));
         size_t row_width = max_batch_size / 2;
 
         printf("Device mem < required mem; Running tiled routine. \n");

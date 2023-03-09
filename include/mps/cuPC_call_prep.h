@@ -4,6 +4,6 @@
 
 const int NUMBER_OF_LEVELS = 14;
 
-double std_normal_qnorm(const double p);
+float std_normal_qnorm(const float p);
 
-std::vector<double> threshold_array(const int n, const double alpha);
+std::vector<float> threshold_array(const int n, const float alpha);
