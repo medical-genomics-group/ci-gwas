@@ -36,9 +36,10 @@ arguments:
     bfiles      stem of .bed, .means, .stds, .dims files
     .blocks     file with genomic block definitions
     alpha       significance level
+    num_samples number of individuals in data (this is for testing speed)
 )";
 
-const int BDPC_NARGS = 6;
+const int BDPC_NARGS = 7;
 
 void block_diagonal_pc(int argc, char *argv[])
 {
@@ -54,6 +55,7 @@ void block_diagonal_pc(int argc, char *argv[])
     std::string bed_base_path = argv[3];
     std::string block_path = argv[4];
     float alpha = std::stod(argv[5]);
+    size_t num_individuals = (size_t)std::stoi(argv[6]);
 
     std::cout << "Checking input paths" << std::endl;
 
@@ -81,7 +83,7 @@ void block_diagonal_pc(int argc, char *argv[])
 
     std::cout << "Found " << blocks.size() << " blocks." << std::endl;
 
-    size_t num_individuals = dims.get_num_samples();
+    // size_t num_individuals = dims.get_num_samples();
     std::vector<float> Th = threshold_array(num_individuals, alpha);
 
     std::cout << "Number of levels: " << NUMBER_OF_LEVELS << std::endl;
