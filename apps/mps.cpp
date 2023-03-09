@@ -1,4 +1,4 @@
-#include "cuPC/cuPC-S.h"
+#include "mps/cuPC-S.h"
 #include <math.h>
 #include <mps/bim.h>
 #include <mps/corr_host.h>
