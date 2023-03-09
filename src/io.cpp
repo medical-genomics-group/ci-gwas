@@ -270,7 +270,7 @@ void check_path(const std::string path)
 
 void check_prepped_bed_path(const std::string basepath)
 {
-    std::string req_suffixes[2] = {".bed", ".dims", ".means", ".stds"};
+    std::string req_suffixes[4] = {".bed", ".dims", ".means", ".stds"};
     for (auto &suffix : req_suffixes)
     {
         check_path(basepath + suffix);
