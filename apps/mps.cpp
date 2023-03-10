@@ -128,21 +128,21 @@ void block_diagonal_pc(int argc, char *argv[])
             exit(1);
         }
 
-        printf("means: [");
-        for (auto f : means)
-        {
-            printf("%f, ", f);
-        }
-        printf("]\n");
-        fflush(stdout);
+        // printf("means: [");
+        // for (auto f : means)
+        // {
+        //     printf("%f, ", f);
+        // }
+        // printf("]\n");
+        // fflush(stdout);
 
-        printf("stds: [");
-        for (auto f : stds)
-        {
-            printf("%f, ", f);
-        }
-        printf("]\n");
-        fflush(stdout);
+        // printf("stds: [");
+        // for (auto f : stds)
+        // {
+        //     printf("%f, ", f);
+        // }
+        // printf("]\n");
+        // fflush(stdout);
 
         // allocate correlation result arrays
         size_t marker_corr_mat_size = num_markers * (num_markers - 1) / 2;
@@ -166,29 +166,29 @@ void block_diagonal_pc(int argc, char *argv[])
             marker_phen_corr.data(),
             phen_corr.data());
 
-        printf("m x m: [");
-        for (auto f : marker_corr)
-        {
-            printf("%f, ", f);
-        }
-        printf("]\n");
-        fflush(stdout);
+        // printf("m x m: [");
+        // for (auto f : marker_corr)
+        // {
+        //     printf("%f, ", f);
+        // }
+        // printf("]\n");
+        // fflush(stdout);
 
-        printf("m x p: [");
-        for (auto f : marker_phen_corr)
-        {
-            printf("%f, ", f);
-        }
-        printf("]\n");
-        fflush(stdout);
+        // printf("m x p: [");
+        // for (auto f : marker_phen_corr)
+        // {
+        //     printf("%f, ", f);
+        // }
+        // printf("]\n");
+        // fflush(stdout);
 
-        printf("p x p: [");
-        for (auto f : phen_corr)
-        {
-            printf("%f, ", f);
-        }
-        printf("]\n");
-        fflush(stdout);
+        // printf("p x p: [");
+        // for (auto f : phen_corr)
+        // {
+        //     printf("%f, ", f);
+        // }
+        // printf("]\n");
+        // fflush(stdout);
 
         std::cout << "Reformating corrs to n2 format" << std::endl;
 
