@@ -67,6 +67,14 @@ void block_diagonal_pc(int argc, char *argv[])
     BfilesBase bfiles(bed_base_path);
     BedDims dims(bfiles.dims());
 
+    printf("Got phen: [");
+    for (auto f : phen.data)
+    {
+        printf("%f, ", f);
+    }
+    printf("]\n");
+    fflush(stdout);
+
     if (phen.get_num_samples() != dims.get_num_samples())
     {
         std::cout << "different num samples in phen and dims" << std::endl;
