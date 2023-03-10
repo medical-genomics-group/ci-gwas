@@ -105,9 +105,13 @@ void block_diagonal_pc(int argc, char *argv[])
 
     for (size_t bid = 0; bid < blocks.size(); bid++)
     {
+        std::cout << "Processing block #" << bid << std::endl;
+
         MarkerBlock block = blocks[bid];
 
         size_t num_markers = block.block_size();
+
+        std::cout << "Block size: " << num_markers << std::endl;
 
         std::cout << "Loading bed data" << std::endl;
 
