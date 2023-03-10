@@ -77,6 +77,7 @@ void block_diagonal_pc(int argc, char *argv[])
     // TODO: testcase for num_phen = 1;
     size_t phen_corr_mat_size = num_phen * (num_phen - 1) / 2;
     std::vector<float> phen_corr(phen_corr_mat_size, 0.0);
+    std::cout << "Found " << num_phen << " phenotypes" << std::endl;
 
     std::cout << "Loading blocks" << std::endl;
     std::vector<MarkerBlock> blocks = read_blocks_from_file(block_path);
@@ -186,6 +187,8 @@ void block_diagonal_pc(int argc, char *argv[])
                 ++sq_col_ix;
             }
         }
+
+        write_floats_to_binary(sq_corrs.data(), sq_corrs.size(), bed_base_path + "block_corrs.bin");
 
         std::cout << "Running cuPC" << std::endl;
 
