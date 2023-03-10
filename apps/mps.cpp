@@ -113,6 +113,22 @@ void block_diagonal_pc(int argc, char *argv[])
         std::vector<float> means = read_floats_from_line_range(bfiles.means(), block.get_first_marker_ix(), block.get_last_marker_ix());
         std::vector<float> stds = read_floats_from_line_range(bfiles.stds(), block.get_first_marker_ix(), block.get_last_marker_ix());
 
+        printf("means: [");
+        for (auto f : means)
+        {
+            printf("%f, ", f);
+        }
+        printf("]\n");
+        fflush(stdout);
+
+        printf("stds: [");
+        for (auto f : stds)
+        {
+            printf("%f, ", f);
+        }
+        printf("]\n");
+        fflush(stdout);
+
         // allocate correlation result arrays
         size_t marker_corr_mat_size = num_markers * (num_markers - 1) / 2;
         std::vector<float> marker_corr(marker_corr_mat_size, 0.0);
@@ -134,6 +150,30 @@ void block_diagonal_pc(int argc, char *argv[])
             marker_corr.data(),
             marker_phen_corr.data(),
             phen_corr.data());
+
+        printf("m x m: [");
+        for (auto f : marker_corr)
+        {
+            printf("%f, ", f);
+        }
+        printf("]\n");
+        fflush(stdout);
+
+        printf("m x p: [");
+        for (auto f : marker_phen_corr)
+        {
+            printf("%f, ", f);
+        }
+        printf("]\n");
+        fflush(stdout);
+
+        printf("p x p: [");
+        for (auto f : phen_corr)
+        {
+            printf("%f, ", f);
+        }
+        printf("]\n");
+        fflush(stdout);
 
         std::cout << "Reformating corrs to n2 format" << std::endl;
 
