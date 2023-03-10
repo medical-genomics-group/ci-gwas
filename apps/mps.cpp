@@ -113,8 +113,8 @@ void block_diagonal_pc(int argc, char *argv[])
 
         // load block data
         std::vector<unsigned char> bedblock = read_block_from_bed(bfiles.bed(), block, dims);
-        std::vector<float> means = read_floats_from_line_range(bfiles.means(), block.get_first_marker_ix(), block.get_first_marker_ix());
-        std::vector<float> stds = read_floats_from_line_range(bfiles.stds(), block.get_first_marker_ix(), block.get_first_marker_ix());
+        std::vector<float> means = read_floats_from_line_range(bfiles.means(), block.get_first_marker_ix(), block.get_last_marker_ix());
+        std::vector<float> stds = read_floats_from_line_range(bfiles.stds(), block.get_first_marker_ix(), block.get_last_marker_ix());
 
         printf("stds: [");
         for (auto f : means)
