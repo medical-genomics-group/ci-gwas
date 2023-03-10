@@ -67,14 +67,6 @@ void block_diagonal_pc(int argc, char *argv[])
     BfilesBase bfiles(bed_base_path);
     BedDims dims(bfiles.dims());
 
-    // printf("Got phen: [");
-    // for (auto f : phen.data)
-    // {
-    //     printf("%f, ", f);
-    // }
-    // printf("]\n");
-    // fflush(stdout);
-
     if (phen.get_num_samples() != dims.get_num_samples())
     {
         std::cout << "different num samples in phen and dims" << std::endl;
@@ -106,7 +98,7 @@ void block_diagonal_pc(int argc, char *argv[])
     for (size_t bid = 0; bid < blocks.size(); bid++)
     {
         std::cout << std::endl;
-        std::cout << "Processing block #" << bid << std::endl;
+        std::cout << "Processing block " << bid + 1 << " / " << blocks.size() << std::endl;
 
         MarkerBlock block = blocks[bid];
 
