@@ -20,6 +20,19 @@
 //@param Ncol       = Number of Col in Nbr matrix
 //============================================================================
 
+void print_degree_distribution(int *GPrime_cuda, int n)
+{
+    int degree = 0;
+    printf("degrees: [");
+    for (size_t i = 0; i < n; i++)
+    {
+        HANDLE_ERROR(cudaMemcpy(&degree, GPrime_cuda[i * n + n - 1], 1 * sizeof(int), cudaMemcpyDeviceToHost));
+        printf("%i, ", degree);
+    }
+    printf("]\n");
+    fflush(stdout);
+}
+
 void Skeleton(float *C, int *P, int *G, float *Th, int *l, int *maxlevel, float *pMax,
               int *SepSet)
 {
@@ -65,7 +78,7 @@ void Skeleton(float *C, int *P, int *G, float *Th, int *l, int *maxlevel, float 
             cudaEventRecord(start);
             printf("Starting lvl 0\n");
             fflush(stdout);
- 
+
             if ((n * n) < 1024)
             {
                 BLOCKS_PER_GRID = dim3(1, 1, 1);
@@ -91,7 +104,7 @@ void Skeleton(float *C, int *P, int *G, float *Th, int *l, int *maxlevel, float 
             cudaEventElapsedTime(&milliseconds, start, stop);
             printf("spend seconds: %f \n", milliseconds * 0.001);
             fflush(stdout);
-       }
+        }
         else
         {
             //================================> Start Scan Process <===============================
@@ -105,6 +118,7 @@ void Skeleton(float *C, int *P, int *G, float *Th, int *l, int *maxlevel, float 
 
             printf("nprime: %i \n", nprime);
             fflush(stdout);
+            print_degree_distribution(GPrime_Cuda, n);
 
             //================================> Begin The Gaussian CI Test
             //<==============================
@@ -135,7 +149,7 @@ void Skeleton(float *C, int *P, int *G, float *Th, int *l, int *maxlevel, float 
                 cudaEventElapsedTime(&milliseconds, start, stop);
                 printf("spend seconds: %f \n", milliseconds * 0.001);
                 fflush(stdout);
-           }
+            }
             else if (*l == 2)
             {
                 cudaEventRecord(start);
@@ -150,9 +164,10 @@ void Skeleton(float *C, int *P, int *G, float *Th, int *l, int *maxlevel, float 
                 CudaCheckError();
                 cudaEventRecord(stop);
                 cudaEventSynchronize(stop);
-                 cudaEventElapsedTime(&milliseconds, start, stop);
+                cudaEventElapsedTime(&milliseconds, start, stop);
                 printf("spend seconds: %f \n", milliseconds * 0.001);
-                fflush(stdout);           }
+                fflush(stdout);
+            }
             else if (*l == 3)
             {
                 cudaEventRecord(start);
@@ -167,9 +182,10 @@ void Skeleton(float *C, int *P, int *G, float *Th, int *l, int *maxlevel, float 
                 CudaCheckError();
                 cudaEventRecord(stop);
                 cudaEventSynchronize(stop);
-                  cudaEventElapsedTime(&milliseconds, start, stop);
+                cudaEventElapsedTime(&milliseconds, start, stop);
                 printf("spend seconds: %f \n", milliseconds * 0.001);
-                fflush(stdout);          }
+                fflush(stdout);
+            }
             else if (*l == 4)
             {
                 cudaEventRecord(start);
@@ -182,15 +198,15 @@ void Skeleton(float *C, int *P, int *G, float *Th, int *l, int *maxlevel, float 
                 CudaCheckError();
                 cudaEventRecord(stop);
                 cudaEventSynchronize(stop);
-                 cudaEventElapsedTime(&milliseconds, start, stop);
+                cudaEventElapsedTime(&milliseconds, start, stop);
                 printf("spend seconds: %f \n", milliseconds * 0.001);
-                fflush(stdout);           }
+                fflush(stdout);
+            }
             else if (*l == 5)
             {
                 cudaEventRecord(start);
                 printf("Starting lvl 5\n");
                 fflush(stdout);
- 
 
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL5, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL5, 1, 1);
@@ -199,15 +215,16 @@ void Skeleton(float *C, int *P, int *G, float *Th, int *l, int *maxlevel, float 
                 CudaCheckError();
                 cudaEventRecord(stop);
                 cudaEventSynchronize(stop);
-                 cudaEventElapsedTime(&milliseconds, start, stop);
+                cudaEventElapsedTime(&milliseconds, start, stop);
                 printf("spend seconds: %f \n", milliseconds * 0.001);
-                fflush(stdout);           }
+                fflush(stdout);
+            }
             else if (*l == 6)
             {
                 cudaEventRecord(start);
                 printf("Starting lvl 6\n");
                 fflush(stdout);
- 
+
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL6, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL6, 1, 1);
                 cal_Indepl6<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
@@ -215,9 +232,10 @@ void Skeleton(float *C, int *P, int *G, float *Th, int *l, int *maxlevel, float 
                 CudaCheckError();
                 cudaEventRecord(stop);
                 cudaEventSynchronize(stop);
-                 cudaEventElapsedTime(&milliseconds, start, stop);
+                cudaEventElapsedTime(&milliseconds, start, stop);
                 printf("spend seconds: %f \n", milliseconds * 0.001);
-                fflush(stdout);           }
+                fflush(stdout);
+            }
             else if (*l == 7)
             {
                 cudaEventRecord(start);
@@ -230,9 +248,10 @@ void Skeleton(float *C, int *P, int *G, float *Th, int *l, int *maxlevel, float 
                 CudaCheckError();
                 cudaEventRecord(stop);
                 cudaEventSynchronize(stop);
-                 cudaEventElapsedTime(&milliseconds, start, stop);
+                cudaEventElapsedTime(&milliseconds, start, stop);
                 printf("spend seconds: %f \n", milliseconds * 0.001);
-                fflush(stdout);           }
+                fflush(stdout);
+            }
             else if (*l == 8)
             {
                 cudaEventRecord(start);
@@ -245,9 +264,10 @@ void Skeleton(float *C, int *P, int *G, float *Th, int *l, int *maxlevel, float 
                 CudaCheckError();
                 cudaEventRecord(stop);
                 cudaEventSynchronize(stop);
-                 cudaEventElapsedTime(&milliseconds, start, stop);
+                cudaEventElapsedTime(&milliseconds, start, stop);
                 printf("spend seconds: %f \n", milliseconds * 0.001);
-                fflush(stdout);           }
+                fflush(stdout);
+            }
             else if (*l == 9)
             {
                 cudaEventRecord(start);
@@ -260,9 +280,10 @@ void Skeleton(float *C, int *P, int *G, float *Th, int *l, int *maxlevel, float 
                 CudaCheckError();
                 cudaEventRecord(stop);
                 cudaEventSynchronize(stop);
-                 cudaEventElapsedTime(&milliseconds, start, stop);
+                cudaEventElapsedTime(&milliseconds, start, stop);
                 printf("spend seconds: %f \n", milliseconds * 0.001);
-                fflush(stdout);           }
+                fflush(stdout);
+            }
             else if (*l == 10)
             {
                 cudaEventRecord(start);
@@ -275,9 +296,10 @@ void Skeleton(float *C, int *P, int *G, float *Th, int *l, int *maxlevel, float 
                 CudaCheckError();
                 cudaEventRecord(stop);
                 cudaEventSynchronize(stop);
-                 cudaEventElapsedTime(&milliseconds, start, stop);
+                cudaEventElapsedTime(&milliseconds, start, stop);
                 printf("spend seconds: %f \n", milliseconds * 0.001);
-                fflush(stdout);           }
+                fflush(stdout);
+            }
             else if (*l == 11)
             {
                 cudaEventRecord(start);
@@ -290,9 +312,10 @@ void Skeleton(float *C, int *P, int *G, float *Th, int *l, int *maxlevel, float 
                 CudaCheckError();
                 cudaEventRecord(stop);
                 cudaEventSynchronize(stop);
-                 cudaEventElapsedTime(&milliseconds, start, stop);
+                cudaEventElapsedTime(&milliseconds, start, stop);
                 printf("spend seconds: %f \n", milliseconds * 0.001);
-                fflush(stdout);           }
+                fflush(stdout);
+            }
             else if (*l == 12)
             {
                 cudaEventRecord(start);
@@ -305,9 +328,10 @@ void Skeleton(float *C, int *P, int *G, float *Th, int *l, int *maxlevel, float 
                 CudaCheckError();
                 cudaEventRecord(stop);
                 cudaEventSynchronize(stop);
-                 cudaEventElapsedTime(&milliseconds, start, stop);
+                cudaEventElapsedTime(&milliseconds, start, stop);
                 printf("spend seconds: %f \n", milliseconds * 0.001);
-                fflush(stdout);           }
+                fflush(stdout);
+            }
             else if (*l == 13)
             {
                 cudaEventRecord(start);
@@ -320,9 +344,10 @@ void Skeleton(float *C, int *P, int *G, float *Th, int *l, int *maxlevel, float 
                 CudaCheckError();
                 cudaEventRecord(stop);
                 cudaEventSynchronize(stop);
-                 cudaEventElapsedTime(&milliseconds, start, stop);
+                cudaEventElapsedTime(&milliseconds, start, stop);
                 printf("spend seconds: %f \n", milliseconds * 0.001);
-                fflush(stdout);           }
+                fflush(stdout);
+            }
             else if (*l == 14)
             {
                 cudaEventRecord(start);
@@ -335,9 +360,10 @@ void Skeleton(float *C, int *P, int *G, float *Th, int *l, int *maxlevel, float 
                 CudaCheckError();
                 cudaEventRecord(stop);
                 cudaEventSynchronize(stop);
-                 cudaEventElapsedTime(&milliseconds, start, stop);
+                cudaEventElapsedTime(&milliseconds, start, stop);
                 printf("spend seconds: %f \n", milliseconds * 0.001);
-                fflush(stdout);           }
+                fflush(stdout);
+            }
             else
             {
                 // TODO: add PC serial
