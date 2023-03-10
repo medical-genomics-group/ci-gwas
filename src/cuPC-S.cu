@@ -26,7 +26,7 @@ void print_degree_distribution(int *GPrime_cuda, int n)
     printf("degrees: [");
     for (size_t i = 0; i < n; i++)
     {
-        HANDLE_ERROR(cudaMemcpy(&degree, GPrime_cuda[i * n + n - 1], 1 * sizeof(int), cudaMemcpyDeviceToHost));
+        HANDLE_ERROR(cudaMemcpy(&degree, &GPrime_cuda[i * n + n - 1], 1 * sizeof(int), cudaMemcpyDeviceToHost));
         printf("%i, ", degree);
     }
     printf("]\n");
@@ -118,7 +118,7 @@ void Skeleton(float *C, int *P, int *G, float *Th, int *l, int *maxlevel, float 
 
             printf("nprime: %i \n", nprime);
             fflush(stdout);
-            print_degree_distribution(GPrime_Cuda, n);
+            print_degree_distribution(GPrime_cuda, n);
 
             //================================> Begin The Gaussian CI Test
             //<==============================
