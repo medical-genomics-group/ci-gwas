@@ -67,13 +67,13 @@ void block_diagonal_pc(int argc, char *argv[])
     BfilesBase bfiles(bed_base_path);
     BedDims dims(bfiles.dims());
 
-    printf("Got phen: [");
-    for (auto f : phen.data)
-    {
-        printf("%f, ", f);
-    }
-    printf("]\n");
-    fflush(stdout);
+    // printf("Got phen: [");
+    // for (auto f : phen.data)
+    // {
+    //     printf("%f, ", f);
+    // }
+    // printf("]\n");
+    // fflush(stdout);
 
     if (phen.get_num_samples() != dims.get_num_samples())
     {
@@ -90,7 +90,7 @@ void block_diagonal_pc(int argc, char *argv[])
     std::cout << "Loading blocks" << std::endl;
     std::vector<MarkerBlock> blocks = read_blocks_from_file(block_path);
 
-    std::cout << "Found " << blocks.size() << " blocks." << std::endl;
+    std::cout << "Found " << blocks.size() << " blocks" << std::endl;
 
     // size_t num_individuals = dims.get_num_samples();
     std::vector<float> Th = threshold_array(num_individuals, alpha);
@@ -137,6 +137,30 @@ void block_diagonal_pc(int argc, char *argv[])
             marker_corr.data(),
             marker_phen_corr.data(),
             phen_corr.data());
+
+        printf("m x m corrs: [");
+        for (auto f : marker_corr)
+        {
+            printf("%f, ", f);
+        }
+        printf("]\n");
+        fflush(stdout);
+
+        printf("m x p corrs: [");
+        for (auto f : marker_phen_corr)
+        {
+            printf("%f, ", f);
+        }
+        printf("]\n");
+        fflush(stdout);
+
+        printf("p x p corrs: [");
+        for (auto f : phen_corr)
+        {
+            printf("%f, ", f);
+        }
+        printf("]\n");
+        fflush(stdout);
 
         std::cout << "Reformating corrs to n2 format" << std::endl;
 
