@@ -3,12 +3,13 @@
 #include <mps/io.h>
 #include <mps/phen.h>
 
+// TODO: use some phenotype format that has ids of individuals, as in bed.
 // Return only the phenotype value part of each line
 auto split_phen_line(std::string line) -> std::vector<float>
 {
     std::vector<std::string> full_line = split_line(line);
     std::vector<float> res;
-    for (size_t i = 2; i < full_line.size(); ++i)
+    for (size_t i = 0; i < full_line.size(); ++i)
     {
         res.push_back((float)atof(full_line[i].c_str()));
     }
