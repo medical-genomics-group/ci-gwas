@@ -105,6 +105,7 @@ void block_diagonal_pc(int argc, char *argv[])
 
     for (size_t bid = 0; bid < blocks.size(); bid++)
     {
+        std::cout << std::endl;
         std::cout << "Processing block #" << bid << std::endl;
 
         MarkerBlock block = blocks[bid];
