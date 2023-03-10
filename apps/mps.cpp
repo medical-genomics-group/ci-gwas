@@ -98,7 +98,7 @@ void block_diagonal_pc(int argc, char *argv[])
     std::cout << "Number of levels: " << NUMBER_OF_LEVELS << std::endl;
 
     std::cout << "Setting level thr for cuPC: " << std::endl;
-    for (int i = 0; i < NUMBER_OF_LEVELS; ++i)
+    for (int i = 0; i <= NUMBER_OF_LEVELS; ++i)
     {
         std::cout << "\t Level: " << i << " thr: " << Th[i] << std::endl;
     }
@@ -115,22 +115,6 @@ void block_diagonal_pc(int argc, char *argv[])
         std::vector<unsigned char> bedblock = read_block_from_bed(bfiles.bed(), block, dims);
         std::vector<float> means = read_floats_from_line_range(bfiles.means(), block.get_first_marker_ix(), block.get_last_marker_ix());
         std::vector<float> stds = read_floats_from_line_range(bfiles.stds(), block.get_first_marker_ix(), block.get_last_marker_ix());
-
-        printf("stds: [");
-        for (auto f : means)
-        {
-            printf("%f, ", f);
-        }
-        printf("]\n");
-        fflush(stdout);
-
-        printf("means: [");
-        for (auto f : stds)
-        {
-            printf("%f, ", f);
-        }
-        printf("]\n");
-        fflush(stdout);
 
         // allocate correlation result arrays
         size_t marker_corr_mat_size = num_markers * (num_markers - 1) / 2;
@@ -153,30 +137,6 @@ void block_diagonal_pc(int argc, char *argv[])
             marker_corr.data(),
             marker_phen_corr.data(),
             phen_corr.data());
-
-        printf("m x m corrs: [");
-        for (auto f : marker_corr)
-        {
-            printf("%f, ", f);
-        }
-        printf("]\n");
-        fflush(stdout);
-
-        printf("m x p corrs: [");
-        for (auto f : marker_phen_corr)
-        {
-            printf("%f, ", f);
-        }
-        printf("]\n");
-        fflush(stdout);
-
-        printf("p x p corrs: [");
-        for (auto f : phen_corr)
-        {
-            printf("%f, ", f);
-        }
-        printf("]\n");
-        fflush(stdout);
 
         std::cout << "Reformating corrs to n2 format" << std::endl;
 
@@ -235,8 +195,6 @@ void block_diagonal_pc(int argc, char *argv[])
                 ++sq_col_ix;
             }
         }
-
-        write_floats_to_binary(sq_corrs.data(), sq_corrs.size(), bed_base_path + "block_corrs.bin");
 
         std::cout << "Running cuPC" << std::endl;
 
