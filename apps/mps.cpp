@@ -84,6 +84,15 @@ void block_diagonal_pc(int argc, char *argv[])
 
     std::cout << "Found " << blocks.size() << " blocks" << std::endl;
 
+    for (auto b : blocks)
+    {
+        if (b.get_first_marker_ix() >= dims.get_num_markers() || (b.get_last_marker_ix() >= dims.get_num_markers()))
+        {
+            std::cout << "block out of bounds with first_ix: " << b.get_first_marker_ix() << " last_ix: " << b.get_last_marker_ix() << std::endl;
+            exit(1);
+        }
+    }
+
     // size_t num_individuals = dims.get_num_samples();
     std::vector<float> Th = threshold_array(num_individuals, alpha);
 
@@ -112,6 +121,12 @@ void block_diagonal_pc(int argc, char *argv[])
         std::vector<unsigned char> bedblock = read_block_from_bed(bfiles.bed(), block, dims);
         std::vector<float> means = read_floats_from_line_range(bfiles.means(), block.get_first_marker_ix(), block.get_last_marker_ix());
         std::vector<float> stds = read_floats_from_line_range(bfiles.stds(), block.get_first_marker_ix(), block.get_last_marker_ix());
+
+        if ((means.size() != block.block_size()) || (stds.size() != block.block_size()))
+        {
+            std::cout << "block size and number of means or stds differ" << std::endl;
+            exit(1);
+        }
 
         printf("means: [");
         for (auto f : means)
