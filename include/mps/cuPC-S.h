@@ -102,7 +102,7 @@ __device__ void pseudoinversel13(float M2[][13], float M2Inv[][13], float v[][13
                                  float *w, float res1[][13]);
 __device__ void pseudoinversel14(float M2[][14], float M2Inv[][14], float v[][14], float *rv1,
                                  float *w, float res1[][14]);
-extern "C" void Skeleton(float *C, int *P, int *G, float *Th, int *l, int *maxlevel, float *pMax,
+extern "C" void Skeleton(float *C, int *P, int *G, float *Th, int *l, const int *maxlevel, float *pMax,
                          int *SepSet);
 
 __global__ void Initialize(int *Mat, int n);

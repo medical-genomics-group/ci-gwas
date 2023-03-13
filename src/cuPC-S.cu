@@ -33,7 +33,7 @@ void print_degree_distribution(int *GPrime_cuda, int n)
     fflush(stdout);
 }
 
-void Skeleton(float *C, int *P, int *G, float *Th, int *l, int *maxlevel, float *pMax,
+void Skeleton(float *C, int *P, int *G, float *Th, int *l, const int *maxlevel, float *pMax,
               int *SepSet)
 {
     float *C_cuda; // Copy of C array in GPU
