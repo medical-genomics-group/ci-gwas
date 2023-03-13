@@ -63,10 +63,10 @@ int count_lines(const std::string file_path)
     return number_of_lines;
 }
 
-auto make_path(const std::string out_dir, const std::string chr_id, const std::string suffix)
+auto make_path(const std::string out_dir, const std::string file_stem, const std::string suffix)
     -> std::string
 {
-    std::string filename = chr_id + suffix;
+    std::string filename = file_stem + suffix;
     std::string outpath;
     if (out_dir.empty())
     {
