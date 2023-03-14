@@ -217,6 +217,36 @@ void write_stds(
 }
 
 void write_single_column_file_with_suffix(
+    const std::vector<int> &data,
+    const std::string outpath)
+{
+    std::ofstream fout;
+    fout.open(outpath, std::ios::out);
+
+    for (size_t i = 0; i < data.size(); ++i)
+    {
+        fout << data[i] << std::endl;
+    }
+
+    fout.close();
+}
+
+void write_single_column_file_with_suffix(
+    const std::vector<float> &data,
+    const std::string outpath)
+{
+    std::ofstream fout;
+    fout.open(outpath, std::ios::out);
+
+    for (size_t i = 0; i < data.size(); ++i)
+    {
+        fout << data[i] << std::endl;
+    }
+
+    fout.close();
+}
+
+void write_single_column_file_with_suffix(
     const std::vector<float> &data, const std::string out_dir, const std::string file_stem, const std::string suffix)
 {
     std::string outpath = make_path(out_dir, file_stem, suffix);

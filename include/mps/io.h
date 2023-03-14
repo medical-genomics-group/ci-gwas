@@ -48,6 +48,11 @@ class BfilesBase
         return base + ".fam";
     }
 
+    std::string modes() const
+    {
+        return base + ".modes";
+    }
+
     bool has_valid_bed_prefix() const
     {
         std::vector<unsigned char> buffer(BED_PREFIX_BYTES);
@@ -198,6 +203,14 @@ void write_stds(
     const std::vector<float> &chr_marker_stds,
     const std::string out_dir,
     const std::string chr_id);
+
+void write_single_column_file_with_suffix(
+    const std::vector<float> &data,
+    const std::string outpath);
+
+void write_single_column_file_with_suffix(
+    const std::vector<int> &data,
+    const std::string outpath);
 
 void write_single_column_file_with_suffix(
     const std::vector<float> &data,
