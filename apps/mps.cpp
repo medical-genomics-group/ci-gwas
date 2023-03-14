@@ -36,7 +36,7 @@ usage: mps bdpc <.phen> <bfiles> <.blocks>
 
 arguments:
     .phen       path to standardized phenotype tsv
-    bfiles      stem of .bed, .means, .stds, .dims files
+    bfiles      stem of .bed, .means, .stds, .dim files
     .blocks     file with genomic block definitions
     alpha       significance level
     depth       max depth at which marker variables are kept as ancestors
@@ -69,7 +69,7 @@ void block_diagonal_pc(int argc, char *argv[])
 
     Phen phen = load_phen(phen_path);
     BfilesBase bfiles(bed_base_path);
-    BedDims dims(bfiles.dims());
+    BedDims dims(bfiles.dim());
 
     if (phen.get_num_samples() != dims.get_num_samples())
     {
@@ -403,7 +403,7 @@ Compute Pearson correlation between markers as sin(pi / 2 * tau-b) where tau is 
 usage: mps mcorrk <prepdir> <chr> <device_mem_gb>
 
 arguments:
-    prepdir Directory with `mps prep` output, i.e. .bed, .stds, .means and .dims files for each chromosome
+    prepdir Directory with `mps prep` output, i.e. .bed, .stds, .means and .dim files for each chromosome
     chr ID of the chromsome to be processed
     device_mem_gb   Amount of memory available on the GPU
 )";
@@ -426,7 +426,7 @@ void mcorrk(int argc, char *argv[])
     // TODO: figure out how to glob files and check that at least one .phen is present
     std::string out_dir = (std::string)argv[2];
     std::string chr_id = (std::string)argv[3];
-    std::string req_suffixes[2] = {".bed", ".dims"};
+    std::string req_suffixes[2] = {".bed", ".dim"};
     for (size_t i = 0; i < 2; ++i)
     {
         std::string fpath = make_path(out_dir, chr_id, req_suffixes[i]);
@@ -438,14 +438,14 @@ void mcorrk(int argc, char *argv[])
     }
 
     // load data + check that file contents are valid
-    // .dims
+    // .dim
     // TODO: there is a lot more that can go wrong here, e.g. number of cols
-    std::string dims_path = make_path(out_dir, chr_id, ".dims");
+    std::string dims_path = make_path(out_dir, chr_id, ".dim");
     std::vector<int> dims = read_ints_from_lines(dims_path);
     size_t ndims = dims.size();
     if (ndims != 2)
     {
-        std::cout << "Invalid .dims file: found " << ndims << "dimensions instead of two."
+        std::cout << "Invalid .dim file: found " << ndims << "dimensions instead of two."
                   << std::endl;
         exit(1);
     }
@@ -523,7 +523,7 @@ Compute Pearson correlation between markers
 usage: mps mcorrp <prepdir> <chr> <device_mem_gb>
 
 arguments:
-    prepdir Directory with `mps prep` output, i.e. .bed, .stds, .means and .dims files for each chromosome
+    prepdir Directory with `mps prep` output, i.e. .bed, .stds, .means and .dim files for each chromosome
     chr ID of the chromsome to be processed
     device_mem_gb   Amount of memory available on the GPU
 )";
@@ -546,7 +546,7 @@ void mcorrp(int argc, char *argv[])
     // TODO: figure out how to glob files and check that at least one .phen is present
     std::string out_dir = (std::string)argv[2];
     std::string chr_id = (std::string)argv[3];
-    std::string req_suffixes[4] = {".bed", ".dims", ".means", ".stds"};
+    std::string req_suffixes[4] = {".bed", ".dim", ".means", ".stds"};
     for (size_t i = 0; i < 4; ++i)
     {
         std::string fpath = make_path(out_dir, chr_id, req_suffixes[i]);
@@ -558,14 +558,14 @@ void mcorrp(int argc, char *argv[])
     }
 
     // load data + check that file contents are valid
-    // .dims
+    // .dim
     // TODO: there is a lot more that can go wrong here, e.g. number of cols
-    std::string dims_path = make_path(out_dir, chr_id, ".dims");
+    std::string dims_path = make_path(out_dir, chr_id, ".dim");
     std::vector<int> dims = read_ints_from_lines(dims_path);
     size_t ndims = dims.size();
     if (ndims != 2)
     {
-        std::cout << "Invalid .dims file: found " << ndims << "dimensions instead of two."
+        std::cout << "Invalid .dim file: found " << ndims << "dimensions instead of two."
                   << std::endl;
         exit(1);
     }
@@ -646,7 +646,7 @@ is computed as a banded matrix.
 usage: mps scorr <prepdir> <chr> <device_mem_gb> <distance_threshold> <.phen>
 
 arguments:
-    prepdir Directory with `mps prep` output, i.e. .bed, .stds, .means and .dims files for each chromosome
+    prepdir Directory with `mps prep` output, i.e. .bed, .stds, .means and .dim files for each chromosome
     chr                 ID of the chromsome to be processed
     device_mem_gb       Amount of memory available on the GPU
     distance_threshold  Maximal distance between markers up to which correlations are computed (in bases)
@@ -668,7 +668,7 @@ void scorr(int argc, char *argv[])
     // TODO: figure out how to glob files and check that at least one .phen is present
     std::string out_dir = (std::string)argv[2];
     std::string chr_id = (std::string)argv[3];
-    std::string req_suffixes[5] = {".bed", ".dims", ".means", ".stds", ".bim"};
+    std::string req_suffixes[5] = {".bed", ".dim", ".means", ".stds", ".bim"};
     for (size_t i = 0; i < 5; ++i)
     {
         std::string fpath = make_path(out_dir, chr_id, req_suffixes[i]);
@@ -683,14 +683,14 @@ void scorr(int argc, char *argv[])
     size_t corr_width = num_markers_within_distance(make_path(out_dir, chr_id, ".bim"), dthr);
     printf("Determined corr width: %u \n", corr_width);
 
-    // .dims
+    // .dim
     // TODO: there is a lot more that can go wrong here, e.g. number of cols
-    std::string dims_path = make_path(out_dir, chr_id, ".dims");
+    std::string dims_path = make_path(out_dir, chr_id, ".dim");
     std::vector<int> dims = read_ints_from_lines(dims_path);
     size_t ndims = dims.size();
     if (ndims != 2)
     {
-        std::cout << "Invalid .dims file: found " << ndims << "dimensions instead of two."
+        std::cout << "Invalid .dim file: found " << ndims << "dimensions instead of two."
                   << std::endl;
         exit(1);
     }
@@ -786,7 +786,7 @@ Compute correlations between markers and phenotypes.
 usage: mps corr <prepdir> <chr> <device_mem_gb> <.phen>...
 
 arguments:
-    prepdir Directory with `mps prep` output, i.e. .bed, .stds, .means and .dims files for each chromosome
+    prepdir Directory with `mps prep` output, i.e. .bed, .stds, .means and .dim files for each chromosome
     chr ID of the chromsome to be processed
     device_mem_gb   Amount of memory available on the GPU
     .phen   Path to .phen file with phenotype values, sorted in the same way as genotype info in the original bed file
@@ -809,7 +809,7 @@ void corr(int argc, char *argv[])
     // TODO: figure out how to glob files and check that at least one .phen is present
     std::string out_dir = (std::string)argv[2];
     std::string chr_id = (std::string)argv[3];
-    std::string req_suffixes[4] = {".bed", ".dims", ".means", ".stds"};
+    std::string req_suffixes[4] = {".bed", ".dim", ".means", ".stds"};
     for (size_t i = 0; i < 4; ++i)
     {
         std::string fpath = make_path(out_dir, chr_id, req_suffixes[i]);
@@ -833,14 +833,14 @@ void corr(int argc, char *argv[])
     }
 
     // load data + check that file contents are valid
-    // .dims
+    // .dim
     // TODO: there is a lot more that can go wrong here, e.g. number of cols
-    std::string dims_path = make_path(out_dir, chr_id, ".dims");
+    std::string dims_path = make_path(out_dir, chr_id, ".dim");
     std::vector<int> dims = read_ints_from_lines(dims_path);
     size_t ndims = dims.size();
     if (ndims != 2)
     {
-        std::cout << "Invalid .dims file: found " << ndims << "dimensions instead of two."
+        std::cout << "Invalid .dim file: found " << ndims << "dimensions instead of two."
                   << std::endl;
         exit(1);
     }
