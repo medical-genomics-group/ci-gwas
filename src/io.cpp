@@ -10,20 +10,6 @@
 #include <sstream>
 #include <sys/stat.h>
 
-BedDims::BedDims(std::string path)
-{
-    std::vector<int> dims = read_ints_from_lines(path);
-    size_t ndims = dims.size();
-    if (ndims != 2)
-    {
-        std::cout << "Invalid .dim file: found " << ndims << "dimensions instead of two."
-                  << std::endl;
-        exit(1);
-    }
-    num_samples = dims[0];
-    num_markers = dims[1];
-}
-
 std::vector<std::string> split_line(std::string line)
 {
     std::vector<std::string> res;
@@ -85,15 +71,15 @@ auto make_path(const std::string out_dir, const std::string file_stem, const std
 
 std::vector<MarkerBlock> read_blocks_from_file(const std::string path)
 {
-    std::string block_line[2];
+    std::string block_line[3];
     std::string line;
     std::ifstream block_file(path);
     std::vector<MarkerBlock> blocks;
 
     while (std::getline(block_file, line))
     {
-        split_line(line, block_line, 2);
-        blocks.push_back(MarkerBlock(std::stoi(block_line[0]), std::stoi(block_line[1])));
+        split_line(line, block_line, 3);
+        blocks.push_back(MarkerBlock((std::string)block_line[0], std::stoi(block_line[1]), std::stoi(block_line[2])));
     }
 
     return blocks;
