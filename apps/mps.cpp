@@ -354,47 +354,28 @@ Prepare input (PLINK) .bed file for mps.
 The file is split by chromosome, NaNs are imputed to column medians
 and column means and standard deviations are computed.
 
-usage: mps prep <.bed> <.bim> <.fam> <outdir> <mem_gb>
+usage: mps prep <.bfiles>
 
 arguments:
-    .bed    (PLINK) .bed file with marker data
-    .bim    (PLINK) .bim file with allele information
-    .fam    (PLINK) .fam file with sample information
-    outdir  output directory for processed .bed
-    mem_gb  maximal amount of memory available in Gb
+    .bfiles filestem of .bed, .bim, .fam fileset
 )";
+
+const int PREP_NARGS = 3;
 
 // TODO: this should also parse .phen files and make sure that no info is missing and order checks
 // out
 void prep_bed(int argc, char *argv[])
 {
     // check if enough args present
-    if ((argc != 7) || (argv[2] == "--help") || (argv[2] == "-h"))
+    if ((argc != PREP_NARGS) || (argv[2] == "--help") || (argv[2] == "-h"))
     {
         std::cout << PREP_USAGE << std::endl;
         exit(1);
     }
 
-    // check if files and dirs exist
-    for (size_t i = 2; i < 6; ++i)
-    {
-        if (!path_exists((std::string)argv[i]))
-        {
-            std::cout << "file or directory found: " << argv[i] << std::endl;
-            exit(1);
-        }
-    }
-
-    int mem_gb = stoi((std::string)argv[6]);
     std::string bed_path = (std::string)argv[2];
-    std::string bim_path = (std::string)argv[3];
-    std::string fam_path = (std::string)argv[4];
-    std::string out_dir = (std::string)argv[5];
-
-    // run prep
-    prep_bed(bed_path, bim_path, fam_path, out_dir, mem_gb);
-
-    std::cout << "Preprocessing output files written to: " << out_dir << std::endl;
+    check_bed_path(bed_path);
+    prep_bed_no_impute(BfilesBase(bed_path));
 }
 
 const std::string MCORRK_USAGE = R"(
