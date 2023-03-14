@@ -1,20 +1,21 @@
+#include <algorithm>
 #include <mps/parent_set.h>
 #include <queue>
-#include <set>
+#include <unordered_set>
 #include <vector>
 
-std::set<int> parent_set(
+std::vector<int> parent_set(
     const std::vector<int> &G,
     const size_t num_var,
     const size_t num_markers,
     const int max_depth)
 {
-    std::set<int> global_parent_set;
+    std::unordered_set<int> global_parent_set;
 
     // do bfs, starting from each of the markers.
     for (int start_ix = num_markers; start_ix < num_var; start_ix++)
     {
-        std::set<int> curr_parent_set;
+        std::unordered_set<int> curr_parent_set;
         std::queue<int> q;
         std::queue<int> next_q;
         curr_parent_set.insert(start_ix);
@@ -44,5 +45,14 @@ std::set<int> parent_set(
         }
     }
 
-    return global_parent_set;
+    std::vector<int> res;
+    res.reserve(global_parent_set.size());
+    for (auto it = global_parent_set.begin(); it != global_parent_set.end();)
+    {
+        res.push_back(std::move(global_parent_set.extract(it++).value()));
+    }
+
+    std::sort(res.begin(), res.end());
+
+    return res;
 }
