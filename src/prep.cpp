@@ -152,9 +152,7 @@ void compute_bed_col_stats_impute(
     modes.push_back(mode);
 }
 
-void prep_bed_no_impute(
-    BfilesBase bfiles,
-    std::string out_dir)
+void prep_bed_no_impute(BfilesBase bfiles)
 {
     if (!bfiles.has_valid_bed_prefix())
     {
