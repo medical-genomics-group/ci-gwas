@@ -185,12 +185,14 @@ std::vector<float> read_floats_from_binary(const std::string path)
 std::vector<unsigned char> read_block_from_bed(
     std::string path,
     MarkerBlock block,
-    BedDims dims)
+    BedDims dims,
+    bimInfo bim)
 {
+    size_t chr_start = bim.chr_start_global_ix(block.get_chr_id());
     size_t block_bytes = dims.bytes_per_col() * block.block_size();
     std::vector<unsigned char> res(block_bytes, 0);
     std::ifstream fin(path, std::ios::binary);
-    fin.seekg(BED_PREFIX_BYTES + dims.bytes_per_col() * block.get_first_marker_ix());
+    fin.seekg(BED_PREFIX_BYTES + chr_start + dims.bytes_per_col() * block.get_first_marker_ix());
     fin.read(reinterpret_cast<char *>(res.data()), block_bytes);
     return res;
 }
@@ -270,7 +272,7 @@ void check_path(const std::string path)
 
 void check_prepped_bed_path(const std::string basepath)
 {
-    std::string req_suffixes[4] = {".bed", ".dims", ".means", ".stds"};
+    std::string req_suffixes[5] = {".bed", ".dims", ".means", ".stds", ".bim"};
     for (auto &suffix : req_suffixes)
     {
         check_path(basepath + suffix);
