@@ -111,11 +111,11 @@ __global__ void bed_marker_phen_corr_pearson(
 
     float thread_sum_mv_phen = 0.0;
     float thread_sum_phen = 0.0;
-    float thread_sum_valid = 0.0;
+    float thread_num_valid = 0.0;
 
-    __shared__ float thread_sums_mv_phen[NUMTHREADS];
-    __shared__ float thread_sums_phen[NUMTHREADS];
-    __shared__ float thread_sums_valid[NUMTHREADS];
+    __shared__ float sums_mv_phen[NUMTHREADS];
+    __shared__ float sums_phen[NUMTHREADS];
+    __shared__ float nums_valid[NUMTHREADS];
 
     for (size_t i = tix; i < col_len_bytes; i += NUMTHREADS)
     {
@@ -130,13 +130,13 @@ __global__ void bed_marker_phen_corr_pearson(
 
             thread_sum_mv_phen += valid_op * mv_val * phen_val;
             thread_sum_phen += valid_op * phen_val;
-            thread_sum_valid += valid_op;
+            thread_num_valid += valid_op;
         }
     }
 
-    thread_sums_mv_phen[tix] = thread_sum_mv_phen;
-    thread_sums_phen[tix] = thread_sum_phen;
-    thread_sums_valid[tix] = thread_sum_valid;
+    sums_mv_phen[tix] = thread_sum_mv_phen;
+    sums_phen[tix] = thread_sum_phen;
+    nums_valid[tix] = thread_num_valid;
 
     __syncthreads();
     if (tix == 0)
@@ -146,9 +146,9 @@ __global__ void bed_marker_phen_corr_pearson(
         float s_valid = 0.0;
         for (size_t i = 0; i < NUMTHREADS; i++)
         {
-            s_mv_phen += thread_sums_mv_phen[i];
-            s_phen += thread_sums_phen[i];
-            s_valid += thread_sums_valid[i];
+            s_mv_phen += sums_mv_phen[i];
+            s_phen += sums_phen[i];
+            s_valid += nums_valid[i];
         }
 
         results[lin_ix] = (s_mv_phen - marker_mean[mv_ix] * s_phen) /
@@ -167,25 +167,33 @@ __global__ void phen_corr_pearson(
     size_t col_start_b = col * num_individuals;
 
     float thread_sum = 0.0;
-    __shared__ float thread_sums[NUMTHREADS];
+    float thread_num_valid = 0.0;
+
+    __shared__ float sums[NUMTHREADS];
+    __shared__ float nums_valid[NUMTHREADS];
     for (size_t i = tx; i < num_individuals; i += NUMTHREADS)
     {
         float val_a = phen_vals[(col_start_a + i)];
         float val_b = phen_vals[(col_start_b + i)];
-        thread_sum += val_a * val_b;
+        float valid_op = !(isnanf(val_a) || isnanf(val_b));
+        thread_sum += valid_op * val_a * val_b;
+        thread_num_valid += valid_op;
     }
 
-    thread_sums[tx] = thread_sum;
+    sums[tx] = thread_sum;
+    nums_valid[tx] = thread_num_valid;
 
     __syncthreads();
     if (tx == 0)
     {
         float s = 0.0;
+        float n = 0.0;
         for (size_t i = 0; i < NUMTHREADS; i++)
         {
-            s += thread_sums[i];
+            s += sums[i];
+            n += nums_valid[i];
         }
-        results[bx] = s / (float)(num_individuals);
+        results[bx] = s / n;
     }
 }
 
