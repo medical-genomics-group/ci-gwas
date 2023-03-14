@@ -18,6 +18,10 @@ add_library(io STATIC io.cpp ${HEADER_LIST})
 target_include_directories(io PUBLIC ../include)
 target_compile_features(io PUBLIC cxx_std_17)
 
+add_library(block STATIC blocking.cpp ${HEADER_LIST})
+target_include_directories(block PUBLIC ../include)
+target_compile_features(block PUBLIC cxx_std_17)
+
 # add_library(cuPCsparse STATIC cu_test_helpers.cu cuPC-S-sparse.cu ${HEADER_LIST})
 # target_include_directories(cuPCsparse PUBLIC ../include)
 # target_compile_features(cuPCsparse PUBLIC cxx_std_17)
