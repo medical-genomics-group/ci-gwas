@@ -159,27 +159,27 @@ TEST(ParseBed, CorrectOutFilesGenerated)
         EXPECT_NEAR(nt_means_exp[i], nt_means_obs[i], 0.000001);
     }
 
-    // .dims
+    // .dim
     std::vector<int> one_dims_exp = {10, 3};
-    std::vector<int> one_dims_obs = read_ints_from_lines("../../tests/test_files/1.dims");
+    std::vector<int> one_dims_obs = read_ints_from_lines("../../tests/test_files/1.dim");
     for (size_t i = 0; i < 2; ++i)
     {
         EXPECT_EQ(one_dims_exp[i], one_dims_obs[i]);
     }
 
     std::vector<int> nt_dims_exp = {10, 2};
-    std::vector<int> nt_dims_obs = read_ints_from_lines("../../tests/test_files/19.dims");
+    std::vector<int> nt_dims_obs = read_ints_from_lines("../../tests/test_files/19.dim");
     for (size_t i = 0; i < 2; ++i)
     {
         EXPECT_EQ(nt_dims_exp[i], nt_dims_obs[i]);
     }
 
-    EXPECT_TRUE(std::filesystem::remove("../../tests/test_files/19.dims"));
+    EXPECT_TRUE(std::filesystem::remove("../../tests/test_files/19.dim"));
     EXPECT_TRUE(std::filesystem::remove("../../tests/test_files/19.bed"));
     EXPECT_TRUE(std::filesystem::remove("../../tests/test_files/19.means"));
     EXPECT_TRUE(std::filesystem::remove("../../tests/test_files/19.stds"));
     EXPECT_TRUE(std::filesystem::remove("../../tests/test_files/1.bed"));
-    EXPECT_TRUE(std::filesystem::remove("../../tests/test_files/1.dims"));
+    EXPECT_TRUE(std::filesystem::remove("../../tests/test_files/1.dim"));
     EXPECT_TRUE(std::filesystem::remove("../../tests/test_files/1.means"));
     EXPECT_TRUE(std::filesystem::remove("../../tests/test_files/1.stds"));
     EXPECT_TRUE(std::filesystem::remove("../../tests/test_files/19.bim"));
