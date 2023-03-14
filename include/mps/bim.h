@@ -34,6 +34,21 @@ struct bimInfo
             ++number_of_lines;
         }
     }
+
+    size_t chr_start_global_ix(std::string chr_id) const
+    {
+        size_t res = 0;
+        for (size_t i = 0; i < chr_ids.size(); i++)
+        {
+            if (chr_id == chr_ids[i])
+            {
+                return res;
+            }
+            res += num_markers_on_chr[i];
+        }
+        std::cout << "chr id does not match .bim content" << std::endl;
+        exit(1);
+    }
 };
 
 void split_bim_line(std::string line, std::string *buf);
