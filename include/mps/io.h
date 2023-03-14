@@ -5,6 +5,7 @@
 #include <vector>
 
 const int BED_PREFIX_BYTES = 3;
+const unsigned char BED_PREFIX_COL_MAJ[3] = {0x6c, 0x1b, 0x01};
 
 class BfilesBase
 {
@@ -46,6 +47,21 @@ class BfilesBase
     {
         return base + ".fam";
     }
+
+    bool has_valid_bed_prefix() const
+    {
+        std::vector<unsigned char> buffer(BED_PREFIX_BYTES);
+        std::ifstream bed_file(bed(), std::ios::binary);
+        bed_file.read(reinterpret_cast<char *>(buffer.data()), BED_PREFIX_BYTES);
+        for (size_t i = 0; i < BED_PREFIX_BYTES; ++i)
+        {
+            if (buffer[i] != BED_PREFIX_COL_MAJ[i])
+            {
+                return false;
+            }
+        }
+        return true;
+    }
 };
 
 class BedDims
@@ -84,6 +100,14 @@ class BedDims
     size_t bytes_per_col() const
     {
         return (num_samples + 3) / 4;
+    }
+
+    void to_file(std::string path) const
+    {
+        std::ofstream fout;
+        fout.open(path, std::ios::out);
+        fout << num_samples << "\t" << num_markers << std::endl;
+        fout.close();
     }
 };
 
