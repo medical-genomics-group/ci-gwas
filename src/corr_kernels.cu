@@ -211,38 +211,50 @@ __global__ void phen_corr_pearson_scan(
     size_t col_start_b = col * num_individuals;
 
     float thread_sum = 0.0;
-    __shared__ float thread_sums[NUMTHREADS];
+    float thread_num_valid = 0.0;
+
+    __shared__ float sums[NUMTHREADS];
+    __shared__ float nums_valid[NUMTHREADS];
+
     for (size_t i = tx; i < num_individuals; i += NUMTHREADS)
     {
         float val_a = phen_vals[(col_start_a + i)];
         float val_b = phen_vals[(col_start_b + i)];
-        thread_sum += val_a * val_b;
+        float valid_op = !(isnanf(val_a) || isnanf(val_b));
+        thread_sum += valid_op * val_a * val_b;
+        thread_num_valid += valid_op;
     }
 
-    thread_sums[tx] = thread_sum;
+    sums[tx] = thread_sum;
+    nums_valid[tx] = thread_num_valid;
 
     // consolidate thread sums
-    float tmp = 0.0;
+    float tmp_s = 0.0;
+    float tmp_n = 0.0;
     __syncthreads();
     for (int step = 1; step < NUMTHREADS; step = step * 2)
     {
         if (tx < step)
         {
-            tmp = thread_sums[tx];
+            tmp_s = sums[tx];
+            tmp_n = nums_valid[tx];
         }
         else
         {
-            tmp = thread_sums[tx] + thread_sums[tx - step];
+            tmp_s = sums[tx] + sums[tx - step];
+            tmp_n = nums_valid[tx] + nums_valid[tx - step];
         }
         __syncthreads();
-        thread_sums[tx] = tmp;
+        sums[tx] = tmp_s;
+        nums_valid[tx] = tmp_n;
         __syncthreads();
     }
 
     if (tx == 0)
     {
-        float s = thread_sums[NUMTHREADS - 1];
-        results[bx] = s / (float)(num_individuals);
+        float s = sums[NUMTHREADS - 1];
+        float n = nums_valid[NUMTHREADS - 1];
+        results[bx] = s / n;
     }
 }
 
