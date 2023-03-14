@@ -276,7 +276,10 @@ __global__ void bed_marker_corr_pearson(
     size_t col_start_b = col * col_len_bytes;
 
     float thread_sum_mvp = 0.0;
-    __shared__ float thread_sums_mvp[NUMTHREADS];
+    float thread_num_valid = 0.0;
+
+    __shared__ float sums_mvp[NUMTHREADS];
+    __shared__ float nums_valid[NUMTHREADS];
 
     for (size_t i = tix; i < col_len_bytes; i += NUMTHREADS)
     {
@@ -286,23 +289,27 @@ __global__ void bed_marker_corr_pearson(
         {
             float mv_a = gpu_bed_lut_a[(mv_byte_ix_a + j)];
             float mv_b = gpu_bed_lut_a[(mv_byte_ix_b + j)];
-            thread_sum_mvp += mv_a * mv_b;
+            float valid_op = gpu_bed_lut_b[(mv_byte_ix_a + j)] * gpu_bed_lut_b[(mv_byte_ix_b + j)];
+            thread_sum_mvp += valid_op * mv_a * mv_b;
+            thread_num_valid += valid_op;
         }
     }
 
-    thread_sums_mvp[tix] = thread_sum_mvp;
+    sums_mvp[tix] = thread_sum_mvp;
+    nums_valid[tix] = thread_num_valid;
 
     __syncthreads();
     // printf("[tix: %lu]: syncing... \n", tix);
     if (tix == 0)
     {
         float s_mvps = 0.0;
-        for (size_t i = 0; i < NUMTHREADS; i++)
+        float n = 0.0 for (size_t i = 0; i < NUMTHREADS; i++)
         {
-            s_mvps += thread_sums_mvp[i];
+            s_mvps += sums_mvp[i];
+            n += nums_valid[i];
         }
 
-        float num = (s_mvps / (float)num_individuals) - (marker_mean[row] * marker_mean[col]);
+        float num = (s_mvps / n) - (marker_mean[row] * marker_mean[col]);
         float denom = marker_std[row] * marker_std[col];
 
         results[blockIdx.x] = num / denom;
