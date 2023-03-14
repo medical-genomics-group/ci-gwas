@@ -17,7 +17,7 @@ class BfilesBase
     {
     }
 
-    std::string dims() const
+    std::string dim() const
     {
         return base + ".dim";
     }
