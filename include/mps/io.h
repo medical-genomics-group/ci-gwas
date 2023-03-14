@@ -246,6 +246,9 @@ std::vector<MarkerBlock> read_blocks_from_file(
 void check_prepped_bed_path(
     const std::string basepath);
 
+void check_bed_path(
+    const std::string basepath);
+
 void check_path(
     const std::string path);
 
