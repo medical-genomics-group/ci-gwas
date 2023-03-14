@@ -53,8 +53,6 @@ struct BimInfo
 
 void split_bim_line(std::string line, std::string *buf);
 
-auto prep_bim(std::string bim_path, std::string out_dir) -> BimInfo;
-
 int median(std::vector<int> &v);
 
 auto num_markers_within_distance(std::string bim_path, unsigned long dthr) -> size_t;

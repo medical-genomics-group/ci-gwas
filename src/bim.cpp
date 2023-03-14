@@ -46,36 +46,3 @@ auto num_markers_within_distance(std::string bim_path, unsigned long dthr) -> si
 
     return (size_t)median(marker_nums);
 }
-
-auto prep_bim(std::string bim_path, std::string out_dir) -> BimInfo
-{
-    BimInfo res;
-    res.number_of_lines = 0;
-    res.chr_ids = {};
-    res.num_markers_on_chr = {};
-
-    std::string bim_line[6];
-    std::string line;
-    std::ifstream bim(bim_path);
-    std::string outpath;
-    std::ofstream fout;
-
-    while (std::getline(bim, line))
-    {
-        split_bim_line(line, bim_line);
-        if ((res.number_of_lines == 0) || (bim_line[0] != res.chr_ids.back()))
-        {
-            fout.close();
-            outpath = make_path(out_dir, bim_line[0], ".bim");
-            fout.open(outpath, std::ios::out);
-
-            res.chr_ids.push_back(bim_line[0]);
-            res.num_markers_on_chr.push_back(0);
-        }
-        fout << line << std::endl;
-        ++res.num_markers_on_chr.back();
-        ++res.number_of_lines;
-    }
-
-    return res;
-}
