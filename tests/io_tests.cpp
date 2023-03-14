@@ -51,7 +51,7 @@ TEST(FloatToAndFromBinary, ExpectedResults)
 
 TEST(LoadBlocks, ExpectedResults)
 {
-    std::vector<MarkerBlock> exp{MarkerBlock(101, 202), MarkerBlock(303, 404), MarkerBlock(505, 606)};
+    std::vector<MarkerBlock> exp{MarkerBlock("1", 101, 202), MarkerBlock("1", 303, 404), MarkerBlock("1", 505, 606)};
     std::vector<MarkerBlock> obs = read_blocks_from_file("../../tests/test_files/test.blocks");
     for (size_t i = 0; i < exp.size(); i++)
     {
@@ -61,10 +61,23 @@ TEST(LoadBlocks, ExpectedResults)
 
 TEST(LoadBedBlock, ExpectedResults)
 {
-    MarkerBlock block(1, 2);
+    MarkerBlock block("1", 1, 2);
     BedDims dims(10, 5);
     std::vector<unsigned char> obs = read_block_from_bed("../../tests/test_files/small.bed", block, dims);
     std::vector<unsigned char> exp{0x38, 0x8e, 0xf3, 0xea, 0x8a, 0xff};
+    for (size_t i = 0; i < exp.size(); i++)
+    {
+        EXPECT_EQ(exp[i], obs[i]);
+    }
+}
+
+TEST(LoadBedBlockSecondChr, ExpectedResults)
+{
+    MarkerBlock block("19", 0, 1);
+    BedDims dims(10, 5);
+    bimInfo bim("../../tests/test_files/small.bim");
+    std::vector<unsigned char> obs = read_block_from_bed("../../tests/test_files/small.bed", block, dims, bim);
+    std::vector<unsigned char> exp{0xb2, 0x2c, 0xfb, 0xcb, 0xb2, 0xfc};
     for (size_t i = 0; i < exp.size(); i++)
     {
         EXPECT_EQ(exp[i], obs[i]);
