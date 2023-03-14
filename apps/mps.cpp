@@ -5,6 +5,7 @@
 #include <mps/cuPC-S.h>
 #include <mps/cuPC_call_prep.h>
 #include <mps/io.h>
+#include <mps/parent_set.h>
 #include <mps/phen.h>
 #include <mps/prep.h>
 
@@ -15,6 +16,8 @@
 #include <string>
 #include <sys/stat.h>
 #include <vector>
+
+const int MAX_LEVEL = 14;
 
 /**
  * @brief Compute number of variables from upper triangular matrix (diag excluded)
@@ -32,14 +35,15 @@ Run cuPC on block diagonal genomic covariance matrix.
 usage: mps bdpc <.phen> <bfiles> <.blocks>
 
 arguments:
-    .phen       path to standardized phenotype csv
+    .phen       path to standardized phenotype tsv
     bfiles      stem of .bed, .means, .stds, .dims files
     .blocks     file with genomic block definitions
     alpha       significance level
-    num_samples number of individuals in data (this is for testing speed)
+    depth       max depth at which marker variables are kept as ancestors
+    outdir      outdir
 )";
 
-const int BDPC_NARGS = 7;
+const int BDPC_NARGS = 8;
 
 void block_diagonal_pc(int argc, char *argv[])
 {
@@ -49,19 +53,19 @@ void block_diagonal_pc(int argc, char *argv[])
         exit(1);
     }
 
-    std::cout << "Starting bdpc" << std::endl;
-
     std::string phen_path = argv[2];
     std::string bed_base_path = argv[3];
     std::string block_path = argv[4];
     float alpha = std::stod(argv[5]);
-    size_t num_individuals = (size_t)std::stoi(argv[6]);
+    int depth = std::stoi(argv[6]);
+    std::string outdir = (std::string)argv[7];
 
-    std::cout << "Checking input paths" << std::endl;
+    std::cout << "Checking paths" << std::endl;
 
     check_prepped_bed_path(bed_base_path);
     check_path(phen_path);
     check_path(block_path);
+    check_path(outdir);
 
     Phen phen = load_phen(phen_path);
     BfilesBase bfiles(bed_base_path);
@@ -73,6 +77,8 @@ void block_diagonal_pc(int argc, char *argv[])
         exit(1);
     }
 
+    bimInfo bim(bfiles.bim());
+    size_t num_individuals = dims.get_num_samples();
     size_t num_phen = phen.get_num_phen();
     // TODO: testcase for num_phen = 1;
     size_t phen_corr_mat_size = num_phen * (num_phen - 1) / 2;
@@ -118,7 +124,8 @@ void block_diagonal_pc(int argc, char *argv[])
         std::cout << "Loading bed data" << std::endl;
 
         // load block data
-        std::vector<unsigned char> bedblock = read_block_from_bed(bfiles.bed(), block, dims);
+        std::vector<unsigned char> bedblock = read_block_from_bed(bfiles.bed(), block, dims, bim);
+        // TODO: add offset due to previous chr in file
         std::vector<float> means = read_floats_from_line_range(bfiles.means(), block.get_first_marker_ix(), block.get_last_marker_ix());
         std::vector<float> stds = read_floats_from_line_range(bfiles.stds(), block.get_first_marker_ix(), block.get_last_marker_ix());
 
@@ -252,14 +259,40 @@ void block_diagonal_pc(int argc, char *argv[])
 
         // call cuPC
         int p = num_var;
-        int max_level = 14;
         const size_t sepset_size = p * p * 14;
         const size_t g_size = num_var * num_var;
         std::vector<float> pmax(g_size, 0.0);
         std::vector<int> G(g_size, 1);
         std::vector<int> sepset(sepset_size, 0);
         int l = 0;
-        Skeleton(sq_corrs.data(), &p, G.data(), Th.data(), &l, &max_level, pmax.data(), sepset.data());
+        Skeleton(sq_corrs.data(), &p, G.data(), Th.data(), &l, &MAX_LEVEL, pmax.data(), sepset.data());
+
+        // TODO:
+        // separate the following steps into new commands, instead here:
+        // save corrs, graph, sepsets to disc
+
+        std::cout << "Reducing data to phenotype parent sets" << std::endl;
+
+        std::vector<int> var_subset = parent_set(G, num_var, num_markers, 1);
+
+        std::vector<int> Gsub;
+        std::vector<int> sepsub;
+        std::vector<float> Csub;
+
+        for (auto i : var_subset)
+        {
+            for (auto j : var_subset)
+            {
+                Gsub.push_back(G[i * num_var + j]);
+                Csub.push_back(sq_corrs[i * num_var + j]);
+                for (int l = 0; l < MAX_LEVEL; l++)
+                {
+                    sepsub.push_back(sepset[(i * num_var + j) * MAX_LEVEL + l]);
+                }
+            }
+        }
+
+        std::cout << "Retained " << (var_subset.size() - num_phen) << " / " << num_markers << " markers" << std::endl;
     }
 }
 

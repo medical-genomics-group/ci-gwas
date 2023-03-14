@@ -12,6 +12,12 @@
 #include <string>
 #include <vector>
 
+void means_and_std_no_impute(
+    BfilesBase bfiles,
+    std::string out_dir)
+{
+}
+
 // Split .bed by chromosome, impute NaN to mode, compute col means and std
 void prep_bed(
     std::string bed_path,
