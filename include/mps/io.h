@@ -60,7 +60,16 @@ class BedDims
     {
     }
 
-    BedDims(std::string path);
+    BedDims(std::string path)
+    {
+        std::string dim_line[2];
+        std::string line;
+        std::ifstream dim_file(path);
+        std::getline(dim_file, line);
+        split_line(line, dim_line, 2);
+        num_samples = std::stoi(dim_line[0]);
+        num_markers = std::stoi(dim_line[1]);
+    }
 
     size_t get_num_markers() const
     {
