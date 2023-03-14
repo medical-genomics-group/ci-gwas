@@ -186,7 +186,7 @@ std::vector<unsigned char> read_block_from_bed(
     std::string path,
     MarkerBlock block,
     BedDims dims,
-    bimInfo bim)
+    BimInfo bim)
 {
     size_t chr_start = bim.chr_start_global_ix(block.get_chr_id());
     size_t block_bytes = dims.bytes_per_col() * block.block_size();

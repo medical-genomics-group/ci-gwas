@@ -77,7 +77,7 @@ void block_diagonal_pc(int argc, char *argv[])
         exit(1);
     }
 
-    bimInfo bim(bfiles.bim());
+    BimInfo bim(bfiles.bim());
     size_t num_individuals = dims.get_num_samples();
     size_t num_phen = phen.get_num_phen();
     // TODO: testcase for num_phen = 1;

@@ -47,9 +47,9 @@ auto num_markers_within_distance(std::string bim_path, unsigned long dthr) -> si
     return (size_t)median(marker_nums);
 }
 
-auto prep_bim(std::string bim_path, std::string out_dir) -> bimInfo
+auto prep_bim(std::string bim_path, std::string out_dir) -> BimInfo
 {
-    bimInfo res;
+    BimInfo res;
     res.number_of_lines = 0;
     res.chr_ids = {};
     res.num_markers_on_chr = {};

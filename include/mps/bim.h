@@ -6,13 +6,13 @@
 
 #define BIM_NUM_COLS 6
 
-struct bimInfo
+struct BimInfo
 {
     size_t number_of_lines;
     std::vector<std::string> chr_ids;
     std::vector<size_t> num_markers_on_chr;
 
-    bimInfo(std::string path)
+    BimInfo(std::string path)
     {
         number_of_lines = 0;
         chr_ids = {};
@@ -53,7 +53,7 @@ struct bimInfo
 
 void split_bim_line(std::string line, std::string *buf);
 
-auto prep_bim(std::string bim_path, std::string out_dir) -> bimInfo;
+auto prep_bim(std::string bim_path, std::string out_dir) -> BimInfo;
 
 int median(std::vector<int> &v);
 

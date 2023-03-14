@@ -12,10 +12,13 @@
 #include <string>
 #include <vector>
 
-void means_and_std_no_impute(
+void prep_bed_no_impute(
     BfilesBase bfiles,
     std::string out_dir)
 {
+    size_t num_individuals = count_lines(bfiles.fam());
+    BimInfo bim(bfiles.bim());
+    BedDims
 }
 
 // Split .bed by chromosome, impute NaN to mode, compute col means and std
@@ -27,7 +30,7 @@ void prep_bed(
     size_t mem_gb) // max memory used by this fn)
 {
     size_t num_individuals = count_lines(fam_path);
-    bimInfo bim_info = prep_bim(bim_path, out_dir);
+    BimInfo bim_info = prep_bim(bim_path, out_dir);
     size_t bed_block_size = (num_individuals + 3) / 4;
 
     for (size_t i = 0; i < bim_info.chr_ids.size(); ++i)

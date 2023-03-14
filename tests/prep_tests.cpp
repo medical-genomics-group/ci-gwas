@@ -32,12 +32,12 @@ TEST(SplitBimLine, ExpectedReturnVals)
 
 TEST(PrepBim, ExpectedReturnVals)
 {
-    bimInfo exp;
+    BimInfo exp;
     exp.number_of_lines = 5;
     exp.chr_ids = {"1", "19"};
     exp.num_markers_on_chr = {3, 2};
 
-    bimInfo obs = prep_bim("../../tests/test_files/small.bim", "../../tests/test_files");
+    BimInfo obs = prep_bim("../../tests/test_files/small.bim", "../../tests/test_files");
 
     EXPECT_EQ(obs.number_of_lines, exp.number_of_lines);
 

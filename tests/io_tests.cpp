@@ -75,7 +75,7 @@ TEST(LoadBedBlockSecondChr, ExpectedResults)
 {
     MarkerBlock block("19", 0, 1);
     BedDims dims(10, 5);
-    bimInfo bim("../../tests/test_files/small.bim");
+    BimInfo bim("../../tests/test_files/small.bim");
     std::vector<unsigned char> obs = read_block_from_bed("../../tests/test_files/small.bed", block, dims, bim);
     std::vector<unsigned char> exp{0xb2, 0x2c, 0xfb, 0xcb, 0xb2, 0xfc};
     for (size_t i = 0; i < exp.size(); i++)

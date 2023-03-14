@@ -126,7 +126,7 @@ std::vector<unsigned char> read_block_from_bed(
     std::string path,
     MarkerBlock block,
     BedDims dims,
-    bimInfo bim);
+    BimInfo bim);
 
 void split_line(
     std::string line,
