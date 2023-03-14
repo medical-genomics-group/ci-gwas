@@ -16,7 +16,7 @@ BedDims::BedDims(std::string path)
     size_t ndims = dims.size();
     if (ndims != 2)
     {
-        std::cout << "Invalid .dims file: found " << ndims << "dimensions instead of two."
+        std::cout << "Invalid .dim file: found " << ndims << "dimensions instead of two."
                   << std::endl;
         exit(1);
     }
@@ -253,7 +253,7 @@ void write_dims(
     const std::string out_dir,
     const std::string chr_id)
 {
-    std::string outpath = make_path(out_dir, chr_id, ".dims");
+    std::string outpath = make_path(out_dir, chr_id, ".dim");
     std::ofstream fout;
     fout.open(outpath, std::ios::out);
     fout << num_individuals << std::endl;
@@ -272,7 +272,16 @@ void check_path(const std::string path)
 
 void check_prepped_bed_path(const std::string basepath)
 {
-    std::string req_suffixes[5] = {".bed", ".dims", ".means", ".stds", ".bim"};
+    std::string req_suffixes[6] = {".bed", ".dim", ".means", ".stds", ".bim", ".fam"};
+    for (auto &suffix : req_suffixes)
+    {
+        check_path(basepath + suffix);
+    }
+}
+
+void check_bed_path(const std::string basepath)
+{
+    std::string req_suffixes[6] = {".bed", ".bim", ".fam"};
     for (auto &suffix : req_suffixes)
     {
         check_path(basepath + suffix);
