@@ -819,8 +819,6 @@ void cu_marker_corr_pearson_npn(
 }
 
 // Compute correlations between markers, markers and phenotypes, and between phenotypes.
-// Markers are expected to be in compressed .bed format, with NaNs removed and no leading magic
-// numbers.
 void cu_corr_pearson_npn(
     const unsigned char *marker_vals,
     const float *phen_vals,
@@ -865,7 +863,7 @@ void cu_corr_pearson_npn(
     HANDLE_ERROR(cudaMemcpy(gpu_marker_vals, marker_vals, marker_vals_bytes, cudaMemcpyHostToDevice));
     HANDLE_ERROR(cudaMalloc(&gpu_marker_corrs, marker_output_bytes));
 
-    bed_marker_corr_pearson_npn<<<blocks_per_grid, threads_per_block>>>(
+    bed_marker_corr_pearson_npn_scan<<<blocks_per_grid, threads_per_block>>>(
         gpu_marker_vals, num_markers, num_individuals, col_len_bytes, gpu_marker_corrs);
     CudaCheckError();
 
@@ -885,7 +883,7 @@ void cu_corr_pearson_npn(
     HANDLE_ERROR(cudaMemcpy(gpu_phen_vals, phen_vals, phen_vals_bytes, cudaMemcpyHostToDevice));
     HANDLE_ERROR(cudaMalloc(&gpu_marker_phen_corrs, marker_phen_output_bytes));
 
-    bed_marker_phen_corr_pearson<<<blocks_per_grid, threads_per_block>>>(
+    bed_marker_phen_corr_pearson_scan<<<blocks_per_grid, threads_per_block>>>(
         gpu_marker_vals,
         gpu_phen_vals,
         num_markers,
@@ -908,7 +906,7 @@ void cu_corr_pearson_npn(
     blocks_per_grid = phen_output_length;
     HANDLE_ERROR(cudaMalloc(&gpu_phen_corrs, phen_output_bytes));
 
-    phen_corr_pearson<<<blocks_per_grid, threads_per_block>>>(
+    phen_corr_pearson_scan<<<blocks_per_grid, threads_per_block>>>(
         gpu_phen_vals, num_individuals, num_phen, gpu_phen_corrs);
     CudaCheckError();
 

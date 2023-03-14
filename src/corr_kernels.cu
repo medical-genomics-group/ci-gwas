@@ -156,6 +156,89 @@ __global__ void bed_marker_phen_corr_pearson(
     }
 }
 
+__global__ void bed_marker_phen_corr_pearson_scan(
+    const unsigned char *marker_vals,
+    const float *phen_vals,
+    const size_t num_markers,
+    const size_t num_individuals,
+    const size_t num_phen,
+    const size_t col_len_bytes,
+    const float *marker_mean,
+    const float *marker_std,
+    float *results)
+{
+    size_t lin_ix = blockIdx.x;
+    size_t mv_ix = lin_ix / num_phen;
+    size_t phen_ix = lin_ix - (num_phen * mv_ix);
+    size_t mv_start_ix = mv_ix * col_len_bytes;
+    size_t phen_start_ix = phen_ix * num_individuals;
+
+    float thread_sum_mv_phen = 0.0;
+    float thread_sum_phen = 0.0;
+    float thread_num_valid = 0.0;
+
+    __shared__ float sums_mv_phen[NUMTHREADS];
+    __shared__ float sums_phen[NUMTHREADS];
+    __shared__ float nums_valid[NUMTHREADS];
+
+    for (size_t i = tx; i < col_len_bytes; i += NUMTHREADS)
+    {
+        size_t curr_mv_byte_ix = 4 * (size_t)(marker_vals[mv_start_ix + i]);
+        for (size_t j = 0; (j < 4) && (i * 4 + j < num_individuals); j++)
+        {
+            float mv_valid = gpu_bed_lut_b[(curr_mv_byte_ix + j)];
+            float mv_val = gpu_bed_lut_a[(curr_mv_byte_ix + j)];
+            float phen_val = phen_vals[(phen_start_ix + (4 * i) + j)];
+            float phen_val_valid = !isnanf(phen_val);
+            float valid_op = mv_valid * phen_val_valid;
+
+            thread_sum_mv_phen += valid_op * mv_val * phen_val;
+            thread_sum_phen += valid_op * phen_val;
+            thread_num_valid += valid_op;
+        }
+    }
+
+    sums_mv_phen[tx] = thread_sum_mv_phen;
+    sums_phen[tx] = thread_sum_phen;
+    nums_valid[tx] = thread_num_valid;
+
+    __syncthreads();
+    // consolidate thread_sums
+    float tmp_mv_phen = 0.0;
+    float tmp_phen = 0.0;
+    float tmp_n = 0.0;
+    for (int step = 1; step < NUMTHREADS; step = step * 2)
+    {
+        if (tx < step)
+        {
+            tmp_mv_phen = sums_mv_phen[tx];
+            tmp_phen = sums_phen[tx];
+            tmp_n = nums_valid[tx];
+        }
+        else
+        {
+            tmp_mv_phen = sums_mv_phen[tx] + sums_mv_phen[tx - step];
+            tmp_phen = sums_phen[tx] + sums_phen[tx - step];
+            tmp_n = nums_valid[tx] + nums_valid[tx - step];
+        }
+        __syncthreads();
+        sums_mv_phen[tx] = tmp_mv_phen;
+        sums_phen[tx] = tmp_phen;
+        nums_valid[tx] = tmp_n;
+        __syncthreads();
+    }
+
+    if (tx == 0)
+    {
+        float s_mv_phen = sums_mv_phen[NUMTHREADS - 1];
+        float s_phen = sums_phen[NUMTHREADS - 1];
+        float n = nums_valid[NUMTHREADS - 1];
+
+        results[lin_ix] = (s_mv_phen - marker_mean[mv_ix] * s_phen) /
+                          (n * marker_std[mv_ix]);
+    }
+}
+
 // Compute Pearson's r between a pair of standardized phenotype vectors.
 __global__ void phen_corr_pearson(
     const float *phen_vals, const size_t num_individuals, const size_t num_phen, float *results)
@@ -369,6 +452,94 @@ __global__ void bed_marker_corr_pearson_npn(
                 s[j] += thread_sums[i][j];
             }
         }
+        float p =
+            ((s[0] * (s[4] + s[5] + s[7] + s[8])) + (s[1] * (s[5] + s[8])) +
+             (s[3] * (s[7] + s[8])) + (s[4] * s[8]));
+        float q =
+            ((s[1] * (s[3] + s[6])) + (s[2] * (s[3] + s[4] + s[6] + s[7])) + (s[4] * s[6]) +
+             (s[5] * (s[6] + s[7])));
+        float t =
+            ((s[0] * (s[1] + s[2])) + (s[1] * s[2]) + (s[3] * (s[4] + s[5])) + (s[4] * s[5]) +
+             (s[6] * (s[7] + s[8])) + (s[7] * s[8]));
+        float u =
+            ((s[0] * (s[3] + s[6])) + (s[1] * (s[4] + s[7])) + (s[2] * (s[5] + s[8])) +
+             (s[3] * s[6]) + (s[4] * s[7]) + (s[5] * s[8]));
+
+        float kendall_corr = (p - q) / sqrt((p + q + t) * (p + q + u));
+
+        results[blockIdx.x] = sin(M_PI / 2 * kendall_corr);
+    }
+}
+
+__global__ void bed_marker_corr_pearson_npn_scan(
+    const unsigned char *marker_vals,
+    const size_t num_markers,
+    const size_t num_individuals,
+    const size_t col_len_bytes,
+    float *results)
+{
+    size_t tix = threadIdx.x;
+    size_t row;
+    size_t col;
+    row_col_ix_from_linear_ix(blockIdx.x, num_markers, &row, &col);
+    size_t col_start_a = row * col_len_bytes;
+    size_t col_start_b = col * col_len_bytes;
+
+    float thread_sum[9] = {0.0};
+
+    __shared__ float thread_sums[NUMTHREADS][9];
+
+    for (size_t i = tix; i < col_len_bytes; i += NUMTHREADS)
+    {
+        size_t aix = 4 * (size_t)(marker_vals[col_start_a + i]);
+        size_t bix = 4 * (size_t)(marker_vals[col_start_b + i]);
+        for (size_t j = 0; (j < 4) && (i * 4 + j < num_individuals); j++)
+        {
+            float val_a = gpu_bed_lut_a[(aix + j)];
+            float val_b = gpu_bed_lut_a[(bix + j)];
+            float valid_op = gpu_bed_lut_b[(aix + j)] * gpu_bed_lut_b[(bix + j)];
+            size_t comp_ix = (size_t)((3 * val_a + val_b));
+            thread_sum[comp_ix] += valid_op * 1.f;
+        }
+    }
+
+    for (size_t i = 0; i < 9; i++)
+    {
+        thread_sums[tix][i] = thread_sum[i];
+    }
+
+    // consolidate thread_sums
+    // consolidate thread_sums
+    float tmp[9] = {0.0};
+    __syncthreads();
+    for (int step = 1; step < NUMTHREADS; step = step * 2)
+    {
+        if (tx < step)
+        {
+            for (size_t i = 0; i < 9; ++i)
+            {
+                tmp[i] = thread_sums[tx][i];
+            }
+        }
+        else
+        {
+            for (size_t i = 0; i < 9; ++i)
+            {
+                tmp[i] = thread_sums[tx][i] + thread_sums[tx - step][i];
+            }
+        }
+        __syncthreads();
+        for (size_t i = 0; i < 9; ++i)
+        {
+            thread_sums[tx][i] = tmp[i];
+        }
+        __syncthreads();
+    }
+
+    if (tix == 0)
+    {
+        // produce single sum
+        float *s = thread_sums[NUMTHREADS - 1];
         float p =
             ((s[0] * (s[4] + s[5] + s[7] + s[8])) + (s[1] * (s[5] + s[8])) +
              (s[3] * (s[7] + s[8])) + (s[4] * s[8]));
@@ -927,10 +1098,11 @@ __global__ void bed_marker_phen_corr_pearson_sparse_scan(
     sums_phen[tx] = thread_sum_phen;
     nums_valid[tx] = thread_num_valid;
 
+    __syncthreads();
     // consolidate thread_sums
     float tmp_mv_phen = 0.0;
     float tmp_phen = 0.0;
-    float tmp_n = 0.0 __syncthreads();
+    float tmp_n = 0.0;
     for (int step = 1; step < NUMTHREADS; step = step * 2)
     {
         if (tx < step)

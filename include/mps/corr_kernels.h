@@ -65,6 +65,13 @@ __global__ void bed_marker_corr_pearson_npn(
     const size_t col_len_bytes,
     float *results);
 
+__global__ void bed_marker_corr_pearson_npn_scan(
+    const unsigned char *marker_vals,
+    const size_t num_markers,
+    const size_t num_individuals,
+    const size_t col_len_bytes,
+    float *results);
+
 __global__ void bed_marker_corr_pearson(
     const unsigned char *marker_vals,
     const size_t num_markers,
@@ -101,6 +108,17 @@ __global__ void bed_marker_corr_pearson_npn_sparse_scan(
     const size_t num_individuals,
     const size_t col_len_bytes,
     const size_t row_in,
+    float *results);
+
+__global__ void bed_marker_phen_corr_pearson_scan(
+    const unsigned char *marker_vals,
+    const float *phen_vals,
+    const size_t num_markers,
+    const size_t num_individuals,
+    const size_t num_phen,
+    const size_t col_len_bytes,
+    const float *marker_mean,
+    const float *marker_std,
     float *results);
 
 __global__ void bed_marker_phen_corr_pearson_sparse(
