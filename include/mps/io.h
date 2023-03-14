@@ -1,5 +1,6 @@
 #pragma once
 
+#include <mps/bim.h>
 #include <string>
 #include <vector>
 
@@ -34,6 +35,11 @@ class BfilesBase
     std::string stds() const
     {
         return base + ".stds";
+    }
+
+    std::string bim() const
+    {
+        return base + ".bim";
     }
 };
 
@@ -70,18 +76,24 @@ class BedDims
 class MarkerBlock
 {
   private:
+    std::string chr_id;
     size_t first_marker_ix;
     size_t last_marker_ix;
 
   public:
-    MarkerBlock(size_t ix1, size_t ix2)
-        : first_marker_ix(ix1), last_marker_ix(ix2)
+    MarkerBlock(std::string chr, size_t ix1, size_t ix2)
+        : chr_id(chr), first_marker_ix(ix1), last_marker_ix(ix2)
     {
     }
 
     bool operator==(const MarkerBlock &other) const
     {
-        return (this->first_marker_ix == other.first_marker_ix) && (this->last_marker_ix == other.last_marker_ix);
+        return (this->chr_id == other.chr_id) && (this->first_marker_ix == other.first_marker_ix) && (this->last_marker_ix == other.last_marker_ix);
+    }
+
+    std::string get_chr_id() const
+    {
+        return chr_id;
     }
 
     size_t get_first_marker_ix() const
@@ -108,7 +120,8 @@ std::vector<float> read_floats_from_line_range(
 std::vector<unsigned char> read_block_from_bed(
     std::string path,
     MarkerBlock block,
-    BedDims dims);
+    BedDims dims,
+    bimInfo bim);
 
 void split_line(
     std::string line,
