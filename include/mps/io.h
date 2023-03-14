@@ -19,7 +19,7 @@ class BfilesBase
 
     std::string dims() const
     {
-        return base + ".dims";
+        return base + ".dim";
     }
 
     std::string bed() const
@@ -40,6 +40,11 @@ class BfilesBase
     std::string bim() const
     {
         return base + ".bim";
+    }
+
+    std::string fam() const
+    {
+        return base + ".fam";
     }
 };
 
