@@ -111,37 +111,48 @@ __global__ void bed_marker_phen_corr_pearson(
 
     float thread_sum_mv_phen = 0.0;
     float thread_sum_phen = 0.0;
+    float thread_sum_valid = 0.0;
+
     __shared__ float thread_sums_mv_phen[NUMTHREADS];
     __shared__ float thread_sums_phen[NUMTHREADS];
+    __shared__ float thread_sums_valid[NUMTHREADS];
+
     for (size_t i = tix; i < col_len_bytes; i += NUMTHREADS)
     {
         size_t curr_mv_byte_ix = 4 * (size_t)(marker_vals[mv_start_ix + i]);
         for (size_t j = 0; (j < 4) && (i * 4 + j < num_individuals); j++)
         {
+            float mv_valid = gpu_bed_lut_b[(curr_mv_byte_ix + j)];
             float mv_val = gpu_bed_lut_a[(curr_mv_byte_ix + j)];
             float phen_val = phen_vals[(phen_start_ix + (4 * i) + j)];
+            float phen_val_valid = !isnanf(phen_val);
+            float valid_op = mv_valid * phen_val_valid;
 
-            thread_sum_mv_phen += (mv_val * phen_val);
-            thread_sum_phen += phen_val;
+            thread_sum_mv_phen += valid_op * mv_val * phen_val;
+            thread_sum_phen += valid_op * phen_val;
+            thread_sum_valid += valid_op;
         }
     }
 
     thread_sums_mv_phen[tix] = thread_sum_mv_phen;
     thread_sums_phen[tix] = thread_sum_phen;
+    thread_sums_valid[tix] = thread_sum_valid;
 
     __syncthreads();
     if (tix == 0)
     {
         float s_mv_phen = 0.0;
         float s_phen = 0.0;
+        float s_valid = 0.0;
         for (size_t i = 0; i < NUMTHREADS; i++)
         {
             s_mv_phen += thread_sums_mv_phen[i];
             s_phen += thread_sums_phen[i];
+            s_valid += thread_sums_valid[i];
         }
 
         results[lin_ix] = (s_mv_phen - marker_mean[mv_ix] * s_phen) /
-                          ((float)(num_individuals)*marker_std[mv_ix]);
+                          (s_valid * marker_std[mv_ix]);
     }
 }
 
