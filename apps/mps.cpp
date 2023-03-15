@@ -8,13 +8,13 @@
 #include <mps/parent_set.h>
 #include <mps/phen.h>
 #include <mps/prep.h>
+#include <sys/stat.h>
 
 #include <array>
 #include <cassert>
 #include <filesystem>
 #include <iostream>
 #include <string>
-#include <sys/stat.h>
 #include <vector>
 
 const int MAX_LEVEL = 14;
@@ -73,7 +73,7 @@ void block_diagonal_pc(int argc, char *argv[])
 
     if (phen.get_num_samples() != dims.get_num_samples())
     {
-        std::cout << "different num samples in phen and dims" << std::endl;
+        std::cerr << "different num samples in phen and dims" << std::endl;
         exit(1);
     }
 
@@ -92,9 +92,11 @@ void block_diagonal_pc(int argc, char *argv[])
 
     for (auto b : blocks)
     {
-        if (b.get_first_marker_ix() >= dims.get_num_markers() || (b.get_last_marker_ix() >= dims.get_num_markers()))
+        if (b.get_first_marker_ix() >= bim.num_markers_on_chr(b.get_chr_id()) ||
+            (b.get_last_marker_ix() >= bim.num_markers_on_chr(b.get_chr_id()))
         {
-            std::cout << "block out of bounds with first_ix: " << b.get_first_marker_ix() << " last_ix: " << b.get_last_marker_ix() << std::endl;
+            std::cerr << "block out of bounds with first_ix: " << b.get_first_marker_ix()
+                      << " last_ix: " << b.get_last_marker_ix() << std::endl;
             exit(1);
         }
     }
@@ -126,8 +128,12 @@ void block_diagonal_pc(int argc, char *argv[])
         // load block data
         std::vector<unsigned char> bedblock = read_block_from_bed(bfiles.bed(), block, dims, bim);
         // TODO: add offset due to previous chr in file
-        std::vector<float> means = read_floats_from_line_range(bfiles.means(), block.get_first_marker_ix(), block.get_last_marker_ix());
-        std::vector<float> stds = read_floats_from_line_range(bfiles.stds(), block.get_first_marker_ix(), block.get_last_marker_ix());
+        std::vector<float> means = read_floats_from_line_range(
+            bfiles.means(), block.get_first_marker_ix(), block.get_last_marker_ix()
+        );
+        std::vector<float> stds = read_floats_from_line_range(
+            bfiles.stds(), block.get_first_marker_ix(), block.get_last_marker_ix()
+        );
 
         if ((means.size() != block.block_size()) || (stds.size() != block.block_size()))
         {
@@ -171,7 +177,8 @@ void block_diagonal_pc(int argc, char *argv[])
             stds.data(),
             marker_corr.data(),
             marker_phen_corr.data(),
-            phen_corr.data());
+            phen_corr.data()
+        );
 
         // printf("m x m: [");
         // for (auto f : marker_corr)
@@ -265,7 +272,9 @@ void block_diagonal_pc(int argc, char *argv[])
         std::vector<int> G(g_size, 1);
         std::vector<int> sepset(sepset_size, 0);
         int l = 0;
-        Skeleton(sq_corrs.data(), &p, G.data(), Th.data(), &l, &MAX_LEVEL, pmax.data(), sepset.data());
+        Skeleton(
+            sq_corrs.data(), &p, G.data(), Th.data(), &l, &MAX_LEVEL, pmax.data(), sepset.data()
+        );
 
         // TODO:
         // separate the following steps into new commands, instead here:
@@ -292,7 +301,8 @@ void block_diagonal_pc(int argc, char *argv[])
             }
         }
 
-        std::cout << "Retained " << (var_subset.size() - num_phen) << " / " << num_markers << " markers" << std::endl;
+        std::cout << "Retained " << (var_subset.size() - num_phen) << " / " << num_markers
+                  << " markers" << std::endl;
     }
 }
 
@@ -473,27 +483,36 @@ void mcorrk(int argc, char *argv[])
         printf("arg4: %i \n", batch_nrows);
         printf("arg5: %p \n", marker_corr.data());
         printf("wtf1 \n");
-        printf("args: %p, %i, %i, %i, %p \n", marker_vals.data(), num_markers, num_individuals,
-               batch_nrows, marker_corr.data());
+        printf(
+            "args: %p, %i, %i, %i, %p \n",
+            marker_vals.data(),
+            num_markers,
+            num_individuals,
+            batch_nrows,
+            marker_corr.data()
+        );
         printf("wtf2 \n");
         printf("wtf3 \n");
-        cu_marker_corr_pearson_npn_batched(marker_vals.data(), num_markers, num_individuals,
-                                           batch_nrows, marker_corr.data());
+        cu_marker_corr_pearson_npn_batched(
+            marker_vals.data(), num_markers, num_individuals, batch_nrows, marker_corr.data()
+        );
     }
     else
     {
         printf("Calling correlation main\n");
         fflush(stdout);
         // compute correlations
-        cu_marker_corr_pearson_npn(marker_vals.data(), num_markers, num_individuals,
-                                   marker_corr.data());
+        cu_marker_corr_pearson_npn(
+            marker_vals.data(), num_markers, num_individuals, marker_corr.data()
+        );
     }
 
     printf("Writing results\n");
     fflush(stdout);
     // write results
-    write_floats_to_binary(marker_corr.data(), marker_corr_mat_size,
-                           make_path(out_dir, chr_id, "_marker_corrk.bin"));
+    write_floats_to_binary(
+        marker_corr.data(), marker_corr_mat_size, make_path(out_dir, chr_id, "_marker_corrk.bin")
+    );
 
     std::cout << "Correlation matrix written to: " << out_dir << std::endl;
 }
@@ -598,24 +617,37 @@ void mcorrp(int argc, char *argv[])
         printf("Device mem < required mem; Running tiled routine. \n");
         fflush(stdout);
 
-        cu_marker_corr_pearson_batched(marker_vals.data(), num_markers, num_individuals,
-                                       marker_means.data(), marker_stds.data(), batch_nrows,
-                                       marker_corr.data());
+        cu_marker_corr_pearson_batched(
+            marker_vals.data(),
+            num_markers,
+            num_individuals,
+            marker_means.data(),
+            marker_stds.data(),
+            batch_nrows,
+            marker_corr.data()
+        );
     }
     else
     {
         printf("Calling correlation main\n");
         fflush(stdout);
         // compute correlations
-        cu_marker_corr_pearson(marker_vals.data(), num_markers, num_individuals,
-                               marker_means.data(), marker_stds.data(), marker_corr.data());
+        cu_marker_corr_pearson(
+            marker_vals.data(),
+            num_markers,
+            num_individuals,
+            marker_means.data(),
+            marker_stds.data(),
+            marker_corr.data()
+        );
     }
 
     printf("Writing results\n");
     fflush(stdout);
     // write results
-    write_floats_to_binary(marker_corr.data(), marker_corr_mat_size,
-                           make_path(out_dir, chr_id, "_marker_corrp.bin"));
+    write_floats_to_binary(
+        marker_corr.data(), marker_corr_mat_size, make_path(out_dir, chr_id, "_marker_corrp.bin")
+    );
 
     std::cout << "Correlation matrix written to: " << out_dir << std::endl;
 }
@@ -683,17 +715,20 @@ void scorr(int argc, char *argv[])
     Phen phen = load_phen((std::string)argv[6]);
     size_t num_phen = phen.num_phen;
 
-    assert((phen.num_samples == num_individuals) && "number of phen values != number of individuals in dim");
+    assert(
+        (phen.num_samples == num_individuals) &&
+        "number of phen values != number of individuals in dim"
+    );
 
     printf("num_individuals: %u \n", num_individuals);
     printf("num_phen: %u \n", num_phen);
     printf("num_markers: %u \n", num_markers);
 
     float device_mem_bytes = device_mem_gb * std::pow(10, 9);
-    size_t upper_bound_batch_size =
-        std::floor(
-            (device_mem_bytes / 4 - (num_phen * num_individuals)) /
-            (corr_width + num_phen + num_individuals / 16));
+    size_t upper_bound_batch_size = std::floor(
+        (device_mem_bytes / 4 - (num_phen * num_individuals)) /
+        (corr_width + num_phen + num_individuals / 16)
+    );
     if (upper_bound_batch_size > num_markers)
     {
         upper_bound_batch_size = num_markers;
@@ -701,9 +736,11 @@ void scorr(int argc, char *argv[])
     if (upper_bound_batch_size < corr_width)
     {
         printf(
-            "Maximal batch size (%u) < corr width (%u). Decrease distance threshold or increase device memory. \n",
+            "Maximal batch size (%u) < corr width (%u). Decrease distance threshold or increase "
+            "device memory. \n",
             upper_bound_batch_size,
-            corr_width);
+            corr_width
+        );
         exit(1);
     }
 
@@ -751,12 +788,12 @@ void scorr(int argc, char *argv[])
         marker_stds.data(),
         corr_width,
         upper_bound_batch_size,
-        corrs.data());
+        corrs.data()
+    );
 
     printf("Writing results\n");
     // write results
-    write_floats_to_binary(corrs.data(), corr_mat_size,
-                           make_path(out_dir, chr_id, "_scorr.bin"));
+    write_floats_to_binary(corrs.data(), corr_mat_size, make_path(out_dir, chr_id, "_scorr.bin"));
 
     std::cout << "Correlation matrix written to: " << out_dir << std::endl;
 }
@@ -886,17 +923,28 @@ void corr(int argc, char *argv[])
         // TODO: this is probably not exactly correct
         // figure out batch size
         float b = (float)num_individuals / 4.0;
-        size_t max_batch_size =
-            (size_t)(-b + std::sqrt(b * b - (4.0 * (float)num_individuals * (float)num_phen -
-                                             (float)device_mem_bytes)));
+        size_t max_batch_size = (size_t
+        )(-b +
+          std::sqrt(
+              b * b - (4.0 * (float)num_individuals * (float)num_phen - (float)device_mem_bytes)
+          ));
         size_t row_width = max_batch_size / 2;
 
         printf("Device mem < required mem; Running tiled routine. \n");
 
-        cu_corr_pearson_npn_batched(marker_vals.data(), phen_vals.data(), num_markers,
-                                    num_individuals, num_phen, marker_means.data(),
-                                    marker_stds.data(), row_width, marker_corr.data(),
-                                    marker_phen_corr.data(), phen_corr.data());
+        cu_corr_pearson_npn_batched(
+            marker_vals.data(),
+            phen_vals.data(),
+            num_markers,
+            num_individuals,
+            num_phen,
+            marker_means.data(),
+            marker_stds.data(),
+            row_width,
+            marker_corr.data(),
+            marker_phen_corr.data(),
+            phen_corr.data()
+        );
         // TODO: the output corrs matrices are ordered in a really stupid way,
         // they need to be reordered.
     }
@@ -904,19 +952,33 @@ void corr(int argc, char *argv[])
     {
         printf("Calling correlation main\n");
         // compute correlations
-        cu_corr_pearson_npn(marker_vals.data(), phen_vals.data(), num_markers, num_individuals,
-                            num_phen, marker_means.data(), marker_stds.data(), marker_corr.data(),
-                            marker_phen_corr.data(), phen_corr.data());
+        cu_corr_pearson_npn(
+            marker_vals.data(),
+            phen_vals.data(),
+            num_markers,
+            num_individuals,
+            num_phen,
+            marker_means.data(),
+            marker_stds.data(),
+            marker_corr.data(),
+            marker_phen_corr.data(),
+            phen_corr.data()
+        );
     }
 
     printf("Writing results\n");
     // write results
-    write_floats_to_binary(marker_corr.data(), marker_corr_mat_size,
-                           make_path(out_dir, chr_id, "_marker_corr.bin"));
-    write_floats_to_binary(marker_phen_corr.data(), marker_phen_corr_mat_size,
-                           make_path(out_dir, chr_id, "_marker_phen_corr.bin"));
-    write_floats_to_binary(phen_corr.data(), phen_corr_mat_size,
-                           make_path(out_dir, chr_id, "_phen_corr.bin"));
+    write_floats_to_binary(
+        marker_corr.data(), marker_corr_mat_size, make_path(out_dir, chr_id, "_marker_corr.bin")
+    );
+    write_floats_to_binary(
+        marker_phen_corr.data(),
+        marker_phen_corr_mat_size,
+        make_path(out_dir, chr_id, "_marker_phen_corr.bin")
+    );
+    write_floats_to_binary(
+        phen_corr.data(), phen_corr_mat_size, make_path(out_dir, chr_id, "_phen_corr.bin")
+    );
 
     std::cout << "Correlation matrices written to: " << out_dir << std::endl;
 }
