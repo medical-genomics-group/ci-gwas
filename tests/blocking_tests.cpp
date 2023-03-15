@@ -1,11 +1,12 @@
-#include <filesystem>
 #include <gtest/gtest.h>
 #include <mps/blocking.h>
-#include <string>
 #include <test_data/blocking_test_set.h>
+
+#include <filesystem>
+#include <string>
 #include <vector>
 
-TEST(LoadBinary, ExpectedResults)
+TEST(BlockChr, ExpectedResults)
 {
     std::vector<MarkerBlock> obs = block_chr(TEST_V, "1", 500);
     std::vector<MarkerBlock> exp = {
