@@ -1,22 +1,21 @@
-#include <fstream>
-#include <iostream>
 #include <mps/io.h>
 #include <mps/phen.h>
 
-// TODO: use some phenotype format that has ids of individuals, as in bed.
-// Return only the phenotype value part of each line
-auto split_phen_line(std::string line) -> std::vector<float>
+#include <fstream>
+#include <iostream>
+
+std::vector<float> split_phen_line(std::string line)
 {
     std::vector<std::string> full_line = split_line(line);
     std::vector<float> res;
-    for (size_t i = 0; i < full_line.size(); ++i)
+    for (size_t i = 2; i < full_line.size(); ++i)
     {
         res.push_back((float)atof(full_line[i].c_str()));
     }
     return res;
 }
 
-auto load_phen(std::string phen_path) -> Phen
+Phen load_phen(std::string phen_path)
 {
     Phen res;
     res.num_samples = 0;
