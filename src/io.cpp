@@ -1,6 +1,7 @@
 // Generic functions for reading and writing
 
 #include <mps/io.h>
+#include <sys/stat.h>
 
 #include <cassert>
 #include <filesystem>
@@ -8,7 +9,6 @@
 #include <iostream>
 #include <iterator>
 #include <sstream>
-#include <sys/stat.h>
 
 std::vector<std::string> split_line(std::string line)
 {
@@ -43,8 +43,7 @@ int count_lines(const std::string file_path)
     std::string line;
     std::ifstream fin(file_path);
 
-    while (std::getline(fin, line))
-        ++number_of_lines;
+    while (std::getline(fin, line)) ++number_of_lines;
 
     return number_of_lines;
 }
@@ -79,7 +78,9 @@ std::vector<MarkerBlock> read_blocks_from_file(const std::string path)
     while (std::getline(block_file, line))
     {
         split_line(line, block_line, 3);
-        blocks.push_back(MarkerBlock((std::string)block_line[0], std::stoi(block_line[1]), std::stoi(block_line[2])));
+        blocks.push_back(MarkerBlock(
+            (std::string)block_line[0], std::stoi(block_line[1]), std::stoi(block_line[2])
+        ));
     }
 
     return blocks;
@@ -87,7 +88,8 @@ std::vector<MarkerBlock> read_blocks_from_file(const std::string path)
 
 // TODO: I don't ever need dest to have dynamic size, this should accept arrays
 void read_n_bytes_from_binary(
-    const std::string path, const size_t nbytes, std::vector<unsigned char> &dest)
+    const std::string path, const size_t nbytes, std::vector<unsigned char> &dest
+)
 {
     dest.resize(nbytes);
     std::ifstream bin_file(path, std::ios::binary);
@@ -162,17 +164,14 @@ std::vector<float> read_floats_from_binary(const std::string path)
     std::ifstream fin(path, std::ios::binary);
     std::vector<float> res = {};
 
-    while (fin.read(reinterpret_cast<char *>(&f), sizeof(float)))
-        res.push_back(f);
+    while (fin.read(reinterpret_cast<char *>(&f), sizeof(float))) res.push_back(f);
 
     return res;
 }
 
 std::vector<unsigned char> read_block_from_bed(
-    std::string path,
-    MarkerBlock block,
-    BedDims dims,
-    BimInfo bim)
+    std::string path, MarkerBlock block, BedDims dims, BimInfo bim
+)
 {
     size_t chr_start = bim.chr_start_global_ix(block.get_chr_id());
     size_t block_bytes = dims.bytes_per_col() * block.block_size();
@@ -181,6 +180,17 @@ std::vector<unsigned char> read_block_from_bed(
     fin.seekg(BED_PREFIX_BYTES + chr_start + dims.bytes_per_col() * block.get_first_marker_ix());
     fin.read(reinterpret_cast<char *>(res.data()), block_bytes);
     return res;
+}
+
+void write_ints_to_binary(const int *data, const size_t nvals, const std::string path)
+{
+    std::ofstream fout;
+    fout.open(path, std::ios::out | std::ios::binary);
+    for (size_t i = 0; i < nvals; ++i)
+    {
+        fout.write(reinterpret_cast<const char *>(&data[i]), sizeof(float));
+    }
+    fout.close();
 }
 
 void write_floats_to_binary(const float *data, const size_t nvals, const std::string path)
@@ -195,7 +205,8 @@ void write_floats_to_binary(const float *data, const size_t nvals, const std::st
 }
 
 void write_bed(
-    const std::vector<unsigned char> &out_buf, const std::string out_dir, const std::string chr_id)
+    const std::vector<unsigned char> &out_buf, const std::string out_dir, const std::string chr_id
+)
 {
     std::string outpath = make_path(out_dir, chr_id, ".bed");
     std::ofstream bedout;
@@ -205,20 +216,33 @@ void write_bed(
 }
 
 void write_means(
-    const std::vector<float> &chr_marker_means, const std::string out_dir, const std::string chr_id)
+    const std::vector<float> &chr_marker_means, const std::string out_dir, const std::string chr_id
+)
 {
     write_single_column_file_with_suffix(chr_marker_means, out_dir, chr_id, ".means");
 }
 
 void write_stds(
-    const std::vector<float> &chr_marker_stds, const std::string out_dir, const std::string chr_id)
+    const std::vector<float> &chr_marker_stds, const std::string out_dir, const std::string chr_id
+)
 {
     write_single_column_file_with_suffix(chr_marker_stds, out_dir, chr_id, ".stds");
 }
 
-void write_single_column_file_with_suffix(
-    const std::vector<int> &data,
-    const std::string outpath)
+void write_single_column_file_with_suffix(const std::vector<int> &data, const std::string outpath)
+{
+    std::ofstream fout;
+    fout.open(outpath, std::ios::out);
+
+    for (size_t i = 0; i < data.size(); ++i)
+    {
+        fout << data[i] << std::endl;
+    }
+
+    fout.close();
+}
+
+void write_single_column_file_with_suffix(const std::vector<float> &data, const std::string outpath)
 {
     std::ofstream fout;
     fout.open(outpath, std::ios::out);
@@ -233,21 +257,10 @@ void write_single_column_file_with_suffix(
 
 void write_single_column_file_with_suffix(
     const std::vector<float> &data,
-    const std::string outpath)
-{
-    std::ofstream fout;
-    fout.open(outpath, std::ios::out);
-
-    for (size_t i = 0; i < data.size(); ++i)
-    {
-        fout << data[i] << std::endl;
-    }
-
-    fout.close();
-}
-
-void write_single_column_file_with_suffix(
-    const std::vector<float> &data, const std::string out_dir, const std::string file_stem, const std::string suffix)
+    const std::string out_dir,
+    const std::string file_stem,
+    const std::string suffix
+)
 {
     std::string outpath = make_path(out_dir, file_stem, suffix);
     std::ofstream fout;
@@ -267,7 +280,8 @@ void write_dims(
     const size_t num_individuals,
     const size_t num_markers,
     const std::string out_dir,
-    const std::string chr_id)
+    const std::string chr_id
+)
 {
     std::string outpath = make_path(out_dir, chr_id, ".dim");
     std::ofstream fout;
