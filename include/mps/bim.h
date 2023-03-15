@@ -42,6 +42,16 @@ struct BimInfo
         }
     }
 
+    size_t num_markers_on_chr(std::string chr_id) const
+    {
+        if (!chr_id2ix.contains(chr_id))
+        {
+            std::cerr << "chr id does not match .bim content" << std::endl;
+            exit(1);
+        }
+        return chr_id2ix[chr_id];
+    }
+
     size_t chr_start_global_ix(std::string chr_id) const
     {
         size_t res = 0;
@@ -53,7 +63,7 @@ struct BimInfo
             }
             res += num_markers_on_chr[i];
         }
-        std::cout << "chr id does not match .bim content" << std::endl;
+        std::cerr << "chr id does not match .bim content" << std::endl;
         exit(1);
     }
 };
