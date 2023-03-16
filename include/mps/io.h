@@ -42,6 +42,11 @@ class BedDims
         num_markers = count_lines(bfiles.bim());
     }
 
+    bool operator==(const BedDims &other) const
+    {
+        return (this->num_samples == other.num_samples) && (this->num_markers == other.num_markers);
+    }
+
     size_t get_num_markers() const { return num_markers; }
 
     size_t get_num_samples() const { return num_samples; }
