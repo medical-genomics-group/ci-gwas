@@ -29,7 +29,7 @@ macro(package_add_test TESTNAME)
     add_executable(${TESTNAME} ${ARGN})
     # link the Google test infrastructure, mocking library, and a default main function to
     # the test executable.  Remove g_test_main if writing your own main function.
-    target_link_libraries(${TESTNAME} gtest gmock gtest_main block)
+    target_link_libraries(${TESTNAME} gtest gmock gtest_main block io)
     target_include_directories(${TESTNAME} PRIVATE ../include)
     # gtest_discover_tests replaces gtest_add_tests,
     # see https://cmake.org/cmake/help/v3.10/module/GoogleTest.html for more options to pass to it
@@ -43,6 +43,6 @@ endmacro()
 
 package_add_test_cuda(corr_tests corr_tests.cpp)
 package_add_test_cuda(prep_tests prep_tests.cpp)
-package_add_test_cuda(io_tests io_tests.cpp)
+package_add_test(io_tests io_tests.cpp)
 package_add_test(blocking_tests blocking_tests.cpp)
 # package_add_test(cupc_tests cupc_tests.cpp)

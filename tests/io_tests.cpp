@@ -1,5 +1,6 @@
 #include <filesystem>
 #include <gtest/gtest.h>
+#include <mps/bim.h>
 #include <mps/io.h>
 #include <string>
 #include <vector>
@@ -63,7 +64,8 @@ TEST(LoadBedBlock, ExpectedResults)
 {
     MarkerBlock block("1", 1, 2);
     BedDims dims(10, 5);
-    std::vector<unsigned char> obs = read_block_from_bed("../../tests/test_files/small.bed", block, dims);
+    BimInfo bim("../../tests/test_files/small.bim");
+    std::vector<unsigned char> obs = read_block_from_bed("../../tests/test_files/small.bed", block, dims, bim);
     std::vector<unsigned char> exp{0x38, 0x8e, 0xf3, 0xea, 0x8a, 0xff};
     for (size_t i = 0; i < exp.size(); i++)
     {
