@@ -1,6 +1,5 @@
 #pragma once
 
-#include <mps/bed_dims.h>
 #include <mps/bim.h>
 #include <mps/marker_block.h>
 
