@@ -29,6 +29,31 @@ auto num_variables_from_matrix_size(const size_t num_matrix_entries) -> size_t
     return (1 + (size_t)sqrt(1.0 + 8.0 * (long double)num_matrix_entries)) / 2;
 }
 
+const std::string BLOCK_USAGE = R"(
+Build approximately unlinked blocks of markers
+
+usage: mps block <bfiles> <max-block-size>
+
+arguments:
+    bfiles          stem of .bed, .means, .stds, .dim files
+    max-block-size  maximum number of markers per block
+)";
+
+const int BLOCK_NARGS = 4;
+
+void make_blocks(int argc, char *argv[])
+{
+    if (argc < BLOCK_NARGS)
+    {
+        std::cout << BLOCK_USAGE << std::endl;
+        exit(1);
+    }
+
+    std::string bed_base_path = argv[2];
+    std::cout << "Checking paths" << std::endl;
+    check_prepped_bed_path(bed_base_path);
+}
+
 const std::string BDPC_USAGE = R"(
 Run cuPC on block diagonal genomic covariance matrix.
 
@@ -56,7 +81,7 @@ void block_diagonal_pc(int argc, char *argv[])
     std::string phen_path = argv[2];
     std::string bed_base_path = argv[3];
     std::string block_path = argv[4];
-    float alpha = std::stod(argv[5]);
+    float alpha = std::stof(argv[5]);
     int depth = std::stoi(argv[6]);
     std::string outdir = (std::string)argv[7];
 
@@ -296,6 +321,7 @@ void block_diagonal_pc(int argc, char *argv[])
                 Csub.push_back(sq_corrs[i * num_var + j]);
                 for (int l = 0; l < MAX_LEVEL; l++)
                 {
+                    // TODO: use new corr mat indices here?
                     sepsub.push_back(sepset[(i * num_var + j) * MAX_LEVEL + l]);
                 }
             }
@@ -1029,7 +1055,9 @@ commands:
     mcorrk  Compute pearson correlations between markers as sin(pi / 2 tau_b)
     mcorrp  Compute pearson correlations between markers
     ads     Compute sums of anti-diagonals of marker correlation matrix
-    cups    use cuPC to compute the parent set for each phenotype
+    cups    Use cuPC to compute the parent set for each phenotype
+    bdpc    Run cuPC on block diagonal genomic covariance matrix
+    block   Build approximately unlinked blocks of markers
 
 contact:
     nick.machnik@gmail.com
@@ -1084,6 +1112,10 @@ auto main(int argc, char *argv[]) -> int
     else if (cmd == "bdpc")
     {
         block_diagonal_pc(argc, argv);
+    }
+    else if (cmd == "block")
+    {
+        make_blocks(argc, argv);
     }
     else
     {
