@@ -47,7 +47,7 @@ struct BimInfo
         }
     }
 
-    size_t check_chr_id(std::string chr_id) const
+    void check_chr_id(std::string chr_id) const
     {
         if (!chr_id2ix.contains(chr_id))
         {
