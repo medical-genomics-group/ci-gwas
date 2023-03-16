@@ -12,6 +12,7 @@ struct BimInfo
     size_t number_of_lines;
     std::vector<std::string> chr_ids;
     std::vector<size_t> num_markers_on_chr;
+    std::vector<size_t> global_chr_start;
     std::unordered_map<std::string, size_t> chr_id2ix;
 
     BimInfo(std::string path)
@@ -20,6 +21,7 @@ struct BimInfo
         chr_ids = {};
         num_markers_on_chr = {};
         chr_id2ix = {};
+        global_chr_start = {};
 
         std::string bim_line[BIM_NUM_COLS];
         std::string line;
@@ -32,6 +34,7 @@ struct BimInfo
             split_bim_line(line, bim_line);
             if ((number_of_lines == 0) || (bim_line[0] != chr_ids.back()))
             {
+                global_chr_start.push_back(number_of_lines);
                 chr_id2ix[bim_line[0]] = chr_ix;
                 chr_ids.push_back(bim_line[0]);
                 num_markers_on_chr.push_back(0);
@@ -42,29 +45,33 @@ struct BimInfo
         }
     }
 
-    size_t num_markers_on_chr(std::string chr_id) const
+    size_t check_chr_id(std::string chr_id) const
     {
         if (!chr_id2ix.contains(chr_id))
         {
             std::cerr << "chr id does not match .bim content" << std::endl;
             exit(1);
         }
-        return chr_id2ix[chr_id];
     }
 
-    size_t chr_start_global_ix(std::string chr_id) const
+    size_t get_num_markers_on_chr(std::string chr_id) const
     {
-        size_t res = 0;
-        for (size_t i = 0; i < chr_ids.size(); i++)
-        {
-            if (chr_id == chr_ids[i])
-            {
-                return res;
-            }
-            res += num_markers_on_chr[i];
-        }
-        std::cerr << "chr id does not match .bim content" << std::endl;
-        exit(1);
+        check_chr_id(chr_id);
+        return num_markers_on_chr[chr_id2ix[chr_id]];
+    }
+
+    size_t get_global_chr_start(std::string chr_id) const
+    {
+        check_chr_id(chr_id);
+        return global_chr_start[chr_id2ix[chr_id]];
+    }
+
+    // inclusive end
+    size_t get_global_chr_end(std::chr_id) const
+    {
+        check_chr_id(chr_id);
+        size_t chr_ix = chr_id2ix[chr_id];
+        return global_chr_start[chr_ix] + num_markers_on_chr[chr_ix] - 1;
     }
 };
 
