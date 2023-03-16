@@ -17,35 +17,7 @@ struct BimInfo
     std::vector<size_t> global_chr_start;
     std::unordered_map<std::string, size_t> chr_id2ix;
 
-    BimInfo(std::string path)
-    {
-        number_of_lines = 0;
-        chr_ids = {};
-        num_markers_on_chr = {};
-        chr_id2ix = {};
-        global_chr_start = {};
-
-        std::string bim_line[BIM_NUM_COLS];
-        std::string line;
-        std::ifstream bim(path);
-
-        size_t chr_ix = 0;
-
-        while (std::getline(bim, line))
-        {
-            split_bim_line(line, bim_line);
-            if ((number_of_lines == 0) || (bim_line[0] != chr_ids.back()))
-            {
-                global_chr_start.push_back(number_of_lines);
-                chr_id2ix[bim_line[0]] = chr_ix;
-                chr_ids.push_back(bim_line[0]);
-                num_markers_on_chr.push_back(0);
-                ++chr_ix;
-            }
-            ++num_markers_on_chr.back();
-            ++number_of_lines;
-        }
-    }
+    BimInfo(std::string path);
 
     void check_chr_id(const std::string chr_id) const
     {
