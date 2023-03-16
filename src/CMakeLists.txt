@@ -9,12 +9,11 @@ add_library(corr STATIC corr_host.cu corr_kernels.cu ${HEADER_LIST})
 target_include_directories(corr PUBLIC ../include)
 target_compile_features(corr PUBLIC cxx_std_20)
 
-add_library(prep STATIC prep.cpp bim.cpp phen.cpp ${HEADER_LIST})
-# set_source_files_properties(prep.cpp PROPERTIES LANGUAGE CUDA)
+add_library(prep STATIC prep.cpp ${HEADER_LIST})
 target_include_directories(prep PUBLIC ../include)
 target_compile_features(prep PUBLIC cxx_std_20)
 
-add_library(io STATIC io.cpp ${HEADER_LIST})
+add_library(io STATIC io.cpp bim.cpp phen.cpp ${HEADER_LIST})
 target_include_directories(io PUBLIC ../include)
 target_compile_features(io PUBLIC cxx_std_20)
 
