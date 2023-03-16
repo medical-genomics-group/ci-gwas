@@ -1,5 +1,5 @@
 #include <math.h>
-#include <mps/bed_lut.h>
+#include <mps/bed_lut_gpu.h>
 #include <mps/corr_host.h>
 #include <mps/corr_kernels.h>
 #include <mps/gpuerrors.h>
@@ -9,9 +9,7 @@
 __device__ unsigned long long int umul_wide(unsigned int a, unsigned int b)
 {
     unsigned long long int r;
-    asm("mul.wide.u32 %0,%1,%2;\n\t"
-        : "=l"(r)
-        : "r"(a), "r"(b));
+    asm("mul.wide.u32 %0,%1,%2;\n\t" : "=l"(r) : "r"(a), "r"(b));
     return r;
 }
 
@@ -29,9 +27,7 @@ __device__ uint32_t isqrtll(uint64_t a)
     /* Approximate rsqrt accurately. Make sure it's an underestimate! */
     float fb, fr;
     fb = (float)b;
-    asm("rsqrt.approx.ftz.f32 %0,%1; \n\t"
-        : "=f"(fr)
-        : "f"(fb));
+    asm("rsqrt.approx.ftz.f32 %0,%1; \n\t" : "=f"(fr) : "f"(fb));
     r = (uint32_t)fmaf(1.407374884e14f, fr, -438.0f);
     /* Compute sqrt(a) as a * rsqrt(a) */
     s = __umulhi(r, b);
@@ -71,7 +67,8 @@ __device__ uint32_t isqrtll(uint64_t a)
 // Compute row and column indices from the linear index into
 // upper triangular matrix.
 __device__ void row_col_ix_from_linear_ix(
-    const size_t lin_ix, const size_t num_rows, size_t *row_ix, size_t *col_ix)
+    const size_t lin_ix, const size_t num_rows, size_t *row_ix, size_t *col_ix
+)
 {
     uint32_t M = num_rows - 1;
     uint64_t num_ix = (uint64_t)M * ((uint64_t)M + 1) / 2;
@@ -86,7 +83,8 @@ __device__ void row_col_ix_from_linear_ix(
 // a upper triangular matrix.
 // This kernel exists only for testing purposes of the device function.
 __global__ void ix_from_linear(
-    const size_t lin_ix, const size_t num_rows, size_t *row_ix, size_t *col_ix)
+    const size_t lin_ix, const size_t num_rows, size_t *row_ix, size_t *col_ix
+)
 {
     row_col_ix_from_linear_ix(lin_ix, num_rows, row_ix, col_ix);
 }
@@ -100,7 +98,8 @@ __global__ void bed_marker_phen_corr_pearson(
     const size_t col_len_bytes,
     const float *marker_mean,
     const float *marker_std,
-    float *results)
+    float *results
+)
 {
     size_t tix = threadIdx.x;
     size_t lin_ix = blockIdx.x;
@@ -151,8 +150,7 @@ __global__ void bed_marker_phen_corr_pearson(
             s_valid += nums_valid[i];
         }
 
-        results[lin_ix] = (s_mv_phen - marker_mean[mv_ix] * s_phen) /
-                          (s_valid * marker_std[mv_ix]);
+        results[lin_ix] = (s_mv_phen - marker_mean[mv_ix] * s_phen) / (s_valid * marker_std[mv_ix]);
     }
 }
 
@@ -165,7 +163,8 @@ __global__ void bed_marker_phen_corr_pearson_scan(
     const size_t col_len_bytes,
     const float *marker_mean,
     const float *marker_std,
-    float *results)
+    float *results
+)
 {
     size_t lin_ix = blockIdx.x;
     size_t mv_ix = lin_ix / num_phen;
@@ -234,14 +233,14 @@ __global__ void bed_marker_phen_corr_pearson_scan(
         float s_phen = sums_phen[NUMTHREADS - 1];
         float n = nums_valid[NUMTHREADS - 1];
 
-        results[lin_ix] = (s_mv_phen - marker_mean[mv_ix] * s_phen) /
-                          (n * marker_std[mv_ix]);
+        results[lin_ix] = (s_mv_phen - marker_mean[mv_ix] * s_phen) / (n * marker_std[mv_ix]);
     }
 }
 
 // Compute Pearson's r between a pair of standardized phenotype vectors.
 __global__ void phen_corr_pearson(
-    const float *phen_vals, const size_t num_individuals, const size_t num_phen, float *results)
+    const float *phen_vals, const size_t num_individuals, const size_t num_phen, float *results
+)
 {
     size_t row;
     size_t col;
@@ -282,10 +281,8 @@ __global__ void phen_corr_pearson(
 
 // Compute Pearson's r between a pair of standardized phenotype vectors.
 __global__ void phen_corr_pearson_scan(
-    const float *phen_vals,
-    const size_t num_individuals,
-    const size_t num_phen,
-    float *results)
+    const float *phen_vals, const size_t num_individuals, const size_t num_phen, float *results
+)
 {
     size_t row;
     size_t col;
@@ -349,7 +346,8 @@ __global__ void bed_marker_corr_pearson(
     const size_t col_len_bytes,
     const float *marker_mean,
     const float *marker_std,
-    float *results)
+    float *results
+)
 {
     size_t tix = threadIdx.x;
     size_t row;
@@ -407,7 +405,8 @@ __global__ void bed_marker_corr_pearson_npn(
     const size_t num_markers,
     const size_t num_individuals,
     const size_t col_len_bytes,
-    float *results)
+    float *results
+)
 {
     size_t tix = threadIdx.x;
     size_t row;
@@ -476,7 +475,8 @@ __global__ void bed_marker_corr_pearson_npn_scan(
     const size_t num_markers,
     const size_t num_individuals,
     const size_t col_len_bytes,
-    float *results)
+    float *results
+)
 {
     size_t tix = threadIdx.x;
     size_t row;
@@ -572,7 +572,8 @@ __global__ void bed_marker_corr_pearson_batched(
     const float *marker_std_row,
     const float *marker_mean_col,
     const float *marker_std_col,
-    float *results)
+    float *results
+)
 {
     // figure out which corr we are computing
     // we have a 2d grid
@@ -618,8 +619,7 @@ __global__ void bed_marker_corr_pearson_batched(
             n += nums_valid[i];
         }
 
-        float num =
-            (s_mvps / n) - (marker_mean_row[row] * marker_mean_col[col]);
+        float num = (s_mvps / n) - (marker_mean_row[row] * marker_mean_col[col]);
         float denom = marker_std_row[row] * marker_std_col[col];
 
         results[num_col_markers * row + col] = num / denom;
@@ -638,7 +638,8 @@ __global__ void bed_marker_corr_pearson_batched_row(
     const size_t col_len_bytes,
     const float *marker_mean,
     const float *marker_std,
-    float *results)
+    float *results
+)
 {
     // 1d grid
     size_t tix = threadIdx.x;
@@ -695,7 +696,8 @@ __global__ void bed_marker_corr_pearson_npn_batched(
     const size_t num_col_markers,
     const size_t num_individuals,
     const size_t col_len_bytes,
-    float *results)
+    float *results
+)
 {
     // figure out which corr we are computing
     // we have a 2d grid
@@ -771,7 +773,8 @@ __global__ void bed_marker_corr_pearson_npn_batched_row(
     const size_t num_rows,
     const size_t num_individuals,
     const size_t col_len_bytes,
-    float *results)
+    float *results
+)
 {
     // 1d grid
     size_t tix = threadIdx.x;
@@ -844,7 +847,8 @@ __global__ void bed_marker_corr_pearson_npn_sparse(
     const size_t num_individuals,
     const size_t col_len_bytes,
     const size_t row_in,
-    float *results)
+    float *results
+)
 {
     size_t row = row_in;
     size_t col = row + bx + 1;
@@ -913,7 +917,8 @@ __global__ void bed_marker_corr_pearson_npn_sparse_scan(
     const size_t num_individuals,
     const size_t col_len_bytes,
     const size_t row_in,
-    float *results)
+    float *results
+)
 {
     size_t row = row_in;
     size_t col = row + bx + 1;
@@ -1002,7 +1007,8 @@ __global__ void bed_marker_phen_corr_pearson_sparse(
     const float *marker_std,
     const size_t corr_width,
     const size_t row_in,
-    float *results)
+    float *results
+)
 {
     size_t row = row_in;
     size_t phen_ix = bx;
@@ -1049,8 +1055,7 @@ __global__ void bed_marker_phen_corr_pearson_sparse(
             n += nums_valid[i];
         }
 
-        results[corr_width + phen_ix] = (s_mv_phen - *marker_mean * s_phen) /
-                                        (n * *marker_std);
+        results[corr_width + phen_ix] = (s_mv_phen - *marker_mean * s_phen) / (n * *marker_std);
     }
 }
 
@@ -1064,7 +1069,8 @@ __global__ void bed_marker_phen_corr_pearson_sparse_scan(
     const float *marker_std,
     const size_t corr_width,
     const size_t row_in,
-    float *results)
+    float *results
+)
 {
     size_t row = row_in;
     size_t phen_ix = bx;
@@ -1130,7 +1136,6 @@ __global__ void bed_marker_phen_corr_pearson_sparse_scan(
         float s_phen = sums_phen[NUMTHREADS - 1];
         float n = nums_valid[NUMTHREADS - 1];
 
-        results[corr_width + phen_ix] = (s_mv_phen - *marker_mean * s_phen) /
-                                        (n * *marker_std);
+        results[corr_width + phen_ix] = (s_mv_phen - *marker_mean * s_phen) / (n * *marker_std);
     }
 }
