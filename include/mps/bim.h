@@ -7,6 +7,8 @@
 
 #define BIM_NUM_COLS 6
 
+void split_bim_line(std::string line, std::string *buf);
+
 struct BimInfo
 {
     size_t number_of_lines;
@@ -74,8 +76,6 @@ struct BimInfo
         return global_chr_start[chr_ix] + num_markers_on_chr[chr_ix] - 1;
     }
 };
-
-void split_bim_line(std::string line, std::string *buf);
 
 int median(std::vector<int> &v);
 
