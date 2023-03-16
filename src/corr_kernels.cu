@@ -124,7 +124,7 @@ __global__ void bed_marker_phen_corr_pearson(
             float mv_valid = gpu_bed_lut_b[(curr_mv_byte_ix + j)];
             float mv_val = gpu_bed_lut_a[(curr_mv_byte_ix + j)];
             float phen_val = phen_vals[(phen_start_ix + (4 * i) + j)];
-            float phen_val_valid = !isnanf(phen_val);
+            float phen_val_valid = !isnan(phen_val);
             float valid_op = mv_valid * phen_val_valid;
 
             thread_sum_mv_phen += valid_op * mv_val * phen_val;
@@ -188,7 +188,7 @@ __global__ void bed_marker_phen_corr_pearson_scan(
             float mv_valid = gpu_bed_lut_b[(curr_mv_byte_ix + j)];
             float mv_val = gpu_bed_lut_a[(curr_mv_byte_ix + j)];
             float phen_val = phen_vals[(phen_start_ix + (4 * i) + j)];
-            float phen_val_valid = !isnanf(phen_val);
+            float phen_val_valid = !isnan(phen_val);
             float valid_op = mv_valid * phen_val_valid;
 
             thread_sum_mv_phen += valid_op * mv_val * phen_val;
@@ -257,7 +257,7 @@ __global__ void phen_corr_pearson(
     {
         float val_a = phen_vals[(col_start_a + i)];
         float val_b = phen_vals[(col_start_b + i)];
-        float valid_op = !(isnanf(val_a) || isnanf(val_b));
+        float valid_op = !(isnan(val_a) || isnan(val_b));
         thread_sum += valid_op * val_a * val_b;
         thread_num_valid += valid_op;
     }
@@ -300,7 +300,7 @@ __global__ void phen_corr_pearson_scan(
     {
         float val_a = phen_vals[(col_start_a + i)];
         float val_b = phen_vals[(col_start_b + i)];
-        float valid_op = !(isnanf(val_a) || isnanf(val_b));
+        float valid_op = !(isnan(val_a) || isnan(val_b));
         thread_sum += valid_op * val_a * val_b;
         thread_num_valid += valid_op;
     }
@@ -1030,7 +1030,7 @@ __global__ void bed_marker_phen_corr_pearson_sparse(
         {
             float mv_val = gpu_bed_lut_a[(curr_mv_byte_ix + j)];
             float phen_val = phen_vals[(phen_start_ix + (4 * i) + j)];
-            float valid_op = !isnanf(phen_val) * gpu_bed_lut_b[(curr_mv_byte_ix + j)];
+            float valid_op = !isnan(phen_val) * gpu_bed_lut_b[(curr_mv_byte_ix + j)];
 
             thread_sum_mv_phen += valid_op * (mv_val * phen_val);
             thread_sum_phen += valid_op * phen_val;
@@ -1092,7 +1092,7 @@ __global__ void bed_marker_phen_corr_pearson_sparse_scan(
         {
             float mv_val = gpu_bed_lut_a[(curr_mv_byte_ix + j)];
             float phen_val = phen_vals[(phen_start_ix + (4 * i) + j)];
-            float valid_op = !isnanf(phen_val) * gpu_bed_lut_b[(curr_mv_byte_ix + j)];
+            float valid_op = !isnan(phen_val) * gpu_bed_lut_b[(curr_mv_byte_ix + j)];
 
             thread_sum_mv_phen += valid_op * (mv_val * phen_val);
             thread_sum_phen += valid_op * phen_val;
