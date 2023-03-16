@@ -48,8 +48,9 @@ int count_lines(const std::string file_path)
     return number_of_lines;
 }
 
-auto make_path(const std::string out_dir, const std::string file_stem, const std::string suffix)
-    -> std::string
+std::string make_path(
+    const std::string out_dir, const std::string file_stem, const std::string suffix
+)
 {
     std::string filename = file_stem + suffix;
     std::string outpath;
@@ -86,7 +87,6 @@ std::vector<MarkerBlock> read_blocks_from_file(const std::string path)
     return blocks;
 }
 
-// TODO: I don't ever need dest to have dynamic size, this should accept arrays
 void read_n_bytes_from_binary(
     const std::string path, const size_t nbytes, std::vector<unsigned char> &dest
 )
@@ -173,11 +173,26 @@ std::vector<unsigned char> read_block_from_bed(
     std::string path, MarkerBlock block, BedDims dims, BimInfo bim
 )
 {
-    size_t chr_start = bim.chr_start_global_ix(block.get_chr_id());
+    size_t chr_start = bim.get_global_chr_start(block.get_chr_id());
     size_t block_bytes = dims.bytes_per_col() * block.block_size();
     std::vector<unsigned char> res(block_bytes, 0);
     std::ifstream fin(path, std::ios::binary);
-    fin.seekg(BED_PREFIX_BYTES + chr_start + dims.bytes_per_col() * block.get_first_marker_ix());
+    fin.seekg(BED_PREFIX_BYTES + (chr_start + block.get_first_marker_ix()) * dims.bytes_per_col());
+    fin.read(reinterpret_cast<char *>(res.data()), block_bytes);
+    return res;
+}
+
+std::vector<unsigned char> read_chr_from_bed(
+    std::string path, std::string chr_id, BimInfo bim, BedDims dim
+)
+{
+    size_t first = bim.get_global_chr_start(chr_id);
+    size_t last = bim.get_global_chr_end(chr_id);
+    size_t block_bytes = dim.bytes_per_col() * (last - first + 1);
+    std::vector<unsigned char> res(block_bytes, 0);
+    std::ifstream fin(path, std::ios::binary);
+
+    fin.seekg(BED_PREFIX_BYTES + first * dim.bytes_per_col());
     fin.read(reinterpret_cast<char *>(res.data()), block_bytes);
     return res;
 }
