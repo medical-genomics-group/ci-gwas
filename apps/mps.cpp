@@ -131,7 +131,7 @@ void block_diagonal_pc(int argc, char *argv[])
     for (auto b : blocks)
     {
         if (b.get_first_marker_ix() >= bim.get_num_markers_on_chr(b.get_chr_id()) ||
-            (b.get_last_marker_ix() >= bim.get_num_markers_on_chr(b.get_chr_id()))
+            (b.get_last_marker_ix() >= bim.get_num_markers_on_chr(b.get_chr_id())))
         {
             std::cerr << "block out of bounds with first_ix: " << b.get_first_marker_ix()
                       << " last_ix: " << b.get_last_marker_ix() << std::endl;
