@@ -1,5 +1,6 @@
 #include <math.h>
 #include <mps/bim.h>
+#include <mps/blocking.h>
 #include <mps/corr_host.h>
 #include <mps/corr_kernels.h>
 #include <mps/cuPC-S.h>
@@ -35,7 +36,7 @@ Build approximately unlinked blocks of markers
 usage: mps block <bfiles> <max-block-size>
 
 arguments:
-    bfiles          stem of .bed, .means, .stds, .dim files
+    bfiles          stem of .bed, .bim, .fam files
     max-block-size  maximum number of markers per block
 )";
 
@@ -50,8 +51,20 @@ void make_blocks(int argc, char *argv[])
     }
 
     std::string bed_base_path = argv[2];
+    int max_block_size = std::stoi(argv[3]);
+
     std::cout << "Checking paths" << std::endl;
-    check_prepped_bed_path(bed_base_path);
+    check_bed_path(bed_base_path);
+
+    BfilesBase bfiles(bed_base_path);
+    BedDims dim(bfiles);
+    BimInfo bim(bfiles.bim());
+
+    for (auto cid : bim.chr_ids)
+    {
+        std::vector<unsigned char> chr_bed = read_chr_from_bed(bfiles.bed(), cid, bim, dim);
+        // TODO: compute tiled or not tiled mcorrk, write routine for that to prevent code doubling
+    }
 }
 
 const std::string BDPC_USAGE = R"(
@@ -117,8 +130,8 @@ void block_diagonal_pc(int argc, char *argv[])
 
     for (auto b : blocks)
     {
-        if (b.get_first_marker_ix() >= bim.num_markers_on_chr(b.get_chr_id()) ||
-            (b.get_last_marker_ix() >= bim.num_markers_on_chr(b.get_chr_id()))
+        if (b.get_first_marker_ix() >= bim.get_num_markers_on_chr(b.get_chr_id()) ||
+            (b.get_last_marker_ix() >= bim.get_num_markers_on_chr(b.get_chr_id()))
         {
             std::cerr << "block out of bounds with first_ix: " << b.get_first_marker_ix()
                       << " last_ix: " << b.get_last_marker_ix() << std::endl;
@@ -503,22 +516,22 @@ void mcorrk(int argc, char *argv[])
         printf("Device mem < required mem; Running tiled routine. \n");
         fflush(stdout);
 
-        printf("arg1: %p \n", marker_vals.data());
-        printf("arg2: %i \n", num_markers);
-        printf("arg3: %i \n", num_individuals);
-        printf("arg4: %i \n", batch_nrows);
-        printf("arg5: %p \n", marker_corr.data());
-        printf("wtf1 \n");
-        printf(
-            "args: %p, %i, %i, %i, %p \n",
-            marker_vals.data(),
-            num_markers,
-            num_individuals,
-            batch_nrows,
-            marker_corr.data()
-        );
-        printf("wtf2 \n");
-        printf("wtf3 \n");
+        // printf("arg1: %p \n", marker_vals.data());
+        // printf("arg2: %i \n", num_markers);
+        // printf("arg3: %i \n", num_individuals);
+        // printf("arg4: %i \n", batch_nrows);
+        // printf("arg5: %p \n", marker_corr.data());
+        // printf("wtf1 \n");
+        // printf(
+        //     "args: %p, %i, %i, %i, %p \n",
+        //     marker_vals.data(),
+        //     num_markers,
+        //     num_individuals,
+        //     batch_nrows,
+        //     marker_corr.data()
+        // );
+        // printf("wtf2 \n");
+        // printf("wtf3 \n");
         cu_marker_corr_pearson_npn_batched(
             marker_vals.data(), num_markers, num_individuals, batch_nrows, marker_corr.data()
         );
