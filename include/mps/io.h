@@ -1,5 +1,6 @@
 #pragma once
 
+#include <mps/bfiles_base.h>
 #include <mps/bim.h>
 #include <mps/marker_block.h>
 
