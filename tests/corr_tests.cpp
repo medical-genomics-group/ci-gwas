@@ -12,15 +12,9 @@ TEST(Hello, BasicAssertions)
     EXPECT_EQ(7 * 6, 42);
 }
 
-auto corr_matrix_size(size_t num_markers) -> size_t
-{
-    return num_markers * (num_markers - 1) / 2;
-}
+auto corr_matrix_size(size_t num_markers) -> size_t { return num_markers * (num_markers - 1) / 2; }
 
-auto sparse_corr_matrix_size(
-    size_t num_markers,
-    size_t num_phen,
-    size_t corr_width) -> size_t
+auto sparse_corr_matrix_size(size_t num_markers, size_t num_phen, size_t corr_width) -> size_t
 {
     return (corr_width + num_phen) * (num_phen + num_markers);
 }
@@ -55,7 +49,8 @@ TEST(SparseCorr, ExpectedReturnVals)
         bmt2_marker_std,
         corr_width,
         batch_size,
-        corrs);
+        corrs
+    );
 
     for (size_t i = 0; i < cm_size; i++)
     {
@@ -120,7 +115,8 @@ TEST(CuMarkerCorrPearsonBatched, ExpectedReturnVals)
         bmt2_marker_mean,
         bmt2_marker_std,
         stripe_width,
-        marker_corr);
+        marker_corr
+    );
 
     for (size_t i = 0; i < marker_cm_size; i++)
     {
@@ -139,7 +135,8 @@ TEST(CuMarkerCorrPearsonNpnBatched, ExpectedReturnVals)
     memset(marker_corr, 0.0, sizeof(marker_corr));
 
     cu_marker_corr_pearson_npn_batched(
-        bmt2_marker_vals, num_markers, num_individuals, stripe_width, marker_corr);
+        bmt2_marker_vals, num_markers, num_individuals, stripe_width, marker_corr
+    );
 
     for (size_t i = 0; i < marker_cm_size; i++)
     {
@@ -173,7 +170,8 @@ TEST(CuCorrPearsonNpn, ExpectedReturnVals)
         bmt_marker_std,
         marker_corr,
         marker_phen_corr,
-        phen_corr);
+        phen_corr
+    );
 
     float marker_corr_expected[marker_cm_size] = {0.299969, 0.924167, 0.0};
     float marker_phen_corr_expected[marker_phen_cm_size] = {
@@ -224,7 +222,8 @@ TEST(CuCorrNpnBatched, ExpectedReturnVals)
         stripe_width,
         marker_corr,
         marker_phen_corr,
-        phen_corr);
+        phen_corr
+    );
 
     for (size_t i = 0; i < marker_cm_size; i++)
     {
@@ -252,8 +251,8 @@ TEST(CuMarkerPearson, ExpectedReturnVals3Markers)
     memset(marker_corr, 0.0, sizeof(marker_corr));
 
     cu_marker_corr_pearson(
-        bmt_marker_vals, num_markers, num_individuals, bmt_marker_mean, bmt_marker_std,
-        marker_corr);
+        bmt_marker_vals, num_markers, num_individuals, bmt_marker_mean, bmt_marker_std, marker_corr
+    );
 
     float marker_corr_expected[marker_cm_size] = {0.2540839, 0.80403025, 0.04012862};
 
@@ -278,7 +277,8 @@ TEST(CuMarkerPearson, ExpectedReturnVals7Markers)
         num_individuals,
         bmt2_marker_mean,
         bmt2_marker_std,
-        marker_corr);
+        marker_corr
+    );
 
     for (size_t i = 0; i < marker_cm_size; i++)
     {
