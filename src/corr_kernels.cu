@@ -384,7 +384,8 @@ __global__ void bed_marker_corr_pearson(
     if (tix == 0)
     {
         float s_mvps = 0.0;
-        float n = 0.0 for (size_t i = 0; i < NUMTHREADS; i++)
+        float n = 0.0;
+        for (size_t i = 0; i < NUMTHREADS; i++)
         {
             s_mvps += sums_mvp[i];
             n += nums_valid[i];
@@ -683,7 +684,7 @@ __global__ void bed_marker_corr_pearson_batched_row(
             n += nums_valid[i];
         }
 
-        float num = (s_mvps / n - (marker_mean[row] * marker_mean[col]);
+        float num = s_mvps / n - marker_mean[row] * marker_mean[col];
         float denom = marker_std[row] * marker_std[col];
 
         results[blockIdx.x] = num / denom;
