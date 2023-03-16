@@ -4,6 +4,8 @@ project(MPS VERSION 1.0
             DESCRIPTION "Computation of marker parent sets for phenotypes"
             LANGUAGES CXX CUDA)
 
+set(CMAKE_CXX_STANDARD 20)
+
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     message(STATUS "Setting build type to 'Release' as none was specified.")
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build." FORCE)
