@@ -1,16 +1,14 @@
-#include <algorithm>
-#include <fstream>
-#include <iostream>
 #include <mps/bim.h>
 #include <mps/io.h>
 #include <mps/prep.h>
+
+#include <algorithm>
+#include <fstream>
+#include <iostream>
 #include <string>
 #include <vector>
 
-void split_bim_line(std::string line, std::string *buf)
-{
-    split_line(line, buf, BIM_NUM_COLS);
-}
+void split_bim_line(std::string line, std::string *buf) { split_line(line, buf, BIM_NUM_COLS); }
 
 int median(std::vector<int> &v)
 {

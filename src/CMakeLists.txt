@@ -10,7 +10,7 @@ target_include_directories(corr PUBLIC ../include)
 target_compile_features(corr PUBLIC cxx_std_20)
 
 add_library(prep STATIC prep.cpp bim.cpp phen.cpp ${HEADER_LIST})
-set_source_files_properties(prep.cpp PROPERTIES LANGUAGE CUDA)
+# set_source_files_properties(prep.cpp PROPERTIES LANGUAGE CUDA)
 target_include_directories(prep PUBLIC ../include)
 target_compile_features(prep PUBLIC cxx_std_20)
 

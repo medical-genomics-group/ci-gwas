@@ -17,7 +17,8 @@ void compute_bed_col_stats_no_impute(
     const size_t num_individuals,
     std::vector<float> &means,
     std::vector<float> &stds,
-    std::vector<int> &modes)
+    std::vector<int> &modes
+)
 {
     // first pass: mean, mode
     int gt_counts[3] = {0};
@@ -80,7 +81,8 @@ void compute_bed_col_stats_impute(
     const size_t num_individuals,
     std::vector<float> &means,
     std::vector<float> &stds,
-    std::vector<int> &modes)
+    std::vector<int> &modes
+)
 {
     // first pass: mean, mode
     int gt_counts[3] = {0};
