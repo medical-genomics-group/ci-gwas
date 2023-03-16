@@ -69,7 +69,7 @@ struct BimInfo
     }
 
     // inclusive end
-    size_t get_global_chr_end(std::chr_id) const
+    size_t get_global_chr_end(std::string chr_id) const
     {
         check_chr_id(chr_id);
         size_t chr_ix = chr_id2ix[chr_id];
