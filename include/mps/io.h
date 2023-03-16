@@ -11,6 +11,8 @@ void split_line(std::string line, std::string *buf, size_t ncols);
 
 std::vector<std::string> split_line(std::string line);
 
+int count_lines(const std::string file_path);
+
 class BedDims
 {
    private:
@@ -97,8 +99,6 @@ void write_single_column_file_with_suffix(
     const std::string file_stem,
     const std::string suffix
 );
-
-int count_lines(const std::string file_path);
 
 void write_dims(
     const size_t num_individuals,
