@@ -9,6 +9,8 @@
 
 void split_line(std::string line, std::string *buf, size_t ncols);
 
+std::vector<std::string> split_line(std::string line);
+
 std::vector<float> read_floats_from_line_range(const std::string path, size_t first, size_t last);
 
 std::vector<unsigned char> read_block_from_bed(
@@ -18,8 +20,6 @@ std::vector<unsigned char> read_block_from_bed(
 std::vector<unsigned char> read_chr_from_bed(
     std::string path, std::string chr_id, BimInfo bim, BedDims dim
 );
-
-std::vector<std::string> split_line(std::string line);
 
 std::string make_path(std::string out_dir, std::string chr_id, std::string suffix);
 
