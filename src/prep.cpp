@@ -172,7 +172,8 @@ void prep_bed_no_impute(BfilesBase bfiles)
     std::vector<float> stds;
     std::vector<int> modes;
     std::ifstream bed_file(bfiles.bed(), std::ios::binary);
-    int gt_counts[3] = {0};
+    // skip prefix
+    bed_file.read(reinterpret_cast<char *>(buffer.data()), BED_PREFIX_BYTES);
 
     while (bed_file.read(reinterpret_cast<char *>(bedcol.data()), bed_block_size))
     {
