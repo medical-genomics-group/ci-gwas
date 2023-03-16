@@ -69,6 +69,12 @@ class BedDims
         num_markers = std::stoi(dim_line[1]);
     }
 
+    BedDims(BfilesBase bfiles)
+    {
+        num_samples = count_lines(bfiles.fam());
+        num_markers = count_lines(bfiles.bim());
+    }
+
     size_t get_num_markers() const { return num_markers; }
 
     size_t get_num_samples() const { return num_samples; }
