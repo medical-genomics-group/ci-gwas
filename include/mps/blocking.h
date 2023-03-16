@@ -4,6 +4,6 @@
 #include <vector>
 
 std::vector<MarkerBlock> block_chr(
-    std::vector<float> &diag_sums,
-    std::string chr_id,
-    int max_block_size);
+    const std::vector<float> &diag_sums,
+    const std::string chr_id,
+    const int max_block_size);
