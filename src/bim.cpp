@@ -8,6 +8,15 @@
 #include <string>
 #include <vector>
 
+void BimInfo::check_chr_id(const std::string chr_id) const
+{
+    if (!chr_id2ix.contains(chr_id))
+    {
+        std::cerr << "chr id does not match .bim content" << std::endl;
+        exit(1);
+    }
+}
+
 BimInfo::BimInfo(std::string path)
 {
     number_of_lines = 0;

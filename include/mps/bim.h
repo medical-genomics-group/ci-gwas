@@ -19,14 +19,7 @@ struct BimInfo
 
     BimInfo(std::string path);
 
-    void check_chr_id(const std::string chr_id) const
-    {
-        if (!chr_id2ix.contains(chr_id))
-        {
-            std::cerr << "chr id does not match .bim content" << std::endl;
-            exit(1);
-        }
-    }
+    void check_chr_id(const std::string chr_id) const;
 
     size_t get_num_markers_on_chr(const std::string chr_id)
     {
