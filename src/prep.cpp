@@ -173,7 +173,7 @@ void prep_bed_no_impute(BfilesBase bfiles)
     std::vector<int> modes;
     std::ifstream bed_file(bfiles.bed(), std::ios::binary);
     // skip prefix
-    bed_file.read(reinterpret_cast<char *>(buffer.data()), BED_PREFIX_BYTES);
+    bed_file.read(reinterpret_cast<char *>(bedcol.data()), BED_PREFIX_BYTES);
 
     while (bed_file.read(reinterpret_cast<char *>(bedcol.data()), bed_block_size))
     {
