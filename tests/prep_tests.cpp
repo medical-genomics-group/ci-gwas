@@ -2,6 +2,7 @@
 #include <mps/bim.h>
 #include <mps/io.h>
 #include <mps/prep.h>
+#include <mps/bfiles_base.h>
 
 #include <filesystem>
 #include <fstream>
@@ -42,7 +43,7 @@ auto read_file(const std::string filename) -> std::vector<unsigned char>
 
 TEST(ParseBed, CorrectOutFilesGenerated)
 {
-    prep_bed_no_impute("../../tests/test_files/small");
+    prep_bed_no_impute(BfilesBase("../../tests/test_files/small"));
 
     // .stds
     std::vector<float> one_stds_exp = {0.66332496, 0.83066239, 0.6, 0.77459667, 0.83066239};
