@@ -72,8 +72,7 @@ std::vector<float> cal_mcorrk_banded(
 {
     size_t num_individuals = dim.get_num_samples();
     float device_mem_bytes = device_mem_gb * std::pow(10, 9);
-    size_t upper_bound_batch_size =
-        std::floor((device_mem_bytes) / (corr_width * num_individuals / 4));
+    size_t upper_bound_batch_size = std::floor((device_mem_bytes) / ((num_individuals + 3) / 4));
 
     if (upper_bound_batch_size > num_markers)
     {
