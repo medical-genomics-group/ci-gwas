@@ -6,7 +6,7 @@ const int MAX_BLOCK_SIZE_TOL = 100;
 
 int num_vars(const int num_antidiags)
 {
-    return (num_antidiags + 1) / 2;
+    return (num_antidiags + 3) / 2;
 }
 
 float hann(
