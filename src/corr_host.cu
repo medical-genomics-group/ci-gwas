@@ -1134,11 +1134,13 @@ void cu_marker_corr_pearson_npn_batched_sparse(
     size_t curr_width = corr_width;
     for (size_t row_ix = 0; row_ix < num_markers; ++row_ix)
     {
-        if (row_ix % 1 == 0)
+        /*
+        if (row_ix % 10000 == 0)
         {
             printf("Processing marker #%u \n", row_ix);
             fflush(stdout);
         }
+        */
         size_t row_out = row_ix % batch_size;
         if (curr_width < corr_width)
         {
