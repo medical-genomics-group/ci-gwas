@@ -1,5 +1,8 @@
 #pragma once
 
+#include <vector>
+#include <mps/io.h>
+
 std::vector<float> cal_mcorrk(
     const std::vector<unsigned char> &bed_vals, const BedDims dim, const size_t device_mem_gb
 );
