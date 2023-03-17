@@ -18,7 +18,8 @@ class MarkerBlock
 
     friend std::ostream& operator<<(std::ostream& os, const MarkerBlock& bar)
     {
-        return os << bar.chr_id << ", " << bar.first_marker_ix << ", " << bar.last_marker_ix;
+        return os << "MarkerBlock(" << bar.chr_id << ", " << bar.first_marker_ix << ", "
+                  << bar.last_marker_ix << ")";
     }
 
     bool operator==(const MarkerBlock& other) const
