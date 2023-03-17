@@ -339,7 +339,7 @@ void check_prepped_bed_path(const std::string basepath)
 
 void check_bed_path(const std::string basepath)
 {
-    std::string req_suffixes[6] = {".bed", ".bim", ".fam"};
+    std::string req_suffixes[3] = {".bed", ".bim", ".fam"};
     for (auto &suffix : req_suffixes)
     {
         check_path(basepath + suffix);
