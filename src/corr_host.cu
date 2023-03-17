@@ -13,7 +13,10 @@
 using byte = unsigned char;
 
 std::vector<float> cal_mcorrk(
-    const std::vector<unsigned char> &bed_vals, const BedDims dim, const size_t num_markers, const size_t device_mem_gb
+    const std::vector<unsigned char> &bed_vals,
+    const BedDims dim,
+    const size_t num_markers,
+    const size_t device_mem_gb
 )
 {
     size_t num_individuals = dim.get_num_samples();
@@ -59,11 +62,77 @@ std::vector<float> cal_mcorrk(
     return marker_corr;
 }
 
-std::vector<float> marker_corr_mat_antidiag_sums(
-    const std::vector<float> &marker_corrs, BedDims dim
+std::vector<float> cal_mcorrk_banded(
+    const std::vector<unsigned char> &bed_vals,
+    const BedDims dim,
+    const size_t num_markers,
+    const size_t corr_width,
+    const size_t device_mem_gb
 )
 {
-    size_t num_markers = dim.get_num_markers();
+    size_t num_individuals = dim.get_num_samples();
+    float device_mem_bytes = device_mem_gb * std::pow(10, 9);
+    size_t upper_bound_batch_size =
+        std::floor((device_mem_bytes) / (corr_width * num_individuals / 4));
+
+    if (upper_bound_batch_size > num_markers)
+    {
+        upper_bound_batch_size = num_markers;
+    }
+    if (upper_bound_batch_size < corr_width)
+    {
+        printf(
+            "Maximal batch size (%u) < corr width (%u). Decrease distance threshold or increase "
+            "device memory. \n",
+            upper_bound_batch_size,
+            corr_width
+        );
+        exit(1);
+    }
+
+    // allocate correlation result arrays
+    size_t corr_mat_size = corr_width * num_markers;
+    std::vector<float> corrs(corr_mat_size, 0.0);
+
+    // compute correlations
+    cu_marker_corr_pearson_npn_batched_sparse(
+        bed_vals.data(),
+        num_markers,
+        num_individuals,
+        corr_width,
+        upper_bound_batch_size,
+        corrs.data()
+    );
+
+    return corrs;
+}
+
+std::vector<float> marker_corr_banded_mat_antidiag_sums(
+    const std::vector<float> &marker_corrs, size_t corr_width
+)
+{
+    size_t num_markers = marker_corrs.size() / corr_width;
+    size_t num_anti_diagonals = num_markers - 1;
+    std::vector<float> sums(num_anti_diagonals, 0.0);
+
+    for (size_t row = 0; row < num_markers - 1; row++)
+    {
+        for (size_t col = 0; col < corr_width; col++)
+        {
+            size_t diag_ix = row + col;
+            if (diag_ix < num_anti_diagonals)
+            {
+                sums[row + col] += marker_corrs[row * corr_width + col];
+            }
+        }
+    }
+
+    return sums;
+}
+
+std::vector<float> marker_corr_mat_antidiag_sums(const std::vector<float> &marker_corrs)
+{
+    size_t num_markers = (marker_corrs.size() + 3) / 2;
     size_t row_start_ix = 0;
     size_t row_size = num_markers - 1;
     size_t num_anti_diagonals = 2 * num_markers - 3;
@@ -1029,6 +1098,126 @@ void cu_corr_pearson_npn(
     HANDLE_ERROR(cudaMemcpy(phen_corrs, gpu_phen_corrs, phen_output_bytes, cudaMemcpyDeviceToHost));
     HANDLE_ERROR(cudaFree(gpu_phen_corrs));
     HANDLE_ERROR(cudaFree(gpu_phen_vals));
+}
+
+void cu_marker_corr_pearson_npn_batched_sparse(
+    const unsigned char *marker_vals,
+    const size_t num_markers,
+    const size_t num_individuals,
+    const size_t corr_width,
+    const size_t batch_size,
+    float *corrs
+)
+{
+    dim3 BLOCKS_PER_GRID;
+    dim3 THREADS_PER_BLOCK;
+
+    float *gpu_corrs;
+    HANDLE_ERROR(cudaMalloc(&gpu_corrs, corr_width * batch_size * sizeof(float)));
+
+    // copy first marker batch to device
+    byte *gpu_marker_vals;
+    size_t genotype_col_bytes = (num_individuals + 3) / 4 * sizeof(unsigned char);
+    size_t batch_marker_vals_bytes = genotype_col_bytes * batch_size;
+    HANDLE_ERROR(cudaMalloc(&gpu_marker_vals, batch_marker_vals_bytes));
+    HANDLE_ERROR(cudaMemcpy(
+        gpu_marker_vals, &marker_vals[0], batch_marker_vals_bytes, cudaMemcpyHostToDevice
+    ));
+
+    size_t row_in = 0;
+    size_t corr_row_len = corr_width;
+    size_t last_full_row = num_markers - corr_width - 1;
+    size_t max_row_in = batch_size - corr_width;
+    size_t batch_start = 0;
+    size_t curr_width = corr_width;
+    for (size_t row_ix = 0; row_ix < num_markers; ++row_ix)
+    {
+        if (row_ix % 10000 == 0)
+        {
+            printf("Processing marker #%u \n", row_ix);
+            fflush(stdout);
+        }
+        size_t row_out = row_ix % batch_size;
+        if (curr_width < corr_width)
+        {
+            // overwrite old results
+            HANDLE_ERROR(cudaMemset(
+                &gpu_corrs[row_out * corr_row_len + curr_width],
+                0,
+                (corr_width - curr_width) * sizeof(float)
+            ));
+        }
+
+        // marker-marker corr
+        BLOCKS_PER_GRID = dim3(curr_width, 1, 1);
+        THREADS_PER_BLOCK = dim3(NUMTHREADS, 1, 1);
+        if (curr_width > 0)
+        {
+            bed_marker_corr_pearson_npn_sparse_scan<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
+                gpu_marker_vals,
+                num_individuals,
+                genotype_col_bytes,
+                row_in,
+                &gpu_corrs[row_out * corr_row_len]
+            );
+            CudaCheckError();
+        }
+
+        if (row_out == (batch_size - 1))
+        {
+            printf("Copying batch results to host\n");
+            fflush(stdout);
+            // copy batch results to host
+            HANDLE_ERROR(cudaMemcpy(
+                &corrs[batch_start * (corr_width)],
+                gpu_corrs,
+                (corr_width)*batch_size * sizeof(float),
+                cudaMemcpyDeviceToHost
+            ));
+            batch_start = row_ix + 1;
+            fflush(stdout);
+        }
+
+        if (row_ix >= last_full_row)
+        {
+            curr_width -= 1;
+            max_row_in += 1;
+        }
+
+        if (row_in == (max_row_in - 1))
+        {
+            printf("At marker #%u;\n", row_ix);
+            printf("Loading new marker batch \n");
+            fflush(stdout);
+            // get new marker data batch
+            HANDLE_ERROR(cudaMemcpy(
+                gpu_marker_vals,
+                &marker_vals[genotype_col_bytes * (row_ix + 1)],
+                batch_marker_vals_bytes,
+                cudaMemcpyHostToDevice
+            ));
+            row_in = 0;
+        }
+        else
+        {
+            row_in += 1;
+        }
+    }
+
+    // copy remaining results to host
+    if ((num_markers % batch_size) != 0)
+    {
+        size_t last_batch_size = num_markers - batch_start;
+        HANDLE_ERROR(cudaMemcpy(
+            &corrs[batch_start * corr_width],
+            gpu_corrs,
+            corr_width * last_batch_size * sizeof(float),
+            cudaMemcpyDeviceToHost
+        ));
+    }
+
+    HANDLE_ERROR(cudaFree(gpu_corrs));
+    HANDLE_ERROR(cudaFree(gpu_marker_vals));
 }
 
 void cu_corr_pearson_npn_batched_sparse(

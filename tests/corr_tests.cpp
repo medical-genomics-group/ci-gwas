@@ -58,6 +58,45 @@ TEST(SparseCorr, ExpectedReturnVals)
     }
 }
 
+TEST(cal_mcorrk_banded, ExpectedReturnVals)
+{
+    const size_t corr_width = 3;
+    const size_t cm_size = corr_width * BMT2_num_markers;
+    BedDims dim(BMT2_NUM_INDIVIDUALS, BMT2_NUM_MARKERS);
+
+    std::vector<float> mcorrs =
+        cal_mcorrk_banded(bmt2_marker_vals, dim, BMT2_NUM_MARKERS, corr_width, 1);
+
+    for (size_t i = 0; i < cm_size; i++)
+    {
+        EXPECT_NEAR(mcorrs[i], bmt2_sparse_mcorrs[i], 0.00001);
+    }
+}
+
+TEST(cu_corr_pearson_npn_batched_sparse, ExpectedReturnVals)
+{
+    const size_t num_markers = BMT2_num_markers;
+    const size_t num_individuals = BMT2_NUM_INDIVIDUALS;
+    const size_t corr_width = 3;
+    const size_t batch_size = 5;
+    const size_t cm_size = corr_width * num_markers;
+    BedDims dim(num_individuals, num_markers);
+
+    // allocate correlation result arrays
+    size_t corr_mat_size = corr_width * num_markers;
+    std::vector<float> corrs(corr_mat_size, 0.0);
+
+    // compute correlations
+    cu_marker_corr_pearson_npn_batched_sparse(
+        bmt2_marker_vals, num_markers, num_individuals, corr_width, batch_size, corrs.data()
+    );
+
+    for (size_t i = 0; i < cm_size; i++)
+    {
+        EXPECT_NEAR(corrs[i], bmt2_sparse_mcorrs[i], 0.00001);
+    }
+}
+
 TEST(RowColIxFromLinear, ExpectedReturnVals3Markers)
 {
     size_t row_ix, col_ix;
