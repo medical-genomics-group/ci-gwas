@@ -4,7 +4,7 @@
 #include <mps/io.h>
 
 std::vector<float> cal_mcorrk(
-    const std::vector<unsigned char> &bed_vals, const BedDims dim, const size_t device_mem_gb
+    const std::vector<unsigned char> &bed_vals, const BedDims dim, const size_t num_markers, const size_t device_mem_gb
 );
 
 std::vector<float> marker_corr_mat_antidiag_sums(

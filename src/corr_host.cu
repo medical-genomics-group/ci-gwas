@@ -13,10 +13,9 @@
 using byte = unsigned char;
 
 std::vector<float> cal_mcorrk(
-    const std::vector<unsigned char> &bed_vals, const BedDims dim, const size_t device_mem_gb
+    const std::vector<unsigned char> &bed_vals, const BedDims dim, const size_t num_markers, const size_t device_mem_gb
 )
 {
-    size_t num_markers = dim.get_num_markers();
     size_t num_individuals = dim.get_num_samples();
     size_t device_mem_bytes = device_mem_gb * std::pow(10, 9);
 
@@ -39,8 +38,7 @@ std::vector<float> cal_mcorrk(
         printf("req mem: %zu, device mem: %zu \n", req_mem_bytes, device_mem_bytes);
         size_t mb_bytes =
             num_individuals / 4 * max_batch_size + max_batch_size * (max_batch_size - 1) * 2;
-        printf("max_batch_size: %zu (%zu bytes \n)", max_batch_size, mb_bytes);
-
+        printf("max_batch_size: %zu (%zu bytes \n)\n", max_batch_size, mb_bytes);
         printf("Device mem < required mem; Running tiled routine. \n");
         fflush(stdout);
 
