@@ -96,8 +96,7 @@ int make_odd(int v)
 std::vector<MarkerBlock> block_chr(
     const std::vector<float> &diag_sums,
     const std::string chr_id,
-    const int max_block_size,
-    const int corr_width
+    const int max_block_size
 )
 {
     int too_large = diag_sums.size();
