@@ -80,6 +80,8 @@ void read_floats_from_lines(std::string path, std::vector<float> &dest);
 
 std::vector<float> read_floats_from_lines(std::string path);
 
+void write_marker_blocks_to_file(const std::vector<MarkerBlock> &blocks, const std::string path);
+
 void write_bed(
     const std::vector<unsigned char> &out_buf, const std::string out_dir, const std::string chr_id
 );
