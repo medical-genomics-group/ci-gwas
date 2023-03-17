@@ -197,6 +197,19 @@ std::vector<unsigned char> read_chr_from_bed(
     return res;
 }
 
+void write_marker_blocks_to_file(const std::vector<MarkerBlock> &blocks, const std::string path)
+{
+    std::ofstream fout;
+    fout.open(path, std::ios::out);
+
+    for (auto block : blocks)
+    {
+        fout << block.to_line_string() << std::endl;
+    }
+
+    fout.close();
+}
+
 void write_ints_to_binary(const int *data, const size_t nvals, const std::string path)
 {
     std::ofstream fout;
