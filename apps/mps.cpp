@@ -65,13 +65,13 @@ void make_blocks(int argc, char *argv[])
 
     for (auto cid : bim.chr_ids)
     {
-        std::cout << "Chr: " << cid << " Loading bed data." << std::endl;
+        std::cout << "[Chr " << cid << "]: Loading bed data." << std::endl;
         std::vector<unsigned char> chr_bed = read_chr_from_bed(bfiles.bed(), cid, bim, dim);
-        std::cout << "Chr: " << cid << " Computing correlations." << std::endl;
+        std::cout << "[Chr " << cid << "]: Computing correlations." << std::endl;
         std::vector<float> mcorrs = cal_mcorrk(chr_bed, dim, device_mem_gb);
-        std::cout << "Chr: " << cid << " Computing antidiagonal sums." << std::endl;
+        std::cout << "[Chr " << cid << "]: Computing antidiagonal sums." << std::endl;
         std::vector<float> antidiag_sums = marker_corr_mat_antidiag_sums(mcorrs, dim);
-        std::cout << "Chr: " << cid << " Making blocks." << std::endl;
+        std::cout << "[Chr " << cid << "]: Making blocks." << std::endl;
         std::vector<MarkerBlock> blocks = block_chr(antidiag_sums, cid, max_block_size);
         global_blocks.insert(global_blocks.end(), blocks.begin(), blocks.end());
     }
