@@ -38,9 +38,10 @@ usage: mps block <bfiles> <max-block-size>
 arguments:
     bfiles          stem of .bed, .bim, .fam files
     max-block-size  maximum number of markers per block
+    device-mem-gb   maximum memory available on gpu in GB
 )";
 
-const int BLOCK_NARGS = 4;
+const int BLOCK_NARGS = 5;
 
 void make_blocks(int argc, char *argv[])
 {
@@ -52,6 +53,7 @@ void make_blocks(int argc, char *argv[])
 
     std::string bed_base_path = argv[2];
     int max_block_size = std::stoi(argv[3]);
+    size_t device_mem_gb = std::stoi(argv[4]);
 
     std::cout << "Checking paths" << std::endl;
     check_bed_path(bed_base_path);
@@ -59,12 +61,23 @@ void make_blocks(int argc, char *argv[])
     BfilesBase bfiles(bed_base_path);
     BedDims dim(bfiles);
     BimInfo bim(bfiles.bim());
+    std::vector<MarkerBlock> global_blocks;
 
     for (auto cid : bim.chr_ids)
     {
+        std::cout << "Chr: " << cid << " Loading bed data." << std::endl;
         std::vector<unsigned char> chr_bed = read_chr_from_bed(bfiles.bed(), cid, bim, dim);
-        // TODO: compute tiled or not tiled mcorrk, write routine for that to prevent code doubling
+        std::cout << "Chr: " << cid << " Computing correlations." << std::endl;
+        std::vector<float> mcorrs = cal_mcorrk(chr_bed, dim, device_mem_gb);
+        std::cout << "Chr: " << cid << " Computing antidiagonal sums." << std::endl;
+        std::vector<float> antidiag_sums = marker_corr_mat_antidiag_sums(mcorrs, dim);
+        std::cout << "Chr: " << cid << " Making blocks." << std::endl;
+        std::vector<MarkerBlock> blocks = block_chr(antidiag_sums, cid, max_block_size);
+        global_blocks.insert(global_blocks.end(), blocks.begin(), blocks.end());
     }
+
+    std::cout << "Done." << std::endl;
+    write_marker_blocks_to_file(global_blocks, bfiles.blocks());
 }
 
 const std::string BDPC_USAGE = R"(
