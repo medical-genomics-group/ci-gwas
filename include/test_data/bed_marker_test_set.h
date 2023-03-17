@@ -34,7 +34,7 @@ const float bmt_phen_vals[20] = {0.72031609,  0.59822862, 0.47614114,  -0.622646
 #define BMT2_NUM_PHEN 5
 
 // Column-major
-const unsigned char bmt2_marker_vals[175] = {
+const std::vector<unsigned char> bmt2_marker_vals = {
     0xff, 0xff, 0xff, 0xff, 0xef, 0xbf, 0xff, 0xff, 0xfe, 0xef, 0xbb, 0xff, 0xbe, 0xee, 0xef, 0xff,
     0xff, 0xfb, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0xff, 0xfe, 0xfb, 0xeb, 0xff, 0xff, 0xff, 0xff,
     0xee, 0xbf, 0xfb, 0xbf, 0xff, 0xee, 0xef, 0xfb, 0xfb, 0xff, 0xee, 0xbf, 0xff, 0xff, 0xff, 0xee,
@@ -303,7 +303,7 @@ const float bmt2_sparse_corrs[96] = {
     0.10069993744517854,
     0.0};
 
-const float bmt2_sparse_mcorrs[21] = {
+const std::vector<float> bmt2_sparse_mcorrs = {
     0.06306042,  0.10184015, 0.06821211,  0.07140777,  0.04720982, 0.01071173,  0.00567552,
     -0.33084848, 0.02414851, -0.03949853, -0.10308874, 0.15181038, -0.07253344, 0.16289531,
     0.0,         0.08953973, 0.0,         0.0,         0.0,        0.0,         0.0,

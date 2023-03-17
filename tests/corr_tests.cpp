@@ -40,7 +40,7 @@ TEST(cu_corr_pearson_npn_batched_sparse, ExpectedReturnVals)
     memset(corrs, 0.0, sizeof(corrs));
 
     cu_corr_pearson_npn_batched_sparse(
-        bmt2_marker_vals,
+        bmt2_marker_vals.data(),
         bmt2_phen_vals,
         BMT2_NUM_MARKERS,
         BMT2_NUM_INDIVIDUALS,
@@ -61,7 +61,7 @@ TEST(cu_corr_pearson_npn_batched_sparse, ExpectedReturnVals)
 TEST(cal_mcorrk_banded, ExpectedReturnVals)
 {
     const size_t corr_width = 3;
-    const size_t cm_size = corr_width * BMT2_num_markers;
+    const size_t cm_size = corr_width * BMT2_NUM_MARKERS;
     BedDims dim(BMT2_NUM_INDIVIDUALS, BMT2_NUM_MARKERS);
 
     std::vector<float> mcorrs =
@@ -75,7 +75,7 @@ TEST(cal_mcorrk_banded, ExpectedReturnVals)
 
 TEST(cu_corr_pearson_npn_batched_sparse, ExpectedReturnVals)
 {
-    const size_t num_markers = BMT2_num_markers;
+    const size_t num_markers = BMT2_NUM_MARKERS;
     const size_t num_individuals = BMT2_NUM_INDIVIDUALS;
     const size_t corr_width = 3;
     const size_t batch_size = 5;
@@ -88,7 +88,7 @@ TEST(cu_corr_pearson_npn_batched_sparse, ExpectedReturnVals)
 
     // compute correlations
     cu_marker_corr_pearson_npn_batched_sparse(
-        bmt2_marker_vals, num_markers, num_individuals, corr_width, batch_size, corrs.data()
+        bmt2_marker_vals.data(), num_markers, num_individuals, corr_width, batch_size, corrs.data()
     );
 
     for (size_t i = 0; i < cm_size; i++)
@@ -148,7 +148,7 @@ TEST(CuMarkerCorrPearsonBatched, ExpectedReturnVals)
     memset(marker_corr, 0.0, sizeof(marker_corr));
 
     cu_marker_corr_pearson_batched(
-        bmt2_marker_vals,
+        bmt2_marker_vals.data(),
         num_markers,
         num_individuals,
         bmt2_marker_mean,
@@ -174,7 +174,7 @@ TEST(CuMarkerCorrPearsonNpnBatched, ExpectedReturnVals)
     memset(marker_corr, 0.0, sizeof(marker_corr));
 
     cu_marker_corr_pearson_npn_batched(
-        bmt2_marker_vals, num_markers, num_individuals, stripe_width, marker_corr
+        bmt2_marker_vals.data(), num_markers, num_individuals, stripe_width, marker_corr
     );
 
     for (size_t i = 0; i < marker_cm_size; i++)
@@ -251,7 +251,7 @@ TEST(CuCorrNpnBatched, ExpectedReturnVals)
     memset(phen_corr, 0.0, sizeof(phen_corr));
 
     cu_corr_pearson_npn_batched(
-        bmt2_marker_vals,
+        bmt2_marker_vals.data(),
         bmt2_phen_vals,
         num_markers,
         num_individuals,
@@ -311,7 +311,7 @@ TEST(CuMarkerPearson, ExpectedReturnVals7Markers)
     memset(marker_corr, 0.0, sizeof(marker_corr));
 
     cu_marker_corr_pearson(
-        bmt2_marker_vals,
+        bmt2_marker_vals.data(),
         num_markers,
         num_individuals,
         bmt2_marker_mean,
