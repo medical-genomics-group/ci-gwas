@@ -30,6 +30,8 @@ class BfilesBase
 
     std::string modes() const { return base + ".modes"; }
 
+    std::string blocks() const { return base + ".blocks"; }
+
     bool has_valid_bed_prefix() const
     {
         std::vector<unsigned char> buffer(BED_PREFIX_BYTES);
