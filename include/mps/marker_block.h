@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#incluse < ostream>
 
 class MarkerBlock
 {
@@ -15,7 +16,12 @@ class MarkerBlock
     {
     }
 
-    bool operator==(const MarkerBlock &other) const
+    friend std::ostream& operator<<(std::ostream& os, const MarkerBlock& bar)
+    {
+        return os << bar.chr_id << ", " << bar.first_marker_ix << ", " << bar.last_marker_ix;
+    }
+
+    bool operator==(const MarkerBlock& other) const
     {
         return (this->chr_id == other.chr_id) && (this->first_marker_ix == other.first_marker_ix) &&
                (this->last_marker_ix == other.last_marker_ix);
