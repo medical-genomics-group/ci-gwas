@@ -3,6 +3,7 @@
 #include <mps/corr_host.h>
 #include <mps/corr_kernels.h>
 #include <mps/gpuerrors.h>
+#include <mps/io.h>
 
 #include <cassert>
 #include <iomanip>
@@ -10,6 +11,79 @@
 #include <vector>
 
 using byte = unsigned char;
+
+std::vector<float> cal_mcorrk(
+    const std::vector<unsigned char> &bed_vals, const BedDims dim, const size_t device_mem_gb
+)
+{
+    size_t num_markers = dim.get_num_markers();
+    size_t num_individuals = dim.get_num_samples();
+    size_t device_mem_bytes = device_mem_gb * std::pow(10, 9);
+
+    // allocate correlation result arrays
+    size_t marker_corr_mat_size = num_markers * (num_markers - 1) / 2;
+    std::vector<float> marker_corr(marker_corr_mat_size, 0.0);
+
+    // mem required for non-batched processing
+    size_t nbytes_marker_data = num_individuals / 4 * num_markers;
+    size_t nbytes_marker_corrs = num_markers * (num_markers - 1) * 2;
+    size_t req_mem_bytes = nbytes_marker_data + nbytes_marker_corrs;
+
+    if (req_mem_bytes > device_mem_bytes)
+    {
+        // figure out batch size
+        float b = num_individuals / 4 - 2;
+        size_t max_batch_size = (size_t)((-b + std::sqrt(b * b + 8 * device_mem_bytes)) / 4);
+        size_t batch_nrows = max_batch_size / 2;
+
+        printf("req mem: %zu, device mem: %zu \n", req_mem_bytes, device_mem_bytes);
+        size_t mb_bytes =
+            num_individuals / 4 * max_batch_size + max_batch_size * (max_batch_size - 1) * 2;
+        printf("max_batch_size: %zu (%zu bytes \n)", max_batch_size, mb_bytes);
+
+        printf("Device mem < required mem; Running tiled routine. \n");
+        fflush(stdout);
+
+        cu_marker_corr_pearson_npn_batched(
+            bed_vals.data(), num_markers, num_individuals, batch_nrows, marker_corr.data()
+        );
+    }
+    else
+    {
+        printf("Device mem >= required mem; Running non-tiled routine. \n");
+        fflush(stdout);
+        // compute correlations
+        cu_marker_corr_pearson_npn(
+            bed_vals.data(), num_markers, num_individuals, marker_corr.data()
+        );
+    }
+
+    return marker_corr;
+}
+
+std::vector<float> marker_corr_mat_antidiag_sums(
+    const std::vector<float> &marker_corrs, BedDims dim
+)
+{
+    size_t num_markers = dim.get_num_markers();
+    size_t row_start_ix = 0;
+    size_t row_size = num_markers - 1;
+    size_t num_anti_diagonals = 2 * num_markers - 3;
+    std::vector<float> sums(num_anti_diagonals, 0.0);
+
+    for (size_t row = 0; row < (num_markers - 1); row++)
+    {
+        for (size_t update_ix = 0; update_ix < row_size; update_ix++)
+        {
+            sums[2 * row + update_ix] += marker_corrs[row_start_ix + update_ix];
+        }
+
+        row_start_ix += row_size;
+        --row_size;
+    }
+
+    return sums;
+}
 
 void marker_corr_mat_antidiag_sums(const size_t num_markers, const float *marker_corrs, float *sums)
 {
