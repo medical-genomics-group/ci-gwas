@@ -39,9 +39,10 @@ arguments:
     bfiles          stem of .bed, .bim, .fam files
     max-block-size  maximum number of markers per block
     device-mem-gb   maximum memory available on gpu in GB
+    corr-width      max distance at which to compute correlations
 )";
 
-const int BLOCK_NARGS = 5;
+const int BLOCK_NARGS = 6;
 
 void make_blocks(int argc, char *argv[])
 {
@@ -54,6 +55,7 @@ void make_blocks(int argc, char *argv[])
     std::string bed_base_path = argv[2];
     int max_block_size = std::stoi(argv[3]);
     size_t device_mem_gb = std::stoi(argv[4]);
+    size_t corr_width = std::stoi(argv[5]);
 
     std::cout << "Checking paths" << std::endl;
     check_bed_path(bed_base_path);
@@ -70,12 +72,11 @@ void make_blocks(int argc, char *argv[])
 
         std::cout << "[Chr " << cid << "]: Computing correlations." << std::endl;
         std::vector<float> mcorrs = cal_mcorrk_banded(
-            chr_bed, dim, bim.get_num_markers_on_chr(cid), max_block_size, device_mem_gb
+            chr_bed, dim, bim.get_num_markers_on_chr(cid), corr_width, device_mem_gb
         );
 
         std::cout << "[Chr " << cid << "]: Computing antidiagonal sums." << std::endl;
-        std::vector<float> antidiag_sums =
-            marker_corr_banded_mat_antidiag_sums(mcorrs, max_block_size);
+        std::vector<float> antidiag_sums = marker_corr_banded_mat_antidiag_sums(mcorrs, corr_width);
 
         std::cout << "[Chr " << cid << "]: Making blocks." << std::endl;
         std::vector<MarkerBlock> blocks = block_chr(antidiag_sums, cid, max_block_size);
