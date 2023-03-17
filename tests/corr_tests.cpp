@@ -73,7 +73,7 @@ TEST(cal_mcorrk_banded, ExpectedReturnVals)
     }
 }
 
-TEST(cu_corr_pearson_npn_batched_sparse, ExpectedReturnVals)
+TEST(cu_marker_corr_pearson_npn_batched_sparse, ExpectedReturnVals)
 {
     const size_t num_markers = BMT2_NUM_MARKERS;
     const size_t num_individuals = BMT2_NUM_INDIVIDUALS;
