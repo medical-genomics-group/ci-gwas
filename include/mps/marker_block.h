@@ -1,7 +1,8 @@
 #pragma once
 
-#include <string>
 #include <ostream>
+#include <sstream>
+#include <string>
 
 class MarkerBlock
 {
@@ -26,6 +27,13 @@ class MarkerBlock
     {
         return (this->chr_id == other.chr_id) && (this->first_marker_ix == other.first_marker_ix) &&
                (this->last_marker_ix == other.last_marker_ix);
+    }
+
+    std::string to_line_string() const
+    {
+        std::ostringstream ss;
+        ss << chr_id << "\t" << first_marker_ix << "\t" << last_marker_ix;
+        return ss.str();
     }
 
     std::string get_chr_id() const { return chr_id; }
