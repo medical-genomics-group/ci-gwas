@@ -19,7 +19,7 @@ auto sparse_corr_matrix_size(size_t num_markers, size_t num_phen, size_t corr_wi
     return (corr_width + num_phen) * (num_phen + num_markers);
 }
 
-TEST(AntiDiagSums, ExpectedReturnVals)
+TEST(marker_corr_mat_antidiag_sums, ExpectedReturnVals)
 {
     float sums[11];
     memset(sums, 0.0, sizeof(sums));
@@ -30,7 +30,7 @@ TEST(AntiDiagSums, ExpectedReturnVals)
     }
 }
 
-TEST(SparseCorr, ExpectedReturnVals)
+TEST(cu_corr_pearson_npn_batched_sparse, ExpectedReturnVals)
 {
     const size_t corr_width = 3;
     const size_t batch_size = 5;
@@ -322,5 +322,16 @@ TEST(CuMarkerPearson, ExpectedReturnVals7Markers)
     for (size_t i = 0; i < marker_cm_size; i++)
     {
         EXPECT_NEAR(marker_corr[i], bmt2_marker_corrs_pearson[i], 0.00001);
+    }
+}
+
+TEST(marker_corr_banded_mat_antidiag_sums, ExpectedReturnVals)
+{
+    std::vector<float> obs = marker_corr_banded_mat_antidiag_sums(bmt2_sparse_mcorrs, 3);
+    std::vector<float> exp = {
+        0.06306042, 0.17324792, 0.12109745000000001, -0.35963528, -0.15147367, 0.40424541999999997};
+    for (size_t i = 0; i < obs.size(); i++)
+    {
+        EXPECT_NEAR(obs[i], exp[i], 0.00001);
     }
 }

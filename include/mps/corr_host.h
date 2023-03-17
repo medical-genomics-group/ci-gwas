@@ -19,6 +19,10 @@ std::vector<float> cal_mcorrk_banded(
     const size_t device_mem_gb
 );
 
+std::vector<float> marker_corr_banded_mat_antidiag_sums(
+    const std::vector<float> &marker_corrs, size_t corr_width
+);
+
 std::vector<float> marker_corr_mat_antidiag_sums(const std::vector<float> &marker_corrs);
 
 void marker_corr_mat_antidiag_sums(
