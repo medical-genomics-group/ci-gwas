@@ -1,24 +1,16 @@
 #include <math.h>
 #include <mps/io.h>
+
 #include <vector>
 
 const int MAX_BLOCK_SIZE_TOL = 100;
 
-int num_vars(const int num_antidiags)
-{
-    return (num_antidiags + 3) / 2;
-}
-
-float hann(
-    const int n,
-    const int m)
+float hann(const int n, const int m)
 {
     return 0.5 - 0.5 * cosf(2.0 * M_PI * (float)n / ((float)m - 1.0));
 }
 
-std::vector<float> hanning_smoothing(
-    const std::vector<float> &v,
-    const int window_size)
+std::vector<float> hanning_smoothing(const std::vector<float> &v, const int window_size)
 {
     std::vector<float> hanning_window;
     for (int i = 0; i < window_size; i++)
@@ -41,8 +33,7 @@ std::vector<float> hanning_smoothing(
     return res;
 }
 
-std::vector<size_t> local_minima(
-    const std::vector<float> &v)
+std::vector<size_t> local_minima(const std::vector<float> &v)
 {
     std::vector<size_t> res;
     for (size_t i = 1; i < (v.size() - 1); i++)
@@ -55,21 +46,9 @@ std::vector<size_t> local_minima(
     return res;
 }
 
-std::vector<size_t> antidiag_ix_to_linear_ix(
-    const std::vector<size_t> &ixs)
-{
-    std::vector<size_t> res;
-    for (auto v : ixs)
-    {
-        res.push_back((v + 1) / 2);
-    }
-    return res;
-}
-
 std::vector<MarkerBlock> blocks_from_minima(
-    const std::vector<size_t> &minima,
-    const std::string chr_id,
-    const size_t num_vars)
+    const std::vector<size_t> &minima, const std::string chr_id, const size_t num_vars
+)
 {
     std::vector<MarkerBlock> res;
     size_t prev = 0;
@@ -82,8 +61,7 @@ std::vector<MarkerBlock> blocks_from_minima(
     return res;
 }
 
-int largest_block_size(
-    const std::vector<MarkerBlock> &blocks)
+int largest_block_size(const std::vector<MarkerBlock> &blocks)
 {
     size_t res = 0;
     for (auto block : blocks)
@@ -97,14 +75,12 @@ int largest_block_size(
 }
 
 std::vector<MarkerBlock> block_chr_with_window_size(
-    const std::vector<float> &diag_sums,
-    const std::string chr_id,
-    const int window_size)
+    const std::vector<float> &diag_sums, const std::string chr_id, const int window_size
+)
 {
-    int n = num_vars(diag_sums.size());
+    int n = diag_sums.size() + 1;
     std::vector<float> smooth = hanning_smoothing(diag_sums, window_size);
-    std::vector<size_t> diag_minima = local_minima(smooth);
-    std::vector<size_t> minima = antidiag_ix_to_linear_ix(diag_minima);
+    std::vector<size_t> minima = local_minima(smooth);
     return blocks_from_minima(minima, chr_id, n);
 }
 
@@ -120,7 +96,9 @@ int make_odd(int v)
 std::vector<MarkerBlock> block_chr(
     const std::vector<float> &diag_sums,
     const std::string chr_id,
-    const int max_block_size)
+    const int max_block_size,
+    const int corr_width
+)
 {
     int too_large = diag_sums.size();
     int too_small = 3;
