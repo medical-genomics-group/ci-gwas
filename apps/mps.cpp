@@ -54,7 +54,7 @@ void make_blocks(int argc, char *argv[])
 
     std::string bed_base_path = argv[2];
     int max_block_size = std::stoi(argv[3]);
-    size_t device_mem_gb = std::stoi(argv[4]);
+    float device_mem_gb = std::stof(argv[4]);
     size_t corr_width = std::stoi(argv[5]);
 
     std::cout << "Checking paths" << std::endl;

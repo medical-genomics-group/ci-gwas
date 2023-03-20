@@ -67,7 +67,7 @@ std::vector<float> cal_mcorrk_banded(
     const BedDims dim,
     const size_t num_markers,
     const size_t corr_width,
-    const size_t device_mem_gb
+    const float device_mem_gb
 )
 {
     size_t num_individuals = dim.get_num_samples();
