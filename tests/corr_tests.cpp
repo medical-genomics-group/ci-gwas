@@ -33,7 +33,7 @@ TEST(marker_corr_mat_antidiag_sums, ExpectedReturnVals)
 TEST(cu_corr_pearson_npn_batched_sparse, ExpectedReturnVals)
 {
     const size_t corr_width = 3;
-    const size_t batch_size = 5;
+    const size_t batch_size = 6;
     const size_t cm_size = sparse_corr_matrix_size(BMT2_NUM_MARKERS, BMT2_NUM_PHEN, corr_width);
 
     float corrs[cm_size];
