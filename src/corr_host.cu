@@ -1147,7 +1147,9 @@ void cu_marker_corr_pearson_npn_batched_sparse(
             // overwrite old results
             HANDLE_ERROR(cudaMemset(
                 &gpu_corrs[row_out * corr_row_len + curr_width],
-                0,row_ix
+                0,
+                (corr_width - curr_width) * sizeof(float)
+            ));
         }
 
         // marker-marker corr
