@@ -30,10 +30,69 @@ auto num_variables_from_matrix_size(const size_t num_matrix_entries) -> size_t
     return (1 + (size_t)sqrt(1.0 + 8.0 * (long double)num_matrix_entries)) / 2;
 }
 
-const std::string BLOCK_USAGE = R"(
-Build approximately unlinked blocks of markers
+void check_nargs(const int argc, const int nargs, const std::string usage)
+{
+    if (argc < nargs)
+    {
+        std::cout << usage << std::endl;
+        exit(1);
+    }
+}
 
-usage: mps block <bfiles> <max-block-size>
+const std::string MCORRKB_CHR_USAGE = R"(
+Compute the banded Kendall correlation matrix for a given chromosome
+
+usage: mps mcorrkb-chr <bfiles> <device-mem-gb> <corr-width>
+
+arguments:
+    bfiles          stem of .bed, .bim, .fam files
+    chr             id of chr (as in .bim)
+    device-mem-gb   maximum memory available on gpu in GB
+    corr-width      max distance at which to compute correlations    
+)";
+
+const int MCORRKB_CHR_NARGS = 6;
+
+void mcorrkb_chr(int argc, char *argv[])
+{
+    check_nargs(argc, MCORRKB_CHR_NARGS, MCORRKB_CHR_USAGE);
+
+    std::string bed_base_path = argv[2];
+    std::string chr_id = argv[3];
+    float device_mem_gb = std::stof(argv[4]);
+    size_t corr_width = std::stoi(argv[5]);
+
+    std::cout << "Checking paths" << std::endl;
+    check_bed_path(bed_base_path);
+
+    BfilesBase bfiles(bed_base_path);
+    BedDims dim(bfiles);
+    BimInfo bim(bfiles.bim());
+
+    size_t bytes_per_bed_col = ((dim.get_num_samples() + 3) / 4);
+
+    size_t num_markers = bim.get_num_markers_on_chr(chr_id);
+    size_t mem_host_gb =
+        ((num_markers * bytes_per_bed_col) + corr_width * num_markers * 4) * std::pow(10, -9);
+    std::cout << "[Chr " << chr_id << "]: At least " << mem_host_gb
+              << " GB in host memory required." << std::endl;
+
+    std::cout << "[Chr " << chr_id << "]: Loading bed data for " << num_markers << " markers."
+              << std::endl;
+    std::vector<unsigned char> chr_bed = read_chr_from_bed(bfiles.bed(), chr_id, bim, dim);
+
+    std::cout << "[Chr " << chr_id << "]: Computing correlations." << std::endl;
+    std::vector<float> mcorrs = cal_mcorrk_banded(
+        chr_bed, dim, bim.get_num_markers_on_chr(chr_id), corr_width, device_mem_gb
+    );
+
+    write_floats_to_binary(mcorrs.data(), mcorrs.size(), chr_id + ".mcorrkb");
+}
+
+const std::string BLOCK_USAGE = R"(
+Group markers into approximately unlinked blocks
+
+usage: mps block <bfiles> <max-block-size> <device-mem-gb> <corr-width>
 
 arguments:
     bfiles          stem of .bed, .bim, .fam files
@@ -46,11 +105,7 @@ const int BLOCK_NARGS = 6;
 
 void make_blocks(int argc, char *argv[])
 {
-    if (argc < BLOCK_NARGS)
-    {
-        std::cout << BLOCK_USAGE << std::endl;
-        exit(1);
-    }
+    check_nargs(argc, BLOCK_NARGS, BLOCK_USAGE);
 
     std::string bed_base_path = argv[2];
     int max_block_size = std::stoi(argv[3]);
@@ -1090,16 +1145,17 @@ const std::string MPS_USAGE = R"(
 usage: mps <command> [<args>]
 
 commands:
-    printbf Interpret contents of binary file as floats and print to stoud
-    prep    Prepare input (PLINK) .bed file for mps
-    scorr   Compute the marker/phenotype correlation matrix in sparse format
-    corr    Compute the marker/phenotype correlation matrix
-    mcorrk  Compute pearson correlations between markers as sin(pi / 2 tau_b)
-    mcorrp  Compute pearson correlations between markers
-    ads     Compute sums of anti-diagonals of marker correlation matrix
-    cups    Use cuPC to compute the parent set for each phenotype
-    bdpc    Run cuPC on block diagonal genomic covariance matrix
-    block   Build approximately unlinked blocks of markers
+    printbf         Interpret contents of binary file as floats and print to stoud
+    prep            Prepare input (PLINK) .bed file for mps
+    scorr           Compute the marker/phenotype correlation matrix in sparse format
+    corr            Compute the marker/phenotype correlation matrix
+    mcorrk          Compute pearson correlations between markers as sin(pi / 2 tau_b)
+    mcorrp          Compute pearson correlations between markers
+    ads             Compute sums of anti-diagonals of marker correlation matrix
+    cups            Use cuPC to compute the parent set for each phenotype
+    bdpc            Run cuPC on block diagonal genomic covariance matrix
+    block           Build approximately unlinked blocks of markers
+    mcorrkb-chr     Compute the banded Kendall correlation matrix for a given chromosome
 
 contact:
     nick.machnik@gmail.com
@@ -1158,6 +1214,10 @@ auto main(int argc, char *argv[]) -> int
     else if (cmd == "block")
     {
         make_blocks(argc, argv);
+    }
+    else if (cmd == "mcorrkb-chr")
+    {
+        mcorrkb_chr(argc, argv);
     }
     else
     {
