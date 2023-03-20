@@ -65,9 +65,18 @@ void make_blocks(int argc, char *argv[])
     BimInfo bim(bfiles.bim());
     std::vector<MarkerBlock> global_blocks;
 
+    size_t bytes_per_bed_col = ((dim.get_num_samples() + 3) / 4);
+
     for (auto cid : bim.chr_ids)
     {
-        std::cout << "[Chr " << cid << "]: Loading bed data." << std::endl;
+        size_t num_markers = bim.get_num_markers_on_chr(cid);
+        size_t mem_host_gb =
+            ((num_markers * bytes_per_bed_col) + corr_width * num_markers * 4) * std::pow(10, -9);
+        std::cout << "[Chr " << cid << "]: At least " << mem_host_gb
+                  << " GB in host memory required." << std::endl;
+
+        std::cout << "[Chr " << cid << "]: Loading bed data for " << num_markers << " markers."
+                  << std::endl;
         std::vector<unsigned char> chr_bed = read_chr_from_bed(bfiles.bed(), cid, bim, dim);
 
         std::cout << "[Chr " << cid << "]: Computing correlations." << std::endl;
