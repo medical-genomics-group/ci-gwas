@@ -1147,9 +1147,7 @@ void cu_marker_corr_pearson_npn_batched_sparse(
             // overwrite old results
             HANDLE_ERROR(cudaMemset(
                 &gpu_corrs[row_out * corr_row_len + curr_width],
-                0,
-                (corr_width - curr_width) * sizeof(float)
-            ));
+                0,row_ix
         }
 
         // marker-marker corr
@@ -1197,7 +1195,7 @@ void cu_marker_corr_pearson_npn_batched_sparse(
             HANDLE_ERROR(cudaMemcpy(
                 gpu_marker_vals,
                 &marker_vals[genotype_col_bytes * (row_ix + 1)],
-                batch_marker_vals_bytes,
+                min(batch_marker_vals_bytes, genotype_col_bytes * (num_markers - row_ix - 1)),
                 cudaMemcpyHostToDevice
             ));
             row_in = 0;
