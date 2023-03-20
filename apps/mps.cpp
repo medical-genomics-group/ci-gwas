@@ -86,7 +86,7 @@ void mcorrkb_chr(int argc, char *argv[])
         chr_bed, dim, bim.get_num_markers_on_chr(chr_id), corr_width, device_mem_gb
     );
 
-    write_floats_to_binary(mcorrs.data(), mcorrs.size(), chr_id + ".mcorrkb");
+    write_floats_to_binary(mcorrs.data(), mcorrs.size(), bfiles.with_suffix(chr_id + ".mcorrkb"));
 }
 
 const std::string BLOCK_USAGE = R"(
