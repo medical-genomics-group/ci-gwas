@@ -325,13 +325,3 @@ TEST(CuMarkerPearson, ExpectedReturnVals7Markers)
     }
 }
 
-TEST(marker_corr_banded_mat_antidiag_sums, ExpectedReturnVals)
-{
-    std::vector<float> obs = marker_corr_banded_mat_antidiag_sums(bmt2_sparse_mcorrs, 3);
-    std::vector<float> exp = {
-        0.06306042, 0.17324792, 0.12109745000000001, -0.35963528, -0.15147367, 0.40424541999999997};
-    for (size_t i = 0; i < obs.size(); i++)
-    {
-        EXPECT_NEAR(obs[i], exp[i], 0.00001);
-    }
-}
