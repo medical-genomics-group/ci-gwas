@@ -35,7 +35,7 @@ std::vector<int> parent_set(
                     if ((G[node_ix * num_var + cix] == 1) && (!curr_parent_set.contains(cix)))
                     {
                         curr_parent_set.insert(cix);
-                        q.push(cix);
+                        next_q.push(cix);
                     }
                 }
             }
