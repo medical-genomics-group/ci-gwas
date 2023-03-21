@@ -20,5 +20,4 @@ const std::vector<int> TEST_ADJ_MAT = {
 
 const std::vector<int> TEST_PAR_SET_D0 = {17, 18, 19};
 const std::vector<int> TEST_PAR_SET_D1 = {0, 1, 3, 8, 9, 17, 18, 19};
-const std::vector<int> TEST_PAR_SET_D2 = {
-    0, 1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
+const std::vector<int> TEST_PAR_SET_D2 = {0, 1, 3, 4, 8, 9, 12, 13, 16, 17, 18, 19};

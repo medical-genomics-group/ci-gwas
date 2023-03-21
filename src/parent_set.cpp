@@ -26,6 +26,7 @@ std::vector<int> parent_set(
 
         for (int depth = 0; depth < max_depth; depth++)
         {
+            next_q = {};
             while (!q.empty())
             {
                 int node_ix = q.front();
