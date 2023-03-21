@@ -139,11 +139,12 @@ void make_blocks(int argc, char *argv[])
             chr_bed, dim, bim.get_num_markers_on_chr(cid), corr_width, device_mem_gb
         );
 
-        std::cout << "[Chr " << cid << "]: Computing antidiagonal sums." << std::endl;
-        std::vector<float> antidiag_sums = marker_corr_banded_mat_antidiag_sums(mcorrs, corr_width);
+        std::cout << "[Chr " << cid << "]: Computing row sums." << std::endl;
+        std::vector<float> mcorrkb_row_sums =
+            marker_corr_banded_mat_row_abs_sums(mcorrs, corr_width);
 
         std::cout << "[Chr " << cid << "]: Making blocks." << std::endl;
-        std::vector<MarkerBlock> blocks = block_chr(antidiag_sums, cid, max_block_size);
+        std::vector<MarkerBlock> blocks = block_chr(mcorrkb_row_sums, cid, max_block_size);
         global_blocks.insert(global_blocks.end(), blocks.begin(), blocks.end());
     }
 

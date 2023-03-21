@@ -36,11 +36,17 @@ std::vector<float> hanning_smoothing(const std::vector<float> &v, const int wind
 std::vector<size_t> local_minima(const std::vector<float> &v)
 {
     std::vector<size_t> res;
+    float left = 0.0;
     for (size_t i = 1; i < (v.size() - 1); i++)
     {
-        if ((v[i] < v[i - 1]) && (v[i] < v[i + 1]))
+        if ((left > v[i]) && (v[i] < v[i + 1]))
         {
             res.push_back(i);
+            left = 0.0;
+        }
+        else if (v[i] > left)
+        {
+            left = v[i];
         }
     }
     return res;
@@ -75,11 +81,11 @@ int largest_block_size(const std::vector<MarkerBlock> &blocks)
 }
 
 std::vector<MarkerBlock> block_chr_with_window_size(
-    const std::vector<float> &diag_sums, const std::string chr_id, const int window_size
+    const std::vector<float> &forward_corr_sums, const std::string chr_id, const int window_size
 )
 {
-    int n = diag_sums.size() + 1;
-    std::vector<float> smooth = hanning_smoothing(diag_sums, window_size);
+    int n = forward_corr_sums.size();
+    std::vector<float> smooth = hanning_smoothing(forward_corr_sums, window_size);
     std::vector<size_t> minima = local_minima(smooth);
     return blocks_from_minima(minima, chr_id, n);
 }
@@ -94,16 +100,15 @@ int make_odd(int v)
 }
 
 std::vector<MarkerBlock> block_chr(
-    const std::vector<float> &diag_sums,
-    const std::string chr_id,
-    const int max_block_size
+    const std::vector<float> &forward_corr_sums, const std::string chr_id, const int max_block_size
 )
 {
-    int too_large = diag_sums.size();
+    int too_large = forward_corr_sums.size();
     int too_small = 3;
     int window_size = make_odd((too_large + too_small) / 2);
 
-    std::vector<MarkerBlock> res = block_chr_with_window_size(diag_sums, chr_id, window_size);
+    std::vector<MarkerBlock> res =
+        block_chr_with_window_size(forward_corr_sums, chr_id, window_size);
     int lbs = largest_block_size(res);
 
     while ((abs(lbs - max_block_size) > MAX_BLOCK_SIZE_TOL) || (lbs > max_block_size))
@@ -123,7 +128,7 @@ std::vector<MarkerBlock> block_chr(
         }
         window_size = new_window_size;
 
-        res = block_chr_with_window_size(diag_sums, chr_id, window_size);
+        res = block_chr_with_window_size(forward_corr_sums, chr_id, window_size);
         lbs = largest_block_size(res);
     }
 

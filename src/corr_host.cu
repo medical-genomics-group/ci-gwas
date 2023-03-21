@@ -109,23 +109,18 @@ std::vector<float> cal_mcorrk_banded(
     return corrs;
 }
 
-std::vector<float> marker_corr_banded_mat_antidiag_sums(
+std::vector<float> marker_corr_banded_mat_row_abs_sums(
     const std::vector<float> &marker_corrs, size_t corr_width
 )
 {
     size_t num_markers = marker_corrs.size() / corr_width;
-    size_t num_anti_diagonals = num_markers - 1;
-    std::vector<float> sums(num_anti_diagonals, 0.0);
+    std::vector<float> sums(num_markers, 0.0);
 
-    for (size_t row = 0; row < num_markers - 1; row++)
+    for (size_t row = 0; row < num_markers; row++)
     {
         for (size_t col = 0; col < corr_width; col++)
         {
-            size_t diag_ix = row + col;
-            if (diag_ix < num_anti_diagonals)
-            {
-                sums[row + col] += marker_corrs[row * corr_width + col];
-            }
+            sums[row] += abs(marker_corrs[row * corr_width + col]);
         }
     }
 
