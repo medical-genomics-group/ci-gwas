@@ -17,7 +17,11 @@ std::vector<int> parent_set(
         std::unordered_set<int> curr_parent_set;
         std::queue<int> q;
         std::queue<int> next_q;
-        curr_parent_set.insert(start_ix);
+        for (int i = num_markers; i < num_var; ++i)
+        {
+            curr_parent_set.insert(i);
+        }
+
         q.push(start_ix);
 
         for (int depth = 0; depth < max_depth; depth++)
