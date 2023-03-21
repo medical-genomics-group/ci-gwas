@@ -1,7 +1,7 @@
 #pragma once
 
-const TEST_NUM_MARKERS = 17;
-const TEST_NUM_PHEN = 3;
+const int TEST_NUM_MARKERS = 17;
+const int TEST_NUM_PHEN = 3;
 
 const std::vector<int> TEST_ADJ_MAT = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0,
