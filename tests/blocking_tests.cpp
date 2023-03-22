@@ -28,6 +28,8 @@ TEST(block_chr, expected_results_synthetic_data)
         MarkerBlock("1", 3575, 3897),
         MarkerBlock("1", 3898, 3997)};
 
+    EXPECT_EQ(exp.size(), obs.size());
+
     for (size_t i = 0; i < exp.size(); ++i)
     {
         EXPECT_EQ(exp[i], obs[i]);
@@ -54,6 +56,8 @@ TEST(block_chr, expected_results_chr1)
         MarkerBlock("1", 144871, 151294), MarkerBlock("1", 151295, 157216),
         MarkerBlock("1", 157217, 162050), MarkerBlock("1", 162051, 165281),
         MarkerBlock("1", 165282, 169903)};
+
+    EXPECT_EQ(exp.size(), obs.size());
 
     for (size_t i = 0; i < exp.size(); ++i)
     {
