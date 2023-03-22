@@ -7,3 +7,5 @@
 std::vector<MarkerBlock> block_chr(
     const std::vector<float> &forward_corr_sums, const std::string chr_id, const int max_block_size
 );
+
+std::vector<float> hanning_smoothing(const std::vector<float> &v, const int window_size);

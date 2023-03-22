@@ -64,3 +64,16 @@ TEST(block_chr, expected_results_chr1)
         EXPECT_EQ(exp[i], obs[i]);
     }
 }
+
+TEST(hanning_smoothing, expected_results)
+{
+    std::vector<float> obs = hanning_smoothing(std::vector<float>(TEST_V[0], TEST_V[999]));
+    std::vector<float> exp = TEST_V_SMOOTH;
+
+    EXPECT_EQ(exp.size(), obs.size());
+
+    for (size_t i = 0; i < exp.size(); ++i)
+    {
+        EXPECT_EQ(exp[i], obs[i]);
+    }
+}
