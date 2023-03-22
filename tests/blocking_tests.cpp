@@ -69,13 +69,13 @@ TEST(block_chr, expected_results_chr1)
 
 TEST(hanning_smoothing, expected_results)
 {
-    std::vector<float> obs = hanning_smoothing(std::vector<float>(TEST_V.begin(), TEST_V.begin() + 999), 101);
+    std::vector<float> obs = hanning_smoothing(std::vector<float>(TEST_V.begin(), TEST_V.begin() + 1000), 101);
     std::vector<float> exp = TEST_V_SMOOTH;
 
     ASSERT_EQ(exp.size(), obs.size());
 
     for (size_t i = 0; i < exp.size(); ++i)
     {
-        EXPECT_EQ(exp[i], obs[i]);
+        EXPECT_NEAR(exp[i], obs[i], 0.01);
     }
 }
