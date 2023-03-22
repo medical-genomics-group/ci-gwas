@@ -57,7 +57,7 @@ TEST(block_chr, expected_results_chr1)
         MarkerBlock("1", 157217, 162049), MarkerBlock("1", 162050, 165281),
         MarkerBlock("1", 165282, 169903)};
 
-    EXPECT_EQ(exp.size(), obs.size());
+    ASSERT_EQ(exp.size(), obs.size());
 
     for (size_t i = 0; i < exp.size(); ++i)
     {
@@ -67,9 +67,9 @@ TEST(block_chr, expected_results_chr1)
 
 TEST(hanning_smoothing, expected_results)
 {
-    std::vector<float> obs =
+    std::vector<double> obs =
         hanning_smoothing(std::vector<float>(TEST_V.begin(), TEST_V.begin() + 1000), 101);
-    std::vector<float> exp = TEST_V_SMOOTH;
+    std::vector<double> exp = TEST_V_SMOOTH;
 
     ASSERT_EQ(exp.size(), obs.size());
 

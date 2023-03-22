@@ -5,7 +5,7 @@
 /*
 First 1000 entries of TEST_V Hanning smoothed with ws 101
 */
-const std::vector<float> TEST_V_SMOOTH = {
+const std::vector<double> TEST_V_SMOOTH = {
     0.0,
     0.0,
     0.0,
