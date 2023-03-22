@@ -200,7 +200,7 @@ std::vector<unsigned char> read_chr_from_bed(
 void write_marker_blocks_to_file(const std::vector<MarkerBlock> &blocks, const std::string path)
 {
     std::ofstream fout;
-    fout.open(path, std::ios::out);
+    fout.open(path, std::ios::out | std::ios::app);
 
     for (auto block : blocks)
     {

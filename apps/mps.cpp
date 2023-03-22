@@ -118,7 +118,6 @@ void make_blocks(int argc, char *argv[])
     BfilesBase bfiles(bed_base_path);
     BedDims dim(bfiles);
     BimInfo bim(bfiles.bim());
-    std::vector<MarkerBlock> global_blocks;
 
     size_t bytes_per_bed_col = ((dim.get_num_samples() + 3) / 4);
 
@@ -145,11 +144,14 @@ void make_blocks(int argc, char *argv[])
 
         std::cout << "[Chr " << cid << "]: Making blocks." << std::endl;
         std::vector<MarkerBlock> blocks = block_chr(mcorrkb_row_sums, cid, max_block_size);
-        global_blocks.insert(global_blocks.end(), blocks.begin(), blocks.end());
+
+        std::cout << "[Chr " << cid << "]: Partitioned into " << blocks.size() << " blocks."
+                  << std::endl;
+        std::cout << "[Chr " << cid << "]: Writing blocks to output file." << std::endl;
+        write_marker_blocks_to_file(blocks, bfiles.blocks());
     }
 
     std::cout << "Done." << std::endl;
-    write_marker_blocks_to_file(global_blocks, bfiles.blocks());
 }
 
 const std::string BDPC_USAGE = R"(
