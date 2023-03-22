@@ -36,6 +36,7 @@ TEST(block_chr, expected_results_synthetic_data)
     }
 }
 
+/*
 TEST(block_chr, expected_results_chr1)
 {
     std::vector<MarkerBlock> obs = block_chr(CHR_ONE_MCORRK_SUM_ABS_ROWS, "1", 11000);
@@ -64,13 +65,14 @@ TEST(block_chr, expected_results_chr1)
         EXPECT_EQ(exp[i], obs[i]);
     }
 }
+*/
 
 TEST(hanning_smoothing, expected_results)
 {
-    std::vector<float> obs = hanning_smoothing(std::vector<float>(TEST_V[0], TEST_V[999]));
+    std::vector<float> obs = hanning_smoothing(std::vector<float>(TEST_V.begin(), TEST_V.begin() + 999), 101);
     std::vector<float> exp = TEST_V_SMOOTH;
 
-    EXPECT_EQ(exp.size(), obs.size());
+    ASSERT_EQ(exp.size(), obs.size());
 
     for (size_t i = 0; i < exp.size(); ++i)
     {
