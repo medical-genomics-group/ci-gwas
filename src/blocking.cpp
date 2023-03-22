@@ -5,14 +5,14 @@
 
 const int MAX_BLOCK_SIZE_TOL = 100;
 
-float hann(const int n, const int m)
+double hann(const int n, const int m)
 {
-    return 0.5 - 0.5 * cosf(2.0 * M_PI * (float)n / ((float)m - 1.0));
+    return 0.5 - 0.5 * cosf(2.0 * M_PI * (double)n / ((double)m - 1.0));
 }
 
-std::vector<float> hanning_smoothing(const std::vector<float> &v, const int window_size)
+std::vector<double> hanning_smoothing(const std::vector<float> &v, const int window_size)
 {
-    std::vector<float> hanning_window;
+    std::vector<double> hanning_window;
     for (int i = 0; i < window_size; i++)
     {
         hanning_window.push_back(hann(i, window_size));
@@ -20,23 +20,23 @@ std::vector<float> hanning_smoothing(const std::vector<float> &v, const int wind
 
     int margin = window_size / 2;
 
-    std::vector<float> res(v.size(), 0.0);
+    std::vector<double> res(v.size(), 0.0);
 
     for (int center = margin; center < (v.size() - margin); center++)
     {
         for (int i = 0; i < window_size; i++)
         {
-            res[center] += hanning_window[i] * v[center - margin + i];
+            res[center] += hanning_window[i] * (double)v[center - margin + i];
         }
     }
 
     return res;
 }
 
-std::vector<size_t> local_minima(const std::vector<float> &v)
+std::vector<size_t> local_minima(const std::vector<double> &v)
 {
     std::vector<size_t> res;
-    float left = 0.0;
+    double left = 0.0;
     for (size_t i = 1; i < (v.size() - 1); i++)
     {
         if ((left > v[i]) && (v[i] < v[i + 1]))
@@ -85,7 +85,7 @@ std::vector<MarkerBlock> block_chr_with_window_size(
 )
 {
     int n = forward_corr_sums.size();
-    std::vector<float> smooth = hanning_smoothing(forward_corr_sums, window_size);
+    std::vector<double> smooth = hanning_smoothing(forward_corr_sums, window_size);
     std::vector<size_t> minima = local_minima(smooth);
     return blocks_from_minima(minima, chr_id, n);
 }
