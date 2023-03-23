@@ -2,6 +2,8 @@
 
 #include <mps/io.h>
 
+#include <fstream>
+#include <iostream>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -17,12 +19,18 @@ void direct_x_to_y(std::vector<int> &G, const size_t num_var, const size_t num_m
 
 struct ReducedGCS
 {
+    size_t num_var;
+    size_t num_phen;
     std::vector<int> G;
     std::vector<float> C;
     std::vector<int> S;
 
     void to_file(std::string base)
     {
+        std::ofstream fout;
+        fout.open(base + ".mdim", std::ios::out);
+        fout << num_var << "\t" << num_phen << std::endl;
+        fout.close();
         write_ints_to_binary(G.data(), G.size(), base + ".adj");
         write_floats_to_binary(C.data(), C.size(), base + ".corr");
         write_ints_to_binary(S.data(), S.size(), base + ".sep");
@@ -46,6 +54,7 @@ ReducedGCS reduce_gcs(
     const std::vector<int> &S,
     const std::unordered_set<int> &P,
     const size_t num_var,
+    const size_t num_phen,
     const size_t max_level
 );
 

@@ -87,10 +87,13 @@ ReducedGCS reduce_gcs(
     const std::vector<int> &S,
     const std::unordered_set<int> &P,
     const size_t num_var,
+    const size_t num_phen,
     const size_t max_level
 )
 {
     ReducedGCS res;
+    res.num_var = num_var;
+    res.num_phen = num_phen;
     ParentSetIndices pix(P);
 
     for (auto i : P)
