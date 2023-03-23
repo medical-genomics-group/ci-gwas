@@ -1136,17 +1136,18 @@ const std::string MPS_USAGE = R"(
 usage: mps <command> [<args>]
 
 commands:
-    printbf         Interpret contents of binary file as floats and print to stoud
-    prep            Prepare input (PLINK) .bed file for mps
-    scorr           Compute the marker/phenotype correlation matrix in sparse format
-    corr            Compute the marker/phenotype correlation matrix
-    mcorrk          Compute pearson correlations between markers as sin(pi / 2 tau_b)
-    mcorrp          Compute pearson correlations between markers
-    ads             Compute sums of anti-diagonals of marker correlation matrix
-    cups            Use cuPC to compute the parent set for each phenotype
-    bdpc            Run cuPC on block diagonal genomic covariance matrix
-    block           Build approximately unlinked blocks of markers
-    mcorrkb-chr     Compute the banded Kendall correlation matrix for a given chromosome
+    printbf                 Interpret contents of binary file as floats and print to stoud
+    prep                    Prepare input (PLINK) .bed file for mps
+    scorr                   Compute the marker/phenotype correlation matrix in sparse format
+    corr                    Compute the marker/phenotype correlation matrix
+    mcorrk                  Compute pearson correlations between markers as sin(pi / 2 tau_b)
+    mcorrp                  Compute pearson correlations between markers
+    ads                     Compute sums of anti-diagonals of marker correlation matrix
+    cups                    Use cuPC to compute the parent set for each phenotype
+    bdpc                    Run cuPC on block diagonal genomic covariance matrix
+    block                   Build approximately unlinked blocks of markers
+    mcorrkb-chr             Compute the banded Kendall correlation matrix for a given chromosome
+    write-bin-floats-tst    Homework for Mahdi
 
 contact:
     nick.machnik@gmail.com
