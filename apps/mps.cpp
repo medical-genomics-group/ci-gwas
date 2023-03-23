@@ -410,7 +410,7 @@ void block_diagonal_pc(int argc, char *argv[])
         std::vector<int> parents = parent_set(G, num_var, num_markers, 1);
 
         // TODO:
-        // keep phenos plus parents plus all members of sepsets between parents
+        // keep phenos plus parents plus all members of sepsets between phenos
         // all remaining sepsets are {}, orient edges using BFS, pointing towards phenos
 
         std::vector<int> Gsub;
