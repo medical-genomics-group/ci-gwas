@@ -410,7 +410,7 @@ void block_diagonal_pc(int argc, char *argv[])
 
         std::cout << "Reducing data to phenotype parent sets" << std::endl;
 
-        std::unordered_set<int> parents = parent_set(G, num_var, num_markers, 1);
+        std::unordered_set<int> parents = parent_set(G, num_var, num_markers, depth);
         ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, parents, num_var, num_phen, MAX_LEVEL);
 
         std::cout << "Retained " << (parents.size() - num_phen) << " / " << num_markers
