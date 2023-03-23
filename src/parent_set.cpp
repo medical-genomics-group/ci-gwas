@@ -5,7 +5,7 @@
 #include <unordered_set>
 #include <vector>
 
-std::vector<int> parent_set(
+std::unordered_set<int> parent_set(
     const std::vector<int> &G, const size_t num_var, const size_t num_markers, const int max_depth
 )
 {
@@ -49,14 +49,12 @@ std::vector<int> parent_set(
         }
     }
 
-    std::vector<int> res;
-    res.reserve(global_parent_set.size());
-    for (auto it = global_parent_set.begin(); it != global_parent_set.end();)
-    {
-        res.push_back(std::move(global_parent_set.extract(it++).value()));
-    }
+    return global_parent_set;
+}
 
-    std::sort(res.begin(), res.end());
-
-    return res;
+std::vector<int> set_to_vec(const std::unordered_set<int> s)
+{
+    std::vector<int> v(s.begin(), s.end());
+    std::sort(v.begin(), v.end());
+    return v;
 }
