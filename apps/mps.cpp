@@ -475,8 +475,7 @@ void anti_diag_sums(int argc, char *argv[])
 const std::string PREP_USAGE = R"(
 Prepare input (PLINK) .bed file for mps.
 
-The file is split by chromosome, NaNs are imputed to column medians
-and column means and standard deviations are computed.
+Compute column means and standard deviations, create all files necessary for mps bdpc.
 
 usage: mps prep <.bfiles>
 

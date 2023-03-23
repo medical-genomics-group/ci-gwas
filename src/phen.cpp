@@ -25,6 +25,8 @@ Phen load_phen(std::string phen_path)
     std::vector<float> row_major_vals;
     bool firstline = true;
 
+    std::getline(phen, line);  // skip the first line
+
     while (std::getline(phen, line))
     {
         std::vector<float> phen_vals = split_phen_line(line);
