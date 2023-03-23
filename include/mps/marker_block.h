@@ -36,6 +36,13 @@ class MarkerBlock
         return ss.str();
     }
 
+    std::string to_file_string() const
+    {
+        std::ostringstream ss;
+        ss << chr_id << "_" << first_marker_ix << "_" << last_marker_ix;
+        return ss.str();
+    }
+
     std::string get_chr_id() const { return chr_id; }
 
     size_t get_first_marker_ix() const { return first_marker_ix; }

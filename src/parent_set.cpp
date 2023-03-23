@@ -58,3 +58,65 @@ std::vector<int> set_to_vec(const std::unordered_set<int> s)
     std::sort(v.begin(), v.end());
     return v;
 }
+
+void direct_x_to_y(std::vector<int> &G, const size_t num_var, const size_t num_markers)
+{
+    std::unordered_set<int> phen_ids;
+    for (int i = num_markers; i < num_var; ++i)
+    {
+        phen_ids.insert(i);
+    }
+
+    for (int node_ix = num_markers; node_ix < num_var; ++node_ix)
+    {
+        for (int cix = 0; cix < num_markers; cix++)
+        {
+            if ((G[node_ix * num_var + cix] == 1) && (!phen_ids.contains(cix)))
+            {
+                // direct: cix -> node_ix
+                G[cix * num_var + num_var] = 2;
+                G[node_ix * num_var + cix] = 3;
+            }
+        }
+    }
+}
+
+ReducedGCS reduce_gcs(
+    const std::vector<int> &G,
+    const std::vector<float> &C,
+    const std::vector<int> &S,
+    const std::unordered_set<int> &P,
+    const size_t num_var,
+    const size_t max_level
+)
+{
+    ReducedGCS res;
+    ParentSetIndices pix(P);
+
+    for (auto i : P)
+    {
+        for (auto j : P)
+        {
+            res.G.push_back(G[i * num_var + j]);
+            res.C.push_back(C[i * num_var + j]);
+            int s_ij_size = 0;
+
+            for (int l = 0; l < max_level; l++)
+            {
+                int sep_elem = S[(i * num_var + j) * max_level + l];
+                if ((sep_elem != -1) && (P.contains(sep_elem)))
+                {
+                    res.S.push_back(pix.get_new_ix(sep_elem));
+                    ++s_ij_size;
+                }
+            }
+
+            for (int l = s_ij_size; l < max_level; l++)
+            {
+                res.S.push_back(-1);
+            }
+        }
+    }
+
+    return res;
+}

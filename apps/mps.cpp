@@ -405,34 +405,18 @@ void block_diagonal_pc(int argc, char *argv[])
         // separate the following steps into new commands, instead here:
         // save corrs, graph, sepsets to disc
 
+        // TODO: make ordering optional
+        direct_x_to_y(G, num_var, num_markers);
+
         std::cout << "Reducing data to phenotype parent sets" << std::endl;
 
-        std::vector<int> parents = parent_set(G, num_var, num_markers, 1);
-
-        // TODO:
-        // keep phenos plus parents plus all members of sepsets between phenos
-        // all remaining sepsets are {}, orient edges using BFS, pointing towards phenos
-
-        std::vector<int> Gsub;
-        std::vector<int> sepsub;
-        std::vector<float> Csub;
-
-        for (auto i : parents)
-        {
-            for (auto j : parents)
-            {
-                Gsub.push_back(G[i * num_var + j]);
-                Csub.push_back(sq_corrs[i * num_var + j]);
-                for (int l = 0; l < MAX_LEVEL; l++)
-                {
-                    // TODO: use new corr mat indices here?
-                    sepsub.push_back(sepset[(i * num_var + j) * MAX_LEVEL + l]);
-                }
-            }
-        }
+        std::unordered_set<int> parents = parent_set(G, num_var, num_markers, 1);
+        ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, parents, num_var, MAX_LEVEL);
 
         std::cout << "Retained " << (parents.size() - num_phen) << " / " << num_markers
                   << " markers" << std::endl;
+
+        gcs.to_file(make_path(outdir, block.to_file_string(), ""));
     }
 }
 
@@ -1225,6 +1209,12 @@ auto main(int argc, char *argv[]) -> int
     else if (cmd == "mcorrkb-chr")
     {
         mcorrkb_chr(argc, argv);
+    }
+    else if (cmd == "write-bin-floats-tst")
+    {
+        std::vector<float> data = {0.0, -1.1, 2.2, -3.3, 4.4};
+        std::string loc = "./floats_test.bin";
+        write_floats_to_binary(data.data(), 5, loc);
     }
     else
     {
