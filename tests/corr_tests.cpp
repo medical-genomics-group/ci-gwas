@@ -197,7 +197,7 @@ TEST(cu_phen_corr_pearson_npn, expected_results)
     const size_t phen_cm_size = corr_matrix_size(num_phen);
     float phen_corr[phen_cm_size];
     memset(phen_corr, 0.0, sizeof(phen_corr));
-    cu_phen_corr_pearson_npn(phen.data(), num_individuals, num_phen, phen_corr);
+    cu_phen_corr_pearson_npn(phen.data.data(), num_individuals, num_phen, phen_corr);
     std::vector<float> phen_corr_expected = {0.0, 1.0, 0.5, 0.2, 0.1, 0.0};
     for (size_t i = 0; i < phen_cm_size; i++)
     {
