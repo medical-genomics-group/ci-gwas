@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <mps/corr_host.h>
 #include <mps/corr_kernels.h>
+#include <mps/phen.h>
 #include <test_data/bed_marker_test_set.h>
 
 // Demonstrate some basic assertions.
@@ -183,6 +184,27 @@ TEST(CuMarkerCorrPearsonNpnBatched, ExpectedReturnVals)
     }
 }
 
+TEST(cu_phen_corr_pearson_npn, expected_results)
+{
+    Phen phen = load_phen("../../tests/test_files/with_nan.phen");
+    for (auto v : phen.data)
+    {
+        std::cout << v << ", ";
+    }
+    std::cout << std::endl;
+    const size_t num_individuals = phen.get_num_samples();
+    const size_t num_phen = phen.get_num_phen();
+    const size_t phen_cm_size = corr_matrix_size(num_phen);
+    float phen_corr[phen_cm_size];
+    memset(phen_corr, 0.0, sizeof(phen_corr));
+    cu_phen_corr_pearson_npn(phen.data(), num_individuals, num_phen, phen_corr);
+    std::vector<float> phen_corr_expected = {0.0, 1.0, 0.5, 0.2, 0.1, 0.0};
+    for (size_t i = 0; i < phen_cm_size; i++)
+    {
+        EXPECT_NEAR(phen_corr[i], phen_corr_expected[i], 0.00001);
+    }
+}
+
 TEST(CuCorrPearsonNpn, ExpectedReturnVals)
 {
     const size_t num_markers = BMT_NUM_MARKERS;
@@ -324,4 +346,3 @@ TEST(CuMarkerPearson, ExpectedReturnVals7Markers)
         EXPECT_NEAR(marker_corr[i], bmt2_marker_corrs_pearson[i], 0.00001);
     }
 }
-

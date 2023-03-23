@@ -177,6 +177,33 @@ void cu_ix_from_linear(const size_t lin_ix, const size_t num_rows, size_t *row_i
     HANDLE_ERROR(cudaMemcpy(col_ix, gpu_cix, sizeof(size_t), cudaMemcpyDeviceToHost));
 }
 
+void cu_phen_corr_pearson_npn(
+    const float *phen_vals, const size_t num_individuals, const size_t num_phen, float *phen_corrs
+)
+{
+    float *gpu_phen_vals;
+    float *gpu_phen_corrs;
+    size_t phen_output_length = num_phen * (num_phen - 1) / 2;
+    size_t phen_output_bytes = phen_output_length * sizeof(float);
+    int threads_per_block = NUMTHREADS;
+
+    HANDLE_ERROR(cudaMalloc(&gpu_phen_vals, phen_vals_bytes));
+    HANDLE_ERROR(cudaMemcpy(gpu_phen_vals, phen_vals, phen_vals_bytes, cudaMemcpyHostToDevice));
+
+    // phen vs phen
+    blocks_per_grid = phen_output_length;
+    HANDLE_ERROR(cudaMalloc(&gpu_phen_corrs, phen_output_bytes));
+
+    phen_corr_pearson_scan<<<blocks_per_grid, threads_per_block>>>(
+        gpu_phen_vals, num_individuals, num_phen, gpu_phen_corrs
+    );
+    CudaCheckError();
+
+    HANDLE_ERROR(cudaMemcpy(phen_corrs, gpu_phen_corrs, phen_output_bytes, cudaMemcpyDeviceToHost));
+    HANDLE_ERROR(cudaFree(gpu_phen_corrs));
+    HANDLE_ERROR(cudaFree(gpu_phen_vals));
+};
+
 void cu_marker_corr_pearson_batched(
     const unsigned char *marker_vals,
     const size_t num_markers,
