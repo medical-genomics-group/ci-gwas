@@ -186,12 +186,13 @@ void cu_phen_corr_pearson_npn(
     size_t phen_output_length = num_phen * (num_phen - 1) / 2;
     size_t phen_output_bytes = phen_output_length * sizeof(float);
     int threads_per_block = NUMTHREADS;
+    size_t phen_vals_bytes = num_phen * num_individuals * sizeof(float);
 
     HANDLE_ERROR(cudaMalloc(&gpu_phen_vals, phen_vals_bytes));
     HANDLE_ERROR(cudaMemcpy(gpu_phen_vals, phen_vals, phen_vals_bytes, cudaMemcpyHostToDevice));
 
     // phen vs phen
-    blocks_per_grid = phen_output_length;
+    int blocks_per_grid = phen_output_length;
     HANDLE_ERROR(cudaMalloc(&gpu_phen_corrs, phen_output_bytes));
 
     phen_corr_pearson_scan<<<blocks_per_grid, threads_per_block>>>(
