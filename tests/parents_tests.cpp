@@ -28,7 +28,7 @@ TEST(parent_set, ExpectedResultsDepth1)
 
 TEST(parent_set, ExpectedResultsDepth2)
 {
-    std::unordered_set<int> obs_s_set =
+    std::unordered_set<int> obs_set =
         parent_set(TEST_ADJ_MAT, TEST_NUM_MARKERS + TEST_NUM_PHEN, TEST_NUM_MARKERS, 2);
     std::vector<int> obs = set_to_vec(obs_set);
     ASSERT_EQ(obs.size(), TEST_PAR_SET_D2.size());
