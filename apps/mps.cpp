@@ -407,15 +407,19 @@ void block_diagonal_pc(int argc, char *argv[])
 
         std::cout << "Reducing data to phenotype parent sets" << std::endl;
 
-        std::vector<int> var_subset = parent_set(G, num_var, num_markers, 1);
+        std::vector<int> parents = parent_set(G, num_var, num_markers, 1);
+
+        // TODO:
+        // keep phenos plus parents plus all members of sepsets between parents
+        // all remaining sepsets are {}, orient edges using BFS, pointing towards phenos
 
         std::vector<int> Gsub;
         std::vector<int> sepsub;
         std::vector<float> Csub;
 
-        for (auto i : var_subset)
+        for (auto i : parents)
         {
-            for (auto j : var_subset)
+            for (auto j : parents)
             {
                 Gsub.push_back(G[i * num_var + j]);
                 Csub.push_back(sq_corrs[i * num_var + j]);
@@ -427,7 +431,7 @@ void block_diagonal_pc(int argc, char *argv[])
             }
         }
 
-        std::cout << "Retained " << (var_subset.size() - num_phen) << " / " << num_markers
+        std::cout << "Retained " << (parents.size() - num_phen) << " / " << num_markers
                   << " markers" << std::endl;
     }
 }
