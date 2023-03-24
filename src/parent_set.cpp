@@ -92,7 +92,7 @@ ReducedGCS reduce_gcs(
 )
 {
     ReducedGCS res;
-    res.num_var = num_var;
+    res.num_var = P.size();
     res.num_phen = num_phen;
     ParentSetIndices pix(P);
 
