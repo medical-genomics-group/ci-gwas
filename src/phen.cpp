@@ -1,8 +1,10 @@
 #include <mps/io.h>
 #include <mps/phen.h>
 
+#include <cmath>
 #include <fstream>
 #include <iostream>
+#include <limits>
 
 std::vector<float> split_phen_line(std::string line)
 {
@@ -10,7 +12,14 @@ std::vector<float> split_phen_line(std::string line)
     std::vector<float> res;
     for (size_t i = 2; i < full_line.size(); ++i)
     {
-        res.push_back((float)atof(full_line[i].c_str()));
+        if (full_line[i] == "NA")
+        {
+            res.push_back(std::numeric_limits<float>::signaling_NaN());
+        }
+        else
+        {
+            res.push_back((float)atof(full_line[i].c_str()));
+        }
     }
     return res;
 }
