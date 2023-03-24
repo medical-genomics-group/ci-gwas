@@ -124,12 +124,12 @@ __global__ void bed_marker_phen_corr_pearson(
             float mv_valid = gpu_bed_lut_b[(curr_mv_byte_ix + j)];
             float mv_val = gpu_bed_lut_a[(curr_mv_byte_ix + j)];
             float phen_val = phen_vals[(phen_start_ix + (4 * i) + j)];
-            float phen_val_valid = !isnan(phen_val);
-            float valid_op = mv_valid * phen_val_valid;
-
-            thread_sum_mv_phen += valid_op * mv_val * phen_val;
-            thread_sum_phen += valid_op * phen_val;
-            thread_num_valid += valid_op;
+            if (!isnan(phen_val))
+            {
+                thread_sum_mv_phen += mv_valid * mv_val * phen_val;
+                thread_sum_phen += mv_valid * phen_val;
+                thread_num_valid += mv_valid;
+            }
         }
     }
 
@@ -188,12 +188,12 @@ __global__ void bed_marker_phen_corr_pearson_scan(
             float mv_valid = gpu_bed_lut_b[(curr_mv_byte_ix + j)];
             float mv_val = gpu_bed_lut_a[(curr_mv_byte_ix + j)];
             float phen_val = phen_vals[(phen_start_ix + (4 * i) + j)];
-            float phen_val_valid = !isnan(phen_val);
-            float valid_op = mv_valid * phen_val_valid;
-
-            thread_sum_mv_phen += valid_op * mv_val * phen_val;
-            thread_sum_phen += valid_op * phen_val;
-            thread_num_valid += valid_op;
+            if (!isnan(phen_val))
+            {
+                thread_sum_mv_phen += mv_valid * mv_val * phen_val;
+                thread_sum_phen += mv_valid * phen_val;
+                thread_num_valid += mv_valid;
+            }
         }
     }
 
@@ -1035,11 +1035,13 @@ __global__ void bed_marker_phen_corr_pearson_sparse(
         {
             float mv_val = gpu_bed_lut_a[(curr_mv_byte_ix + j)];
             float phen_val = phen_vals[(phen_start_ix + (4 * i) + j)];
-            float valid_op = !isnan(phen_val) * gpu_bed_lut_b[(curr_mv_byte_ix + j)];
-
-            thread_sum_mv_phen += valid_op * (mv_val * phen_val);
-            thread_sum_phen += valid_op * phen_val;
-            thread_num_valid += valid_op;
+            if (!isnan(phen_val))
+            {
+                float valid_op = gpu_bed_lut_b[(curr_mv_byte_ix + j)];
+                thread_sum_mv_phen += valid_op * (mv_val * phen_val);
+                thread_sum_phen += valid_op * phen_val;
+                thread_num_valid += valid_op;
+            }
         }
     }
 
@@ -1097,11 +1099,13 @@ __global__ void bed_marker_phen_corr_pearson_sparse_scan(
         {
             float mv_val = gpu_bed_lut_a[(curr_mv_byte_ix + j)];
             float phen_val = phen_vals[(phen_start_ix + (4 * i) + j)];
-            float valid_op = !isnan(phen_val) * gpu_bed_lut_b[(curr_mv_byte_ix + j)];
-
-            thread_sum_mv_phen += valid_op * (mv_val * phen_val);
-            thread_sum_phen += valid_op * phen_val;
-            thread_num_valid += valid_op;
+            if (!isnan(phen_val))
+            {
+                float valid_op = gpu_bed_lut_b[(curr_mv_byte_ix + j)];
+                thread_sum_mv_phen += valid_op * (mv_val * phen_val);
+                thread_sum_phen += valid_op * phen_val;
+                thread_num_valid += valid_op;
+            }
         }
     }
 
