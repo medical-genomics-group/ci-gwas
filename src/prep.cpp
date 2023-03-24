@@ -164,6 +164,10 @@ void prep_bed_no_impute(BfilesBase bfiles)
     size_t num_individuals = count_lines(bfiles.fam());
     BimInfo bim(bfiles.bim());
     BedDims dim(num_individuals, bim.number_of_lines);
+
+    std::cout << "Writing dim file." << std::endl;
+    dim.to_file(bfiles.dim());
+
     size_t bed_block_size = dim.bytes_per_col();
 
     std::vector<unsigned char> bedcol(bed_block_size);
@@ -175,13 +179,16 @@ void prep_bed_no_impute(BfilesBase bfiles)
     // skip prefix
     bed_file.read(reinterpret_cast<char *>(bedcol.data()), BED_PREFIX_BYTES);
 
+    std::cout << "Computing means, stds, modes." << std::endl;
+
     while (bed_file.read(reinterpret_cast<char *>(bedcol.data()), bed_block_size))
     {
         compute_bed_col_stats_no_impute(bedcol, num_individuals, means, stds, modes);
     }
 
-    dim.to_file(bfiles.dim());
+    std::cout << "Writing stats to files." << std::endl;
     write_single_column_file_with_suffix(means, bfiles.means());
     write_single_column_file_with_suffix(stds, bfiles.stds());
     write_single_column_file_with_suffix(modes, bfiles.modes());
+    std::cout << "Done." << std::endl;
 }
