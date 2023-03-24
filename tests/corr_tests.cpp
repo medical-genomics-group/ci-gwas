@@ -187,10 +187,6 @@ TEST(CuMarkerCorrPearsonNpnBatched, ExpectedReturnVals)
 TEST(cu_phen_corr_pearson_npn, expected_results)
 {
     Phen phen = load_phen("../../tests/test_files/with_nan.phen");
-    for (auto v : phen.data)
-    {
-        std::cout << v << ", ";
-    }
     std::cout << std::endl;
     const size_t num_individuals = phen.get_num_samples();
     const size_t num_phen = phen.get_num_phen();
@@ -198,10 +194,16 @@ TEST(cu_phen_corr_pearson_npn, expected_results)
     float phen_corr[phen_cm_size];
     memset(phen_corr, 0.0, sizeof(phen_corr));
     cu_phen_corr_pearson_npn(phen.data.data(), num_individuals, num_phen, phen_corr);
-    std::vector<float> phen_corr_expected = {0.0, 1.0, 0.5, 0.2, 0.1, 0.0};
+    std::vector<float> phen_corr_expected = {
+        0.24836234542914287,
+        0.03862939307838749,
+        -0.062494103838,
+        0.3617577116109875,
+        -0.36021846990149997,
+        -0.2546223144976223,
+    };
     for (size_t i = 0; i < phen_cm_size; i++)
     {
-        std::cout << phen_corr[i] << std::endl;
         EXPECT_NEAR(phen_corr[i], phen_corr_expected[i], 0.00001);
     }
 }
