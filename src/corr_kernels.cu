@@ -257,7 +257,7 @@ __global__ void phen_corr_pearson(
     {
         float val_a = phen_vals[(col_start_a + i)];
         float val_b = phen_vals[(col_start_b + i)];
-        if !(isnan(val_a) || isnan(val_b))
+        if (!(isnan(val_a) || isnan(val_b)))
         {
             thread_sum += val_a * val_b;
             thread_num_valid++;
@@ -302,7 +302,7 @@ __global__ void phen_corr_pearson_scan(
     {
         float val_a = phen_vals[(col_start_a + i)];
         float val_b = phen_vals[(col_start_b + i)];
-        if !(isnan(val_a) || isnan(val_b))
+        if (!(isnan(val_a) || isnan(val_b)))
         {
             thread_sum += val_a * val_b;
             thread_num_valid++;
