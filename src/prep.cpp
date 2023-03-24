@@ -180,10 +180,17 @@ void prep_bed_no_impute(BfilesBase bfiles)
     bed_file.read(reinterpret_cast<char *>(bedcol.data()), BED_PREFIX_BYTES);
 
     std::cout << "Computing means, stds, modes." << std::endl;
+    int lc = 0;
 
     while (bed_file.read(reinterpret_cast<char *>(bedcol.data()), bed_block_size))
     {
+        if (lc % 100000 == 0)
+        {
+            std::cout << "Processing marker " << lc + 1 << " / " << dim.get_num_markers()
+                      << std::endl;
+        }
         compute_bed_col_stats_no_impute(bedcol, num_individuals, means, stds, modes);
+        ++lc;
     }
 
     std::cout << "Writing stats to files." << std::endl;
