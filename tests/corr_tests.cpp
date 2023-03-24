@@ -201,6 +201,7 @@ TEST(cu_phen_corr_pearson_npn, expected_results)
     std::vector<float> phen_corr_expected = {0.0, 1.0, 0.5, 0.2, 0.1, 0.0};
     for (size_t i = 0; i < phen_cm_size; i++)
     {
+        std::cout << phen_corr[i] << std::endl;
         EXPECT_NEAR(phen_corr[i], phen_corr_expected[i], 0.00001);
     }
 }
