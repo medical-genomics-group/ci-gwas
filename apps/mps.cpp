@@ -356,7 +356,7 @@ void prepc(int argc, char *argv[])
         {
             for (size_t pid = 0; pid < (parents_v.size() - num_phen); pid++)
             {
-                std::cout << "[Parent]" << block.get_chr_id() << "\t" << parents_v[pid] << std::endl;
+                std::cout << "[Parent]\t" << block.get_chr_id() << "\t" << parents_v[pid] << std::endl;
             }
         }
 
