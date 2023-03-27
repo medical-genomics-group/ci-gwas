@@ -1,6 +1,9 @@
 #pragma once
+#include <mps/marker_block.h>
+
 #include <fstream>
 #include <iostream>
+#include <math>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -39,6 +42,22 @@ struct BimInfo
         check_chr_id(chr_id);
         size_t chr_ix = chr_id2ix[chr_id];
         return global_chr_start[chr_ix] + num_markers_on_chr[chr_ix] - 1;
+    }
+
+    std::vector<MarkerBlock> equisized_blocks(const int size) const
+    {
+        std::vector<MarkerBlock> res;
+        for (size_t i = 0; i < chr_ids.size(); i++)
+        {
+            size_t num_blocks(num_markers_on_chr[i] + size - 1) / size;
+            for (size_t bid = 0; bid < num_blocks; bid++)
+            {
+                size_t bstart = bid * size;
+                size_t bend = min(bstart + size - 1, num_markers_on_chr[i]);
+                res.push_back(MarkerBlock(chr_ids[i], bstart, bend));
+            }
+        }
+        return res;
     }
 };
 
