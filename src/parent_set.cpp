@@ -67,15 +67,15 @@ void direct_x_to_y(std::vector<int> &G, const size_t num_var, const size_t num_m
         phen_ids.insert(i);
     }
 
-    for (int node_ix = num_markers; node_ix < num_var; ++node_ix)
+    for (int sink = num_markers; sink < num_var; ++sink)
     {
-        for (int cix = 0; cix < num_markers; cix++)
+        for (int source = 0; source < num_markers; source++)
         {
-            if ((G[node_ix * num_var + cix] == 1) && (!phen_ids.contains(cix)))
+            if ((G[sink * num_var + source] == 1) && (!phen_ids.contains(source)))
             {
-                // direct: cix -> node_ix
-                G[cix * num_var + num_var] = 2;
-                G[node_ix * num_var + cix] = 3;
+                // direct: source -> sink
+                G[source * num_var + sink] = 2;
+                G[sink * num_var + source] = 3;
             }
         }
     }
