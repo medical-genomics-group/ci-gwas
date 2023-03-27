@@ -13,20 +13,6 @@ foo@bar:~/mps$ cmake --build build
 foo@bar:~/mps$ cd build && ctest
 ```
 
-## Benchmark
-
-Our reference is Plink's ld functionality. This is run with
-
-```console
-foo@bar:~/$ time plink --bfile $BEDNAME --r --matrix --out $OUTFILE
-```
-
-and compare that to
-
-```console
-foo@bar:~/ time ./mps mcorrp PREPDIR CHR
-```
-
 ## Common Errors
 
 `no kernel image is available for execution on the device`
