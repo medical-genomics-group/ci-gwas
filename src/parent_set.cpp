@@ -95,10 +95,11 @@ ReducedGCS reduce_gcs(
     res.num_var = P.size();
     res.num_phen = num_phen;
     ParentSetIndices pix(P);
+    std::vector<int> ordered_ixs = set_to_vec(P);
 
-    for (auto i : P)
+    for (auto i : ordered_ixs)
     {
-        for (auto j : P)
+        for (auto j : ordered_ixs)
         {
             res.G.push_back(G[i * num_var + j]);
             res.C.push_back(C[i * num_var + j]);
