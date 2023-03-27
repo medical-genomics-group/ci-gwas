@@ -165,9 +165,9 @@ arguments:
     blocksize   number of markers per block to test
     alpha       significance level
     outdir      outdir
-)"
+)";
 
-    const int PREPC_NARGS = 7;
+const int PREPC_NARGS = 7;
 
 void prepc(int argc, char *argv[])
 {
@@ -215,7 +215,9 @@ void prepc(int argc, char *argv[])
     }
 
     size_t bid = 0;
-    for (auto block : bim.equisized_blocks(blocksize))
+    std::vector<MarkerBlock> blocks = bim.equisized_blocks(blocksize);
+
+    for (auto block : blocks)
     {
         std::cout << std::endl;
         std::cout << "Processing block " << bid + 1 << " / " << blocks.size() << std::endl;
@@ -343,7 +345,7 @@ void prepc(int argc, char *argv[])
 
         std::cout << "Finding parents" << std::endl;
 
-        std::unordered_set<int> parents = parent_set(G, num_var, num_markers, depth);
+        std::unordered_set<int> parents = parent_set(G, num_var, num_markers, 1);
         std::vector<int> parents_v = set_to_vec(parents);
 
         if (parents_v.size() == num_phen)
@@ -1424,7 +1426,7 @@ auto main(int argc, char *argv[]) -> int
     }
     else if (cmd == "prepc")
     {
-        prepc(argc, argc);
+        prepc(argc, argv);
     }
     else
     {

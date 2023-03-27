@@ -49,11 +49,11 @@ struct BimInfo
         std::vector<MarkerBlock> res;
         for (size_t i = 0; i < chr_ids.size(); i++)
         {
-            size_t num_blocks(num_markers_on_chr[i] + size - 1) / size;
+            size_t num_blocks = (num_markers_on_chr[i] + size - 1) / size;
             for (size_t bid = 0; bid < num_blocks; bid++)
             {
                 size_t bstart = bid * size;
-                size_t bend = min(bstart + size - 1, num_markers_on_chr[i]);
+                size_t bend = std::min(bstart + size - 1, num_markers_on_chr[i]);
                 res.push_back(MarkerBlock(chr_ids[i], bstart, bend));
             }
         }
