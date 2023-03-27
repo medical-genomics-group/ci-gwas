@@ -154,10 +154,218 @@ void make_blocks(int argc, char *argv[])
     std::cout << "Done." << std::endl;
 }
 
+const std::string PREPC_USAGE = R"(
+Run cuPC on very small windows to find locations of candidate associated sites.
+
+usage: mps bdpc <.phen> <bfiles> <blocksize> <alpha> <outdir>
+
+arguments:
+    .phen       path to standardized phenotype tsv
+    bfiles      stem of .bed, .means, .stds, .dim files
+    blocksize   number of markers per block to test
+    alpha       significance level
+    outdir      outdir
+)"
+
+    const int PREPC_NARGS = 7;
+
+void prepc(int argc, char *argv[])
+{
+    check_nargs(argc, PREPC_NARGS, PREPC_USAGE);
+
+    std::string phen_path = argv[2];
+    std::string bed_base_path = argv[3];
+    int blocksize = std::stoi(argv[4]);
+    float alpha = std::stof(argv[5]);
+    std::string outdir = (std::string)argv[6];
+
+    std::cout << "Checking paths" << std::endl;
+
+    check_prepped_bed_path(bed_base_path);
+    check_path(phen_path);
+    check_path(outdir);
+
+    Phen phen = load_phen(phen_path);
+    BfilesBase bfiles(bed_base_path);
+    BedDims dims(bfiles.dim());
+
+    if (phen.get_num_samples() != dims.get_num_samples())
+    {
+        std::cerr << "different num samples in phen and dims" << std::endl;
+        exit(1);
+    }
+
+    BimInfo bim(bfiles.bim());
+    size_t num_individuals = dims.get_num_samples();
+    size_t num_phen = phen.get_num_phen();
+    // TODO: testcase for num_phen = 1;
+    size_t phen_corr_mat_size = num_phen * (num_phen - 1) / 2;
+    std::vector<float> phen_corr(phen_corr_mat_size, 0.0);
+    std::cout << "Found " << num_phen << " phenotypes" << std::endl;
+
+    // size_t num_individuals = dims.get_num_samples();
+    std::vector<float> Th = threshold_array(num_individuals, alpha);
+
+    std::cout << "Number of levels: " << NUMBER_OF_LEVELS << std::endl;
+
+    std::cout << "Setting level thr for cuPC: " << std::endl;
+    for (int i = 0; i <= NUMBER_OF_LEVELS; ++i)
+    {
+        std::cout << "\t Level: " << i << " thr: " << Th[i] << std::endl;
+    }
+
+    size_t bid = 0;
+    for (auto block : bim.equisized_blocks(blocksize))
+    {
+        std::cout << std::endl;
+        std::cout << "Processing block " << bid + 1 << " / " << blocks.size() << std::endl;
+
+        size_t num_markers = block.block_size();
+
+        std::cout << "Block size: " << num_markers << std::endl;
+
+        std::cout << "Loading bed data" << std::endl;
+
+        // load block data
+        std::vector<unsigned char> bedblock = read_block_from_bed(bfiles.bed(), block, dims, bim);
+        // TODO: add offset due to previous chr in file
+        std::vector<float> means = read_floats_from_line_range(
+            bfiles.means(), block.get_first_marker_ix(), block.get_last_marker_ix()
+        );
+        std::vector<float> stds = read_floats_from_line_range(
+            bfiles.stds(), block.get_first_marker_ix(), block.get_last_marker_ix()
+        );
+
+        if ((means.size() != block.block_size()) || (stds.size() != block.block_size()))
+        {
+            std::cout << "block size and number of means or stds differ" << std::endl;
+            exit(1);
+        }
+
+        // allocate correlation result arrays
+        size_t marker_corr_mat_size = num_markers * (num_markers - 1) / 2;
+        std::vector<float> marker_corr(marker_corr_mat_size, 0.0);
+
+        size_t marker_phen_corr_mat_size = num_markers * num_phen;
+        std::vector<float> marker_phen_corr(marker_phen_corr_mat_size, 0.0);
+
+        std::cout << "Computing correlations" << std::endl;
+
+        // compute correlations
+        cu_corr_pearson_npn(
+            bedblock.data(),
+            phen.data.data(),
+            num_markers,
+            num_individuals,
+            num_phen,
+            means.data(),
+            stds.data(),
+            marker_corr.data(),
+            marker_phen_corr.data(),
+            phen_corr.data()
+        );
+
+        std::cout << "Reformating corrs to n2 format" << std::endl;
+
+        // make n2 matrix to please cuPC
+        size_t num_var = num_markers + num_phen;
+        // TODO: make this float, if cuPC is happy with that
+        std::vector<float> sq_corrs(num_var * num_var, 1.0);
+
+        size_t sq_row_ix = 0;
+        size_t sq_col_ix = 1;
+        for (size_t i = 0; i < marker_corr_mat_size; ++i)
+        {
+            sq_corrs[num_var * sq_row_ix + sq_col_ix] = (float)marker_corr[i];
+            sq_corrs[num_var * sq_col_ix + sq_row_ix] = (float)marker_corr[i];
+            if (sq_col_ix == num_markers - 1)
+            {
+                ++sq_row_ix;
+                sq_col_ix = sq_row_ix + 1;
+            }
+            else
+            {
+                ++sq_col_ix;
+            }
+        }
+
+        sq_row_ix = 0;
+        sq_col_ix = num_markers;
+        for (size_t i = 0; i < marker_phen_corr_mat_size; ++i)
+        {
+            sq_corrs[num_var * sq_row_ix + sq_col_ix] = (float)marker_phen_corr[i];
+            sq_corrs[num_var * sq_col_ix + sq_row_ix] = (float)marker_phen_corr[i];
+            if (sq_col_ix == (num_var - 1))
+            {
+                sq_col_ix = num_markers;
+                ++sq_row_ix;
+            }
+            else
+            {
+                ++sq_col_ix;
+            }
+        }
+
+        sq_row_ix = num_markers;
+        sq_col_ix = num_markers + 1;
+        for (size_t i = 0; i < phen_corr_mat_size; ++i)
+        {
+            sq_corrs[num_var * sq_row_ix + sq_col_ix] = (float)phen_corr[i];
+            sq_corrs[num_var * sq_col_ix + sq_row_ix] = (float)phen_corr[i];
+            if (sq_col_ix == (num_var - 1))
+            {
+                ++sq_row_ix;
+                sq_col_ix = sq_row_ix + 1;
+            }
+            else
+            {
+                ++sq_col_ix;
+            }
+        }
+
+        std::cout << "Running cuPC" << std::endl;
+
+        // call cuPC
+        int p = num_var;
+        const size_t sepset_size = p * p * 14;
+        const size_t g_size = num_var * num_var;
+        std::vector<float> pmax(g_size, 0.0);
+        std::vector<int> G(g_size, 1);
+        std::vector<int> sepset(sepset_size, 0);
+        int l = 0;
+        Skeleton(
+            sq_corrs.data(), &p, G.data(), Th.data(), &l, &MAX_LEVEL, pmax.data(), sepset.data()
+        );
+
+        // TODO:
+        // separate the following steps into new commands, instead here:
+        // save corrs, graph, sepsets to disc
+
+        std::cout << "Finding parents" << std::endl;
+
+        std::unordered_set<int> parents = parent_set(G, num_var, num_markers, depth);
+        std::vector<int> parents_v = set_to_vec(parents);
+
+        if (parents_v.size() == num_phen)
+        {
+            std::cout << "No parents found" << std::endl;
+        }
+        else
+        {
+            for (size_t pid = 0; pid < (parents_v.size() - num_phen); pid++)
+            {
+                std::cout << "[Parent]" << block.get_chr_id() << "\t" << parents_v[pid];
+            }
+        }
+
+        bid += 1;
+    }
+}
+
 const std::string BDPC_USAGE = R"(
 Run cuPC on block diagonal genomic covariance matrix.
 
-usage: mps bdpc <.phen> <bfiles> <.blocks>
+usage: mps bdpc <.phen> <bfiles> <.blocks> <alpha> <depth> <outdir>
 
 arguments:
     .phen       path to standardized phenotype tsv
@@ -172,11 +380,7 @@ const int BDPC_NARGS = 8;
 
 void block_diagonal_pc(int argc, char *argv[])
 {
-    if (argc < BDPC_NARGS)
-    {
-        std::cout << BDPC_USAGE << std::endl;
-        exit(1);
-    }
+    check_nargs(argc, BDPC_NARGS, BDPC_USAGE);
 
     std::string phen_path = argv[2];
     std::string bed_base_path = argv[3];
@@ -405,12 +609,13 @@ void block_diagonal_pc(int argc, char *argv[])
         // separate the following steps into new commands, instead here:
         // save corrs, graph, sepsets to disc
 
-        // TODO: make ordering optional
-        direct_x_to_y(G, num_var, num_markers);
-
         std::cout << "Reducing data to phenotype parent sets" << std::endl;
 
         std::unordered_set<int> parents = parent_set(G, num_var, num_markers, depth);
+
+        // TODO: make ordering optional
+        direct_x_to_y(G, num_var, num_markers);
+
         ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, parents, num_var, num_phen, MAX_LEVEL);
 
         std::cout << "Retained " << (parents.size() - num_phen) << " / " << num_markers
@@ -1143,6 +1348,7 @@ commands:
     mcorrp                  Compute pearson correlations between markers
     ads                     Compute sums of anti-diagonals of marker correlation matrix
     cups                    Use cuPC to compute the parent set for each phenotype
+    prepc                   Run cuPC on very small windows to find locations of candidate associated sites.
     bdpc                    Run cuPC on block diagonal genomic covariance matrix
     block                   Build approximately unlinked blocks of markers
     mcorrkb-chr             Compute the banded Kendall correlation matrix for a given chromosome
@@ -1215,6 +1421,10 @@ auto main(int argc, char *argv[]) -> int
         std::vector<float> data = {0.0, -1.1, 2.2, -3.3, 4.4};
         std::string loc = "./floats_test.bin";
         write_floats_to_binary(data.data(), 5, loc);
+    }
+    else if (cmd == "prepc")
+    {
+        prepc(argc, argc);
     }
     else
     {
