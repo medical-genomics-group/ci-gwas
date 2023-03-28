@@ -21,6 +21,7 @@ struct ReducedGCS
 {
     size_t num_var;
     size_t num_phen;
+    size_t max_level;
     std::vector<int> G;
     std::vector<float> C;
     std::vector<int> S;
@@ -29,7 +30,7 @@ struct ReducedGCS
     {
         std::ofstream fout;
         fout.open(base + ".mdim", std::ios::out);
-        fout << num_var << "\t" << num_phen << std::endl;
+        fout << num_var << "\t" << num_phen << "\t" << max_level << std::endl;
         fout.close();
         write_ints_to_binary(G.data(), G.size(), base + ".adj");
         write_floats_to_binary(C.data(), C.size(), base + ".corr");

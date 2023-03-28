@@ -18,8 +18,6 @@
 #include <string>
 #include <vector>
 
-const int MAX_LEVEL = 14;
-
 /**
  * @brief Compute number of variables from upper triangular matrix (diag excluded)
  *
@@ -173,6 +171,8 @@ void prepc(int argc, char *argv[])
 {
     check_nargs(argc, PREPC_NARGS, PREPC_USAGE);
 
+    const int max_level = 14;
+
     std::string phen_path = argv[2];
     std::string bed_base_path = argv[3];
     int blocksize = std::stoi(argv[4]);
@@ -206,10 +206,10 @@ void prepc(int argc, char *argv[])
     // size_t num_individuals = dims.get_num_samples();
     std::vector<float> Th = threshold_array(num_individuals, alpha);
 
-    std::cout << "Number of levels: " << NUMBER_OF_LEVELS << std::endl;
+    std::cout << "Number of levels: " << max_level << std::endl;
 
     std::cout << "Setting level thr for cuPC: " << std::endl;
-    for (int i = 0; i <= NUMBER_OF_LEVELS; ++i)
+    for (int i = 0; i <= max_level; ++i)
     {
         std::cout << "\t Level: " << i << " thr: " << Th[i] << std::endl;
     }
@@ -336,7 +336,7 @@ void prepc(int argc, char *argv[])
         std::vector<int> sepset(sepset_size, 0);
         int l = 0;
         Skeleton(
-            sq_corrs.data(), &p, G.data(), Th.data(), &l, &MAX_LEVEL, pmax.data(), sepset.data()
+            sq_corrs.data(), &p, G.data(), Th.data(), &l, &max_level, pmax.data(), sepset.data()
         );
 
         // TODO:
@@ -356,7 +356,8 @@ void prepc(int argc, char *argv[])
         {
             for (size_t pid = 0; pid < (parents_v.size() - num_phen); pid++)
             {
-                std::cout << "[Parent]\t" << block.get_chr_id() << "\t" << parents_v[pid] << std::endl;
+                std::cout << "[Parent]\t" << block.get_chr_id() << "\t" << parents_v[pid]
+                          << std::endl;
             }
         }
 
@@ -367,18 +368,19 @@ void prepc(int argc, char *argv[])
 const std::string BDPC_USAGE = R"(
 Run cuPC on block diagonal genomic covariance matrix.
 
-usage: mps bdpc <.phen> <bfiles> <.blocks> <alpha> <depth> <outdir>
+usage: mps bdpc <.phen> <bfiles> <.blocks> <alpha> <max-level> <depth> <outdir>
 
 arguments:
     .phen       path to standardized phenotype tsv
     bfiles      stem of .bed, .means, .stds, .dim files
     .blocks     file with genomic block definitions
     alpha       significance level
+    max-level   maximal size of seperation sets in cuPC ( <= 14)
     depth       max depth at which marker variables are kept as ancestors
     outdir      outdir
 )";
 
-const int BDPC_NARGS = 8;
+const int BDPC_NARGS = 9;
 
 void block_diagonal_pc(int argc, char *argv[])
 {
@@ -388,8 +390,9 @@ void block_diagonal_pc(int argc, char *argv[])
     std::string bed_base_path = argv[3];
     std::string block_path = argv[4];
     float alpha = std::stof(argv[5]);
-    int depth = std::stoi(argv[6]);
-    std::string outdir = (std::string)argv[7];
+    int max_level = std::stoi(argv[6]);
+    int depth = std::stoi(argv[7]);
+    std::string outdir = (std::string)argv[8];
 
     std::cout << "Checking paths" << std::endl;
 
@@ -435,10 +438,10 @@ void block_diagonal_pc(int argc, char *argv[])
     // size_t num_individuals = dims.get_num_samples();
     std::vector<float> Th = threshold_array(num_individuals, alpha);
 
-    std::cout << "Number of levels: " << NUMBER_OF_LEVELS << std::endl;
+    std::cout << "Number of levels: " << max_level << std::endl;
 
     std::cout << "Setting level thr for cuPC: " << std::endl;
-    for (int i = 0; i <= NUMBER_OF_LEVELS; ++i)
+    for (int i = 0; i <= max_level; ++i)
     {
         std::cout << "\t Level: " << i << " thr: " << Th[i] << std::endl;
     }
@@ -604,7 +607,7 @@ void block_diagonal_pc(int argc, char *argv[])
         std::vector<int> sepset(sepset_size, 0);
         int l = 0;
         Skeleton(
-            sq_corrs.data(), &p, G.data(), Th.data(), &l, &MAX_LEVEL, pmax.data(), sepset.data()
+            sq_corrs.data(), &p, G.data(), Th.data(), &l, &max_level, pmax.data(), sepset.data()
         );
 
         // TODO:
@@ -618,7 +621,7 @@ void block_diagonal_pc(int argc, char *argv[])
         // TODO: make ordering optional
         direct_x_to_y(G, num_var, num_markers);
 
-        ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, parents, num_var, num_phen, MAX_LEVEL);
+        ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, parents, num_var, num_phen, max_level);
 
         std::cout << "Retained " << (parents.size() - num_phen) << " / " << num_markers
                   << " markers" << std::endl;
