@@ -73,6 +73,7 @@ void Skeleton(float *C, int *P, int *G, float *Th, int *l, const int *maxlevel, 
     //----------------------------------------------------------
     for (*l = 0; *l <= ML && !FinishFlag && *l <= *maxlevel; *l = *l + 1)
     {
+        CudaCheckError();
         if (*l == 0)
         {
             cudaEventRecord(start);
@@ -108,7 +109,7 @@ void Skeleton(float *C, int *P, int *G, float *Th, int *l, const int *maxlevel, 
         else
         {
             //================================> Start Scan Process <===============================
-            HANDLE_ERROR(cudaMemset(nprime_cuda, 0, 1 * sizeof(int)));
+            //HANDLE_ERROR(cudaMemset(nprime_cuda, 0, 1 * sizeof(int)));
             BLOCKS_PER_GRID = dim3(1, n, 1);
             THREADS_PER_BLOCK = dim3(1024, 1, 1);
             scan_compact<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, n * sizeof(int)>>>(
@@ -116,8 +117,8 @@ void Skeleton(float *C, int *P, int *G, float *Th, int *l, const int *maxlevel, 
             CudaCheckError();
             HANDLE_ERROR(cudaMemcpy(&nprime, nprime_cuda, 1 * sizeof(int), cudaMemcpyDeviceToHost));
 
-            printf("nprime: %i \n", nprime);
-            fflush(stdout);
+            //printf("nprime: %i \n", nprime);
+            //fflush(stdout);
 
             //================================> Begin The Gaussian CI Test
             //<==============================
@@ -234,6 +235,7 @@ void Skeleton(float *C, int *P, int *G, float *Th, int *l, const int *maxlevel, 
                 cudaEventElapsedTime(&milliseconds, start, stop);
                 printf("spent seconds: %f \n", milliseconds * 0.001);
                 fflush(stdout);
+                CudaCheckError();
             }
             else if (*l == 7)
             {
