@@ -1,11 +1,10 @@
 #include <math.h>
+#include <mps/cuPC-S.h>
+#include <mps/gpuerrors.h>
 #include <stdlib.h>
 #include <time.h>
 
 #include <iostream>
-
-#include <mps/cuPC-S.h>
-#include <mps/gpuerrors.h>
 
 //========================> Main Function Parameter <========================
 // Description : this function just calculate one Stage of PC stable algorithm
@@ -26,19 +25,22 @@ void print_degree_distribution(int *GPrime_cuda, int n)
     printf("degrees: [");
     for (size_t i = 0; i < n; i++)
     {
-        HANDLE_ERROR(cudaMemcpy(&degree, &GPrime_cuda[i * n + n - 1], 1 * sizeof(int), cudaMemcpyDeviceToHost));
+        HANDLE_ERROR(cudaMemcpy(
+            &degree, &GPrime_cuda[i * n + n - 1], 1 * sizeof(int), cudaMemcpyDeviceToHost
+        ));
         printf("%i, ", degree);
     }
     printf("]\n");
     fflush(stdout);
 }
 
-void Skeleton(float *C, int *P, int *G, float *Th, int *l, const int *maxlevel, float *pMax,
-              int *SepSet)
+void Skeleton(
+    float *C, int *P, int *G, float *Th, int *l, const int *maxlevel, float *pMax, int *SepSet
+)
 {
-    float *C_cuda; // Copy of C array in GPU
+    float *C_cuda;  // Copy of C array in GPU
     float *pMax_cuda;
-    int *G_cuda; // Copy of G Array in GPU
+    int *G_cuda;  // Copy of G Array in GPU
     int *nprime_cuda;
     int *SepSet_cuda;
     int *GPrime_cuda;
@@ -84,16 +86,18 @@ void Skeleton(float *C, int *P, int *G, float *Th, int *l, const int *maxlevel, 
             {
                 BLOCKS_PER_GRID = dim3(1, 1, 1);
                 THREADS_PER_BLOCK = dim3(32, 32, 1);
-                cal_Indepl0<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(C_cuda, G_cuda, Th[0],
-                                                                    pMax_cuda, n);
+                cal_Indepl0<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
+                    C_cuda, G_cuda, Th[0], pMax_cuda, n
+                );
                 CudaCheckError();
             }
             else
             {
                 BLOCKS_PER_GRID = dim3(ceil(((float)(n)) / 32.0), ceil(((float)(n)) / 32.0), 1);
                 THREADS_PER_BLOCK = dim3(32, 32, 1);
-                cal_Indepl0<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(C_cuda, G_cuda, Th[0],
-                                                                    pMax_cuda, n);
+                cal_Indepl0<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
+                    C_cuda, G_cuda, Th[0], pMax_cuda, n
+                );
                 CudaCheckError();
             }
             BLOCKS_PER_GRID = dim3(n * n, 1, 1);
@@ -109,22 +113,23 @@ void Skeleton(float *C, int *P, int *G, float *Th, int *l, const int *maxlevel, 
         else
         {
             //================================> Start Scan Process <===============================
-            //HANDLE_ERROR(cudaMemset(nprime_cuda, 0, 1 * sizeof(int)));
+            HANDLE_ERROR(cudaMemset(nprime_cuda, 0, 1 * sizeof(int)));
             BLOCKS_PER_GRID = dim3(1, n, 1);
             THREADS_PER_BLOCK = dim3(1024, 1, 1);
             scan_compact<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, n * sizeof(int)>>>(
-                GPrime_cuda, G_cuda, n, nprime_cuda);
+                GPrime_cuda, G_cuda, n, nprime_cuda
+            );
             CudaCheckError();
             HANDLE_ERROR(cudaMemcpy(&nprime, nprime_cuda, 1 * sizeof(int), cudaMemcpyDeviceToHost));
 
-            //printf("nprime: %i \n", nprime);
-            //fflush(stdout);
+            printf("nprime: %i \n", nprime);
+            fflush(stdout);
 
             //================================> Begin The Gaussian CI Test
             //<==============================
             // CHeck whether a CI test is possible
             if (nprime - 1 < *l)
-            { // if not:
+            {  // if not:
                 *l = *l - 1;
                 FinishFlag = true;
                 break;
@@ -139,7 +144,8 @@ void Skeleton(float *C, int *P, int *G, float *Th, int *l, const int *maxlevel, 
                 THREADS_PER_BLOCK = dim3(ParGivenL1, 1, 1);
                 // HANDLE_ERROR( cudaMalloc((void**)&SepSet_cuda,  n * n * 1 * sizeof(int)) );
                 cal_Indepl1<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, Th[1], n);
+                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, Th[1], n
+                );
                 // HANDLE_ERROR( cudaFree(SepSet_cuda) );
                 CudaCheckError();
                 HANDLE_ERROR(cudaDeviceSynchronize());
@@ -159,7 +165,8 @@ void Skeleton(float *C, int *P, int *G, float *Th, int *l, const int *maxlevel, 
                 THREADS_PER_BLOCK = dim3(ParGivenL2, 1, 1);
                 // HANDLE_ERROR( cudaMalloc((void**)&SepSet_cuda,  n * n * 1 * sizeof(int)) );
                 cal_Indepl2<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, n, Th[2]);
+                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, n, Th[2]
+                );
                 // HANDLE_ERROR( cudaFree(SepSet_cuda) );
                 CudaCheckError();
                 cudaEventRecord(stop);
@@ -177,7 +184,8 @@ void Skeleton(float *C, int *P, int *G, float *Th, int *l, const int *maxlevel, 
                 THREADS_PER_BLOCK = dim3(ParGivenL3, 1, 1);
                 // HANDLE_ERROR( cudaMalloc((void**)&SepSet_cuda,  n * n * 1 * sizeof(int)) );
                 cal_Indepl3<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, n, Th[3]);
+                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, n, Th[3]
+                );
                 // HANDLE_ERROR( cudaFree(SepSet_cuda) );
                 CudaCheckError();
                 cudaEventRecord(stop);
@@ -194,7 +202,8 @@ void Skeleton(float *C, int *P, int *G, float *Th, int *l, const int *maxlevel, 
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL4, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL4, 1, 1);
                 cal_Indepl4<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, n, Th[4]);
+                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, n, Th[4]
+                );
                 CudaCheckError();
                 cudaEventRecord(stop);
                 cudaEventSynchronize(stop);
@@ -211,7 +220,8 @@ void Skeleton(float *C, int *P, int *G, float *Th, int *l, const int *maxlevel, 
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL5, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL5, 1, 1);
                 cal_Indepl5<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, n, Th[5]);
+                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, n, Th[5]
+                );
                 CudaCheckError();
                 cudaEventRecord(stop);
                 cudaEventSynchronize(stop);
@@ -228,7 +238,8 @@ void Skeleton(float *C, int *P, int *G, float *Th, int *l, const int *maxlevel, 
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL6, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL6, 1, 1);
                 cal_Indepl6<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, n, Th[6]);
+                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, n, Th[6]
+                );
                 CudaCheckError();
                 cudaEventRecord(stop);
                 cudaEventSynchronize(stop);
@@ -245,7 +256,8 @@ void Skeleton(float *C, int *P, int *G, float *Th, int *l, const int *maxlevel, 
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL7, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL7, 1, 1);
                 cal_Indepl7<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, n, Th[7]);
+                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, n, Th[7]
+                );
                 CudaCheckError();
                 cudaEventRecord(stop);
                 cudaEventSynchronize(stop);
@@ -261,7 +273,8 @@ void Skeleton(float *C, int *P, int *G, float *Th, int *l, const int *maxlevel, 
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL8, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL8, 1, 1);
                 cal_Indepl8<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, n, Th[8]);
+                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, n, Th[8]
+                );
                 CudaCheckError();
                 cudaEventRecord(stop);
                 cudaEventSynchronize(stop);
@@ -277,7 +290,8 @@ void Skeleton(float *C, int *P, int *G, float *Th, int *l, const int *maxlevel, 
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL9, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL9, 1, 1);
                 cal_Indepl9<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, n, Th[9]);
+                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, n, Th[9]
+                );
                 CudaCheckError();
                 cudaEventRecord(stop);
                 cudaEventSynchronize(stop);
@@ -293,7 +307,8 @@ void Skeleton(float *C, int *P, int *G, float *Th, int *l, const int *maxlevel, 
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL10, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL10, 1, 1);
                 cal_Indepl10<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, n, Th[10]);
+                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, n, Th[10]
+                );
                 CudaCheckError();
                 cudaEventRecord(stop);
                 cudaEventSynchronize(stop);
@@ -309,7 +324,8 @@ void Skeleton(float *C, int *P, int *G, float *Th, int *l, const int *maxlevel, 
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL11, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL11, 1, 1);
                 cal_Indepl11<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, n, Th[11]);
+                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, n, Th[11]
+                );
                 CudaCheckError();
                 cudaEventRecord(stop);
                 cudaEventSynchronize(stop);
@@ -325,7 +341,8 @@ void Skeleton(float *C, int *P, int *G, float *Th, int *l, const int *maxlevel, 
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL12, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL12, 1, 1);
                 cal_Indepl12<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, n, Th[12]);
+                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, n, Th[12]
+                );
                 CudaCheckError();
                 cudaEventRecord(stop);
                 cudaEventSynchronize(stop);
@@ -341,7 +358,8 @@ void Skeleton(float *C, int *P, int *G, float *Th, int *l, const int *maxlevel, 
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL13, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL13, 1, 1);
                 cal_Indepl13<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, n, Th[13]);
+                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, n, Th[13]
+                );
                 CudaCheckError();
                 cudaEventRecord(stop);
                 cudaEventSynchronize(stop);
@@ -357,7 +375,8 @@ void Skeleton(float *C, int *P, int *G, float *Th, int *l, const int *maxlevel, 
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL14, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL14, 1, 1);
                 cal_Indepl14<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, n, Th[14]);
+                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, n, Th[14]
+                );
                 CudaCheckError();
                 cudaEventRecord(stop);
                 cudaEventSynchronize(stop);
@@ -370,7 +389,7 @@ void Skeleton(float *C, int *P, int *G, float *Th, int *l, const int *maxlevel, 
                 // TODO: add PC serial
             }
         }
-    } // if l > 0
+    }  // if l > 0
 
     // Copy Graph G from GPU to CPU
     HANDLE_ERROR(cudaMemcpy(G, G_cuda, n * n * sizeof(int), cudaMemcpyDeviceToHost));
@@ -405,7 +424,7 @@ void Skeleton(float *C, int *P, int *G, float *Th, int *l, const int *maxlevel, 
     HANDLE_ERROR(cudaFree(G_cuda));
     HANDLE_ERROR(cudaFree(mutex_cuda));
     HANDLE_ERROR(cudaFree(pMax_cuda));
-} // Skeleton
+}  // Skeleton
 
 __global__ void SepSet_initialize(int *SepSet, int size)
 {
@@ -440,8 +459,9 @@ __global__ void cal_Indepl0(float *C, int *G, float th, float *pMax, int n)
     }
 }
 
-__global__ void cal_Indepl1(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
-                            float th, int n)
+__global__ void cal_Indepl1(
+    float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax, float th, int n
+)
 {
     int YIdx;
     int XIdx = by;
@@ -537,8 +557,9 @@ __global__ void cal_Indepl1(float *C, int *G, int *GPrime, int *mutex, int *Seps
     }
 }
 
-__global__ void cal_Indepl2(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
-                            int n, float th)
+__global__ void cal_Indepl2(
+    float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax, int n, float th
+)
 {
     int YIdx;
     int XIdx = by;
@@ -608,8 +629,12 @@ __global__ void cal_Indepl2(float *C, int *G, int *GPrime, int *mutex, int *Seps
             __syncthreads();
             NoEdgeFlag = 1;
             __syncthreads();
-            IthCombination(NbrIdxPointer, SizeOfArr, 2,
-                           tx + bx * ParGivenL2 + d1 * ParGivenL2 * NumOfBlockForEachNodeL2 + 1);
+            IthCombination(
+                NbrIdxPointer,
+                SizeOfArr,
+                2,
+                tx + bx * ParGivenL2 + d1 * ParGivenL2 * NumOfBlockForEachNodeL2 + 1
+            );
             NbrIdx[0] = G_Chunk[NbrIdxPointer[0] - 1];
             NbrIdx[1] = G_Chunk[NbrIdxPointer[1] - 1];
             M2[0][1] = C[NbrIdx[0] * n + NbrIdx[1]];
@@ -652,7 +677,7 @@ __global__ void cal_Indepl2(float *C, int *G, int *GPrime, int *mutex, int *Seps
                     if (Z < th)
                     {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
-                        { // lock
+                        {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
                             pMax[XIdx * n + YIdx] = Z;
@@ -666,8 +691,9 @@ __global__ void cal_Indepl2(float *C, int *G, int *GPrime, int *mutex, int *Seps
     }
 }
 
-__global__ void cal_Indepl3(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
-                            int n, float th)
+__global__ void cal_Indepl3(
+    float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax, int n, float th
+)
 {
     int YIdx;
     int XIdx = by;
@@ -735,8 +761,12 @@ __global__ void cal_Indepl3(float *C, int *G, int *GPrime, int *mutex, int *Seps
             __syncthreads();
             NoEdgeFlag = 1;
             __syncthreads();
-            IthCombination(NbrIdxPointer, SizeOfArr, 3,
-                           tx + bx * ParGivenL3 + d1 * ParGivenL3 * NumOfBlockForEachNodeL3 + 1);
+            IthCombination(
+                NbrIdxPointer,
+                SizeOfArr,
+                3,
+                tx + bx * ParGivenL3 + d1 * ParGivenL3 * NumOfBlockForEachNodeL3 + 1
+            );
             NbrIdx[0] = G_Chunk[NbrIdxPointer[0] - 1];
             NbrIdx[1] = G_Chunk[NbrIdxPointer[1] - 1];
             NbrIdx[2] = G_Chunk[NbrIdxPointer[2] - 1];
@@ -801,7 +831,7 @@ __global__ void cal_Indepl3(float *C, int *G, int *GPrime, int *mutex, int *Seps
                     if (Z < th)
                     {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
-                        { // lock
+                        {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
                             pMax[XIdx * n + YIdx] = Z;
@@ -816,8 +846,9 @@ __global__ void cal_Indepl3(float *C, int *G, int *GPrime, int *mutex, int *Seps
     }
 }
 
-__global__ void cal_Indepl4(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
-                            int n, float th)
+__global__ void cal_Indepl4(
+    float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax, int n, float th
+)
 {
     int YIdx;
     int XIdx = by;
@@ -890,8 +921,12 @@ __global__ void cal_Indepl4(float *C, int *G, int *GPrime, int *mutex, int *Seps
             __syncthreads();
             NoEdgeFlag = 1;
             __syncthreads();
-            IthCombination(NbrIdxPointer, SizeOfArr, 4,
-                           tx + bx * ParGivenL4 + d1 * ParGivenL4 * NumOfBlockForEachNodeL4 + 1);
+            IthCombination(
+                NbrIdxPointer,
+                SizeOfArr,
+                4,
+                tx + bx * ParGivenL4 + d1 * ParGivenL4 * NumOfBlockForEachNodeL4 + 1
+            );
             NbrIdx[0] = G_Chunk[NbrIdxPointer[0] - 1];
             NbrIdx[1] = G_Chunk[NbrIdxPointer[1] - 1];
             NbrIdx[2] = G_Chunk[NbrIdxPointer[2] - 1];
@@ -969,7 +1004,7 @@ __global__ void cal_Indepl4(float *C, int *G, int *GPrime, int *mutex, int *Seps
                     if (Z < th)
                     {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
-                        { // lock
+                        {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
                             pMax[XIdx * n + YIdx] = Z;
@@ -985,8 +1020,9 @@ __global__ void cal_Indepl4(float *C, int *G, int *GPrime, int *mutex, int *Seps
     }
 }
 
-__global__ void cal_Indepl5(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
-                            int n, float th)
+__global__ void cal_Indepl5(
+    float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax, int n, float th
+)
 {
     int YIdx;
     int XIdx = by;
@@ -1058,8 +1094,12 @@ __global__ void cal_Indepl5(float *C, int *G, int *GPrime, int *mutex, int *Seps
             __syncthreads();
             NoEdgeFlag = 1;
             __syncthreads();
-            IthCombination(NbrIdxPointer, SizeOfArr, 5,
-                           tx + bx * ParGivenL5 + d1 * ParGivenL5 * NumOfBlockForEachNodeL5 + 1);
+            IthCombination(
+                NbrIdxPointer,
+                SizeOfArr,
+                5,
+                tx + bx * ParGivenL5 + d1 * ParGivenL5 * NumOfBlockForEachNodeL5 + 1
+            );
             for (int tmp = 0; tmp < 5; tmp++)
             {
                 NbrIdx[tmp] = G_Chunk[NbrIdxPointer[tmp] - 1];
@@ -1151,7 +1191,7 @@ __global__ void cal_Indepl5(float *C, int *G, int *GPrime, int *mutex, int *Seps
                     if (Z < th)
                     {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
-                        { // lock
+                        {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
                             pMax[XIdx * n + YIdx] = Z;
@@ -1168,8 +1208,9 @@ __global__ void cal_Indepl5(float *C, int *G, int *GPrime, int *mutex, int *Seps
     }
 }
 
-__global__ void cal_Indepl6(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
-                            int n, float th)
+__global__ void cal_Indepl6(
+    float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax, int n, float th
+)
 {
     int YIdx;
     int XIdx = by;
@@ -1242,8 +1283,12 @@ __global__ void cal_Indepl6(float *C, int *G, int *GPrime, int *mutex, int *Seps
             __syncthreads();
             NoEdgeFlag = 1;
             __syncthreads();
-            IthCombination(NbrIdxPointer, SizeOfArr, 6,
-                           tx + bx * ParGivenL6 + d1 * ParGivenL6 * NumOfBlockForEachNodeL6 + 1);
+            IthCombination(
+                NbrIdxPointer,
+                SizeOfArr,
+                6,
+                tx + bx * ParGivenL6 + d1 * ParGivenL6 * NumOfBlockForEachNodeL6 + 1
+            );
             for (int tmp = 0; tmp < 6; tmp++)
             {
                 NbrIdx[tmp] = G_Chunk[NbrIdxPointer[tmp] - 1];
@@ -1349,7 +1394,7 @@ __global__ void cal_Indepl6(float *C, int *G, int *GPrime, int *mutex, int *Seps
                     if (Z < th)
                     {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
-                        { // lock
+                        {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
                             pMax[XIdx * n + YIdx] = Z;
@@ -1367,8 +1412,9 @@ __global__ void cal_Indepl6(float *C, int *G, int *GPrime, int *mutex, int *Seps
     }
 }
 
-__global__ void cal_Indepl7(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
-                            int n, float th)
+__global__ void cal_Indepl7(
+    float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax, int n, float th
+)
 {
     int YIdx;
     int XIdx = by;
@@ -1442,8 +1488,12 @@ __global__ void cal_Indepl7(float *C, int *G, int *GPrime, int *mutex, int *Seps
             __syncthreads();
             NoEdgeFlag = 1;
             __syncthreads();
-            IthCombination(NbrIdxPointer, SizeOfArr, 7,
-                           tx + bx * ParGivenL7 + d1 * ParGivenL7 * NumOfBlockForEachNodeL7 + 1);
+            IthCombination(
+                NbrIdxPointer,
+                SizeOfArr,
+                7,
+                tx + bx * ParGivenL7 + d1 * ParGivenL7 * NumOfBlockForEachNodeL7 + 1
+            );
             for (int tmp = 0; tmp < 7; tmp++)
             {
                 NbrIdx[tmp] = G_Chunk[NbrIdxPointer[tmp] - 1];
@@ -1567,7 +1617,7 @@ __global__ void cal_Indepl7(float *C, int *G, int *GPrime, int *mutex, int *Seps
                     if (Z < th)
                     {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
-                        { // lock
+                        {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
                             pMax[XIdx * n + YIdx] = Z;
@@ -1586,8 +1636,9 @@ __global__ void cal_Indepl7(float *C, int *G, int *GPrime, int *mutex, int *Seps
     }
 }
 
-__global__ void cal_Indepl8(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
-                            int n, float th)
+__global__ void cal_Indepl8(
+    float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax, int n, float th
+)
 {
     int YIdx;
     int XIdx = by;
@@ -1661,8 +1712,12 @@ __global__ void cal_Indepl8(float *C, int *G, int *GPrime, int *mutex, int *Seps
             __syncthreads();
             NoEdgeFlag = 1;
             __syncthreads();
-            IthCombination(NbrIdxPointer, SizeOfArr, 8,
-                           tx + bx * ParGivenL8 + d1 * ParGivenL8 * NumOfBlockForEachNodeL8 + 1);
+            IthCombination(
+                NbrIdxPointer,
+                SizeOfArr,
+                8,
+                tx + bx * ParGivenL8 + d1 * ParGivenL8 * NumOfBlockForEachNodeL8 + 1
+            );
             for (int tmp = 0; tmp < 8; tmp++)
             {
                 NbrIdx[tmp] = G_Chunk[NbrIdxPointer[tmp] - 1];
@@ -1802,7 +1857,7 @@ __global__ void cal_Indepl8(float *C, int *G, int *GPrime, int *mutex, int *Seps
                     if (Z < th)
                     {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
-                        { // lock
+                        {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
                             pMax[XIdx * n + YIdx] = Z;
@@ -1822,8 +1877,9 @@ __global__ void cal_Indepl8(float *C, int *G, int *GPrime, int *mutex, int *Seps
     }
 }
 
-__global__ void cal_Indepl9(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
-                            int n, float th)
+__global__ void cal_Indepl9(
+    float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax, int n, float th
+)
 {
     int YIdx;
     int XIdx = by;
@@ -1896,8 +1952,12 @@ __global__ void cal_Indepl9(float *C, int *G, int *GPrime, int *mutex, int *Seps
             __syncthreads();
             NoEdgeFlag = 1;
             __syncthreads();
-            IthCombination(NbrIdxPointer, SizeOfArr, 9,
-                           tx + bx * ParGivenL9 + d1 * ParGivenL9 * NumOfBlockForEachNodeL9 + 1);
+            IthCombination(
+                NbrIdxPointer,
+                SizeOfArr,
+                9,
+                tx + bx * ParGivenL9 + d1 * ParGivenL9 * NumOfBlockForEachNodeL9 + 1
+            );
             for (int tmp = 0; tmp < 9; tmp++)
             {
                 NbrIdx[tmp] = G_Chunk[NbrIdxPointer[tmp] - 1];
@@ -1978,7 +2038,7 @@ __global__ void cal_Indepl9(float *C, int *G, int *GPrime, int *mutex, int *Seps
                     if (Z < th)
                     {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
-                        { // lock
+                        {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
                             pMax[XIdx * n + YIdx] = Z;
@@ -1999,8 +2059,9 @@ __global__ void cal_Indepl9(float *C, int *G, int *GPrime, int *mutex, int *Seps
     }
 }
 
-__global__ void cal_Indepl10(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
-                             int n, float th)
+__global__ void cal_Indepl10(
+    float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax, int n, float th
+)
 {
     int YIdx;
     int XIdx = by;
@@ -2074,8 +2135,12 @@ __global__ void cal_Indepl10(float *C, int *G, int *GPrime, int *mutex, int *Sep
             __syncthreads();
             NoEdgeFlag = 1;
             __syncthreads();
-            IthCombination(NbrIdxPointer, SizeOfArr, 10,
-                           tx + bx * ParGivenL10 + d1 * ParGivenL10 * NumOfBlockForEachNodeL10 + 1);
+            IthCombination(
+                NbrIdxPointer,
+                SizeOfArr,
+                10,
+                tx + bx * ParGivenL10 + d1 * ParGivenL10 * NumOfBlockForEachNodeL10 + 1
+            );
             for (int tmp = 0; tmp < 10; tmp++)
             {
                 NbrIdx[tmp] = G_Chunk[NbrIdxPointer[tmp] - 1];
@@ -2156,7 +2221,7 @@ __global__ void cal_Indepl10(float *C, int *G, int *GPrime, int *mutex, int *Sep
                     if (Z < th)
                     {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
-                        { // lock
+                        {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
                             pMax[XIdx * n + YIdx] = Z;
@@ -2178,8 +2243,9 @@ __global__ void cal_Indepl10(float *C, int *G, int *GPrime, int *mutex, int *Sep
     }
 }
 
-__global__ void cal_Indepl11(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
-                             int n, float th)
+__global__ void cal_Indepl11(
+    float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax, int n, float th
+)
 {
     int YIdx;
     int XIdx = by;
@@ -2253,8 +2319,12 @@ __global__ void cal_Indepl11(float *C, int *G, int *GPrime, int *mutex, int *Sep
             __syncthreads();
             NoEdgeFlag = 1;
             __syncthreads();
-            IthCombination(NbrIdxPointer, SizeOfArr, 11,
-                           tx + bx * ParGivenL11 + d1 * ParGivenL11 * NumOfBlockForEachNodeL11 + 1);
+            IthCombination(
+                NbrIdxPointer,
+                SizeOfArr,
+                11,
+                tx + bx * ParGivenL11 + d1 * ParGivenL11 * NumOfBlockForEachNodeL11 + 1
+            );
             for (int tmp = 0; tmp < 11; tmp++)
             {
                 NbrIdx[tmp] = G_Chunk[NbrIdxPointer[tmp] - 1];
@@ -2336,7 +2406,7 @@ __global__ void cal_Indepl11(float *C, int *G, int *GPrime, int *mutex, int *Sep
                     if (Z < th)
                     {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
-                        { // lock
+                        {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
                             pMax[XIdx * n + YIdx] = Z;
@@ -2359,8 +2429,9 @@ __global__ void cal_Indepl11(float *C, int *G, int *GPrime, int *mutex, int *Sep
     }
 }
 
-__global__ void cal_Indepl12(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
-                             int n, float th)
+__global__ void cal_Indepl12(
+    float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax, int n, float th
+)
 {
     int YIdx;
     int XIdx = by;
@@ -2434,8 +2505,12 @@ __global__ void cal_Indepl12(float *C, int *G, int *GPrime, int *mutex, int *Sep
             __syncthreads();
             NoEdgeFlag = 1;
             __syncthreads();
-            IthCombination(NbrIdxPointer, SizeOfArr, 12,
-                           tx + bx * ParGivenL12 + d1 * ParGivenL12 * NumOfBlockForEachNodeL12 + 1);
+            IthCombination(
+                NbrIdxPointer,
+                SizeOfArr,
+                12,
+                tx + bx * ParGivenL12 + d1 * ParGivenL12 * NumOfBlockForEachNodeL12 + 1
+            );
             for (int tmp = 0; tmp < 12; tmp++)
             {
                 NbrIdx[tmp] = G_Chunk[NbrIdxPointer[tmp] - 1];
@@ -2517,7 +2592,7 @@ __global__ void cal_Indepl12(float *C, int *G, int *GPrime, int *mutex, int *Sep
                     if (Z < th)
                     {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
-                        { // lock
+                        {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
                             pMax[XIdx * n + YIdx] = Z;
@@ -2541,8 +2616,9 @@ __global__ void cal_Indepl12(float *C, int *G, int *GPrime, int *mutex, int *Sep
     }
 }
 
-__global__ void cal_Indepl13(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
-                             int n, float th)
+__global__ void cal_Indepl13(
+    float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax, int n, float th
+)
 {
     int YIdx;
     int XIdx = by;
@@ -2616,8 +2692,12 @@ __global__ void cal_Indepl13(float *C, int *G, int *GPrime, int *mutex, int *Sep
             __syncthreads();
             NoEdgeFlag = 1;
             __syncthreads();
-            IthCombination(NbrIdxPointer, SizeOfArr, 13,
-                           tx + bx * ParGivenL13 + d1 * ParGivenL13 * NumOfBlockForEachNodeL13 + 1);
+            IthCombination(
+                NbrIdxPointer,
+                SizeOfArr,
+                13,
+                tx + bx * ParGivenL13 + d1 * ParGivenL13 * NumOfBlockForEachNodeL13 + 1
+            );
             for (int tmp = 0; tmp < 13; tmp++)
             {
                 NbrIdx[tmp] = G_Chunk[NbrIdxPointer[tmp] - 1];
@@ -2700,7 +2780,7 @@ __global__ void cal_Indepl13(float *C, int *G, int *GPrime, int *mutex, int *Sep
                     if (Z < th)
                     {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
-                        { // lock
+                        {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
                             pMax[XIdx * n + YIdx] = Z;
@@ -2725,8 +2805,9 @@ __global__ void cal_Indepl13(float *C, int *G, int *GPrime, int *mutex, int *Sep
     }
 }
 
-__global__ void cal_Indepl14(float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax,
-                             int n, float th)
+__global__ void cal_Indepl14(
+    float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax, int n, float th
+)
 {
     int YIdx;
     int XIdx = by;
@@ -2800,8 +2881,12 @@ __global__ void cal_Indepl14(float *C, int *G, int *GPrime, int *mutex, int *Sep
             __syncthreads();
             NoEdgeFlag = 1;
             __syncthreads();
-            IthCombination(NbrIdxPointer, SizeOfArr, 14,
-                           tx + bx * ParGivenL14 + d1 * ParGivenL14 * NumOfBlockForEachNodeL14 + 1);
+            IthCombination(
+                NbrIdxPointer,
+                SizeOfArr,
+                14,
+                tx + bx * ParGivenL14 + d1 * ParGivenL14 * NumOfBlockForEachNodeL14 + 1
+            );
             for (int tmp = 0; tmp < 14; tmp++)
             {
                 NbrIdx[tmp] = G_Chunk[NbrIdxPointer[tmp] - 1];
@@ -2884,7 +2969,7 @@ __global__ void cal_Indepl14(float *C, int *G, int *GPrime, int *mutex, int *Sep
                     if (Z < th)
                     {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
-                        { // lock
+                        {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
                             pMax[XIdx * n + YIdx] = Z;
@@ -3351,8 +3436,9 @@ __device__ void pseudoinversel3(float M2[][3], float M2Inv[][3])
     }
 }
 
-__device__ void pseudoinversel4(float M2[][4], float M2Inv[][4], float v[][4], float *rv1,
-                                float *w, float res1[][4])
+__device__ void pseudoinversel4(
+    float M2[][4], float M2Inv[][4], float v[][4], float *rv1, float *w, float res1[][4]
+)
 {
     int m = 4;
     int flag, its, i, j, jj, k, l, nm;
@@ -3367,8 +3453,7 @@ __device__ void pseudoinversel4(float M2[][4], float M2Inv[][4], float v[][4], f
         g = s = scale = 0.0;
         if (i < m)
         {
-            for (k = i; k < m; k++)
-                scale += fabs(M2[k][i]);
+            for (k = i; k < m; k++) scale += fabs(M2[k][i]);
             if (scale)
             {
                 for (k = i; k < m; k++)
@@ -3384,15 +3469,12 @@ __device__ void pseudoinversel4(float M2[][4], float M2Inv[][4], float v[][4], f
                 {
                     for (j = l; j < m; j++)
                     {
-                        for (s = 0.0, k = i; k < m; k++)
-                            s += (M2[k][i] * M2[k][j]);
+                        for (s = 0.0, k = i; k < m; k++) s += (M2[k][i] * M2[k][j]);
                         f = s / h;
-                        for (k = i; k < m; k++)
-                            M2[k][j] += (f * M2[k][i]);
+                        for (k = i; k < m; k++) M2[k][j] += (f * M2[k][i]);
                     }
                 }
-                for (k = i; k < m; k++)
-                    M2[k][i] = (M2[k][i] * scale);
+                for (k = i; k < m; k++) M2[k][i] = (M2[k][i] * scale);
             }
         }
         w[i] = scale * g;
@@ -3401,8 +3483,7 @@ __device__ void pseudoinversel4(float M2[][4], float M2Inv[][4], float v[][4], f
         g = s = scale = 0.0;
         if (i < m && i != m - 1)
         {
-            for (k = l; k < m; k++)
-                scale += fabs(M2[i][k]);
+            for (k = l; k < m; k++) scale += fabs(M2[i][k]);
             if (scale)
             {
                 for (k = l; k < m; k++)
@@ -3414,20 +3495,16 @@ __device__ void pseudoinversel4(float M2[][4], float M2Inv[][4], float v[][4], f
                 g = -SIGN(sqrt(s), f);
                 h = f * g - s;
                 M2[i][l] = f - g;
-                for (k = l; k < m; k++)
-                    rv1[k] = M2[i][k] / h;
+                for (k = l; k < m; k++) rv1[k] = M2[i][k] / h;
                 if (i != m - 1)
                 {
                     for (j = l; j < m; j++)
                     {
-                        for (s = 0.0, k = l; k < m; k++)
-                            s += (M2[j][k] * M2[i][k]);
-                        for (k = l; k < m; k++)
-                            M2[j][k] += (s * rv1[k]);
+                        for (s = 0.0, k = l; k < m; k++) s += (M2[j][k] * M2[i][k]);
+                        for (k = l; k < m; k++) M2[j][k] += (s * rv1[k]);
                     }
                 }
-                for (k = l; k < m; k++)
-                    M2[i][k] = M2[i][k] * scale;
+                for (k = l; k < m; k++) M2[i][k] = M2[i][k] * scale;
             }
         }
         anorm = MAX(anorm, (fabs(w[i]) + fabs(rv1[i])));
@@ -3440,19 +3517,15 @@ __device__ void pseudoinversel4(float M2[][4], float M2Inv[][4], float v[][4], f
         {
             if (g)
             {
-                for (j = l; j < m; j++)
-                    v[j][i] = (M2[i][j] / M2[i][l]) / g;
+                for (j = l; j < m; j++) v[j][i] = (M2[i][j] / M2[i][l]) / g;
                 /* float division to avoid underflow */
                 for (j = l; j < m; j++)
                 {
-                    for (s = 0.0, k = l; k < m; k++)
-                        s += (M2[i][k] * v[k][j]);
-                    for (k = l; k < m; k++)
-                        v[k][j] += (s * v[k][i]);
+                    for (s = 0.0, k = l; k < m; k++) s += (M2[i][k] * v[k][j]);
+                    for (k = l; k < m; k++) v[k][j] += (s * v[k][i]);
                 }
             }
-            for (j = l; j < m; j++)
-                v[i][j] = v[j][i] = 0.0;
+            for (j = l; j < m; j++) v[i][j] = v[j][i] = 0.0;
         }
         v[i][i] = 1.0;
         g = rv1[i];
@@ -3465,8 +3538,7 @@ __device__ void pseudoinversel4(float M2[][4], float M2Inv[][4], float v[][4], f
         l = i + 1;
         g = w[i];
         if (i < m - 1)
-            for (j = l; j < m; j++)
-                M2[i][j] = 0.0;
+            for (j = l; j < m; j++) M2[i][j] = 0.0;
         if (g)
         {
             g = 1.0 / g;
@@ -3474,20 +3546,16 @@ __device__ void pseudoinversel4(float M2[][4], float M2Inv[][4], float v[][4], f
             {
                 for (j = l; j < m; j++)
                 {
-                    for (s = 0.0, k = l; k < m; k++)
-                        s += (M2[k][i] * M2[k][j]);
+                    for (s = 0.0, k = l; k < m; k++) s += (M2[k][i] * M2[k][j]);
                     f = (s / M2[i][i]) * g;
-                    for (k = i; k < m; k++)
-                        M2[k][j] += (f * M2[k][i]);
+                    for (k = i; k < m; k++) M2[k][j] += (f * M2[k][i]);
                 }
             }
-            for (j = i; j < m; j++)
-                M2[j][i] = (M2[j][i] * g);
+            for (j = i; j < m; j++) M2[j][i] = (M2[j][i] * g);
         }
         else
         {
-            for (j = i; j < m; j++)
-                M2[j][i] = 0.0;
+            for (j = i; j < m; j++) M2[j][i] = 0.0;
         }
         ++M2[i][i];
     }
@@ -3506,8 +3574,7 @@ __device__ void pseudoinversel4(float M2[][4], float M2Inv[][4], float v[][4], f
                     flag = 0;
                     break;
                 }
-                if (fabs(w[nm]) + anorm == anorm)
-                    break;
+                if (fabs(w[nm]) + anorm == anorm) break;
             }
             if (flag)
             {
@@ -3540,8 +3607,7 @@ __device__ void pseudoinversel4(float M2[][4], float M2Inv[][4], float v[][4], f
                 if (z < 0.0)
                 { /* make singular value nonnegative */
                     w[k] = (-z);
-                    for (j = 0; j < m; j++)
-                        v[j][k] = (-v[j][k]);
+                    for (j = 0; j < m; j++) v[j][k] = (-v[j][k]);
                 }
                 break;
             }
@@ -3633,8 +3699,9 @@ __device__ void pseudoinversel4(float M2[][4], float M2Inv[][4], float v[][4], f
     }
 }
 
-__device__ void pseudoinversel5(float M2[][5], float M2Inv[][5], float v[][5], float *rv1,
-                                float *w, float res1[][5])
+__device__ void pseudoinversel5(
+    float M2[][5], float M2Inv[][5], float v[][5], float *rv1, float *w, float res1[][5]
+)
 {
     int m = 5;
     int flag, its, i, j, jj, k, l, nm;
@@ -3649,8 +3716,7 @@ __device__ void pseudoinversel5(float M2[][5], float M2Inv[][5], float v[][5], f
         g = s = scale = 0.0;
         if (i < m)
         {
-            for (k = i; k < m; k++)
-                scale += fabs(M2[k][i]);
+            for (k = i; k < m; k++) scale += fabs(M2[k][i]);
             if (scale)
             {
                 for (k = i; k < m; k++)
@@ -3666,15 +3732,12 @@ __device__ void pseudoinversel5(float M2[][5], float M2Inv[][5], float v[][5], f
                 {
                     for (j = l; j < m; j++)
                     {
-                        for (s = 0.0, k = i; k < m; k++)
-                            s += (M2[k][i] * M2[k][j]);
+                        for (s = 0.0, k = i; k < m; k++) s += (M2[k][i] * M2[k][j]);
                         f = s / h;
-                        for (k = i; k < m; k++)
-                            M2[k][j] += (f * M2[k][i]);
+                        for (k = i; k < m; k++) M2[k][j] += (f * M2[k][i]);
                     }
                 }
-                for (k = i; k < m; k++)
-                    M2[k][i] = (M2[k][i] * scale);
+                for (k = i; k < m; k++) M2[k][i] = (M2[k][i] * scale);
             }
         }
         w[i] = scale * g;
@@ -3683,8 +3746,7 @@ __device__ void pseudoinversel5(float M2[][5], float M2Inv[][5], float v[][5], f
         g = s = scale = 0.0;
         if (i < m && i != m - 1)
         {
-            for (k = l; k < m; k++)
-                scale += fabs(M2[i][k]);
+            for (k = l; k < m; k++) scale += fabs(M2[i][k]);
             if (scale)
             {
                 for (k = l; k < m; k++)
@@ -3696,20 +3758,16 @@ __device__ void pseudoinversel5(float M2[][5], float M2Inv[][5], float v[][5], f
                 g = -SIGN(sqrt(s), f);
                 h = f * g - s;
                 M2[i][l] = f - g;
-                for (k = l; k < m; k++)
-                    rv1[k] = M2[i][k] / h;
+                for (k = l; k < m; k++) rv1[k] = M2[i][k] / h;
                 if (i != m - 1)
                 {
                     for (j = l; j < m; j++)
                     {
-                        for (s = 0.0, k = l; k < m; k++)
-                            s += (M2[j][k] * M2[i][k]);
-                        for (k = l; k < m; k++)
-                            M2[j][k] += (s * rv1[k]);
+                        for (s = 0.0, k = l; k < m; k++) s += (M2[j][k] * M2[i][k]);
+                        for (k = l; k < m; k++) M2[j][k] += (s * rv1[k]);
                     }
                 }
-                for (k = l; k < m; k++)
-                    M2[i][k] = M2[i][k] * scale;
+                for (k = l; k < m; k++) M2[i][k] = M2[i][k] * scale;
             }
         }
         anorm = MAX(anorm, (fabs(w[i]) + fabs(rv1[i])));
@@ -3722,19 +3780,15 @@ __device__ void pseudoinversel5(float M2[][5], float M2Inv[][5], float v[][5], f
         {
             if (g)
             {
-                for (j = l; j < m; j++)
-                    v[j][i] = (M2[i][j] / M2[i][l]) / g;
+                for (j = l; j < m; j++) v[j][i] = (M2[i][j] / M2[i][l]) / g;
                 /* float division to avoid underflow */
                 for (j = l; j < m; j++)
                 {
-                    for (s = 0.0, k = l; k < m; k++)
-                        s += (M2[i][k] * v[k][j]);
-                    for (k = l; k < m; k++)
-                        v[k][j] += (s * v[k][i]);
+                    for (s = 0.0, k = l; k < m; k++) s += (M2[i][k] * v[k][j]);
+                    for (k = l; k < m; k++) v[k][j] += (s * v[k][i]);
                 }
             }
-            for (j = l; j < m; j++)
-                v[i][j] = v[j][i] = 0.0;
+            for (j = l; j < m; j++) v[i][j] = v[j][i] = 0.0;
         }
         v[i][i] = 1.0;
         g = rv1[i];
@@ -3747,8 +3801,7 @@ __device__ void pseudoinversel5(float M2[][5], float M2Inv[][5], float v[][5], f
         l = i + 1;
         g = w[i];
         if (i < m - 1)
-            for (j = l; j < m; j++)
-                M2[i][j] = 0.0;
+            for (j = l; j < m; j++) M2[i][j] = 0.0;
         if (g)
         {
             g = 1.0 / g;
@@ -3756,20 +3809,16 @@ __device__ void pseudoinversel5(float M2[][5], float M2Inv[][5], float v[][5], f
             {
                 for (j = l; j < m; j++)
                 {
-                    for (s = 0.0, k = l; k < m; k++)
-                        s += (M2[k][i] * M2[k][j]);
+                    for (s = 0.0, k = l; k < m; k++) s += (M2[k][i] * M2[k][j]);
                     f = (s / M2[i][i]) * g;
-                    for (k = i; k < m; k++)
-                        M2[k][j] += (f * M2[k][i]);
+                    for (k = i; k < m; k++) M2[k][j] += (f * M2[k][i]);
                 }
             }
-            for (j = i; j < m; j++)
-                M2[j][i] = (M2[j][i] * g);
+            for (j = i; j < m; j++) M2[j][i] = (M2[j][i] * g);
         }
         else
         {
-            for (j = i; j < m; j++)
-                M2[j][i] = 0.0;
+            for (j = i; j < m; j++) M2[j][i] = 0.0;
         }
         ++M2[i][i];
     }
@@ -3788,8 +3837,7 @@ __device__ void pseudoinversel5(float M2[][5], float M2Inv[][5], float v[][5], f
                     flag = 0;
                     break;
                 }
-                if (fabs(w[nm]) + anorm == anorm)
-                    break;
+                if (fabs(w[nm]) + anorm == anorm) break;
             }
             if (flag)
             {
@@ -3822,8 +3870,7 @@ __device__ void pseudoinversel5(float M2[][5], float M2Inv[][5], float v[][5], f
                 if (z < 0.0)
                 { /* make singular value nonnegative */
                     w[k] = (-z);
-                    for (j = 0; j < m; j++)
-                        v[j][k] = (-v[j][k]);
+                    for (j = 0; j < m; j++) v[j][k] = (-v[j][k]);
                 }
                 break;
             }
@@ -3914,8 +3961,9 @@ __device__ void pseudoinversel5(float M2[][5], float M2Inv[][5], float v[][5], f
         }
     }
 }
-__device__ void pseudoinversel6(float M2[][6], float M2Inv[][6], float v[][6], float *rv1,
-                                float *w, float res1[][6])
+__device__ void pseudoinversel6(
+    float M2[][6], float M2Inv[][6], float v[][6], float *rv1, float *w, float res1[][6]
+)
 {
     int m = 6;
     int flag, its, i, j, jj, k, l, nm;
@@ -3930,8 +3978,7 @@ __device__ void pseudoinversel6(float M2[][6], float M2Inv[][6], float v[][6], f
         g = s = scale = 0.0;
         if (i < m)
         {
-            for (k = i; k < m; k++)
-                scale += fabs(M2[k][i]);
+            for (k = i; k < m; k++) scale += fabs(M2[k][i]);
             if (scale)
             {
                 for (k = i; k < m; k++)
@@ -3947,15 +3994,12 @@ __device__ void pseudoinversel6(float M2[][6], float M2Inv[][6], float v[][6], f
                 {
                     for (j = l; j < m; j++)
                     {
-                        for (s = 0.0, k = i; k < m; k++)
-                            s += (M2[k][i] * M2[k][j]);
+                        for (s = 0.0, k = i; k < m; k++) s += (M2[k][i] * M2[k][j]);
                         f = s / h;
-                        for (k = i; k < m; k++)
-                            M2[k][j] += (f * M2[k][i]);
+                        for (k = i; k < m; k++) M2[k][j] += (f * M2[k][i]);
                     }
                 }
-                for (k = i; k < m; k++)
-                    M2[k][i] = (M2[k][i] * scale);
+                for (k = i; k < m; k++) M2[k][i] = (M2[k][i] * scale);
             }
         }
         w[i] = scale * g;
@@ -3964,8 +4008,7 @@ __device__ void pseudoinversel6(float M2[][6], float M2Inv[][6], float v[][6], f
         g = s = scale = 0.0;
         if (i < m && i != m - 1)
         {
-            for (k = l; k < m; k++)
-                scale += fabs(M2[i][k]);
+            for (k = l; k < m; k++) scale += fabs(M2[i][k]);
             if (scale)
             {
                 for (k = l; k < m; k++)
@@ -3977,20 +4020,16 @@ __device__ void pseudoinversel6(float M2[][6], float M2Inv[][6], float v[][6], f
                 g = -SIGN(sqrt(s), f);
                 h = f * g - s;
                 M2[i][l] = f - g;
-                for (k = l; k < m; k++)
-                    rv1[k] = M2[i][k] / h;
+                for (k = l; k < m; k++) rv1[k] = M2[i][k] / h;
                 if (i != m - 1)
                 {
                     for (j = l; j < m; j++)
                     {
-                        for (s = 0.0, k = l; k < m; k++)
-                            s += (M2[j][k] * M2[i][k]);
-                        for (k = l; k < m; k++)
-                            M2[j][k] += (s * rv1[k]);
+                        for (s = 0.0, k = l; k < m; k++) s += (M2[j][k] * M2[i][k]);
+                        for (k = l; k < m; k++) M2[j][k] += (s * rv1[k]);
                     }
                 }
-                for (k = l; k < m; k++)
-                    M2[i][k] = M2[i][k] * scale;
+                for (k = l; k < m; k++) M2[i][k] = M2[i][k] * scale;
             }
         }
         anorm = MAX(anorm, (fabs(w[i]) + fabs(rv1[i])));
@@ -4003,19 +4042,15 @@ __device__ void pseudoinversel6(float M2[][6], float M2Inv[][6], float v[][6], f
         {
             if (g)
             {
-                for (j = l; j < m; j++)
-                    v[j][i] = (M2[i][j] / M2[i][l]) / g;
+                for (j = l; j < m; j++) v[j][i] = (M2[i][j] / M2[i][l]) / g;
                 /* float division to avoid underflow */
                 for (j = l; j < m; j++)
                 {
-                    for (s = 0.0, k = l; k < m; k++)
-                        s += (M2[i][k] * v[k][j]);
-                    for (k = l; k < m; k++)
-                        v[k][j] += (s * v[k][i]);
+                    for (s = 0.0, k = l; k < m; k++) s += (M2[i][k] * v[k][j]);
+                    for (k = l; k < m; k++) v[k][j] += (s * v[k][i]);
                 }
             }
-            for (j = l; j < m; j++)
-                v[i][j] = v[j][i] = 0.0;
+            for (j = l; j < m; j++) v[i][j] = v[j][i] = 0.0;
         }
         v[i][i] = 1.0;
         g = rv1[i];
@@ -4028,8 +4063,7 @@ __device__ void pseudoinversel6(float M2[][6], float M2Inv[][6], float v[][6], f
         l = i + 1;
         g = w[i];
         if (i < m - 1)
-            for (j = l; j < m; j++)
-                M2[i][j] = 0.0;
+            for (j = l; j < m; j++) M2[i][j] = 0.0;
         if (g)
         {
             g = 1.0 / g;
@@ -4037,20 +4071,16 @@ __device__ void pseudoinversel6(float M2[][6], float M2Inv[][6], float v[][6], f
             {
                 for (j = l; j < m; j++)
                 {
-                    for (s = 0.0, k = l; k < m; k++)
-                        s += (M2[k][i] * M2[k][j]);
+                    for (s = 0.0, k = l; k < m; k++) s += (M2[k][i] * M2[k][j]);
                     f = (s / M2[i][i]) * g;
-                    for (k = i; k < m; k++)
-                        M2[k][j] += (f * M2[k][i]);
+                    for (k = i; k < m; k++) M2[k][j] += (f * M2[k][i]);
                 }
             }
-            for (j = i; j < m; j++)
-                M2[j][i] = (M2[j][i] * g);
+            for (j = i; j < m; j++) M2[j][i] = (M2[j][i] * g);
         }
         else
         {
-            for (j = i; j < m; j++)
-                M2[j][i] = 0.0;
+            for (j = i; j < m; j++) M2[j][i] = 0.0;
         }
         ++M2[i][i];
     }
@@ -4069,8 +4099,7 @@ __device__ void pseudoinversel6(float M2[][6], float M2Inv[][6], float v[][6], f
                     flag = 0;
                     break;
                 }
-                if (fabs(w[nm]) + anorm == anorm)
-                    break;
+                if (fabs(w[nm]) + anorm == anorm) break;
             }
             if (flag)
             {
@@ -4103,8 +4132,7 @@ __device__ void pseudoinversel6(float M2[][6], float M2Inv[][6], float v[][6], f
                 if (z < 0.0)
                 { /* make singular value nonnegative */
                     w[k] = (-z);
-                    for (j = 0; j < m; j++)
-                        v[j][k] = (-v[j][k]);
+                    for (j = 0; j < m; j++) v[j][k] = (-v[j][k]);
                 }
                 break;
             }
@@ -4196,8 +4224,9 @@ __device__ void pseudoinversel6(float M2[][6], float M2Inv[][6], float v[][6], f
     }
 }
 
-__device__ void pseudoinversel7(float M2[][7], float M2Inv[][7], float v[][7], float *rv1,
-                                float *w, float res1[][7])
+__device__ void pseudoinversel7(
+    float M2[][7], float M2Inv[][7], float v[][7], float *rv1, float *w, float res1[][7]
+)
 {
     int m = 7;
     int flag, its, i, j, jj, k, l, nm;
@@ -4212,8 +4241,7 @@ __device__ void pseudoinversel7(float M2[][7], float M2Inv[][7], float v[][7], f
         g = s = scale = 0.0;
         if (i < m)
         {
-            for (k = i; k < m; k++)
-                scale += fabs(M2[k][i]);
+            for (k = i; k < m; k++) scale += fabs(M2[k][i]);
             if (scale)
             {
                 for (k = i; k < m; k++)
@@ -4229,15 +4257,12 @@ __device__ void pseudoinversel7(float M2[][7], float M2Inv[][7], float v[][7], f
                 {
                     for (j = l; j < m; j++)
                     {
-                        for (s = 0.0, k = i; k < m; k++)
-                            s += (M2[k][i] * M2[k][j]);
+                        for (s = 0.0, k = i; k < m; k++) s += (M2[k][i] * M2[k][j]);
                         f = s / h;
-                        for (k = i; k < m; k++)
-                            M2[k][j] += (f * M2[k][i]);
+                        for (k = i; k < m; k++) M2[k][j] += (f * M2[k][i]);
                     }
                 }
-                for (k = i; k < m; k++)
-                    M2[k][i] = (M2[k][i] * scale);
+                for (k = i; k < m; k++) M2[k][i] = (M2[k][i] * scale);
             }
         }
         w[i] = scale * g;
@@ -4246,8 +4271,7 @@ __device__ void pseudoinversel7(float M2[][7], float M2Inv[][7], float v[][7], f
         g = s = scale = 0.0;
         if (i < m && i != m - 1)
         {
-            for (k = l; k < m; k++)
-                scale += fabs(M2[i][k]);
+            for (k = l; k < m; k++) scale += fabs(M2[i][k]);
             if (scale)
             {
                 for (k = l; k < m; k++)
@@ -4259,20 +4283,16 @@ __device__ void pseudoinversel7(float M2[][7], float M2Inv[][7], float v[][7], f
                 g = -SIGN(sqrt(s), f);
                 h = f * g - s;
                 M2[i][l] = f - g;
-                for (k = l; k < m; k++)
-                    rv1[k] = M2[i][k] / h;
+                for (k = l; k < m; k++) rv1[k] = M2[i][k] / h;
                 if (i != m - 1)
                 {
                     for (j = l; j < m; j++)
                     {
-                        for (s = 0.0, k = l; k < m; k++)
-                            s += (M2[j][k] * M2[i][k]);
-                        for (k = l; k < m; k++)
-                            M2[j][k] += (s * rv1[k]);
+                        for (s = 0.0, k = l; k < m; k++) s += (M2[j][k] * M2[i][k]);
+                        for (k = l; k < m; k++) M2[j][k] += (s * rv1[k]);
                     }
                 }
-                for (k = l; k < m; k++)
-                    M2[i][k] = M2[i][k] * scale;
+                for (k = l; k < m; k++) M2[i][k] = M2[i][k] * scale;
             }
         }
         anorm = MAX(anorm, (fabs(w[i]) + fabs(rv1[i])));
@@ -4285,19 +4305,15 @@ __device__ void pseudoinversel7(float M2[][7], float M2Inv[][7], float v[][7], f
         {
             if (g)
             {
-                for (j = l; j < m; j++)
-                    v[j][i] = (M2[i][j] / M2[i][l]) / g;
+                for (j = l; j < m; j++) v[j][i] = (M2[i][j] / M2[i][l]) / g;
                 /* float division to avoid underflow */
                 for (j = l; j < m; j++)
                 {
-                    for (s = 0.0, k = l; k < m; k++)
-                        s += (M2[i][k] * v[k][j]);
-                    for (k = l; k < m; k++)
-                        v[k][j] += (s * v[k][i]);
+                    for (s = 0.0, k = l; k < m; k++) s += (M2[i][k] * v[k][j]);
+                    for (k = l; k < m; k++) v[k][j] += (s * v[k][i]);
                 }
             }
-            for (j = l; j < m; j++)
-                v[i][j] = v[j][i] = 0.0;
+            for (j = l; j < m; j++) v[i][j] = v[j][i] = 0.0;
         }
         v[i][i] = 1.0;
         g = rv1[i];
@@ -4310,8 +4326,7 @@ __device__ void pseudoinversel7(float M2[][7], float M2Inv[][7], float v[][7], f
         l = i + 1;
         g = w[i];
         if (i < m - 1)
-            for (j = l; j < m; j++)
-                M2[i][j] = 0.0;
+            for (j = l; j < m; j++) M2[i][j] = 0.0;
         if (g)
         {
             g = 1.0 / g;
@@ -4319,20 +4334,16 @@ __device__ void pseudoinversel7(float M2[][7], float M2Inv[][7], float v[][7], f
             {
                 for (j = l; j < m; j++)
                 {
-                    for (s = 0.0, k = l; k < m; k++)
-                        s += (M2[k][i] * M2[k][j]);
+                    for (s = 0.0, k = l; k < m; k++) s += (M2[k][i] * M2[k][j]);
                     f = (s / M2[i][i]) * g;
-                    for (k = i; k < m; k++)
-                        M2[k][j] += (f * M2[k][i]);
+                    for (k = i; k < m; k++) M2[k][j] += (f * M2[k][i]);
                 }
             }
-            for (j = i; j < m; j++)
-                M2[j][i] = (M2[j][i] * g);
+            for (j = i; j < m; j++) M2[j][i] = (M2[j][i] * g);
         }
         else
         {
-            for (j = i; j < m; j++)
-                M2[j][i] = 0.0;
+            for (j = i; j < m; j++) M2[j][i] = 0.0;
         }
         ++M2[i][i];
     }
@@ -4351,8 +4362,7 @@ __device__ void pseudoinversel7(float M2[][7], float M2Inv[][7], float v[][7], f
                     flag = 0;
                     break;
                 }
-                if (fabs(w[nm]) + anorm == anorm)
-                    break;
+                if (fabs(w[nm]) + anorm == anorm) break;
             }
             if (flag)
             {
@@ -4385,8 +4395,7 @@ __device__ void pseudoinversel7(float M2[][7], float M2Inv[][7], float v[][7], f
                 if (z < 0.0)
                 { /* make singular value nonnegative */
                     w[k] = (-z);
-                    for (j = 0; j < m; j++)
-                        v[j][k] = (-v[j][k]);
+                    for (j = 0; j < m; j++) v[j][k] = (-v[j][k]);
                 }
                 break;
             }
@@ -4478,8 +4487,9 @@ __device__ void pseudoinversel7(float M2[][7], float M2Inv[][7], float v[][7], f
     }
 }
 
-__device__ void pseudoinversel8(float M2[][8], float M2Inv[][8], float v[][8], float *rv1,
-                                float *w, float res1[][8])
+__device__ void pseudoinversel8(
+    float M2[][8], float M2Inv[][8], float v[][8], float *rv1, float *w, float res1[][8]
+)
 {
     int m = 8;
     int flag, its, i, j, jj, k, l, nm;
@@ -4494,8 +4504,7 @@ __device__ void pseudoinversel8(float M2[][8], float M2Inv[][8], float v[][8], f
         g = s = scale = 0.0;
         if (i < m)
         {
-            for (k = i; k < m; k++)
-                scale += fabs(M2[k][i]);
+            for (k = i; k < m; k++) scale += fabs(M2[k][i]);
             if (scale)
             {
                 for (k = i; k < m; k++)
@@ -4511,15 +4520,12 @@ __device__ void pseudoinversel8(float M2[][8], float M2Inv[][8], float v[][8], f
                 {
                     for (j = l; j < m; j++)
                     {
-                        for (s = 0.0, k = i; k < m; k++)
-                            s += (M2[k][i] * M2[k][j]);
+                        for (s = 0.0, k = i; k < m; k++) s += (M2[k][i] * M2[k][j]);
                         f = s / h;
-                        for (k = i; k < m; k++)
-                            M2[k][j] += (f * M2[k][i]);
+                        for (k = i; k < m; k++) M2[k][j] += (f * M2[k][i]);
                     }
                 }
-                for (k = i; k < m; k++)
-                    M2[k][i] = (M2[k][i] * scale);
+                for (k = i; k < m; k++) M2[k][i] = (M2[k][i] * scale);
             }
         }
         w[i] = scale * g;
@@ -4528,8 +4534,7 @@ __device__ void pseudoinversel8(float M2[][8], float M2Inv[][8], float v[][8], f
         g = s = scale = 0.0;
         if (i < m && i != m - 1)
         {
-            for (k = l; k < m; k++)
-                scale += fabs(M2[i][k]);
+            for (k = l; k < m; k++) scale += fabs(M2[i][k]);
             if (scale)
             {
                 for (k = l; k < m; k++)
@@ -4541,20 +4546,16 @@ __device__ void pseudoinversel8(float M2[][8], float M2Inv[][8], float v[][8], f
                 g = -SIGN(sqrt(s), f);
                 h = f * g - s;
                 M2[i][l] = f - g;
-                for (k = l; k < m; k++)
-                    rv1[k] = M2[i][k] / h;
+                for (k = l; k < m; k++) rv1[k] = M2[i][k] / h;
                 if (i != m - 1)
                 {
                     for (j = l; j < m; j++)
                     {
-                        for (s = 0.0, k = l; k < m; k++)
-                            s += (M2[j][k] * M2[i][k]);
-                        for (k = l; k < m; k++)
-                            M2[j][k] += (s * rv1[k]);
+                        for (s = 0.0, k = l; k < m; k++) s += (M2[j][k] * M2[i][k]);
+                        for (k = l; k < m; k++) M2[j][k] += (s * rv1[k]);
                     }
                 }
-                for (k = l; k < m; k++)
-                    M2[i][k] = M2[i][k] * scale;
+                for (k = l; k < m; k++) M2[i][k] = M2[i][k] * scale;
             }
         }
         anorm = MAX(anorm, (fabs(w[i]) + fabs(rv1[i])));
@@ -4567,19 +4568,15 @@ __device__ void pseudoinversel8(float M2[][8], float M2Inv[][8], float v[][8], f
         {
             if (g)
             {
-                for (j = l; j < m; j++)
-                    v[j][i] = (M2[i][j] / M2[i][l]) / g;
+                for (j = l; j < m; j++) v[j][i] = (M2[i][j] / M2[i][l]) / g;
                 /* float division to avoid underflow */
                 for (j = l; j < m; j++)
                 {
-                    for (s = 0.0, k = l; k < m; k++)
-                        s += (M2[i][k] * v[k][j]);
-                    for (k = l; k < m; k++)
-                        v[k][j] += (s * v[k][i]);
+                    for (s = 0.0, k = l; k < m; k++) s += (M2[i][k] * v[k][j]);
+                    for (k = l; k < m; k++) v[k][j] += (s * v[k][i]);
                 }
             }
-            for (j = l; j < m; j++)
-                v[i][j] = v[j][i] = 0.0;
+            for (j = l; j < m; j++) v[i][j] = v[j][i] = 0.0;
         }
         v[i][i] = 1.0;
         g = rv1[i];
@@ -4592,8 +4589,7 @@ __device__ void pseudoinversel8(float M2[][8], float M2Inv[][8], float v[][8], f
         l = i + 1;
         g = w[i];
         if (i < m - 1)
-            for (j = l; j < m; j++)
-                M2[i][j] = 0.0;
+            for (j = l; j < m; j++) M2[i][j] = 0.0;
         if (g)
         {
             g = 1.0 / g;
@@ -4601,20 +4597,16 @@ __device__ void pseudoinversel8(float M2[][8], float M2Inv[][8], float v[][8], f
             {
                 for (j = l; j < m; j++)
                 {
-                    for (s = 0.0, k = l; k < m; k++)
-                        s += (M2[k][i] * M2[k][j]);
+                    for (s = 0.0, k = l; k < m; k++) s += (M2[k][i] * M2[k][j]);
                     f = (s / M2[i][i]) * g;
-                    for (k = i; k < m; k++)
-                        M2[k][j] += (f * M2[k][i]);
+                    for (k = i; k < m; k++) M2[k][j] += (f * M2[k][i]);
                 }
             }
-            for (j = i; j < m; j++)
-                M2[j][i] = (M2[j][i] * g);
+            for (j = i; j < m; j++) M2[j][i] = (M2[j][i] * g);
         }
         else
         {
-            for (j = i; j < m; j++)
-                M2[j][i] = 0.0;
+            for (j = i; j < m; j++) M2[j][i] = 0.0;
         }
         ++M2[i][i];
     }
@@ -4633,8 +4625,7 @@ __device__ void pseudoinversel8(float M2[][8], float M2Inv[][8], float v[][8], f
                     flag = 0;
                     break;
                 }
-                if (fabs(w[nm]) + anorm == anorm)
-                    break;
+                if (fabs(w[nm]) + anorm == anorm) break;
             }
             if (flag)
             {
@@ -4667,8 +4658,7 @@ __device__ void pseudoinversel8(float M2[][8], float M2Inv[][8], float v[][8], f
                 if (z < 0.0)
                 { /* make singular value nonnegative */
                     w[k] = (-z);
-                    for (j = 0; j < m; j++)
-                        v[j][k] = (-v[j][k]);
+                    for (j = 0; j < m; j++) v[j][k] = (-v[j][k]);
                 }
                 break;
             }
@@ -4760,8 +4750,9 @@ __device__ void pseudoinversel8(float M2[][8], float M2Inv[][8], float v[][8], f
     }
 }
 
-__device__ void pseudoinversel9(float M2[][9], float M2Inv[][9], float v[][9], float *rv1,
-                                float *w, float res1[][9])
+__device__ void pseudoinversel9(
+    float M2[][9], float M2Inv[][9], float v[][9], float *rv1, float *w, float res1[][9]
+)
 {
     int m = 9;
     int flag, its, i, j, jj, k, l, nm;
@@ -4776,8 +4767,7 @@ __device__ void pseudoinversel9(float M2[][9], float M2Inv[][9], float v[][9], f
         g = s = scale = 0.0;
         if (i < m)
         {
-            for (k = i; k < m; k++)
-                scale += fabs(M2[k][i]);
+            for (k = i; k < m; k++) scale += fabs(M2[k][i]);
             if (scale)
             {
                 for (k = i; k < m; k++)
@@ -4793,15 +4783,12 @@ __device__ void pseudoinversel9(float M2[][9], float M2Inv[][9], float v[][9], f
                 {
                     for (j = l; j < m; j++)
                     {
-                        for (s = 0.0, k = i; k < m; k++)
-                            s += (M2[k][i] * M2[k][j]);
+                        for (s = 0.0, k = i; k < m; k++) s += (M2[k][i] * M2[k][j]);
                         f = s / h;
-                        for (k = i; k < m; k++)
-                            M2[k][j] += (f * M2[k][i]);
+                        for (k = i; k < m; k++) M2[k][j] += (f * M2[k][i]);
                     }
                 }
-                for (k = i; k < m; k++)
-                    M2[k][i] = (M2[k][i] * scale);
+                for (k = i; k < m; k++) M2[k][i] = (M2[k][i] * scale);
             }
         }
         w[i] = scale * g;
@@ -4810,8 +4797,7 @@ __device__ void pseudoinversel9(float M2[][9], float M2Inv[][9], float v[][9], f
         g = s = scale = 0.0;
         if (i < m && i != m - 1)
         {
-            for (k = l; k < m; k++)
-                scale += fabs(M2[i][k]);
+            for (k = l; k < m; k++) scale += fabs(M2[i][k]);
             if (scale)
             {
                 for (k = l; k < m; k++)
@@ -4823,20 +4809,16 @@ __device__ void pseudoinversel9(float M2[][9], float M2Inv[][9], float v[][9], f
                 g = -SIGN(sqrt(s), f);
                 h = f * g - s;
                 M2[i][l] = f - g;
-                for (k = l; k < m; k++)
-                    rv1[k] = M2[i][k] / h;
+                for (k = l; k < m; k++) rv1[k] = M2[i][k] / h;
                 if (i != m - 1)
                 {
                     for (j = l; j < m; j++)
                     {
-                        for (s = 0.0, k = l; k < m; k++)
-                            s += (M2[j][k] * M2[i][k]);
-                        for (k = l; k < m; k++)
-                            M2[j][k] += (s * rv1[k]);
+                        for (s = 0.0, k = l; k < m; k++) s += (M2[j][k] * M2[i][k]);
+                        for (k = l; k < m; k++) M2[j][k] += (s * rv1[k]);
                     }
                 }
-                for (k = l; k < m; k++)
-                    M2[i][k] = M2[i][k] * scale;
+                for (k = l; k < m; k++) M2[i][k] = M2[i][k] * scale;
             }
         }
         anorm = MAX(anorm, (fabs(w[i]) + fabs(rv1[i])));
@@ -4849,19 +4831,15 @@ __device__ void pseudoinversel9(float M2[][9], float M2Inv[][9], float v[][9], f
         {
             if (g)
             {
-                for (j = l; j < m; j++)
-                    v[j][i] = (M2[i][j] / M2[i][l]) / g;
+                for (j = l; j < m; j++) v[j][i] = (M2[i][j] / M2[i][l]) / g;
                 /* float division to avoid underflow */
                 for (j = l; j < m; j++)
                 {
-                    for (s = 0.0, k = l; k < m; k++)
-                        s += (M2[i][k] * v[k][j]);
-                    for (k = l; k < m; k++)
-                        v[k][j] += (s * v[k][i]);
+                    for (s = 0.0, k = l; k < m; k++) s += (M2[i][k] * v[k][j]);
+                    for (k = l; k < m; k++) v[k][j] += (s * v[k][i]);
                 }
             }
-            for (j = l; j < m; j++)
-                v[i][j] = v[j][i] = 0.0;
+            for (j = l; j < m; j++) v[i][j] = v[j][i] = 0.0;
         }
         v[i][i] = 1.0;
         g = rv1[i];
@@ -4874,8 +4852,7 @@ __device__ void pseudoinversel9(float M2[][9], float M2Inv[][9], float v[][9], f
         l = i + 1;
         g = w[i];
         if (i < m - 1)
-            for (j = l; j < m; j++)
-                M2[i][j] = 0.0;
+            for (j = l; j < m; j++) M2[i][j] = 0.0;
         if (g)
         {
             g = 1.0 / g;
@@ -4883,20 +4860,16 @@ __device__ void pseudoinversel9(float M2[][9], float M2Inv[][9], float v[][9], f
             {
                 for (j = l; j < m; j++)
                 {
-                    for (s = 0.0, k = l; k < m; k++)
-                        s += (M2[k][i] * M2[k][j]);
+                    for (s = 0.0, k = l; k < m; k++) s += (M2[k][i] * M2[k][j]);
                     f = (s / M2[i][i]) * g;
-                    for (k = i; k < m; k++)
-                        M2[k][j] += (f * M2[k][i]);
+                    for (k = i; k < m; k++) M2[k][j] += (f * M2[k][i]);
                 }
             }
-            for (j = i; j < m; j++)
-                M2[j][i] = (M2[j][i] * g);
+            for (j = i; j < m; j++) M2[j][i] = (M2[j][i] * g);
         }
         else
         {
-            for (j = i; j < m; j++)
-                M2[j][i] = 0.0;
+            for (j = i; j < m; j++) M2[j][i] = 0.0;
         }
         ++M2[i][i];
     }
@@ -4915,8 +4888,7 @@ __device__ void pseudoinversel9(float M2[][9], float M2Inv[][9], float v[][9], f
                     flag = 0;
                     break;
                 }
-                if (fabs(w[nm]) + anorm == anorm)
-                    break;
+                if (fabs(w[nm]) + anorm == anorm) break;
             }
             if (flag)
             {
@@ -4949,8 +4921,7 @@ __device__ void pseudoinversel9(float M2[][9], float M2Inv[][9], float v[][9], f
                 if (z < 0.0)
                 { /* make singular value nonnegative */
                     w[k] = (-z);
-                    for (j = 0; j < m; j++)
-                        v[j][k] = (-v[j][k]);
+                    for (j = 0; j < m; j++) v[j][k] = (-v[j][k]);
                 }
                 break;
             }
@@ -5042,8 +5013,9 @@ __device__ void pseudoinversel9(float M2[][9], float M2Inv[][9], float v[][9], f
     }
 }
 
-__device__ void pseudoinversel10(float M2[][10], float M2Inv[][10], float v[][10], float *rv1,
-                                 float *w, float res1[][10])
+__device__ void pseudoinversel10(
+    float M2[][10], float M2Inv[][10], float v[][10], float *rv1, float *w, float res1[][10]
+)
 {
     int m = 10;
     int flag, its, i, j, jj, k, l, nm;
@@ -5058,8 +5030,7 @@ __device__ void pseudoinversel10(float M2[][10], float M2Inv[][10], float v[][10
         g = s = scale = 0.0;
         if (i < m)
         {
-            for (k = i; k < m; k++)
-                scale += fabs(M2[k][i]);
+            for (k = i; k < m; k++) scale += fabs(M2[k][i]);
             if (scale)
             {
                 for (k = i; k < m; k++)
@@ -5075,15 +5046,12 @@ __device__ void pseudoinversel10(float M2[][10], float M2Inv[][10], float v[][10
                 {
                     for (j = l; j < m; j++)
                     {
-                        for (s = 0.0, k = i; k < m; k++)
-                            s += (M2[k][i] * M2[k][j]);
+                        for (s = 0.0, k = i; k < m; k++) s += (M2[k][i] * M2[k][j]);
                         f = s / h;
-                        for (k = i; k < m; k++)
-                            M2[k][j] += (f * M2[k][i]);
+                        for (k = i; k < m; k++) M2[k][j] += (f * M2[k][i]);
                     }
                 }
-                for (k = i; k < m; k++)
-                    M2[k][i] = (M2[k][i] * scale);
+                for (k = i; k < m; k++) M2[k][i] = (M2[k][i] * scale);
             }
         }
         w[i] = scale * g;
@@ -5092,8 +5060,7 @@ __device__ void pseudoinversel10(float M2[][10], float M2Inv[][10], float v[][10
         g = s = scale = 0.0;
         if (i < m && i != m - 1)
         {
-            for (k = l; k < m; k++)
-                scale += fabs(M2[i][k]);
+            for (k = l; k < m; k++) scale += fabs(M2[i][k]);
             if (scale)
             {
                 for (k = l; k < m; k++)
@@ -5105,20 +5072,16 @@ __device__ void pseudoinversel10(float M2[][10], float M2Inv[][10], float v[][10
                 g = -SIGN(sqrt(s), f);
                 h = f * g - s;
                 M2[i][l] = f - g;
-                for (k = l; k < m; k++)
-                    rv1[k] = M2[i][k] / h;
+                for (k = l; k < m; k++) rv1[k] = M2[i][k] / h;
                 if (i != m - 1)
                 {
                     for (j = l; j < m; j++)
                     {
-                        for (s = 0.0, k = l; k < m; k++)
-                            s += (M2[j][k] * M2[i][k]);
-                        for (k = l; k < m; k++)
-                            M2[j][k] += (s * rv1[k]);
+                        for (s = 0.0, k = l; k < m; k++) s += (M2[j][k] * M2[i][k]);
+                        for (k = l; k < m; k++) M2[j][k] += (s * rv1[k]);
                     }
                 }
-                for (k = l; k < m; k++)
-                    M2[i][k] = M2[i][k] * scale;
+                for (k = l; k < m; k++) M2[i][k] = M2[i][k] * scale;
             }
         }
         anorm = MAX(anorm, (fabs(w[i]) + fabs(rv1[i])));
@@ -5131,19 +5094,15 @@ __device__ void pseudoinversel10(float M2[][10], float M2Inv[][10], float v[][10
         {
             if (g)
             {
-                for (j = l; j < m; j++)
-                    v[j][i] = (M2[i][j] / M2[i][l]) / g;
+                for (j = l; j < m; j++) v[j][i] = (M2[i][j] / M2[i][l]) / g;
                 /* float division to avoid underflow */
                 for (j = l; j < m; j++)
                 {
-                    for (s = 0.0, k = l; k < m; k++)
-                        s += (M2[i][k] * v[k][j]);
-                    for (k = l; k < m; k++)
-                        v[k][j] += (s * v[k][i]);
+                    for (s = 0.0, k = l; k < m; k++) s += (M2[i][k] * v[k][j]);
+                    for (k = l; k < m; k++) v[k][j] += (s * v[k][i]);
                 }
             }
-            for (j = l; j < m; j++)
-                v[i][j] = v[j][i] = 0.0;
+            for (j = l; j < m; j++) v[i][j] = v[j][i] = 0.0;
         }
         v[i][i] = 1.0;
         g = rv1[i];
@@ -5156,8 +5115,7 @@ __device__ void pseudoinversel10(float M2[][10], float M2Inv[][10], float v[][10
         l = i + 1;
         g = w[i];
         if (i < m - 1)
-            for (j = l; j < m; j++)
-                M2[i][j] = 0.0;
+            for (j = l; j < m; j++) M2[i][j] = 0.0;
         if (g)
         {
             g = 1.0 / g;
@@ -5165,20 +5123,16 @@ __device__ void pseudoinversel10(float M2[][10], float M2Inv[][10], float v[][10
             {
                 for (j = l; j < m; j++)
                 {
-                    for (s = 0.0, k = l; k < m; k++)
-                        s += (M2[k][i] * M2[k][j]);
+                    for (s = 0.0, k = l; k < m; k++) s += (M2[k][i] * M2[k][j]);
                     f = (s / M2[i][i]) * g;
-                    for (k = i; k < m; k++)
-                        M2[k][j] += (f * M2[k][i]);
+                    for (k = i; k < m; k++) M2[k][j] += (f * M2[k][i]);
                 }
             }
-            for (j = i; j < m; j++)
-                M2[j][i] = (M2[j][i] * g);
+            for (j = i; j < m; j++) M2[j][i] = (M2[j][i] * g);
         }
         else
         {
-            for (j = i; j < m; j++)
-                M2[j][i] = 0.0;
+            for (j = i; j < m; j++) M2[j][i] = 0.0;
         }
         ++M2[i][i];
     }
@@ -5197,8 +5151,7 @@ __device__ void pseudoinversel10(float M2[][10], float M2Inv[][10], float v[][10
                     flag = 0;
                     break;
                 }
-                if (fabs(w[nm]) + anorm == anorm)
-                    break;
+                if (fabs(w[nm]) + anorm == anorm) break;
             }
             if (flag)
             {
@@ -5231,8 +5184,7 @@ __device__ void pseudoinversel10(float M2[][10], float M2Inv[][10], float v[][10
                 if (z < 0.0)
                 { /* make singular value nonnegative */
                     w[k] = (-z);
-                    for (j = 0; j < m; j++)
-                        v[j][k] = (-v[j][k]);
+                    for (j = 0; j < m; j++) v[j][k] = (-v[j][k]);
                 }
                 break;
             }
@@ -5324,8 +5276,9 @@ __device__ void pseudoinversel10(float M2[][10], float M2Inv[][10], float v[][10
     }
 }
 
-__device__ void pseudoinversel11(float M2[][11], float M2Inv[][11], float v[][11], float *rv1,
-                                 float *w, float res1[][11])
+__device__ void pseudoinversel11(
+    float M2[][11], float M2Inv[][11], float v[][11], float *rv1, float *w, float res1[][11]
+)
 {
     int m = 11;
     int flag, its, i, j, jj, k, l, nm;
@@ -5340,8 +5293,7 @@ __device__ void pseudoinversel11(float M2[][11], float M2Inv[][11], float v[][11
         g = s = scale = 0.0;
         if (i < m)
         {
-            for (k = i; k < m; k++)
-                scale += fabs(M2[k][i]);
+            for (k = i; k < m; k++) scale += fabs(M2[k][i]);
             if (scale)
             {
                 for (k = i; k < m; k++)
@@ -5357,15 +5309,12 @@ __device__ void pseudoinversel11(float M2[][11], float M2Inv[][11], float v[][11
                 {
                     for (j = l; j < m; j++)
                     {
-                        for (s = 0.0, k = i; k < m; k++)
-                            s += (M2[k][i] * M2[k][j]);
+                        for (s = 0.0, k = i; k < m; k++) s += (M2[k][i] * M2[k][j]);
                         f = s / h;
-                        for (k = i; k < m; k++)
-                            M2[k][j] += (f * M2[k][i]);
+                        for (k = i; k < m; k++) M2[k][j] += (f * M2[k][i]);
                     }
                 }
-                for (k = i; k < m; k++)
-                    M2[k][i] = (M2[k][i] * scale);
+                for (k = i; k < m; k++) M2[k][i] = (M2[k][i] * scale);
             }
         }
         w[i] = scale * g;
@@ -5374,8 +5323,7 @@ __device__ void pseudoinversel11(float M2[][11], float M2Inv[][11], float v[][11
         g = s = scale = 0.0;
         if (i < m && i != m - 1)
         {
-            for (k = l; k < m; k++)
-                scale += fabs(M2[i][k]);
+            for (k = l; k < m; k++) scale += fabs(M2[i][k]);
             if (scale)
             {
                 for (k = l; k < m; k++)
@@ -5387,20 +5335,16 @@ __device__ void pseudoinversel11(float M2[][11], float M2Inv[][11], float v[][11
                 g = -SIGN(sqrt(s), f);
                 h = f * g - s;
                 M2[i][l] = f - g;
-                for (k = l; k < m; k++)
-                    rv1[k] = M2[i][k] / h;
+                for (k = l; k < m; k++) rv1[k] = M2[i][k] / h;
                 if (i != m - 1)
                 {
                     for (j = l; j < m; j++)
                     {
-                        for (s = 0.0, k = l; k < m; k++)
-                            s += (M2[j][k] * M2[i][k]);
-                        for (k = l; k < m; k++)
-                            M2[j][k] += (s * rv1[k]);
+                        for (s = 0.0, k = l; k < m; k++) s += (M2[j][k] * M2[i][k]);
+                        for (k = l; k < m; k++) M2[j][k] += (s * rv1[k]);
                     }
                 }
-                for (k = l; k < m; k++)
-                    M2[i][k] = M2[i][k] * scale;
+                for (k = l; k < m; k++) M2[i][k] = M2[i][k] * scale;
             }
         }
         anorm = MAX(anorm, (fabs(w[i]) + fabs(rv1[i])));
@@ -5413,19 +5357,15 @@ __device__ void pseudoinversel11(float M2[][11], float M2Inv[][11], float v[][11
         {
             if (g)
             {
-                for (j = l; j < m; j++)
-                    v[j][i] = (M2[i][j] / M2[i][l]) / g;
+                for (j = l; j < m; j++) v[j][i] = (M2[i][j] / M2[i][l]) / g;
                 /* float division to avoid underflow */
                 for (j = l; j < m; j++)
                 {
-                    for (s = 0.0, k = l; k < m; k++)
-                        s += (M2[i][k] * v[k][j]);
-                    for (k = l; k < m; k++)
-                        v[k][j] += (s * v[k][i]);
+                    for (s = 0.0, k = l; k < m; k++) s += (M2[i][k] * v[k][j]);
+                    for (k = l; k < m; k++) v[k][j] += (s * v[k][i]);
                 }
             }
-            for (j = l; j < m; j++)
-                v[i][j] = v[j][i] = 0.0;
+            for (j = l; j < m; j++) v[i][j] = v[j][i] = 0.0;
         }
         v[i][i] = 1.0;
         g = rv1[i];
@@ -5438,8 +5378,7 @@ __device__ void pseudoinversel11(float M2[][11], float M2Inv[][11], float v[][11
         l = i + 1;
         g = w[i];
         if (i < m - 1)
-            for (j = l; j < m; j++)
-                M2[i][j] = 0.0;
+            for (j = l; j < m; j++) M2[i][j] = 0.0;
         if (g)
         {
             g = 1.0 / g;
@@ -5447,20 +5386,16 @@ __device__ void pseudoinversel11(float M2[][11], float M2Inv[][11], float v[][11
             {
                 for (j = l; j < m; j++)
                 {
-                    for (s = 0.0, k = l; k < m; k++)
-                        s += (M2[k][i] * M2[k][j]);
+                    for (s = 0.0, k = l; k < m; k++) s += (M2[k][i] * M2[k][j]);
                     f = (s / M2[i][i]) * g;
-                    for (k = i; k < m; k++)
-                        M2[k][j] += (f * M2[k][i]);
+                    for (k = i; k < m; k++) M2[k][j] += (f * M2[k][i]);
                 }
             }
-            for (j = i; j < m; j++)
-                M2[j][i] = (M2[j][i] * g);
+            for (j = i; j < m; j++) M2[j][i] = (M2[j][i] * g);
         }
         else
         {
-            for (j = i; j < m; j++)
-                M2[j][i] = 0.0;
+            for (j = i; j < m; j++) M2[j][i] = 0.0;
         }
         ++M2[i][i];
     }
@@ -5479,8 +5414,7 @@ __device__ void pseudoinversel11(float M2[][11], float M2Inv[][11], float v[][11
                     flag = 0;
                     break;
                 }
-                if (fabs(w[nm]) + anorm == anorm)
-                    break;
+                if (fabs(w[nm]) + anorm == anorm) break;
             }
             if (flag)
             {
@@ -5513,8 +5447,7 @@ __device__ void pseudoinversel11(float M2[][11], float M2Inv[][11], float v[][11
                 if (z < 0.0)
                 { /* make singular value nonnegative */
                     w[k] = (-z);
-                    for (j = 0; j < m; j++)
-                        v[j][k] = (-v[j][k]);
+                    for (j = 0; j < m; j++) v[j][k] = (-v[j][k]);
                 }
                 break;
             }
@@ -5606,8 +5539,9 @@ __device__ void pseudoinversel11(float M2[][11], float M2Inv[][11], float v[][11
     }
 }
 
-__device__ void pseudoinversel12(float M2[][12], float M2Inv[][12], float v[][12], float *rv1,
-                                 float *w, float res1[][12])
+__device__ void pseudoinversel12(
+    float M2[][12], float M2Inv[][12], float v[][12], float *rv1, float *w, float res1[][12]
+)
 {
     int m = 12;
     int flag, its, i, j, jj, k, l, nm;
@@ -5622,8 +5556,7 @@ __device__ void pseudoinversel12(float M2[][12], float M2Inv[][12], float v[][12
         g = s = scale = 0.0;
         if (i < m)
         {
-            for (k = i; k < m; k++)
-                scale += fabs(M2[k][i]);
+            for (k = i; k < m; k++) scale += fabs(M2[k][i]);
             if (scale)
             {
                 for (k = i; k < m; k++)
@@ -5639,15 +5572,12 @@ __device__ void pseudoinversel12(float M2[][12], float M2Inv[][12], float v[][12
                 {
                     for (j = l; j < m; j++)
                     {
-                        for (s = 0.0, k = i; k < m; k++)
-                            s += (M2[k][i] * M2[k][j]);
+                        for (s = 0.0, k = i; k < m; k++) s += (M2[k][i] * M2[k][j]);
                         f = s / h;
-                        for (k = i; k < m; k++)
-                            M2[k][j] += (f * M2[k][i]);
+                        for (k = i; k < m; k++) M2[k][j] += (f * M2[k][i]);
                     }
                 }
-                for (k = i; k < m; k++)
-                    M2[k][i] = (M2[k][i] * scale);
+                for (k = i; k < m; k++) M2[k][i] = (M2[k][i] * scale);
             }
         }
         w[i] = scale * g;
@@ -5656,8 +5586,7 @@ __device__ void pseudoinversel12(float M2[][12], float M2Inv[][12], float v[][12
         g = s = scale = 0.0;
         if (i < m && i != m - 1)
         {
-            for (k = l; k < m; k++)
-                scale += fabs(M2[i][k]);
+            for (k = l; k < m; k++) scale += fabs(M2[i][k]);
             if (scale)
             {
                 for (k = l; k < m; k++)
@@ -5669,20 +5598,16 @@ __device__ void pseudoinversel12(float M2[][12], float M2Inv[][12], float v[][12
                 g = -SIGN(sqrt(s), f);
                 h = f * g - s;
                 M2[i][l] = f - g;
-                for (k = l; k < m; k++)
-                    rv1[k] = M2[i][k] / h;
+                for (k = l; k < m; k++) rv1[k] = M2[i][k] / h;
                 if (i != m - 1)
                 {
                     for (j = l; j < m; j++)
                     {
-                        for (s = 0.0, k = l; k < m; k++)
-                            s += (M2[j][k] * M2[i][k]);
-                        for (k = l; k < m; k++)
-                            M2[j][k] += (s * rv1[k]);
+                        for (s = 0.0, k = l; k < m; k++) s += (M2[j][k] * M2[i][k]);
+                        for (k = l; k < m; k++) M2[j][k] += (s * rv1[k]);
                     }
                 }
-                for (k = l; k < m; k++)
-                    M2[i][k] = M2[i][k] * scale;
+                for (k = l; k < m; k++) M2[i][k] = M2[i][k] * scale;
             }
         }
         anorm = MAX(anorm, (fabs(w[i]) + fabs(rv1[i])));
@@ -5695,19 +5620,15 @@ __device__ void pseudoinversel12(float M2[][12], float M2Inv[][12], float v[][12
         {
             if (g)
             {
-                for (j = l; j < m; j++)
-                    v[j][i] = (M2[i][j] / M2[i][l]) / g;
+                for (j = l; j < m; j++) v[j][i] = (M2[i][j] / M2[i][l]) / g;
                 /* float division to avoid underflow */
                 for (j = l; j < m; j++)
                 {
-                    for (s = 0.0, k = l; k < m; k++)
-                        s += (M2[i][k] * v[k][j]);
-                    for (k = l; k < m; k++)
-                        v[k][j] += (s * v[k][i]);
+                    for (s = 0.0, k = l; k < m; k++) s += (M2[i][k] * v[k][j]);
+                    for (k = l; k < m; k++) v[k][j] += (s * v[k][i]);
                 }
             }
-            for (j = l; j < m; j++)
-                v[i][j] = v[j][i] = 0.0;
+            for (j = l; j < m; j++) v[i][j] = v[j][i] = 0.0;
         }
         v[i][i] = 1.0;
         g = rv1[i];
@@ -5720,8 +5641,7 @@ __device__ void pseudoinversel12(float M2[][12], float M2Inv[][12], float v[][12
         l = i + 1;
         g = w[i];
         if (i < m - 1)
-            for (j = l; j < m; j++)
-                M2[i][j] = 0.0;
+            for (j = l; j < m; j++) M2[i][j] = 0.0;
         if (g)
         {
             g = 1.0 / g;
@@ -5729,20 +5649,16 @@ __device__ void pseudoinversel12(float M2[][12], float M2Inv[][12], float v[][12
             {
                 for (j = l; j < m; j++)
                 {
-                    for (s = 0.0, k = l; k < m; k++)
-                        s += (M2[k][i] * M2[k][j]);
+                    for (s = 0.0, k = l; k < m; k++) s += (M2[k][i] * M2[k][j]);
                     f = (s / M2[i][i]) * g;
-                    for (k = i; k < m; k++)
-                        M2[k][j] += (f * M2[k][i]);
+                    for (k = i; k < m; k++) M2[k][j] += (f * M2[k][i]);
                 }
             }
-            for (j = i; j < m; j++)
-                M2[j][i] = (M2[j][i] * g);
+            for (j = i; j < m; j++) M2[j][i] = (M2[j][i] * g);
         }
         else
         {
-            for (j = i; j < m; j++)
-                M2[j][i] = 0.0;
+            for (j = i; j < m; j++) M2[j][i] = 0.0;
         }
         ++M2[i][i];
     }
@@ -5761,8 +5677,7 @@ __device__ void pseudoinversel12(float M2[][12], float M2Inv[][12], float v[][12
                     flag = 0;
                     break;
                 }
-                if (fabs(w[nm]) + anorm == anorm)
-                    break;
+                if (fabs(w[nm]) + anorm == anorm) break;
             }
             if (flag)
             {
@@ -5795,8 +5710,7 @@ __device__ void pseudoinversel12(float M2[][12], float M2Inv[][12], float v[][12
                 if (z < 0.0)
                 { /* make singular value nonnegative */
                     w[k] = (-z);
-                    for (j = 0; j < m; j++)
-                        v[j][k] = (-v[j][k]);
+                    for (j = 0; j < m; j++) v[j][k] = (-v[j][k]);
                 }
                 break;
             }
@@ -5888,8 +5802,9 @@ __device__ void pseudoinversel12(float M2[][12], float M2Inv[][12], float v[][12
     }
 }
 
-__device__ void pseudoinversel13(float M2[][13], float M2Inv[][13], float v[][13], float *rv1,
-                                 float *w, float res1[][13])
+__device__ void pseudoinversel13(
+    float M2[][13], float M2Inv[][13], float v[][13], float *rv1, float *w, float res1[][13]
+)
 {
     int m = 13;
     int flag, its, i, j, jj, k, l, nm;
@@ -5904,8 +5819,7 @@ __device__ void pseudoinversel13(float M2[][13], float M2Inv[][13], float v[][13
         g = s = scale = 0.0;
         if (i < m)
         {
-            for (k = i; k < m; k++)
-                scale += fabs(M2[k][i]);
+            for (k = i; k < m; k++) scale += fabs(M2[k][i]);
             if (scale)
             {
                 for (k = i; k < m; k++)
@@ -5921,15 +5835,12 @@ __device__ void pseudoinversel13(float M2[][13], float M2Inv[][13], float v[][13
                 {
                     for (j = l; j < m; j++)
                     {
-                        for (s = 0.0, k = i; k < m; k++)
-                            s += (M2[k][i] * M2[k][j]);
+                        for (s = 0.0, k = i; k < m; k++) s += (M2[k][i] * M2[k][j]);
                         f = s / h;
-                        for (k = i; k < m; k++)
-                            M2[k][j] += (f * M2[k][i]);
+                        for (k = i; k < m; k++) M2[k][j] += (f * M2[k][i]);
                     }
                 }
-                for (k = i; k < m; k++)
-                    M2[k][i] = (M2[k][i] * scale);
+                for (k = i; k < m; k++) M2[k][i] = (M2[k][i] * scale);
             }
         }
         w[i] = scale * g;
@@ -5938,8 +5849,7 @@ __device__ void pseudoinversel13(float M2[][13], float M2Inv[][13], float v[][13
         g = s = scale = 0.0;
         if (i < m && i != m - 1)
         {
-            for (k = l; k < m; k++)
-                scale += fabs(M2[i][k]);
+            for (k = l; k < m; k++) scale += fabs(M2[i][k]);
             if (scale)
             {
                 for (k = l; k < m; k++)
@@ -5951,20 +5861,16 @@ __device__ void pseudoinversel13(float M2[][13], float M2Inv[][13], float v[][13
                 g = -SIGN(sqrt(s), f);
                 h = f * g - s;
                 M2[i][l] = f - g;
-                for (k = l; k < m; k++)
-                    rv1[k] = M2[i][k] / h;
+                for (k = l; k < m; k++) rv1[k] = M2[i][k] / h;
                 if (i != m - 1)
                 {
                     for (j = l; j < m; j++)
                     {
-                        for (s = 0.0, k = l; k < m; k++)
-                            s += (M2[j][k] * M2[i][k]);
-                        for (k = l; k < m; k++)
-                            M2[j][k] += (s * rv1[k]);
+                        for (s = 0.0, k = l; k < m; k++) s += (M2[j][k] * M2[i][k]);
+                        for (k = l; k < m; k++) M2[j][k] += (s * rv1[k]);
                     }
                 }
-                for (k = l; k < m; k++)
-                    M2[i][k] = M2[i][k] * scale;
+                for (k = l; k < m; k++) M2[i][k] = M2[i][k] * scale;
             }
         }
         anorm = MAX(anorm, (fabs(w[i]) + fabs(rv1[i])));
@@ -5977,19 +5883,15 @@ __device__ void pseudoinversel13(float M2[][13], float M2Inv[][13], float v[][13
         {
             if (g)
             {
-                for (j = l; j < m; j++)
-                    v[j][i] = (M2[i][j] / M2[i][l]) / g;
+                for (j = l; j < m; j++) v[j][i] = (M2[i][j] / M2[i][l]) / g;
                 /* float division to avoid underflow */
                 for (j = l; j < m; j++)
                 {
-                    for (s = 0.0, k = l; k < m; k++)
-                        s += (M2[i][k] * v[k][j]);
-                    for (k = l; k < m; k++)
-                        v[k][j] += (s * v[k][i]);
+                    for (s = 0.0, k = l; k < m; k++) s += (M2[i][k] * v[k][j]);
+                    for (k = l; k < m; k++) v[k][j] += (s * v[k][i]);
                 }
             }
-            for (j = l; j < m; j++)
-                v[i][j] = v[j][i] = 0.0;
+            for (j = l; j < m; j++) v[i][j] = v[j][i] = 0.0;
         }
         v[i][i] = 1.0;
         g = rv1[i];
@@ -6002,8 +5904,7 @@ __device__ void pseudoinversel13(float M2[][13], float M2Inv[][13], float v[][13
         l = i + 1;
         g = w[i];
         if (i < m - 1)
-            for (j = l; j < m; j++)
-                M2[i][j] = 0.0;
+            for (j = l; j < m; j++) M2[i][j] = 0.0;
         if (g)
         {
             g = 1.0 / g;
@@ -6011,20 +5912,16 @@ __device__ void pseudoinversel13(float M2[][13], float M2Inv[][13], float v[][13
             {
                 for (j = l; j < m; j++)
                 {
-                    for (s = 0.0, k = l; k < m; k++)
-                        s += (M2[k][i] * M2[k][j]);
+                    for (s = 0.0, k = l; k < m; k++) s += (M2[k][i] * M2[k][j]);
                     f = (s / M2[i][i]) * g;
-                    for (k = i; k < m; k++)
-                        M2[k][j] += (f * M2[k][i]);
+                    for (k = i; k < m; k++) M2[k][j] += (f * M2[k][i]);
                 }
             }
-            for (j = i; j < m; j++)
-                M2[j][i] = (M2[j][i] * g);
+            for (j = i; j < m; j++) M2[j][i] = (M2[j][i] * g);
         }
         else
         {
-            for (j = i; j < m; j++)
-                M2[j][i] = 0.0;
+            for (j = i; j < m; j++) M2[j][i] = 0.0;
         }
         ++M2[i][i];
     }
@@ -6043,8 +5940,7 @@ __device__ void pseudoinversel13(float M2[][13], float M2Inv[][13], float v[][13
                     flag = 0;
                     break;
                 }
-                if (fabs(w[nm]) + anorm == anorm)
-                    break;
+                if (fabs(w[nm]) + anorm == anorm) break;
             }
             if (flag)
             {
@@ -6077,8 +5973,7 @@ __device__ void pseudoinversel13(float M2[][13], float M2Inv[][13], float v[][13
                 if (z < 0.0)
                 { /* make singular value nonnegative */
                     w[k] = (-z);
-                    for (j = 0; j < m; j++)
-                        v[j][k] = (-v[j][k]);
+                    for (j = 0; j < m; j++) v[j][k] = (-v[j][k]);
                 }
                 break;
             }
@@ -6170,8 +6065,9 @@ __device__ void pseudoinversel13(float M2[][13], float M2Inv[][13], float v[][13
     }
 }
 
-__device__ void pseudoinversel14(float M2[][14], float M2Inv[][14], float v[][14], float *rv1,
-                                 float *w, float res1[][14])
+__device__ void pseudoinversel14(
+    float M2[][14], float M2Inv[][14], float v[][14], float *rv1, float *w, float res1[][14]
+)
 {
     int m = 14;
     int flag, its, i, j, jj, k, l, nm;
@@ -6186,8 +6082,7 @@ __device__ void pseudoinversel14(float M2[][14], float M2Inv[][14], float v[][14
         g = s = scale = 0.0;
         if (i < m)
         {
-            for (k = i; k < m; k++)
-                scale += fabs(M2[k][i]);
+            for (k = i; k < m; k++) scale += fabs(M2[k][i]);
             if (scale)
             {
                 for (k = i; k < m; k++)
@@ -6203,15 +6098,12 @@ __device__ void pseudoinversel14(float M2[][14], float M2Inv[][14], float v[][14
                 {
                     for (j = l; j < m; j++)
                     {
-                        for (s = 0.0, k = i; k < m; k++)
-                            s += (M2[k][i] * M2[k][j]);
+                        for (s = 0.0, k = i; k < m; k++) s += (M2[k][i] * M2[k][j]);
                         f = s / h;
-                        for (k = i; k < m; k++)
-                            M2[k][j] += (f * M2[k][i]);
+                        for (k = i; k < m; k++) M2[k][j] += (f * M2[k][i]);
                     }
                 }
-                for (k = i; k < m; k++)
-                    M2[k][i] = (M2[k][i] * scale);
+                for (k = i; k < m; k++) M2[k][i] = (M2[k][i] * scale);
             }
         }
         w[i] = scale * g;
@@ -6220,8 +6112,7 @@ __device__ void pseudoinversel14(float M2[][14], float M2Inv[][14], float v[][14
         g = s = scale = 0.0;
         if (i < m && i != m - 1)
         {
-            for (k = l; k < m; k++)
-                scale += fabs(M2[i][k]);
+            for (k = l; k < m; k++) scale += fabs(M2[i][k]);
             if (scale)
             {
                 for (k = l; k < m; k++)
@@ -6233,20 +6124,16 @@ __device__ void pseudoinversel14(float M2[][14], float M2Inv[][14], float v[][14
                 g = -SIGN(sqrt(s), f);
                 h = f * g - s;
                 M2[i][l] = f - g;
-                for (k = l; k < m; k++)
-                    rv1[k] = M2[i][k] / h;
+                for (k = l; k < m; k++) rv1[k] = M2[i][k] / h;
                 if (i != m - 1)
                 {
                     for (j = l; j < m; j++)
                     {
-                        for (s = 0.0, k = l; k < m; k++)
-                            s += (M2[j][k] * M2[i][k]);
-                        for (k = l; k < m; k++)
-                            M2[j][k] += (s * rv1[k]);
+                        for (s = 0.0, k = l; k < m; k++) s += (M2[j][k] * M2[i][k]);
+                        for (k = l; k < m; k++) M2[j][k] += (s * rv1[k]);
                     }
                 }
-                for (k = l; k < m; k++)
-                    M2[i][k] = M2[i][k] * scale;
+                for (k = l; k < m; k++) M2[i][k] = M2[i][k] * scale;
             }
         }
         anorm = MAX(anorm, (fabs(w[i]) + fabs(rv1[i])));
@@ -6259,19 +6146,15 @@ __device__ void pseudoinversel14(float M2[][14], float M2Inv[][14], float v[][14
         {
             if (g)
             {
-                for (j = l; j < m; j++)
-                    v[j][i] = (M2[i][j] / M2[i][l]) / g;
+                for (j = l; j < m; j++) v[j][i] = (M2[i][j] / M2[i][l]) / g;
                 /* float division to avoid underflow */
                 for (j = l; j < m; j++)
                 {
-                    for (s = 0.0, k = l; k < m; k++)
-                        s += (M2[i][k] * v[k][j]);
-                    for (k = l; k < m; k++)
-                        v[k][j] += (s * v[k][i]);
+                    for (s = 0.0, k = l; k < m; k++) s += (M2[i][k] * v[k][j]);
+                    for (k = l; k < m; k++) v[k][j] += (s * v[k][i]);
                 }
             }
-            for (j = l; j < m; j++)
-                v[i][j] = v[j][i] = 0.0;
+            for (j = l; j < m; j++) v[i][j] = v[j][i] = 0.0;
         }
         v[i][i] = 1.0;
         g = rv1[i];
@@ -6284,8 +6167,7 @@ __device__ void pseudoinversel14(float M2[][14], float M2Inv[][14], float v[][14
         l = i + 1;
         g = w[i];
         if (i < m - 1)
-            for (j = l; j < m; j++)
-                M2[i][j] = 0.0;
+            for (j = l; j < m; j++) M2[i][j] = 0.0;
         if (g)
         {
             g = 1.0 / g;
@@ -6293,20 +6175,16 @@ __device__ void pseudoinversel14(float M2[][14], float M2Inv[][14], float v[][14
             {
                 for (j = l; j < m; j++)
                 {
-                    for (s = 0.0, k = l; k < m; k++)
-                        s += (M2[k][i] * M2[k][j]);
+                    for (s = 0.0, k = l; k < m; k++) s += (M2[k][i] * M2[k][j]);
                     f = (s / M2[i][i]) * g;
-                    for (k = i; k < m; k++)
-                        M2[k][j] += (f * M2[k][i]);
+                    for (k = i; k < m; k++) M2[k][j] += (f * M2[k][i]);
                 }
             }
-            for (j = i; j < m; j++)
-                M2[j][i] = (M2[j][i] * g);
+            for (j = i; j < m; j++) M2[j][i] = (M2[j][i] * g);
         }
         else
         {
-            for (j = i; j < m; j++)
-                M2[j][i] = 0.0;
+            for (j = i; j < m; j++) M2[j][i] = 0.0;
         }
         ++M2[i][i];
     }
@@ -6325,8 +6203,7 @@ __device__ void pseudoinversel14(float M2[][14], float M2Inv[][14], float v[][14
                     flag = 0;
                     break;
                 }
-                if (fabs(w[nm]) + anorm == anorm)
-                    break;
+                if (fabs(w[nm]) + anorm == anorm) break;
             }
             if (flag)
             {
@@ -6359,8 +6236,7 @@ __device__ void pseudoinversel14(float M2[][14], float M2Inv[][14], float v[][14
                 if (z < 0.0)
                 { /* make singular value nonnegative */
                     w[k] = (-z);
-                    for (j = 0; j < m; j++)
-                        v[j][k] = (-v[j][k]);
+                    for (j = 0; j < m; j++) v[j][k] = (-v[j][k]);
                 }
                 break;
             }
