@@ -9,8 +9,12 @@ target_compile_features(mps PRIVATE cxx_std_20)
 
 # target_link_libraries(mps PRIVATE corr prep io cuPCsparse)
 target_link_libraries(mps PRIVATE corr prep io cuPC parents block)
+
 target_compile_options(mps PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
-    --generate-line-info
+    -O3
+    -lineinfo
     --use_fast_math
-    --relocatable-device-code=true
+    --shared
+    -Xcompiler
+    -fPIC
     >)
