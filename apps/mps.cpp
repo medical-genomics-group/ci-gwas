@@ -600,7 +600,7 @@ void block_diagonal_pc(int argc, char *argv[])
 
         // call cuPC
         int p = num_var;
-        const size_t sepset_size = p * p * 14;
+        const size_t sepset_size = p * p * ML;
         const size_t g_size = num_var * num_var;
         std::vector<float> pmax(g_size, 0.0);
         std::vector<int> G(g_size, 1);
