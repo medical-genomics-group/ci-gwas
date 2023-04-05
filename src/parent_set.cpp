@@ -1,4 +1,3 @@
-#include <mps/cuPC-S.h>
 #include <mps/parent_set.h>
 
 #include <algorithm>
@@ -109,7 +108,7 @@ ReducedGCS reduce_gcs(
 
             for (int l = 0; l < max_level; l++)
             {
-                int sep_elem = S[(i * num_var + j) * ML + l];
+                int sep_elem = S[(i * num_var + j) * 14 + l];
                 if ((sep_elem != -1) && (P.contains(sep_elem)))
                 {
                     res.S.push_back(pix.get_new_ix(sep_elem));
