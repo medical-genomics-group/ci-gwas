@@ -22,6 +22,7 @@ struct ReducedGCS
     size_t num_var;
     size_t num_phen;
     size_t max_level;
+    std::vector<int> new_to_old_indices;
     std::vector<int> G;
     std::vector<float> C;
     std::vector<int> S;
@@ -32,6 +33,7 @@ struct ReducedGCS
         fout.open(base + ".mdim", std::ios::out);
         fout << num_var << "\t" << num_phen << "\t" << max_level << std::endl;
         fout.close();
+        write_ints_to_binary(new_to_old_indices.data(), new_to_old_indices.size(), base + ".ixs");
         write_ints_to_binary(G.data(), G.size(), base + ".adj");
         write_floats_to_binary(C.data(), C.size(), base + ".corr");
         write_ints_to_binary(S.data(), S.size(), base + ".sep");
@@ -78,4 +80,6 @@ class ParentSetIndices
     int get_old_ix(const int new_ix) const { return new_to_old[new_ix]; }
 
     int get_new_ix(const int old_ix) { return old_to_new[old_ix]; }
+
+    std::vector<int> new_to_old_indices() { return new_to_old; }
 };

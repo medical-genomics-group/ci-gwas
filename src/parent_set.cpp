@@ -91,11 +91,12 @@ ReducedGCS reduce_gcs(
     const size_t max_level
 )
 {
+    ParentSetIndices pix(P);
     ReducedGCS res;
     res.num_var = P.size();
     res.num_phen = num_phen;
     res.max_level = max_level;
-    ParentSetIndices pix(P);
+    res.new_to_old_indices = pix.new_to_old_indices();
     std::vector<int> ordered_ixs = set_to_vec(P);
 
     for (auto i : ordered_ixs)
