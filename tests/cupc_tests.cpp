@@ -1,9 +1,8 @@
 #include <gtest/gtest.h>
 #include <mps/cuPC_call_prep.h>
-#include <mps/cu_test_helpers.h>
+#include <mps/cuPC-S.h>
 #include <test_data/cupc_test_set.h>
 
-#include <boost/math/distributions/normal.hpp>
 #include <cmath>
 #include <vector>
 
