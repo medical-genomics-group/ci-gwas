@@ -17,7 +17,7 @@ std::vector<float> threshold_array(const int n, const float alpha)
     const float half = 0.5;
     for (size_t i = 0; i < MAX_LEVEL + 1; i++)
     {
-        thr.push_back(abs(std_normal_qnorm(half * alpha) / sqrt(n - i - 3)));
+        thr.push_back(abs(std_normal_qnorm(1 - half * alpha) / sqrt(n - i - 3)));
     }
     return thr;
 }

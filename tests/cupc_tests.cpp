@@ -1,8 +1,9 @@
-#include <boost/math/distributions/normal.hpp>
-#include <cmath>
 #include <gtest/gtest.h>
 #include <mps/cu_test_helpers.h>
 #include <test_data/cupc_test_set.h>
+
+#include <boost/math/distributions/normal.hpp>
+#include <cmath>
 #include <vector>
 
 const int NUMBER_OF_LEVELS = 50;
@@ -21,7 +22,7 @@ auto threshold_array(const int n, const float alpha) -> std::array<float, NUMBER
     const float half = 0.5;
     for (size_t i = 0; i < n_thr; i++)
     {
-        thr[i] = abs(std_normal_qnorm(half * alpha) / sqrt(n - i - 3));
+        thr[i] = abs(std_normal_qnorm(1 - half * alpha) / sqrt(n - i - 3));
     }
     return thr;
 }
@@ -38,13 +39,7 @@ TEST(cuPCSparseTests, CalIndepL0SingleBlock)
     std::vector<int> G(mixed_matrix_size, 0);
     std::array<float, NUMBER_OF_LEVELS> Th = threshold_array(m + p, alpha);
 
-    test_cal_Indepl0(
-        &cupct1_c[0],
-        &m,
-        &p,
-        &w,
-        G.data(),
-        Th.data());
+    test_cal_Indepl0(&cupct1_c[0], &m, &p, &w, G.data(), Th.data());
 
     // printf("ix | obs | exp \n");
     // for (size_t i = 0; i < CUPCT1_ADJSIZE; ++i)
@@ -70,18 +65,13 @@ TEST(cuPCSparseTests, CalIndepL0MultiBlock)
     std::vector<int> G(mixed_matrix_size, 0);
     std::array<float, NUMBER_OF_LEVELS> Th = threshold_array(m + p, alpha);
 
-    test_cal_Indepl0(
-        &cupct2_c[0],
-        &m,
-        &p,
-        &w,
-        G.data(),
-        Th.data());
+    test_cal_Indepl0(&cupct2_c[0], &m, &p, &w, G.data(), Th.data());
 
     printf("ix | obs | exp \n");
     for (size_t i = 0; i < CUPCT2_ADJSIZE; ++i)
     {
-        if (G[i] != cupct2_g[i]) {
+        if (G[i] != cupct2_g[i])
+        {
             printf("%i | %i | %i \n", i, G[i], cupct2_g[i]);
         }
     }
