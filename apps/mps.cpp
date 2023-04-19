@@ -461,12 +461,17 @@ void block_diagonal_pc(int argc, char *argv[])
 
         // load block data
         std::vector<unsigned char> bedblock = read_block_from_bed(bfiles.bed(), block, dims, bim);
-        // TODO: add offset due to previous chr in file
+
+        size_t chr_start = bim.get_global_chr_start(block.chr_id);
         std::vector<float> means = read_floats_from_line_range(
-            bfiles.means(), block.get_first_marker_ix(), block.get_last_marker_ix()
+            bfiles.means(),
+            chr_start + bim.block.get_first_marker_ix(),
+            chr_start + block.get_last_marker_ix()
         );
         std::vector<float> stds = read_floats_from_line_range(
-            bfiles.stds(), block.get_first_marker_ix(), block.get_last_marker_ix()
+            bfiles.stds(),
+            chr_start + block.get_first_marker_ix(),
+            chr_start + block.get_last_marker_ix()
         );
 
         if ((means.size() != block.block_size()) || (stds.size() != block.block_size()))
