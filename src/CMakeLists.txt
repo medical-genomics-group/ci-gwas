@@ -1,6 +1,6 @@
 file(GLOB HEADER_LIST CONFIGURE_DEPENDS "${MPS_SOURCE_DIR}/include/mps/*.h")
-# set(HEADER_LIST "${MPS_SOURCE_DIR}/include/mps/*.h")
 
+# set(HEADER_LIST "${MPS_SOURCE_DIR}/include/mps/*.h")
 add_library(cuPC STATIC cuPC-S.cu cuPC_call_prep.cpp ${HEADER_LIST})
 target_include_directories(cuPC PUBLIC ../include)
 target_compile_features(cuPC PUBLIC cxx_std_20)
@@ -12,7 +12,6 @@ target_compile_options(cuPC PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
     -Xcompiler
     -fPIC
     >)
-
 
 add_library(corr STATIC corr_host.cu corr_kernels.cu ${HEADER_LIST})
 target_include_directories(corr PUBLIC ../include)
@@ -41,9 +40,3 @@ target_compile_features(block PUBLIC cxx_std_20)
 add_library(parents STATIC parent_set.cpp ${HEADER_LIST})
 target_include_directories(parents PUBLIC ../include)
 target_compile_features(parents PUBLIC cxx_std_20)
-
-# add_library(cuPCsparse STATIC cu_test_helpers.cu cuPC-S-sparse.cu ${HEADER_LIST})
-# target_include_directories(cuPCsparse PUBLIC ../include)
-# target_compile_features(cuPCsparse PUBLIC cxx_std_20)
-
-
