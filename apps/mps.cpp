@@ -231,10 +231,10 @@ void prepc(int argc, char *argv[])
         // load block data
         std::vector<unsigned char> bedblock = read_block_from_bed(bfiles.bed(), block, dims, bim);
 
-        size_t chr_start = bim.get_global_chr_start(block.chr_id);
+        size_t chr_start = bim.get_global_chr_start(block.get_chr_id());
         std::vector<float> means = read_floats_from_line_range(
             bfiles.means(),
-            chr_start + bim.block.get_first_marker_ix(),
+            chr_start + block.get_first_marker_ix(),
             chr_start + block.get_last_marker_ix()
         );
         std::vector<float> stds = read_floats_from_line_range(
@@ -467,10 +467,10 @@ void block_diagonal_pc(int argc, char *argv[])
         // load block data
         std::vector<unsigned char> bedblock = read_block_from_bed(bfiles.bed(), block, dims, bim);
 
-        size_t chr_start = bim.get_global_chr_start(block.chr_id);
+        size_t chr_start = bim.get_global_chr_start(block.get_chr_id());
         std::vector<float> means = read_floats_from_line_range(
             bfiles.means(),
-            chr_start + bim.block.get_first_marker_ix(),
+            chr_start + block.get_first_marker_ix(),
             chr_start + block.get_last_marker_ix()
         );
         std::vector<float> stds = read_floats_from_line_range(
