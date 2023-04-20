@@ -7,7 +7,7 @@ const int MAX_LEVEL = 14;
 float std_normal_qnorm(const float p)
 {
     boost::math::normal dist(0.0, 1.0);
-    return quantile(dist, p);
+    return quantile(dist, (double)p);
 }
 
 std::vector<float> threshold_array(const int n, const float alpha)
