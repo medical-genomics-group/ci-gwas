@@ -1,12 +1,23 @@
 #include <gtest/gtest.h>
-#include <mps/cuPC_call_prep.h>
 #include <mps/cuPC-S.h>
+#include <mps/cuPC_call_prep.h>
 #include <test_data/cupc_test_set.h>
 
 #include <cmath>
 #include <vector>
 
-TEST(cuPCTests, ExpectedSkeletonN10)
+TEST(threshold, at_10_e_min_8)
+{
+    // call cuPC
+    int max_level = 14;
+    std::vector<float> Th = threshold_array(500000, 0.00000001);
+    for (size_t i = 0; i < max_level + 1; ++i)
+    {
+        EXPECT_EQ(Th[i], 0.007);
+    }
+}
+
+TEST(cuPC, expected_skeleton_n10)
 {
     // call cuPC
     int max_level = 14;
