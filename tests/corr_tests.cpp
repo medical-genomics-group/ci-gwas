@@ -208,7 +208,37 @@ TEST(cu_phen_corr_pearson_npn, expected_results)
     }
 }
 
-TEST(CuCorrPearsonNpn, ExpectedReturnVals)
+TEST(cu_marker_phen_corr_pearson, expected_results)
+{
+    const size_t num_markers = BMT_NUM_MARKERS;
+    const size_t num_individuals = BMT_NUM_INDIVIDUALS;
+    const size_t num_phen = BMT_NUM_PHEN;
+    const size_t marker_phen_cm_size = num_markers * num_phen;
+
+    float marker_phen_corr[marker_phen_cm_size];
+    memset(marker_phen_corr, 0.0, sizeof(marker_phen_corr));
+
+    cu_marker_phen_corr_pearson(
+        bmt_marker_vals,
+        bmt_phen_vals,
+        num_markers,
+        num_individuals,
+        num_phen,
+        bmt_marker_mean,
+        bmt_marker_std,
+        marker_phen_corr
+    );
+
+    float marker_phen_corr_expected[marker_phen_cm_size] = {
+        -0.982847, -0.856312, -0.380668, -0.405905, -0.695899, -0.928034};
+
+    for (size_t i = 0; i < marker_phen_cm_size; i++)
+    {
+        EXPECT_NEAR(marker_phen_corr[i], marker_phen_corr_expected[i], 0.00001);
+    }
+}
+
+TEST(cu_corr_pearson_npn, expected_results)
 {
     const size_t num_markers = BMT_NUM_MARKERS;
     const size_t num_individuals = BMT_NUM_INDIVIDUALS;
