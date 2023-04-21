@@ -508,7 +508,37 @@ void block_diagonal_pc(int argc, char *argv[])
         size_t marker_phen_corr_mat_size = num_markers * num_phen;
         std::vector<float> marker_phen_corr(marker_phen_corr_mat_size, 0.0);
 
-        std::cout << "Computing correlations" << std::endl;
+        std::cout << "Checking for significant marker - phen correlations" << std::endl;
+
+        cu_marker_phen_corr_pearson(
+            bedblock.data(),
+            phen.data.data(),
+            num_markers,
+            num_individuals,
+            num_phen,
+            means.data(),
+            stds.data(),
+            marker_phen_corr.data()
+        );
+
+        int num_sig_corrs = 0;
+        for (float c : marker_phen_corr)
+        {
+            num_sig_corrs += (fabs(0.5 * (log(fabs((1 + c))) - log(fabs(1 - c)))) >= Thr[0]);
+        }
+
+        if (num_sig_corrs > 0)
+        {
+            std::cout << "Found " << num_sig_corrs << " marker - phen correlations. Proceeding."
+                      << std::endl;
+        }
+        else
+        {
+            std::cout << "No significant correlations found. Skipping block." << std::endl;
+            continue;
+        }
+
+        std::cout << "Computing all correlations" << std::endl;
 
         // compute correlations
         cu_corr_pearson_npn(
