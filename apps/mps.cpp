@@ -373,19 +373,20 @@ void prepc(int argc, char *argv[])
 const std::string BDPC_USAGE = R"(
 Run cuPC on block diagonal genomic covariance matrix.
 
-usage: mps bdpc <.phen> <bfiles> <.blocks> <alpha> <max-level> <depth> <outdir>
+usage: mps bdpc <.phen> <bfiles> <.blocks> <alpha> <max-level> <depth> <outdir> <first-block>
 
 arguments:
-    .phen       path to standardized phenotype tsv
-    bfiles      stem of .bed, .means, .stds, .dim files
-    .blocks     file with genomic block definitions
-    alpha       significance level
-    max-level   maximal size of seperation sets in cuPC ( <= 14)
-    depth       max depth at which marker variables are kept as ancestors
-    outdir      outdir
+    .phen           path to standardized phenotype tsv
+    bfiles          stem of .bed, .means, .stds, .dim files
+    .blocks         file with genomic block definitions
+    alpha           significance level
+    max-level       maximal size of seperation sets in cuPC ( <= 14)
+    depth           max depth at which marker variables are kept as ancestors
+    outdir          outdir
+    first-block     0-based index first block to start bdpc from. Meant for resuming interrupted jobs.
 )";
 
-const int BDPC_NARGS = 9;
+const int BDPC_NARGS = 10;
 
 void block_diagonal_pc(int argc, char *argv[])
 {
@@ -398,6 +399,7 @@ void block_diagonal_pc(int argc, char *argv[])
     int max_level = std::stoi(argv[6]);
     int depth = std::stoi(argv[7]);
     std::string outdir = (std::string)argv[8];
+    int first_block = std::stoi(argv[9]);
 
     std::cout << "Checking paths" << std::endl;
 
@@ -451,7 +453,7 @@ void block_diagonal_pc(int argc, char *argv[])
         std::cout << "\t Level: " << i << " thr: " << Th[i] << std::endl;
     }
 
-    for (size_t bid = 0; bid < blocks.size(); bid++)
+    for (size_t bid = first_block; bid < blocks.size(); bid++)
     {
         std::cout << std::endl;
         std::cout << "Processing block " << bid + 1 << " / " << blocks.size() << std::endl;
