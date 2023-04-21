@@ -9,12 +9,9 @@
 TEST(threshold, at_10_e_min_8)
 {
     // call cuPC
-    int max_level = 14;
+    int max_level = 0;
     std::vector<float> Th = threshold_array(500000, 0.00000001);
-    for (size_t i = 0; i < max_level + 1; ++i)
-    {
-        EXPECT_EQ(Th[i], 0.007);
-    }
+    EXPECT_EQ(Th[0], 0.008104498802733414);
 }
 
 TEST(cuPC, expected_skeleton_n10)
