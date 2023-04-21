@@ -524,7 +524,7 @@ void block_diagonal_pc(int argc, char *argv[])
         int num_sig_corrs = 0;
         for (float c : marker_phen_corr)
         {
-            num_sig_corrs += (fabs(0.5 * (log(fabs((1 + c))) - log(fabs(1 - c)))) >= Thr[0]);
+            num_sig_corrs += (fabs(0.5 * (log(fabs((1 + c))) - log(fabs(1 - c)))) >= Th[0]);
         }
 
         if (num_sig_corrs > 0)
