@@ -1052,6 +1052,10 @@ void cu_marker_phen_corr_pearson(
     // markers vs phen
     int blocks_per_grid = marker_phen_output_length;
 
+    HANDLE_ERROR(cudaMalloc(&gpu_marker_vals, marker_vals_bytes));
+    HANDLE_ERROR(cudaMemcpy(gpu_marker_vals, marker_vals, marker_vals_bytes, cudaMemcpyHostToDevice)
+    );
+
     HANDLE_ERROR(cudaMalloc(&gpu_marker_mean, marker_stats_bytes));
     HANDLE_ERROR(
         cudaMemcpy(gpu_marker_mean, marker_mean, marker_stats_bytes, cudaMemcpyHostToDevice)
