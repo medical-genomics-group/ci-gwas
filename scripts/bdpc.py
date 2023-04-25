@@ -5,10 +5,8 @@ from dataclasses import dataclass
 import json
 import pandas as pd
 import seaborn as sns
-from dataclasses import dataclass
 import queue
 from scipy.io import mmread
-import json
 
 SMALL_SIZE = 12
 MEDIUM_SIZE = 14
@@ -211,7 +209,26 @@ def global_eps(blockfile: str, outdir: str):
     return eps
 
 
-def pleitropy_mat(pag, num_phen):
+def global_parent_sets(blockfile: str, outdir: str):
+    basepaths = [outdir + s for s in get_block_out_stems(blockfile)]
+
+    bo = BlockOutput(basepaths[0])
+    marker_offset = bo.num_markers()
+
+    eps = bo.pheno_direct_parents()
+
+    for path in basepaths[1:]:
+        bo = BlockOutput(path, marker_offset)
+        marker_offset += bo.num_markers()
+        for k, v in bo.pheno_direct_parents().items():
+            if k in eps:
+                eps[k].update(v)
+            else:
+                eps[k] = v
+    return eps
+
+
+def pag_pheno_parent_sets(pag, num_phen):
     """Compute upper bound of markers that could affect each phenotype or combination of phenotypes
     """
     res = {}
@@ -231,8 +248,8 @@ def pleitropy_mat(pag, num_phen):
     return res
 
 
-def exclusive_pleiotropy_sets(pag, num_phen):
-    pm = pleitropy_mat(pag, num_phen)
+def pag_exclusive_pleiotropy_sets(pag, num_phen):
+    pm = pag_pheno_parent_sets(pag, num_phen)
     pleiotropic_markers = set()
     res = {}
     for i in range(num_phen):
@@ -298,7 +315,7 @@ class BlockOutput:
     def pheno_indices(self):
         return np.arange(0, self.num_phen()) + BASE_INDEX
 
-    def pleitropy_mat(self):
+    def pheno_parents(self):
         """Compute upper bound of markers that could affect each phenotype or combination of phenotypes
         """
         res = {}
@@ -317,8 +334,20 @@ class BlockOutput:
             res[pix] = visited
         return res
 
+    def pheno_direct_parents(self):
+        """For each phenotype, find all markers that are direct parents to it.
+        """
+        res = {}
+        adj = self.sam()
+        for pix in self.pheno_indices():
+            res[pix] = set()
+            for parent_candidate in self.marker_indices():
+                if (pix, parent_candidate) in adj:
+                    res[pix].add(parent_candidate)
+        return res
+
     def exclusive_pleiotropy_mat(self):
-        pm = self.pleitropy_mat()
+        pm = self.pheno_parents()
         pleiotropic_markers = set()
         res = {}
         for i in self.pheno_indices():
@@ -332,7 +361,7 @@ class BlockOutput:
         return res
 
     def exclusive_pleiotropy_sets(self):
-        pm = self.pleitropy_mat()
+        pm = self.pheno_parents()
         pleiotropic_markers = set()
         res = {}
         for i in self.pheno_indices():
@@ -526,7 +555,7 @@ def combine_all_pheno_and_plot():
                 cbar=False)
 
     num_phen = len(p_names)
-    geps = exclusive_pleiotropy_sets(pag, num_phen)
+    geps = pag_exclusive_pleiotropy_sets(pag, num_phen)
 
     np_gepm = np.zeros(shape=(num_phen, num_phen))
     pd_gepm = []
