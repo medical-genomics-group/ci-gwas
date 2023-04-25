@@ -209,7 +209,10 @@ def global_eps(blockfile: str, outdir: str):
     return eps
 
 
-def global_parent_sets(blockfile: str, outdir: str):
+def global_parent_sets(blockfile: str, outdir: str, reduced_indices=False):
+    if not reduced_indices:
+        gr = merge_block_outputs(blockfile, outdir)
+
     basepaths = [outdir + s for s in get_block_out_stems(blockfile)]
 
     bo = BlockOutput(basepaths[0])
@@ -221,6 +224,8 @@ def global_parent_sets(blockfile: str, outdir: str):
         bo = BlockOutput(path, marker_offset)
         marker_offset += bo.num_markers()
         for k, v in bo.pheno_direct_parents().items():
+            if not reduced_indices:
+                v = set([int(gr.gmi[ix]) for ix in v])
             if k in eps:
                 eps[k].update(v)
             else:
