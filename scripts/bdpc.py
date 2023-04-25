@@ -228,7 +228,7 @@ def global_ancestor_sets(blockfile: str,
         marker_offset += bo.num_markers()
         for k, v in bo.pheno_ancestor_sets(depth).items():
             if not reduced_indices:
-                v = {{gr.gmi[ix] for ix in s} for s in v}
+                v = {frozenset({gr.gmi[ix] for ix in s}) for s in v}
             if k in eps:
                 eps[k].update(v)
             else:
@@ -385,7 +385,7 @@ class BlockOutput:
                                 if (v1, v2) in adj and not v2 in anc_set:
                                     next_q.put(v2)
                                     anc_set.add(v2)
-                    res[pix].add(anc_set)
+                    res[pix].add(frozenset(anc_set))
         return res
 
     def pheno_direct_parents(self):
