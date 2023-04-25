@@ -209,6 +209,33 @@ def global_eps(blockfile: str, outdir: str):
     return eps
 
 
+def global_ancestor_sets(blockfile: str,
+                         outdir: str,
+                         reduced_indices=False,
+                         depth=1):
+    if not reduced_indices:
+        gr = merge_block_outputs(blockfile, outdir)
+
+    basepaths = [outdir + s for s in get_block_out_stems(blockfile)]
+
+    bo = BlockOutput(basepaths[0])
+    marker_offset = bo.num_markers()
+
+    eps = bo.pheno_ancestor_sets(depth)
+
+    for path in basepaths[1:]:
+        bo = BlockOutput(path, marker_offset)
+        marker_offset += bo.num_markers()
+        for k, v in bo.pheno_ancestor_sets(depth).items():
+            if not reduced_indices:
+                v = {{gr.gmi[ix] for ix in s} for s in v}
+            if k in eps:
+                eps[k].update(v)
+            else:
+                eps[k] = v
+    return eps
+
+
 def global_parent_sets(blockfile: str, outdir: str, reduced_indices=False):
     if not reduced_indices:
         gr = merge_block_outputs(blockfile, outdir)
@@ -337,6 +364,28 @@ class BlockOutput:
                         q.put(v2)
                         visited.add(v2)
             res[pix] = visited
+        return res
+
+    def pheno_ancestor_sets(self, depth: int):
+        res = {}
+        adj = self.sam()
+        for pix in self.pheno_indices():
+            res[pix] = set()
+            for parent in self.marker_indices():
+                if (pix, parent) in adj:
+                    anc_set = set()
+                    anc_set.add(parent)
+                    q = queue.Queue()
+                    q.put(parent)
+                    next_q = queue.Queue()
+                    for _ in range(depth - 1):
+                        while not q.empty():
+                            v1 = q.get()
+                            for v2 in self.marker_indices():
+                                if (v1, v2) in adj and not v2 in anc_set:
+                                    next_q.put(v2)
+                                    anc_set.add(v2)
+                    res[pix].add(anc_set)
         return res
 
     def pheno_direct_parents(self):
