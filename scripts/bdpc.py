@@ -5,6 +5,10 @@ from dataclasses import dataclass
 import json
 import pandas as pd
 import seaborn as sns
+from dataclasses import dataclass
+import queue
+from scipy.io import mmread
+import json
 
 SMALL_SIZE = 12
 MEDIUM_SIZE = 14
@@ -19,23 +23,6 @@ plt.rc('legend', fontsize=SMALL_SIZE)    # legend fontsize
 plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 
 rng = np.random.default_rng()
-
-# count total number of retained markers
-
-path = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/bdpc_d1_l6_a1e8.log"
-
-nm = 0
-
-with open(path, "r") as fin:
-    for line in fin:
-        if not line.startswith("Retained"):
-            continue
-        nm += int(line.split()[1])
-    
-nm
-
-from dataclasses import dataclass
-import queue
 
 BASE_INDEX = 1
 
@@ -194,6 +181,39 @@ def global_eps(blockfile: str, outdir: str):
                 eps[k] = v
     return eps
 
+def pleitropy_mat(pag, num_phen):
+    """Compute upper bound of markers that could affect each phenotype or combination of phenotypes
+    """
+    res = {}
+    plr = pag.tolil().rows
+    phens = set(np.arange(num_phen))
+    for pix in range(num_phen):
+        visited = set()
+        q = queue.Queue()
+        q.put(pix)
+        while not q.empty():
+            v1 = q.get()
+            for v2 in plr[v1]:
+                if not v2 in phens and not v2 in visited and pag[v2, v1] == 2:
+                    q.put(v2)
+                    visited.add(v2)
+        res[pix] = visited
+    return res
+
+def exclusive_pleiotropy_sets(pag, num_phen):
+    pm = pleitropy_mat(pag, num_phen)
+    pleiotropic_markers = set()
+    res = {}
+    for i in range(num_phen):
+        for j in range(i + 1, num_phen):
+            s = set.intersection(pm[i], pm[j])
+            res[(i, j)] = s
+            res[(j, i)] = s
+            pleiotropic_markers.update(s)
+    for i in range(num_phen):
+        res[(i, i)] = pm[i] - pleiotropic_markers
+    return res
+
 class BlockOutput:
     def __init__(self, basepath: str, marker_offset=0, global_marker_offset=0):
         self.basepath = basepath
@@ -323,154 +343,114 @@ class GlobalBdpcResult:
             fout.write(f"{self.num_var}\t{self.num_phen}\t{self.max_level}\n")
 
 
-outdir = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/bdpc_d1_l6_a1e8/"
-blockfile = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/ukb22828_UKB_EST_v3_ldp08.blocks"
-p_names = get_pheno_codes("/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/input.phen")
-num_phen = len(p_names)
+def combine_all_pheno_and_plot():
+    outdir = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/bdpc_d1_l6_a1e8/"
+    blockfile = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/ukb22828_UKB_EST_v3_ldp08.blocks"
+    p_names = get_pheno_codes("/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/input.phen")
+    num_phen = len(p_names)
 
-gepm = global_epm(blockfile, outdir)
-geps = global_eps(blockfile, outdir)
-gr = merge_block_outputs(blockfile, outdir)
-# gr.write_mm(outdir + "all_merged")
-
-
-import json
-
-geps_global_ix = {}
-for k, v in geps.items():
-    if k[0] >= k[1]:
-        nk = f"{p_names[k[0] - 1]}_{p_names[k[1] - 1]}"
-        geps_global_ix[nk] = [int(gr.gmi[ix]) for ix in v]
-
-with open("./../../../../human_data/causality/parent_set_selection/bdpc_d1_l6_a1e8/bim_indices_of_pleiotropy_matrix_set_elements.json", 'w') as fout:
-    json.dump(geps_global_ix, fout)
+    gepm = global_epm(blockfile, outdir)
+    geps = global_eps(blockfile, outdir)
+    gr = merge_block_outputs(blockfile, outdir)
+    # gr.write_mm(outdir + "all_merged")
 
 
-np_gepm = np.zeros(shape=(num_phen, num_phen))
-pd_gepm = []
-for (i, j), c in gepm.items():
-    np_gepm[i - 1, j - 1] = c
-    pd_gepm.append({"y1": p_names[i - 1], "y2": p_names[j - 1], "count": c})
-pd_gepm = pd.DataFrame(pd_gepm)
+    geps_global_ix = {}
+    for k, v in geps.items():
+        if k[0] >= k[1]:
+            nk = f"{p_names[k[0] - 1]}_{p_names[k[1] - 1]}"
+            geps_global_ix[nk] = [int(gr.gmi[ix]) for ix in v]
+
+    # with open("./../../../../human_data/causality/parent_set_selection/bdpc_d1_l6_a1e8/bim_indices_of_pleiotropy_matrix_set_elements.json", 'w') as fout:
+    #     json.dump(geps_global_ix, fout)
 
 
-pd_pcm = []
-for i in range(1, num_phen + 1):
-    for j in range(1, num_phen + 1):
-        pd_pcm.append({"y1": p_names[i - 1], "y2": p_names[j - 1], "v": gr.scm[(i, j)]})
-pd_pcm = pd.DataFrame(pd_pcm)
-
-plt.figure(figsize=(20, 15))
-g = pd_pcm.pivot("y1", "y2", "v")
-mask = np.triu(np.ones_like(g, dtype=bool))
-np.fill_diagonal(mask, False)
-sns.heatmap(g, xticklabels=1, yticklabels=1, cmap="RdBu", annot=True, square=True, mask=mask, vmax=1, vmin=-1)
+    np_gepm = np.zeros(shape=(num_phen, num_phen))
+    pd_gepm = []
+    for (i, j), c in gepm.items():
+        np_gepm[i - 1, j - 1] = c
+        pd_gepm.append({"y1": p_names[i - 1], "y2": p_names[j - 1], "count": c})
+    pd_gepm = pd.DataFrame(pd_gepm)
 
 
-pd_pam = []
-for i in range(1, num_phen + 1):
-    for j in range(1, num_phen + 1):
-        if (i, j) in gr.sam:
-            pd_pam.append({"y1": p_names[i - 1], "y2": p_names[j - 1], "v": 1})
-        else:
-            pd_pam.append({"y1": p_names[i - 1], "y2": p_names[j - 1], "v": 0})
-pd_pam = pd.DataFrame(pd_pam)
+    pd_pcm = []
+    for i in range(1, num_phen + 1):
+        for j in range(1, num_phen + 1):
+            pd_pcm.append({"y1": p_names[i - 1], "y2": p_names[j - 1], "v": gr.scm[(i, j)]})
+    pd_pcm = pd.DataFrame(pd_pcm)
 
-plt.figure(figsize=(14, 14))
-g = pd_pam.pivot("y1", "y2", "v")
-mask = np.triu(np.ones_like(g, dtype=bool))
-np.fill_diagonal(mask, False)
-sns.heatmap(g, xticklabels=1, yticklabels=1, cbar=False, square=True, mask=mask, cmap="Blues", vmax=2)
+    plt.figure(figsize=(20, 15))
+    g = pd_pcm.pivot("y1", "y2", "v")
+    mask = np.triu(np.ones_like(g, dtype=bool))
+    np.fill_diagonal(mask, False)
+    sns.heatmap(g, xticklabels=1, yticklabels=1, cmap="RdBu", annot=True, square=True, mask=mask, vmax=1, vmin=-1)
 
 
-num_phen = len(p_names)
-np_gepm = np.zeros(shape=(num_phen, num_phen))
-pd_gepm = []
-for (i, j), c in {k: len(v) for k, v in geps.items()}.items():
-    np_gepm[i - 1, j - 1] = c
-    pd_gepm.append({"y1": p_names[i - 1], "y2": p_names[j - 1], "count": c})
-pd_gepm = pd.DataFrame(pd_gepm)
+    pd_pam = []
+    for i in range(1, num_phen + 1):
+        for j in range(1, num_phen + 1):
+            if (i, j) in gr.sam:
+                pd_pam.append({"y1": p_names[i - 1], "y2": p_names[j - 1], "v": 1})
+            else:
+                pd_pam.append({"y1": p_names[i - 1], "y2": p_names[j - 1], "v": 0})
+    pd_pam = pd.DataFrame(pd_pam)
 
-plt.figure(figsize=(20, 15))
-g = pd_gepm.pivot("y1", "y2", "count")
-mask = np.triu(np.ones_like(g, dtype=bool))
-np.fill_diagonal(mask, False)
-sns.heatmap(g, xticklabels=1, yticklabels=1, norm=matplotlib.colors.LogNorm(), cmap="Blues", annot=True, square=True, mask=mask, cbar_kws={'label': '# parent markers'})
-
-
-from scipy.io import mmread
-
-pag_path = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/bdpc_d1_l6_a1e8/all_merged_pag.mtx"
-
-pag_coo = mmread(pag_path)
-
-pag = mmread(pag_path).tocsr()
-
-pd_pag = []
-
-for i in range(num_phen):
-    for j in range(num_phen):
-        v = 0
-        if pag[i, j] == 2:
-            v = 1
-        elif pag[i, j] == 1:
-            v = -1
-        pd_pag.append({"y1": p_names[i], "y2": p_names[j], "edge": v})
-
-pd_pag = pd.DataFrame(pd_pag)
-
-plt.figure(figsize=(20, 15))
-g = pd_pag.pivot("y1", "y2", "edge")
-sns.heatmap(g, xticklabels=1, yticklabels=1, cmap="Blues", annot=False, square=True, cbar=False)
+    plt.figure(figsize=(14, 14))
+    g = pd_pam.pivot("y1", "y2", "v")
+    mask = np.triu(np.ones_like(g, dtype=bool))
+    np.fill_diagonal(mask, False)
+    sns.heatmap(g, xticklabels=1, yticklabels=1, cbar=False, square=True, mask=mask, cmap="Blues", vmax=2)
 
 
+    num_phen = len(p_names)
+    np_gepm = np.zeros(shape=(num_phen, num_phen))
+    pd_gepm = []
+    for (i, j), c in {k: len(v) for k, v in geps.items()}.items():
+        np_gepm[i - 1, j - 1] = c
+        pd_gepm.append({"y1": p_names[i - 1], "y2": p_names[j - 1], "count": c})
+    pd_gepm = pd.DataFrame(pd_gepm)
 
-def pleitropy_mat(pag, num_phen):
-    """Compute upper bound of markers that could affect each phenotype or combination of phenotypes
-    """
-    res = {}
-    plr = pag.tolil().rows
-    phens = set(np.arange(num_phen))
-    for pix in range(num_phen):
-        visited = set()
-        q = queue.Queue()
-        q.put(pix)
-        while not q.empty():
-            v1 = q.get()
-            for v2 in plr[v1]:
-                if not v2 in phens and not v2 in visited and pag[v2, v1] == 2:
-                    q.put(v2)
-                    visited.add(v2)
-        res[pix] = visited
-    return res
+    plt.figure(figsize=(20, 15))
+    g = pd_gepm.pivot("y1", "y2", "count")
+    mask = np.triu(np.ones_like(g, dtype=bool))
+    np.fill_diagonal(mask, False)
+    sns.heatmap(g, xticklabels=1, yticklabels=1, norm=matplotlib.colors.LogNorm(), cmap="Blues", annot=True, square=True, mask=mask, cbar_kws={'label': '# parent markers'})
 
-def exclusive_pleiotropy_sets(pag, num_phen):
-    pm = pleitropy_mat(pag, num_phen)
-    pleiotropic_markers = set()
-    res = {}
+    pag_path = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/bdpc_d1_l6_a1e8/all_merged_pag.mtx"
+
+    pag_coo = mmread(pag_path)
+
+    pag = mmread(pag_path).tocsr()
+
+    pd_pag = []
+
     for i in range(num_phen):
-        for j in range(i + 1, num_phen):
-            s = set.intersection(pm[i], pm[j])
-            res[(i, j)] = s
-            res[(j, i)] = s
-            pleiotropic_markers.update(s)
-    for i in range(num_phen):
-        res[(i, i)] = pm[i] - pleiotropic_markers
-    return res
+        for j in range(num_phen):
+            v = 0
+            if pag[i, j] == 2:
+                v = 1
+            elif pag[i, j] == 1:
+                v = -1
+            pd_pag.append({"y1": p_names[i], "y2": p_names[j], "edge": v})
 
+    pd_pag = pd.DataFrame(pd_pag)
 
-num_phen = len(p_names)
-geps = exclusive_pleiotropy_sets(pag, num_phen)
+    plt.figure(figsize=(20, 15))
+    g = pd_pag.pivot("y1", "y2", "edge")
+    sns.heatmap(g, xticklabels=1, yticklabels=1, cmap="Blues", annot=False, square=True, cbar=False)
 
-np_gepm = np.zeros(shape=(num_phen, num_phen))
-pd_gepm = []
-for (i, j), c in {k: len(v) for k, v in geps.items()}.items():
-    np_gepm[i, j] = c
-    pd_gepm.append({"y1": p_names[i], "y2": p_names[j], "count": c})
-pd_gepm = pd.DataFrame(pd_gepm)
+    num_phen = len(p_names)
+    geps = exclusive_pleiotropy_sets(pag, num_phen)
 
-plt.figure(figsize=(20, 15))
-g = pd_gepm.pivot("y1", "y2", "count")
-mask = np.triu(np.ones_like(g, dtype=bool))
-np.fill_diagonal(mask, False)
-sns.heatmap(g, xticklabels=1, yticklabels=1, norm=matplotlib.colors.LogNorm(), cmap="Blues", annot=True, square=True, mask=mask, cbar_kws={'label': '# parent markers'})
+    np_gepm = np.zeros(shape=(num_phen, num_phen))
+    pd_gepm = []
+    for (i, j), c in {k: len(v) for k, v in geps.items()}.items():
+        np_gepm[i, j] = c
+        pd_gepm.append({"y1": p_names[i], "y2": p_names[j], "count": c})
+    pd_gepm = pd.DataFrame(pd_gepm)
+
+    plt.figure(figsize=(20, 15))
+    g = pd_gepm.pivot("y1", "y2", "count")
+    mask = np.triu(np.ones_like(g, dtype=bool))
+    np.fill_diagonal(mask, False)
+    sns.heatmap(g, xticklabels=1, yticklabels=1, norm=matplotlib.colors.LogNorm(), cmap="Blues", annot=True, square=True, mask=mask, cbar_kws={'label': '# parent markers'})
