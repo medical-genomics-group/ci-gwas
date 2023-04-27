@@ -180,7 +180,10 @@ def global_epm(blockfile: str, outdir: str):
     epm = bo.exclusive_pleiotropy_mat()
 
     for path in basepaths[1:]:
-        bo = BlockOutput(path, marker_offset)
+        try:
+            bo = BlockOutput(path, marker_offset)
+        except FileNotFoundError:
+            continue
         marker_offset += bo.num_markers()
         for k, v in bo.exclusive_pleiotropy_mat().items():
             if k in epm:
