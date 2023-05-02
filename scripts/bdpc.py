@@ -159,7 +159,11 @@ def merge_block_outputs(blockfile: str, outdir: str):
     gmi = bo.gmi()
 
     for path in basepaths[1:]:
-        bo = BlockOutput(path, marker_offset, global_marker_offset)
+        try:
+            bo = BlockOutput(path, marker_offset, global_marker_offset)
+        except FileNotFoundError:
+            global_marker_offset += block_size(path)
+            continue
         add_sam(sam, bo.sam(), bo.num_phen())
         add_scm(scm, bo.scm())
         add_ssm(ssm, bo.ssm())
@@ -296,6 +300,11 @@ def pag_exclusive_pleiotropy_sets(pag, num_phen):
     for i in range(num_phen):
         res[(i, i)] = pm[i] - pleiotropic_markers
     return res
+
+
+def block_size(basepath: str) -> int:
+    first, last = basepath.split("_")[-2:]
+    return int(last) - int(first) + 1
 
 
 class BlockOutput:
