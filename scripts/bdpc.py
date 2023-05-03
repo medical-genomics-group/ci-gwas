@@ -606,6 +606,28 @@ def plot_pag(pag_path: str, pheno_path: str):
                     ylabel=r"$y_1$")
 
 
+def marker_pheno_associations(blockfile: str, outdir: str, pag_path: str,
+                              pheno_path: str, bim_path: str):
+    gr = merge_block_outputs(blockfile, outdir)
+    rs_ids = pd.read_csv(bim_path, sep='\t', header=None)[1].values
+    p_names = get_pheno_codes(pheno_path)
+    num_phen = len(p_names)
+    pag = mmread(pag_path).tocsr()
+    geps = pag_exclusive_pleiotropy_sets(pag, num_phen)
+    assoc_markers = []
+
+    for pix in range(num_phen):
+        for v in geps[(pix, pix)]:
+            bim_line = int(gr.gmi[v])
+            assoc_markers.append({
+                "phenotype": p_names[pix],
+                "rsID": rs_ids[bim_line],
+                "bim_line_ix": bim_line
+            })
+
+    return pd.DataFrame(assoc_markers)
+
+
 def combine_all_pheno_and_plot():
     outdir = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/bdpc_d1_l6_a1e8/"
     blockfile = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/ukb22828_UKB_EST_v3_ldp08.blocks"
