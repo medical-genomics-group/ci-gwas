@@ -116,7 +116,7 @@ def load_global_marker_indices(basepath: str,
     dm2sm = make_dm_ix_to_sm_ix(num_m, num_p, selected_marker_offset)
     for dm_ix in range(len(dm2sm)):
         sm_ix = dm2sm[dm_ix]
-        if sm_ix > num_p:
+        if sm_ix >= num_p:
             global_marker_indices[
                 sm_ix] = rel_to_block[dm_ix] + global_marker_offset
     return global_marker_indices
@@ -618,7 +618,8 @@ def marker_pheno_associations(blockfile: str, outdir: str, pag_path: str,
 
     for pix in range(num_phen):
         for v in geps[(pix, pix)]:
-            bim_line = int(gr.gmi[v])
+            # pag is 0-based indexed, everything else uses 1-based indexing
+            bim_line = int(gr.gmi[v + BASE_INDEX])
             assoc_markers.append({
                 "phenotype": p_names[pix],
                 "rsID": rs_ids[bim_line],
