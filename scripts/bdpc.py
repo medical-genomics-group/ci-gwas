@@ -1,5 +1,5 @@
 import numpy as np
-import matplotlib
+import matplotlib as mpl
 from matplotlib import pyplot as plt
 from dataclasses import dataclass
 import json
@@ -476,6 +476,134 @@ class GlobalBdpcResult:
 
         with open(basepath + ".mdim", "w") as fout:
             fout.write(f"{self.num_var}\t{self.num_phen}\t{self.max_level}\n")
+
+
+def heatmap(data,
+            row_labels,
+            col_labels,
+            ax=None,
+            cbar_kw=None,
+            cbarlabel="",
+            xlabel=None,
+            ylabel=None,
+            **kwargs):
+    """
+    Create a heatmap from a numpy array and two lists of labels.
+
+    Parameters
+    ----------
+    data
+        A 2D numpy array of shape (M, N).
+    row_labels
+        A list or array of length M with the labels for the rows.
+    col_labels
+        A list or array of length N with the labels for the columns.
+    ax
+        A `matplotlib.axes.Axes` instance to which the heatmap is plotted.  If
+        not provided, use current axes or create a new one.  Optional.
+    cbar_kw
+        A dictionary with arguments to `matplotlib.Figure.colorbar`.  Optional.
+    cbarlabel
+        The label for the colorbar.  Optional.
+    **kwargs
+        All other arguments are forwarded to `imshow`.
+    """
+
+    if ax is None:
+        ax = plt.gca()
+
+    if cbar_kw is None:
+        cbar_kw = {}
+
+    # Plot the heatmap
+    im = ax.imshow(data, **kwargs)
+
+    # Create colorbar
+    cbar = ax.figure.colorbar(im, ax=ax, **cbar_kw)
+    cbar.ax.set_ylabel(cbarlabel, rotation=-90, va="bottom")
+
+    # Show all ticks and label them with the respective list entries.
+    ax.set_xticks(np.arange(data.shape[1]), labels=col_labels)
+    ax.set_yticks(np.arange(data.shape[0]), labels=row_labels)
+
+    # Let the horizontal axes labeling appear on top.
+    ax.tick_params(top=False, bottom=True, labeltop=False, labelbottom=True)
+
+    # Rotate the tick labels and set their alignment.
+    plt.setp(ax.get_xticklabels(),
+             rotation=45,
+             ha="right",
+             rotation_mode="anchor")
+
+    # Turn spines off and create white grid.
+    ax.spines[:].set_visible(False)
+
+    ax.set_xticks(np.arange(data.shape[1] + 1) - .5, minor=True)
+    ax.set_yticks(np.arange(data.shape[0] + 1) - .5, minor=True)
+    ax.grid(which="minor", color="w", linestyle='-', linewidth=3)
+    ax.tick_params(which="minor", bottom=False, left=False)
+    ax.set_ylabel(ylabel)
+    ax.set_xlabel(xlabel)
+
+    return im, cbar
+
+
+def plot_pag(pag_path: str, pheno_path: str):
+    my_cmap = mpl.colors.ListedColormap(
+        np.array([
+            # "#7e1e9c", # purple
+            # "#aaff32", # lime
+            "#c04e01",  # burnt orange
+            "#f7d560",  # light mustard
+            "#d8dcd6",  # light grey
+            # "#658cbb", # faded blue
+            "#ffffff",  # white
+        ]))
+
+    edges = [
+        r"$y_1 \rightarrow y_2$",
+        r"$y_1 \leftarrow y_2$",
+        r"$y_1 \leftrightarrow y_2$",
+        r"$y_1 \; \; \; y_2$",
+    ]
+
+    p_names = get_pheno_codes(pheno_path)
+    num_phen = len(p_names)
+
+    pag = mmread(pag_path).tocsr()
+
+    z = [[4 for _ in range(num_phen)] for _ in range(num_phen)]
+
+    for i in range(num_phen):
+        for j in range(i):
+            v1 = pag[i, j]
+            v2 = pag[j, i]
+            if v1 == 2 and v2 == 3:
+                v = 0
+            elif v1 == 3 and v2 == 2:
+                v = 1
+            elif v1 == 2 and v2 == 2:
+                v = 2
+            elif v1 == 0 and v2 == 0:
+                v = 3
+            else:
+                raise ValueError(f"Got link: ({v1}, {v2})")
+            z[i][j] = v
+
+    ne = len(edges)
+
+    norm = mpl.colors.BoundaryNorm(np.linspace(0, 4, ne + 1), ne)
+    fmt = mpl.ticker.FuncFormatter(lambda x, pos: edges[norm(x)])
+
+    im, _ = heatmap(np.array(z),
+                    p_names,
+                    p_names,
+                    cmap=my_cmap,
+                    norm=norm,
+                    cbar_kw=dict(ticks=np.arange(ne) + 0.5, format=fmt),
+                    cbarlabel="Edge Type",
+                    xlabel=r"$y_2$",
+                    ylabel=r"$y_1$")
 
 
 def combine_all_pheno_and_plot():
