@@ -559,7 +559,7 @@ def load_ace(ace_path: str, pheno_path: str) -> np.array:
     for i in range(num_phen):
         for j in range(num_phen):
             z[i][j] = ace[i, j]
-    return z
+    return np.array(z)
 
 
 def plot_ace(ace_path: str, pheno_path: str, title=None, cmap="bwr"):
