@@ -370,6 +370,88 @@ void prepc(int argc, char *argv[])
     }
 }
 
+const std::string PHENOPC_USAGE = R"(
+Run cuPC on phenotypes only.
+
+usage: mps bdpc <.phen> <alpha> <max-level> <outdir>
+
+arguments:
+    .phen           path to standardized phenotype tsv
+    alpha           significance level
+    max-level       maximal size of seperation sets in cuPC ( <= 14)
+    outdir          outdir
+)";
+
+const int PHENOPC_NARGS = 6;
+
+void phenotype_pc(int argc, char *argv[])
+{
+    check_nargs(argc, PHENOPC_NARGS, PHENOPC_USAGE);
+
+    std::string phen_path = argv[2];
+    float alpha = std::stof(argv[3]);
+    int max_level = std::stoi(argv[4]);
+    std::string outdir = (std::string)argv[5];
+
+    Phen phen = load_phen(phen_path);
+    size_t num_phen = phen.get_num_phen();
+    size_t phen_corr_mat_size = num_phen * (num_phen - 1) / 2;
+    std::vector<float> phen_corr(phen_corr_mat_size, 0.0);
+    std::cout << "Found " << num_phen << " phenotypes" << std::endl;
+
+    // size_t num_individuals = dims.get_num_samples();
+    std::vector<float> Th = threshold_array(phen.get_num_samples(), alpha);
+
+    std::cout << "Number of levels: " << max_level << std::endl;
+
+    std::cout << "Setting level thr for cuPC: " << std::endl;
+    for (int i = 0; i <= max_level; ++i)
+    {
+        std::cout << "\t Level: " << i << " thr: " << Th[i] << std::endl;
+    }
+
+    std::cout << "Computing correlations" << std::endl;
+    cu_phen_corr_pearson_npn(
+        phen.data.data(), phen.get_num_samples(), phen.get_num_phen(), phen_corr.data()
+    );
+
+    std::cout << "Reformating corrs to n2 format" << std::endl;
+    std::vector<float> sq_corrs(num_phen * num_phen, 1.0);
+
+    size_t sq_row_ix = 0;
+    size_t sq_col_ix = 1;
+    for (size_t i = 0; i < phen_corr_mat_size; ++i)
+    {
+        sq_corrs[num_phen * sq_row_ix + sq_col_ix] = phen_corr[i];
+        sq_corrs[num_phen * sq_col_ix + sq_row_ix] = phen_corr[i];
+        if (sq_col_ix == num_phen - 1)
+        {
+            ++sq_row_ix;
+            sq_col_ix = sq_row_ix + 1;
+        }
+        else
+        {
+            ++sq_col_ix;
+        }
+    }
+
+    std::cout << "Running cuPC" << std::endl;
+
+    // call cuPC
+    int p = num_phen;
+    const size_t sepset_size = p * p * ML;
+    const size_t g_size = p * p;
+    std::vector<float> pmax(g_size, 0.0);
+    std::vector<int> G(g_size, 1);
+    std::vector<int> sepset(sepset_size, 0);
+    int l = 0;
+    Skeleton(sq_corrs.data(), &p, G.data(), Th.data(), &l, &max_level, pmax.data(), sepset.data());
+
+    std::unordered_set<int> parents = {};
+    ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, parents, p, num_phen, max_level);
+    gcs.to_file(make_path(outdir, block.to_file_string(), ""));
+}
+
 const std::string BDPCSS_USAGE = R"(
 Run cuPC on block diagonal genomic correlation matrix with pre-computed correlations.
 
@@ -640,7 +722,6 @@ void block_diagonal_pc(int argc, char *argv[])
 
         // make n2 matrix to please cuPC
         size_t num_var = num_markers + num_phen;
-        // TODO: make this float, if cuPC is happy with that
         std::vector<float> sq_corrs(num_var * num_var, 1.0);
 
         size_t sq_row_ix = 0;
@@ -724,7 +805,7 @@ void block_diagonal_pc(int argc, char *argv[])
         std::cout << "Retained " << (parents.size() - num_phen) << " / " << num_markers
                   << " markers" << std::endl;
 
-        gcs.to_file(make_path(outdir, block.to_file_string(), ""));
+        gcs.to_file(make_path(outdir, "skeleton", ""));
     }
 }
 
