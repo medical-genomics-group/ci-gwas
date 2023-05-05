@@ -486,7 +486,8 @@ def heatmap(data,
             cbarlabel="",
             xlabel=None,
             ylabel=None,
-            title=None**kwargs):
+            title=None,
+            **kwargs):
     """
     Create a heatmap from a numpy array and two lists of labels.
 
