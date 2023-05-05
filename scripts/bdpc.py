@@ -605,7 +605,7 @@ def plot_pag(pag_path: str, pheno_path: str, title=None):
                     cbar_kw=dict(ticks=np.arange(ne) + 0.5, format=fmt),
                     cbarlabel="Edge Type",
                     xlabel=r"$y_2$",
-                    ylabel=r"$y_1$"
+                    ylabel=r"$y_1$",
                     title=title)
 
 
