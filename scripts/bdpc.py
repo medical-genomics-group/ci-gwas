@@ -551,6 +551,29 @@ def heatmap(data,
     return im, cbar
 
 
+def plot_ace(ace_path: str, pheno_path: str, title=None, cmap="bwr"):
+    p_names = get_pheno_codes(pheno_path)
+    num_phen = len(p_names)
+
+    ace = mmread(ace_path).tocsr()
+
+    z = [[0.0 for _ in range(num_phen)] for _ in range(num_phen)]
+
+    for i in range(num_phen):
+        for j in range(num_phen):
+            z[i][j] = ace[i, j]
+
+    max_z = np.max(z)
+    im, _ = heatmap(np.array(z),
+                    p_names,
+                    p_names,
+                    cmap=cmap,
+                    cbarlabel="ACE",
+                    vmin=-max_z,
+                    vmax=max_z,
+                    title=title)
+
+
 def plot_pag(pag_path: str, pheno_path: str, title=None, cmapix=0):
     # my_cmap = mpl.colors.ListedColormap(
     #     np.array([
