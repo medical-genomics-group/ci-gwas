@@ -551,24 +551,95 @@ def heatmap(data,
     return im, cbar
 
 
-def plot_pag(pag_path: str, pheno_path: str, title=None):
-    my_cmap = mpl.colors.ListedColormap(
-        np.array([
-            # "#7e1e9c", # purple
-            # "#aaff32", # lime
-            "#c04e01",  # burnt orange
-            "#f7d560",  # light mustard
-            "#d8dcd6",  # light grey
-            # "#658cbb", # faded blue
-            "#ffffff",  # white
-        ]))
+def plot_pag(pag_path: str, pheno_path: str, title=None, cmapix=0):
+    # my_cmap = mpl.colors.ListedColormap(
+    #     np.array([
+    #         # "#658cbb", # faded blue
+    #         # "#658cbb", # faded blue
+    #         # "#658cbb", # faded blue
+    #         # "#658cbb", # faded blue
+    #         "#c9ff27",  # green yellow
+    #         "#d8dcd6",  # light grey
+    #         "#c04e01",  # burnt orange
+    #         "#f7d560",  # light mustard
+    #         # "#658cbb", # faded blue
+    #         "#ffffff",  # white
+    #     ]))
+
+    cmaps = [
+        mpl.colors.ListedColormap(
+            np.array([
+                "#003f5c",
+                "#2f4b7c",
+                "#665191",
+                "#a05195",
+                "#d45087",
+                "#f95d6a",
+                "#ff7c43",
+                "#ffa600",
+                "#ffe300",
+                "#ffffff",  # white
+            ])),
+        mpl.colors.ListedColormap(
+            np.array([
+                "#e41a1c",
+                "#377eb8",
+                "#4daf4a",
+                "#984ea3",
+                "#ff7f00",
+                "#ffff33",
+                "#a65628",
+                "#f781bf",
+                "#999999",
+                "#ffffff",  # white
+            ]))
+    ]
+    """
+    i, j
+    1, 1 -> i o-o j
+    1, 2 -> i <-o j
+    2, 1 -> i o-> j
+    1, 3 -> i --o j
+    3, 1 -> i o-- j
+    2, 2 -> i <-> j
+    2, 3 -> i --> j
+    3, 2 -> i <-- j
+    3, 3 -> i --- j
+    0, 0 -> i     j
+    """
 
     edges = [
-        r"$y_1 \rightarrow y_2$",
-        r"$y_1 \leftarrow y_2$",
-        r"$y_1 \leftrightarrow y_2$",
+        r"y_1 o-o y_2",
+        r"y_1 <-o y_2",
+        r"y_1 o-> y_2",
+        r"y_1 --o y_2",
+        r"y_1 o-- y_2",
+        r"y_1 <-> y_2",
+        r"y_1 --> y_2",
+        r"y_1 <-- y_2",
+        r"y_1 --- y_2",
         r"$y_1 \; \; \; y_2$",
     ]
+
+    edge_ixs = {
+        (1, 1): 0,
+        (1, 2): 1,
+        (2, 1): 2,
+        (1, 3): 3,
+        (3, 1): 4,
+        (2, 2): 5,
+        (2, 3): 6,
+        (3, 2): 7,
+        (3, 3): 8,
+        (0, 0): 9
+    }
+
+    # edges = [
+    #     r"$y_1 \rightarrow y_2$",
+    #     r"$y_1 \leftarrow y_2$",
+    #     r"$y_1 \leftrightarrow y_2$",
+    #     r"$y_1 \; \; \; y_2$",
+    # ]
 
     p_names = get_pheno_codes(pheno_path)
     num_phen = len(p_names)
@@ -581,27 +652,17 @@ def plot_pag(pag_path: str, pheno_path: str, title=None):
         for j in range(i):
             v1 = pag[i, j]
             v2 = pag[j, i]
-            if v1 == 2 and v2 == 3:
-                v = 0
-            elif v1 == 3 and v2 == 2:
-                v = 1
-            elif v1 == 2 and v2 == 2:
-                v = 2
-            elif v1 == 0 and v2 == 0:
-                v = 3
-            else:
-                raise ValueError(f"Got link: ({v1}, {v2})")
-            z[i][j] = v
+            z[i][j] = edge_ixs[(v1, v2)]
 
     ne = len(edges)
 
-    norm = mpl.colors.BoundaryNorm(np.linspace(0, 4, ne + 1), ne)
+    norm = mpl.colors.BoundaryNorm(np.linspace(0, ne, ne + 1), ne)
     fmt = mpl.ticker.FuncFormatter(lambda x, pos: edges[norm(x)])
 
     im, _ = heatmap(np.array(z),
                     p_names,
                     p_names,
-                    cmap=my_cmap,
+                    cmap=cmaps[cmapix],
                     norm=norm,
                     cbar_kw=dict(ticks=np.arange(ne) + 0.5, format=fmt),
                     cbarlabel="Edge Type",
