@@ -646,7 +646,7 @@ def plot_pag(pag_path: str, pheno_path: str, title=None, cmapix=0):
 
     pag = mmread(pag_path).tocsr()
 
-    z = [[4 for _ in range(num_phen)] for _ in range(num_phen)]
+    z = [[9 for _ in range(num_phen)] for _ in range(num_phen)]
 
     for i in range(num_phen):
         for j in range(i):
