@@ -486,7 +486,7 @@ def heatmap(data,
             cbarlabel="",
             xlabel=None,
             ylabel=None,
-            **kwargs):
+            title=None**kwargs):
     """
     Create a heatmap from a numpy array and two lists of labels.
 
@@ -544,11 +544,13 @@ def heatmap(data,
     ax.tick_params(which="minor", bottom=False, left=False)
     ax.set_ylabel(ylabel)
     ax.set_xlabel(xlabel)
+    if title:
+        ax.set_title(title)
 
     return im, cbar
 
 
-def plot_pag(pag_path: str, pheno_path: str):
+def plot_pag(pag_path: str, pheno_path: str, title=None):
     my_cmap = mpl.colors.ListedColormap(
         np.array([
             # "#7e1e9c", # purple
@@ -603,7 +605,8 @@ def plot_pag(pag_path: str, pheno_path: str):
                     cbar_kw=dict(ticks=np.arange(ne) + 0.5, format=fmt),
                     cbarlabel="Edge Type",
                     xlabel=r"$y_2$",
-                    ylabel=r"$y_1$")
+                    ylabel=r"$y_1$"
+                    title=title)
 
 
 def marker_pheno_associations(blockfile: str, outdir: str, pag_path: str,
