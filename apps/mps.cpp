@@ -1532,8 +1532,9 @@ commands:
     mcorrp                  Compute pearson correlations between markers
     ads                     Compute sums of anti-diagonals of marker correlation matrix
     cups                    Use cuPC to compute the parent set for each phenotype
-    prepc                   Run cuPC on very small windows to find locations of candidate associated sites.
+    prepc                   Run cuPC on very small windows to find locations of candidate associated sites
     bdpc                    Run cuPC on block diagonal genomic covariance matrix
+    phenopc                 Run cuPC on phenotypes only
     block                   Build approximately unlinked blocks of markers
     mcorrkb-chr             Compute the banded Kendall correlation matrix for a given chromosome
     write-bin-floats-tst    Homework for Mahdi
@@ -1600,15 +1601,13 @@ auto main(int argc, char *argv[]) -> int
     {
         mcorrkb_chr(argc, argv);
     }
-    else if (cmd == "write-bin-floats-tst")
-    {
-        std::vector<float> data = {0.0, -1.1, 2.2, -3.3, 4.4};
-        std::string loc = "./floats_test.bin";
-        write_floats_to_binary(data.data(), 5, loc);
-    }
     else if (cmd == "prepc")
     {
         prepc(argc, argv);
+    }
+    else if (cmd == "phenopc")
+    {
+        phenotype_pc(argc, argv);
     }
     else
     {
