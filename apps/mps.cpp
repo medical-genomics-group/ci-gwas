@@ -448,6 +448,11 @@ void phenotype_pc(int argc, char *argv[])
     Skeleton(sq_corrs.data(), &p, G.data(), Th.data(), &l, &max_level, pmax.data(), sepset.data());
 
     std::unordered_set<int> parents = {};
+    for (size_t i = 0; i < num_phen; i++)
+    {
+        parents.insert(i);
+    }
+
     ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, parents, p, num_phen, max_level);
     gcs.to_file(make_path(outdir, "pheno_sk", ""));
 }
