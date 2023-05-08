@@ -449,7 +449,7 @@ void phenotype_pc(int argc, char *argv[])
 
     std::unordered_set<int> parents = {};
     ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, parents, p, num_phen, max_level);
-    gcs.to_file(make_path(outdir, block.to_file_string(), ""));
+    gcs.to_file(make_path(outdir, "pheno_sk", ""));
 }
 
 const std::string BDPCSS_USAGE = R"(
