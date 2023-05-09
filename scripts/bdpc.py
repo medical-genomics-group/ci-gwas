@@ -583,77 +583,15 @@ def plot_ace(ace_path: str, pheno_path: str, title=None, cmap="bwr"):
                     title=title)
 
 
-def plot_pag(pag_path: str, pheno_path: str, title=None, cmapix=0):
-    # my_cmap = mpl.colors.ListedColormap(
-    #     np.array([
-    #         # "#658cbb", # faded blue
-    #         # "#658cbb", # faded blue
-    #         # "#658cbb", # faded blue
-    #         # "#658cbb", # faded blue
-    #         "#c9ff27",  # green yellow
-    #         "#d8dcd6",  # light grey
-    #         "#c04e01",  # burnt orange
-    #         "#f7d560",  # light mustard
-    #         # "#658cbb", # faded blue
-    #         "#ffffff",  # white
-    #     ]))
+@dataclass
+class EdgeEncoding:
+    str_rep: list[str]
+    int_rep: dict[tuple(int, int), int]
+    cmap: mpl.colors.ListedColormap
 
-    cmaps = [
-        mpl.colors.ListedColormap(
-            np.array([
-                "#ffffff",  # white
-                "#003f5c",
-                "#2f4b7c",
-                "#665191",
-                "#a05195",
-                "#d45087",
-                "#f95d6a",
-                "#ff7c43",
-                "#ffa600",
-                "#ffe300",
-            ])),
-        mpl.colors.ListedColormap(
-            np.array([
-                "#ffffff",  # white
-                "#e41a1c",
-                "#377eb8",
-                "#4daf4a",
-                "#984ea3",
-                "#ff7f00",
-                "#ffff33",
-                "#a65628",
-                "#f781bf",
-                "#999999",
-            ])),
-        mpl.colors.ListedColormap(
-            np.array([
-                "#ffffff",  # white
-                '#fbb4ae',
-                '#b3cde3',
-                '#ccebc5',
-                '#decbe4',
-                '#fed9a6',
-                '#ffffcc',
-                '#e5d8bd',
-                '#fddaec',
-                '#f2f2f2',
-            ])),
-        mpl.colors.ListedColormap(
-            np.array([
-                "#ffffff",  # white
-                '#1f77b4',
-                '#ff7f0e',
-                '#2ca02c',
-                '#d62728',
-                '#9467bd',
-                '#8c564b',
-                '#e377c2',
-                '#7f7f7f',
-                '#bcbd22',
-            ]))
-    ]
 
-    edges = [
+all_edge_types = EdgeEncoding(
+    [
         r"$y_1 \; \; \; y_2$",
         r"$y_1$ o-o $y_2$",
         r"$y_1$ <-o $y_2$",
@@ -664,9 +602,8 @@ def plot_pag(pag_path: str, pheno_path: str, title=None, cmapix=0):
         r"$y_1$ -> $y_2$",
         r"$y_1$ <- $y_2$",
         r"$y_1$ - $y_2$",
-    ]
-
-    edge_ixs = {
+    ],
+    {
         (0, 0): 0,
         (1, 1): 1,
         (1, 2): 2,
@@ -677,14 +614,113 @@ def plot_pag(pag_path: str, pheno_path: str, title=None, cmapix=0):
         (2, 3): 7,
         (3, 2): 8,
         (3, 3): 9,
-    }
+    },
+    mpl.colors.ListedColormap(
+        np.array([
+            "#ffffff",  # white
+            "#003f5c",
+            "#2f4b7c",
+            "#665191",
+            "#a05195",
+            "#d45087",
+            "#f95d6a",
+            "#ff7c43",
+            "#ffa600",
+            "#ffe300",
+        ])))
 
-    # edges = [
-    #     r"$y_1 \rightarrow y_2$",
-    #     r"$y_1 \leftarrow y_2$",
-    #     r"$y_1 \leftrightarrow y_2$",
-    #     r"$y_1 \; \; \; y_2$",
-    # ]
+six_edge_types = EdgeEncoding(
+    [
+        r"$y_1 \; \; \; y_2$",
+        r"$y_1$ <-o $y_2$",
+        r"$y_1$ o-> $y_2$",
+        r"$y_1$ <-> $y_2$",
+        r"$y_1$ -> $y_2$",
+        r"$y_1$ <- $y_2$",
+        r"$y_1$ - $y_2$",
+    ],
+    {
+        (0, 0): 0,
+        (1, 2): 1,
+        (2, 1): 2,
+        (2, 2): 3,
+        (2, 3): 4,
+        (3, 2): 5,
+        (3, 3): 6,
+    },
+    mpl.colors.ListedColormap(
+        np.array([
+            "#ffffff",  # white
+            "#000421",
+            "#46204c",
+            "#99305b",
+            "#dd584b",
+            "#fb9d20",
+            "#e5ed05"
+        ])))
+
+six_edge_types = EdgeEncoding(
+    [
+        r"$y_1 \; \; \; y_2$",
+        r"$y_1$ <-o $y_2$",
+        r"$y_1$ o-> $y_2$",
+        r"$y_1$ <-> $y_2$",
+        r"$y_1$ -> $y_2$",
+        r"$y_1$ <- $y_2$",
+        r"$y_1$ - $y_2$",
+    ],
+    {
+        (0, 0): 0,
+        (1, 2): 1,
+        (2, 1): 2,
+        (2, 2): 3,
+        (2, 3): 4,
+        (3, 2): 5,
+        (3, 3): 6,
+    },
+    mpl.colors.ListedColormap(
+        np.array([
+            "#ffffff",  # white
+            "#000421",
+            "#46204c",
+            "#99305b",
+            "#dd584b",
+            "#fb9d20",
+            "#e5ed05"
+        ])))
+
+five_common_edge_types = EdgeEncoding(
+    [
+        r"$y_1 \; \; \; y_2$",
+        r"$y_1$ <-o $y_2$",
+        r"$y_1$ o-> $y_2$",
+        r"$y_1$ <-> $y_2$",
+        r"$y_1$ -> $y_2$",
+        r"$y_1$ <- $y_2$",
+    ],
+    {
+        (0, 0): 0,
+        (1, 2): 1,
+        (2, 1): 2,
+        (2, 2): 3,
+        (2, 3): 4,
+        (3, 2): 5,
+    },
+    mpl.colors.ListedColormap(
+        np.array([
+            "#ffffff",  # white
+            "#000421",
+            "#5b2453",
+            "#bf4056",
+            "#f88a2e",
+            "#e5ed05",
+        ])))
+
+
+def plot_pag(pag_path: str,
+             pheno_path: str,
+             title=None,
+             edge_encoding=all_edge_types):
 
     p_names = get_pheno_codes(pheno_path)
     num_phen = len(p_names)
@@ -697,17 +733,18 @@ def plot_pag(pag_path: str, pheno_path: str, title=None, cmapix=0):
         for j in range(i):
             v1 = pag[i, j]
             v2 = pag[j, i]
-            z[i][j] = edge_ixs[(v1, v2)]
+            z[i][j] = edge_encoding.int_rep[(v1, v2)]
 
-    ne = len(edges)
+    ne = len(edge_encoding.int_rep)
 
     norm = mpl.colors.BoundaryNorm(np.linspace(0, ne, ne + 1), ne)
-    fmt = mpl.ticker.FuncFormatter(lambda x, pos: edges[norm(x)])
+    fmt = mpl.ticker.FuncFormatter(
+        lambda x, pos: edge_encoding.str_rep[norm(x)])
 
     im, _ = heatmap(np.array(z),
                     p_names,
                     p_names,
-                    cmap=cmaps[cmapix],
+                    cmap=edge_encoding.cmap,
                     norm=norm,
                     cbar_kw=dict(ticks=np.arange(ne) + 0.5, format=fmt),
                     cbarlabel="Edge Type",
