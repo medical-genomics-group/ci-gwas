@@ -655,15 +655,15 @@ def plot_pag(pag_path: str, pheno_path: str, title=None, cmapix=0):
 
     edges = [
         r"$y_1 \; \; \; y_2$",
-        r"$y_1 o-o y_2$",
-        r"$y_1 <-o y_2$",
-        r"$y_1 o-> y_2$",
-        r"$y_1 --o y_2$",
-        r"$y_1 o-- y_2$",
-        r"$y_1 <-> y_2$",
-        r"$y_1 --> y_2$",
-        r"$y_1 <-- y_2$",
-        r"$y_1 --- y_2$",
+        r"$y_1$ o-o $y_2$",
+        r"$y_1$ <-o $y_2$",
+        r"$y_1$ o-> $y_2$",
+        r"$y_1$ -o $y_2$",
+        r"$y_1$ o- $y_2$",
+        r"$y_1$ <-> $y_2$",
+        r"$y_1$ -> $y_2$",
+        r"$y_1$ <- $y_2$",
+        r"$y_1$ - $y_2$",
     ]
 
     edge_ixs = {
