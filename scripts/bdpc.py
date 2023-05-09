@@ -586,7 +586,7 @@ def plot_ace(ace_path: str, pheno_path: str, title=None, cmap="bwr"):
 @dataclass
 class EdgeEncoding:
     str_rep: list[str]
-    int_rep: dict[tuple(int, int), int]
+    int_rep: dict[tuple[int, int], int]
     cmap: mpl.colors.ListedColormap
 
 
