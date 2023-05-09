@@ -575,9 +575,11 @@ def plot_ace(ace_path: str, pheno_path: str, title=None, cmap="bwr"):
                     p_names,
                     p_names,
                     cmap=cmap,
-                    cbarlabel="ACE",
+                    cbarlabel="$ACE(y_1 \leftarrow y_2)$",
                     vmin=-max_z,
                     vmax=max_z,
+                    xlabel=r"$y_2$",
+                    ylabel=r"$y_1$",
                     title=title)
 
 
