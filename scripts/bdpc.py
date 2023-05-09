@@ -601,6 +601,7 @@ def plot_pag(pag_path: str, pheno_path: str, title=None, cmapix=0):
     cmaps = [
         mpl.colors.ListedColormap(
             np.array([
+                "#ffffff",  # white
                 "#003f5c",
                 "#2f4b7c",
                 "#665191",
@@ -610,10 +611,10 @@ def plot_pag(pag_path: str, pheno_path: str, title=None, cmapix=0):
                 "#ff7c43",
                 "#ffa600",
                 "#ffe300",
-                "#ffffff",  # white
             ])),
         mpl.colors.ListedColormap(
             np.array([
+                "#ffffff",  # white
                 "#e41a1c",
                 "#377eb8",
                 "#4daf4a",
@@ -623,10 +624,10 @@ def plot_pag(pag_path: str, pheno_path: str, title=None, cmapix=0):
                 "#a65628",
                 "#f781bf",
                 "#999999",
-                "#ffffff",  # white
             ])),
         mpl.colors.ListedColormap(
             np.array([
+                "#ffffff",  # white
                 '#fbb4ae',
                 '#b3cde3',
                 '#ccebc5',
@@ -636,10 +637,10 @@ def plot_pag(pag_path: str, pheno_path: str, title=None, cmapix=0):
                 '#e5d8bd',
                 '#fddaec',
                 '#f2f2f2',
-                "#ffffff",  # white
             ])),
         mpl.colors.ListedColormap(
             np.array([
+                "#ffffff",  # white
                 '#1f77b4',
                 '#ff7f0e',
                 '#2ca02c',
@@ -649,47 +650,33 @@ def plot_pag(pag_path: str, pheno_path: str, title=None, cmapix=0):
                 '#e377c2',
                 '#7f7f7f',
                 '#bcbd22',
-                "#ffffff",  # white
             ]))
     ]
-    """
-    i, j
-    1, 1 -> i o-o j
-    1, 2 -> i <-o j
-    2, 1 -> i o-> j
-    1, 3 -> i --o j
-    3, 1 -> i o-- j
-    2, 2 -> i <-> j
-    2, 3 -> i --> j
-    3, 2 -> i <-- j
-    3, 3 -> i --- j
-    0, 0 -> i     j
-    """
 
     edges = [
-        r"y_1 o-o y_2",
-        r"y_1 <-o y_2",
-        r"y_1 o-> y_2",
-        r"y_1 --o y_2",
-        r"y_1 o-- y_2",
-        r"y_1 <-> y_2",
-        r"y_1 --> y_2",
-        r"y_1 <-- y_2",
-        r"y_1 --- y_2",
         r"$y_1 \; \; \; y_2$",
+        r"$y_1 o-o y_2$",
+        r"$y_1 <-o y_2$",
+        r"$y_1 o-> y_2$",
+        r"$y_1 --o y_2$",
+        r"$y_1 o-- y_2$",
+        r"$y_1 <-> y_2$",
+        r"$y_1 --> y_2$",
+        r"$y_1 <-- y_2$",
+        r"$y_1 --- y_2$",
     ]
 
     edge_ixs = {
-        (1, 1): 0,
-        (1, 2): 1,
-        (2, 1): 2,
-        (1, 3): 3,
-        (3, 1): 4,
-        (2, 2): 5,
-        (2, 3): 6,
-        (3, 2): 7,
-        (3, 3): 8,
-        (0, 0): 9
+        (0, 0): 0,
+        (1, 1): 1,
+        (1, 2): 2,
+        (2, 1): 3,
+        (1, 3): 4,
+        (3, 1): 5,
+        (2, 2): 6,
+        (2, 3): 7,
+        (3, 2): 8,
+        (3, 3): 9,
     }
 
     # edges = [
@@ -704,7 +691,7 @@ def plot_pag(pag_path: str, pheno_path: str, title=None, cmapix=0):
 
     pag = mmread(pag_path).tocsr()
 
-    z = [[9 for _ in range(num_phen)] for _ in range(num_phen)]
+    z = [[0 for _ in range(num_phen)] for _ in range(num_phen)]
 
     for i in range(num_phen):
         for j in range(i):
