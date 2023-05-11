@@ -776,6 +776,39 @@ def marker_pheno_associations(blockfile: str, outdir: str, pag_path: str,
     return pd.DataFrame(assoc_markers)
 
 
+def pag_edge_types(pag_path: str,
+                   pheno_path: str) -> dict[tuple[int, int], int]:
+    all_edges = {}
+    p_names = get_pheno_codes(pheno_path)
+    pag = mmread(pag_path).tocsr()
+    plr = pag.tolil().rows
+    for j, r in enumerate(plr):
+        for i in r:
+            e = (pag[i, j], pag[j, i])
+            if e not in all_edges:
+                all_edges[e] = 0
+            all_edges[e] += 1
+    return all_edges
+
+
+def pag_x_to_y_edge_types(pag_path: str,
+                          pheno_path: str) -> dict[tuple[int, int], int]:
+    x_to_y = {}
+    p_names = get_pheno_codes(pheno_path)
+    num_phen = len(p_names)
+    pag = mmread(pag_path).tocsr()
+    plr = pag.tolil().rows
+
+    for j in range(num_phen):
+        for i in plr[j]:
+            if i >= num_phen:
+                e = (pag[i, j], pag[j, i])
+                if e not in x_to_y:
+                    x_to_y[e] = 0
+                x_to_y[e] += 1
+    return x_to_y
+
+
 def combine_all_pheno_and_plot():
     outdir = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/bdpc_d1_l6_a1e8/"
     blockfile = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/ukb22828_UKB_EST_v3_ldp08.blocks"
