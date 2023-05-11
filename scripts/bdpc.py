@@ -300,7 +300,14 @@ def is_possible_child(pag, v1, v2):
     return is_child(pag, v1, v2) or (pag[v2, v1] == 2 and pag[v1, v2] == 1)
 
 
-def pag_exclusive_pleiotropy_sets(pag, num_phen, neighbor_fn, depth=1):
+def pag_exclusive_pleiotropy_sets(pag_path: str,
+                                  pheno_path: str,
+                                  neighbor_fn,
+                                  depth=1):
+    p_names = get_pheno_codes(pheno_path)
+    num_phen = len(p_names)
+    pag = mmread(pag_path).tocsr()
+
     pm = pag_pheno_parent_sets(pag, num_phen, neighbor_fn, depth)
     pleiotropic_markers = set()
     res = {}
