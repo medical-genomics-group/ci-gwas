@@ -507,7 +507,7 @@ def heatmap(data,
             xlabel=None,
             ylabel=None,
             title=None,
-            title_loc='left',
+            title_kw=dict(),
             **kwargs):
     """
     Create a heatmap from a numpy array and two lists of labels.
@@ -566,8 +566,9 @@ def heatmap(data,
     ax.tick_params(which="minor", bottom=False, left=False)
     ax.set_ylabel(ylabel)
     ax.set_xlabel(xlabel)
+
     if title:
-        ax.set_title(title, loc=title_loc)
+        ax.set_title(title, **title_kw)
 
     return im, cbar
 
@@ -579,7 +580,7 @@ def plot_pleiotropy_mat(pag_path: str,
                         ax=None,
                         cbar_kw=None,
                         title=None,
-                        title_loc='left',
+                        title_kw=dict(),
                         cmap='BuPu'):
     poss_parents = pag_exclusive_pleiotropy_sets(pag_path, pheno_path,
                                                  neighbor_fn, depth)
@@ -606,7 +607,7 @@ def plot_pleiotropy_mat(pag_path: str,
         xlabel=r"$y_2$",
         ylabel=r"$y_1$",
         title=title,
-        title_loc=title_loc,
+        title_kw=title_kw,
         ax=None)
 
 
@@ -624,7 +625,7 @@ def load_ace(ace_path: str, pheno_path: str) -> np.array:
 def plot_ace(ace_path: str,
              pheno_path: str,
              title=None,
-             title_loc='left',
+             title_kw=dict(),
              cmap="bwr",
              cbarlabel=r"$ACE \: (y_1 \rightarrow y_2)$",
              cbar_kw=None,
@@ -648,7 +649,7 @@ def plot_ace(ace_path: str,
                     xlabel=r"$y_2$",
                     ylabel=r"$y_1$",
                     title=title,
-                    title_loc=title_loc,
+                    title_kw=title_kw,
                     ax=ax)
 
 
@@ -789,7 +790,7 @@ five_common_edge_types = EdgeEncoding(
 def plot_pag(pag_path: str,
              pheno_path: str,
              title=None,
-             title_loc='left',
+             title_kw=dict(),
              cbar_kw=None,
              edge_encoding=all_edge_types,
              ax=None):
@@ -828,7 +829,7 @@ def plot_pag(pag_path: str,
                     xlabel=r"$y_2$",
                     ylabel=r"$y_1$",
                     title=title,
-                    title_loc=title_loc,
+                    title_kw=title_kw,
                     ax=ax)
 
 
