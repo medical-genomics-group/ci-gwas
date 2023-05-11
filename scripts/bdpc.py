@@ -626,7 +626,7 @@ def plot_ace(ace_path: str,
              title=None,
              title_loc='left',
              cmap="bwr",
-             cbarlabel=r"$ACE \: (y_1 \rightarrow y_2)$"
+             cbarlabel=r"$ACE \: (y_1 \rightarrow y_2)$",
              cbar_kw=None,
              ax=None):
     p_names = get_pheno_codes(pheno_path)
