@@ -507,6 +507,7 @@ def heatmap(data,
             xlabel=None,
             ylabel=None,
             title=None,
+            title_loc='left',
             **kwargs):
     """
     Create a heatmap from a numpy array and two lists of labels.
@@ -566,7 +567,7 @@ def heatmap(data,
     ax.set_ylabel(ylabel)
     ax.set_xlabel(xlabel)
     if title:
-        ax.set_title(title)
+        ax.set_title(title, loc=title_loc)
 
     return im, cbar
 
@@ -577,6 +578,7 @@ def plot_pleiotropy_mat(pag_path: str,
                         depth=1,
                         ax=None,
                         title=None,
+                        title_loc='left',
                         cmap='BuPu'):
     poss_parents = pag_exclusive_pleiotropy_sets(pag_path, pheno_path,
                                                  neighbor_fn, depth)
@@ -602,6 +604,7 @@ def plot_pleiotropy_mat(pag_path: str,
         xlabel=r"$y_2$",
         ylabel=r"$y_1$",
         title=title,
+        title_loc=title_loc,
         ax=None)
 
 
@@ -616,7 +619,12 @@ def load_ace(ace_path: str, pheno_path: str) -> np.array:
     return np.array(z)
 
 
-def plot_ace(ace_path: str, pheno_path: str, title=None, cmap="bwr", ax=None):
+def plot_ace(ace_path: str,
+             pheno_path: str,
+             title=None,
+             title_loc='left',
+             cmap="bwr",
+             ax=None):
     p_names = get_pheno_codes(pheno_path)
     num_phen = len(p_names)
     ace = mmread(ace_path).tocsr()
@@ -635,6 +643,7 @@ def plot_ace(ace_path: str, pheno_path: str, title=None, cmap="bwr", ax=None):
                     xlabel=r"$y_2$",
                     ylabel=r"$y_1$",
                     title=title,
+                    title_loc=title_loc,
                     ax=ax)
 
 
@@ -775,6 +784,7 @@ five_common_edge_types = EdgeEncoding(
 def plot_pag(pag_path: str,
              pheno_path: str,
              title=None,
+             title_loc='left',
              edge_encoding=all_edge_types,
              ax=None):
 
@@ -807,6 +817,7 @@ def plot_pag(pag_path: str,
                     xlabel=r"$y_2$",
                     ylabel=r"$y_1$",
                     title=title,
+                    title_loc=title_loc,
                     ax=ax)
 
 
