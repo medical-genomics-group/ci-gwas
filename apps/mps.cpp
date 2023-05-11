@@ -802,9 +802,6 @@ void block_diagonal_pc(int argc, char *argv[])
 
         std::unordered_set<int> parents = parent_set(G, num_var, num_markers, depth);
 
-        // TODO: make ordering optional
-        direct_x_to_y(G, num_var, num_markers);
-
         ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, parents, num_var, num_phen, max_level);
 
         std::cout << "Retained " << (parents.size() - num_phen) << " / " << num_markers
