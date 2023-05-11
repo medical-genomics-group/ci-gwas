@@ -267,7 +267,7 @@ def global_parent_sets(blockfile: str, outdir: str, reduced_indices=False):
     return eps
 
 
-def pag_pheno_parent_sets(pag, num_phen):
+def pag_pheno_parent_sets(pag, num_phen, neighbor_fn, depth=1):
     """Compute upper bound of markers that could affect each phenotype or combination of phenotypes
     """
     res = {}
@@ -275,20 +275,33 @@ def pag_pheno_parent_sets(pag, num_phen):
     phens = set(np.arange(num_phen))
     for pix in range(num_phen):
         visited = set()
+        nq = queue.Queue()
         q = queue.Queue()
         q.put(pix)
-        while not q.empty():
-            v1 = q.get()
-            for v2 in plr[v1]:
-                if not v2 in phens and not v2 in visited and pag[v2, v1] == 2:
-                    q.put(v2)
-                    visited.add(v2)
+        for _ in range(depth):
+            while not q.empty():
+                v1 = q.get()
+                for v2 in plr[v1]:
+                    if not v2 in phens and not v2 in visited and neighbor_fn(
+                            pag, v1, v2):
+                        nq.put(v2)
+                        visited.add(v2)
+            q = nq
+            nq = queue.Queue()
         res[pix] = visited
     return res
 
 
-def pag_exclusive_pleiotropy_sets(pag, num_phen):
-    pm = pag_pheno_parent_sets(pag, num_phen)
+def is_child(pag, v1, v2):
+    return pag[v2, v1] == 2 and pag[v1, v2] == 3
+
+
+def is_possible_child(pag, v1, v2):
+    return is_child(pag, v1, v2) or (pag[v2, v1] == 2 and pag[v1, v2] == 1)
+
+
+def pag_exclusive_pleiotropy_sets(pag, num_phen, neighbor_fn, depth=1):
+    pm = pag_pheno_parent_sets(pag, num_phen, neighbor_fn, depth)
     pleiotropic_markers = set()
     res = {}
     for i in range(num_phen):
