@@ -577,6 +577,7 @@ def plot_pleiotropy_mat(pag_path: str,
                         neighbor_fn=is_possible_child,
                         depth=1,
                         ax=None,
+                        cbar_kw=None,
                         title=None,
                         title_loc='left',
                         cmap='BuPu'):
@@ -598,6 +599,7 @@ def plot_pleiotropy_mat(pag_path: str,
         p_names,
         p_names,
         cmap=cmap,
+        cbar_kw=cbar_kw,
         cbarlabel=r"# shared parent markers",
         # vmin=-max_z,
         # vmax=max_z,
@@ -624,6 +626,8 @@ def plot_ace(ace_path: str,
              title=None,
              title_loc='left',
              cmap="bwr",
+             cbarlabel=r"$ACE \: (y_1 \rightarrow y_2)$"
+             cbar_kw=None,
              ax=None):
     p_names = get_pheno_codes(pheno_path)
     num_phen = len(p_names)
@@ -637,7 +641,8 @@ def plot_ace(ace_path: str,
                     p_names,
                     p_names,
                     cmap=cmap,
-                    cbarlabel=r"$ACE \: (y_1 \rightarrow y_2)$",
+                    cbarlabel=cbarlabel,
+                    cbar_kw=cbar_kw,
                     vmin=-max_z,
                     vmax=max_z,
                     xlabel=r"$y_2$",
@@ -785,6 +790,7 @@ def plot_pag(pag_path: str,
              pheno_path: str,
              title=None,
              title_loc='left',
+             cbar_kw=None,
              edge_encoding=all_edge_types,
              ax=None):
 
@@ -807,12 +813,17 @@ def plot_pag(pag_path: str,
     fmt = mpl.ticker.FuncFormatter(
         lambda x, pos: edge_encoding.str_rep[norm(x)])
 
+    if cbar_kw is None:
+        cbar_kw = {}
+    cbar_kw["ticks"] = np.arange(ne) + 0.5
+    cbar_kw["format"] = fmt
+
     im, _ = heatmap(np.array(z),
                     p_names,
                     p_names,
                     cmap=edge_encoding.cmap,
                     norm=norm,
-                    cbar_kw=dict(ticks=np.arange(ne) + 0.5, format=fmt),
+                    cbar_kw=cbar_kw,
                     cbarlabel="Edge Type",
                     xlabel=r"$y_2$",
                     ylabel=r"$y_1$",
