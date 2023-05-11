@@ -571,6 +571,40 @@ def heatmap(data,
     return im, cbar
 
 
+def plot_pleiotropy_mat(pag_path: str,
+                        pheno_path: str,
+                        neighbor_fn=is_possible_child,
+                        depth=1,
+                        ax=None,
+                        title=None,
+                        cmap='BuPu'):
+    poss_parents = pag_exclusive_pleiotropy_sets(pag_path, pheno_path,
+                                                 neighbor_fn, depth)
+    p_names = get_pheno_codes(pheno_path)
+    num_phen = len(p_names)
+    z = [[0 for _ in range(num_phen)] for _ in range(num_phen)]
+    for i in range(num_phen):
+        for j in range(i + 1):
+            z[i][j] = len(poss_parents[(i, j)])
+    z = np.array(z)
+    mask = ~np.tri(z.shape[0], k=0, dtype=bool)
+    z = np.ma.array(z, mask=mask)  # mask out the lower triangle
+    cmap = mpl.colormaps[cmap]  # jet doesn't have white color
+    cmap.set_bad('w')  # default value is 'k'
+    im, _ = heatmap(
+        z,
+        p_names,
+        p_names,
+        cmap=cmap,
+        cbarlabel=r"# shared parent markers",
+        # vmin=-max_z,
+        # vmax=max_z,
+        xlabel=r"$y_2$",
+        ylabel=r"$y_1$",
+        title=title,
+        ax=None)
+
+
 def load_ace(ace_path: str, pheno_path: str) -> np.array:
     p_names = get_pheno_codes(pheno_path)
     num_phen = len(p_names)
@@ -582,7 +616,7 @@ def load_ace(ace_path: str, pheno_path: str) -> np.array:
     return np.array(z)
 
 
-def plot_ace(ace_path: str, pheno_path: str, title=None, cmap="bwr"):
+def plot_ace(ace_path: str, pheno_path: str, title=None, cmap="bwr", ax=None):
     p_names = get_pheno_codes(pheno_path)
     num_phen = len(p_names)
     ace = mmread(ace_path).tocsr()
@@ -600,7 +634,8 @@ def plot_ace(ace_path: str, pheno_path: str, title=None, cmap="bwr"):
                     vmax=max_z,
                     xlabel=r"$y_2$",
                     ylabel=r"$y_1$",
-                    title=title)
+                    title=title,
+                    ax=ax)
 
 
 @dataclass
@@ -740,7 +775,8 @@ five_common_edge_types = EdgeEncoding(
 def plot_pag(pag_path: str,
              pheno_path: str,
              title=None,
-             edge_encoding=all_edge_types):
+             edge_encoding=all_edge_types,
+             ax=None):
 
     p_names = get_pheno_codes(pheno_path)
     num_phen = len(p_names)
@@ -770,7 +806,8 @@ def plot_pag(pag_path: str,
                     cbarlabel="Edge Type",
                     xlabel=r"$y_2$",
                     ylabel=r"$y_1$",
-                    title=title)
+                    title=title,
+                    ax=ax)
 
 
 def marker_pheno_associations(blockfile: str, outdir: str, pag_path: str,
