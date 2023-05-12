@@ -833,14 +833,19 @@ def plot_pag(pag_path: str,
                     ax=ax)
 
 
-def marker_pheno_associations(blockfile: str, outdir: str, pag_path: str,
-                              pheno_path: str, bim_path: str):
+def marker_pheno_associations(blockfile: str,
+                              outdir: str,
+                              pag_path: str,
+                              pheno_path: str,
+                              bim_path: str,
+                              neighbor_fn=is_possible_child,
+                              depth=1):
     gr = merge_block_outputs(blockfile, outdir)
     rs_ids = pd.read_csv(bim_path, sep='\t', header=None)[1].values
     p_names = get_pheno_codes(pheno_path)
     num_phen = len(p_names)
     pag = mmread(pag_path).tocsr()
-    geps = pag_exclusive_pleiotropy_sets(pag, num_phen)
+    geps = pag_exclusive_pleiotropy_sets(pag, num_phen, neighbor_fn, depth)
     assoc_markers = []
 
     for pix in range(num_phen):
