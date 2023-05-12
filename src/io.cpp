@@ -172,6 +172,10 @@ std::vector<float> read_correlations_from_mtx(const std::string path)
 
     while (std::getline(mtx_file, line))
     {
+        if (line.empty()) {
+            break;
+        }
+        std::cout << line << std::endl;
         if (line.starts_with("%"))
         {
             dim_line = true;
@@ -186,9 +190,14 @@ std::vector<float> read_correlations_from_mtx(const std::string path)
             corrs.assign(ni * nj, 0.0);
             continue;
         }
+        std::cout << mtx_line[0] << std::endl;
+        std::cout << mtx_line[1] << std::endl;
+        std::cout << mtx_line[2] << std::endl;
         int i = std::stoi(mtx_line[0]) - 1;
         int j = std::stoi(mtx_line[1]) - 1;
-        float c = std::stof(mtx_line[2]);
+        float c = (float)std::stod(mtx_line[2]);
+        printf("%i, %i, %f \n", i + 1, j + 1, c);
+        printf("\n");
         corrs[i * nj + j] = c;
         corrs[j * nj + i] = c;
     }
