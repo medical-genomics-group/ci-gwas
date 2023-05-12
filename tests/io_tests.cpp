@@ -17,7 +17,7 @@ TEST(read_correlations_from_mtx, expected_results)
          .013313834590098538,
          -.026459418125921043,
          .013313834590098538,
-         1.0}
+         1.0};
 
     std::vector<float>
         obs_vals = read_correlations_from_mtx("../../tests/test_files/test.mtx");

@@ -181,14 +181,14 @@ std::vector<float> read_correlations_from_mtx(const std::string path)
         if (dim_line)
         {
             dim_line = false;
-            ni = std::stoi(line[0]);
-            nj = std::stoi(line[1]);
+            ni = std::stoi(mtx_line[0]);
+            nj = std::stoi(mtx_line[1]);
             corrs.assign(ni * nj, 0.0);
             continue;
         }
-        int i = std::stoi(line[0]);
-        int j = std::stoi(line[1]);
-        int c = std::stof(line[2]);
+        int i = std::stoi(mtx_line[0]);
+        int j = std::stoi(mtx_line[1]);
+        int c = std::stof(mtx_line[2]);
         corrs[i * nj + j] = c;
         corrs[j * nj + i] = c;
     }
