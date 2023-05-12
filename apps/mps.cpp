@@ -487,7 +487,46 @@ void sim_pc(int argc, char *argv[])
     std::string outdir = (std::string)argv[8];
 
     check_path(mtx_path);
-    check_path(outdir);
+
+    std::cout << "Loading phenotype correlations" << std::endl;
+    std::vector<float> corrs = read_correlations_from_mtx(mtx_path);
+
+    int num_var = (int)floor(sqrt(corrs.size()));
+    int num_markers = num_var - num_phen;
+
+    // size_t num_individuals = dims.get_num_samples();
+    std::vector<float> Th = threshold_array(num_individuals, alpha);
+
+    std::cout << "Number of levels: " << max_level << std::endl;
+
+    std::cout << "Setting level thr for cuPC: " << std::endl;
+    for (int i = 0; i <= max_level; ++i)
+    {
+        std::cout << "\t Level: " << i << " thr: " << Th[i] << std::endl;
+    }
+
+    std::cout << "Running cuPC" << std::endl;
+
+    // call cuPC
+    int p = num_var;
+    const size_t sepset_size = p * p * ML;
+    const size_t g_size = num_var * num_var;
+    std::vector<float> pmax(g_size, 0.0);
+    std::vector<int> G(g_size, 1);
+    std::vector<int> sepset(sepset_size, 0);
+    int l = 0;
+    Skeleton(corrs.data(), &p, G.data(), Th.data(), &l, &max_level, pmax.data(), sepset.data());
+
+    std::cout << "Reducing data to phenotype parent sets" << std::endl;
+
+    std::unordered_set<int> parents = parent_set(G, num_var, num_markers, depth);
+
+    ReducedGCS gcs = reduce_gcs(G, corrs, sepset, parents, num_var, num_phen, max_level);
+
+    std::cout << "Retained " << (parents.size() - num_phen) << " / " << num_markers << " markers"
+              << std::endl;
+
+    gcs.to_file(make_path(outdir, "skeleton", ""));
 }
 
 const std::string BDPCSS_USAGE = R"(
@@ -1569,6 +1608,7 @@ commands:
     cups                    Use cuPC to compute the parent set for each phenotype
     prepc                   Run cuPC on very small windows to find locations of candidate associated sites
     bdpc                    Run cuPC on block diagonal genomic covariance matrix
+    simpc                   Run cuPC on single simulated block
     phenopc                 Run cuPC on phenotypes only
     block                   Build approximately unlinked blocks of markers
     mcorrkb-chr             Compute the banded Kendall correlation matrix for a given chromosome
@@ -1643,6 +1683,10 @@ auto main(int argc, char *argv[]) -> int
     else if (cmd == "phenopc")
     {
         phenotype_pc(argc, argv);
+    }
+    else if (cmd == "simpc")
+    {
+        sim_pc(argc, argv);
     }
     else
     {
