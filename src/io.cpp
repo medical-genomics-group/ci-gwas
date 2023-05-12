@@ -158,6 +158,44 @@ std::vector<int> read_ints_from_lines(const std::string path)
     return res;
 }
 
+std::vector<float> read_correlations_from_mtx(const std::string path)
+{
+    std::vector<float> corrs;
+    std::string mtx_line[3];
+    std::string line;
+    std::ifstream mtx_file(path);
+
+    bool dim_line = false;
+
+    int ni = 0;
+    int nj = 0;
+
+    while (std::getline(mtx_file, line))
+    {
+        if (line.startswith("%"))
+        {
+            dim_line = true;
+            continue;
+        }
+        split_line(line, mtx_line, 3);
+        if (dim_line)
+        {
+            dim_line = false;
+            ni = std::stoi(line[0]);
+            nj = std::stoi(line[1]);
+            corrs.assign(ni * nj, 0.0);
+            continue;
+        }
+        int i = std::stoi(line[0]);
+        int j = std::stoi(line[1]);
+        int c = std::stof(line[2]);
+        corrs[i * nj + j] = c;
+        corrs[j * nj + i] = c;
+    }
+
+    return corrs;
+}
+
 std::vector<float> read_floats_from_binary(const std::string path)
 {
     float f;

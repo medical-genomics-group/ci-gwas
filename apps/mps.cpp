@@ -457,6 +457,39 @@ void phenotype_pc(int argc, char *argv[])
     gcs.to_file(make_path(outdir, "pheno_sk", ""));
 }
 
+const std::string SIMPC_USAGE = R"(
+Like bdpcss but with mtx file input and with a single block.
+
+usage: mps simpc <mtx> <alpha> <max-level> <depth> <num_samples> <num-phen> <outdir>
+
+arguments:
+    mtx             correlation matrix where the last `num-phen` variables are the phenotypes. In .mtx format.
+    alpha           significance level
+    max-level       maximal size of seperation sets in cuPC
+    depth           max depth at which marker variables are kept as ancestors
+    num-samples     number of samples used in correlation calculations
+    num-phen        number of phenotypes
+    outdir          outdir
+)";
+
+const int SIMPC_NARGS = 9;
+
+void sim_pc(int argc, char *argv[])
+{
+    check_nargs(argc, SIMPC_NARGS, SIMPC_USAGE);
+
+    std::string mtx_path = argv[2];
+    float alpha = std::stof(argv[3]);
+    int max_level = std::stoi(argv[4]);
+    int depth = std::stoi(argv[5]);
+    int num_individuals = std::stoi(argv[6]);
+    int num_phen = std::stoi(argv[7]);
+    std::string outdir = (std::string)argv[8];
+
+    check_path(mtx_path);
+    check_path(outdir);
+}
+
 const std::string BDPCSS_USAGE = R"(
 Run cuPC on block diagonal genomic correlation matrix with pre-computed correlations.
 

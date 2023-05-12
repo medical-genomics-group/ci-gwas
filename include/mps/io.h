@@ -133,3 +133,5 @@ void check_bed_path(const std::string basepath);
 void check_path(const std::string path);
 
 bool path_exists(const std::string path);
+
+std::vector<float> read_correlations_from_mtx(const std::string path);
