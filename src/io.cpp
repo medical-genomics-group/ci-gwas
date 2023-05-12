@@ -172,7 +172,7 @@ std::vector<float> read_correlations_from_mtx(const std::string path)
 
     while (std::getline(mtx_file, line))
     {
-        if (line.startswith("%"))
+        if (line.starts_with("%"))
         {
             dim_line = true;
             continue;
