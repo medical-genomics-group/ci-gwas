@@ -186,9 +186,9 @@ std::vector<float> read_correlations_from_mtx(const std::string path)
             corrs.assign(ni * nj, 0.0);
             continue;
         }
-        int i = std::stoi(mtx_line[0]);
-        int j = std::stoi(mtx_line[1]);
-        int c = std::stof(mtx_line[2]);
+        int i = std::stoi(mtx_line[0]) - 1;
+        int j = std::stoi(mtx_line[1]) - 1;
+        float c = std::stof(mtx_line[2]);
         corrs[i * nj + j] = c;
         corrs[j * nj + i] = c;
     }
