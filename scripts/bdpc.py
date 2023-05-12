@@ -845,7 +845,7 @@ def marker_pheno_associations(blockfile: str,
     p_names = get_pheno_codes(pheno_path)
     num_phen = len(p_names)
     pag = mmread(pag_path).tocsr()
-    geps = pag_exclusive_pleiotropy_sets(pag, num_phen, neighbor_fn, depth)
+    geps = pag_exclusive_pleiotropy_sets(pag, pheno_path, neighbor_fn, depth)
     assoc_markers = []
 
     for pix in range(num_phen):
