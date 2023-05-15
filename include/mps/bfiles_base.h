@@ -32,6 +32,8 @@ class BfilesBase
 
     std::string blocks() const { return base + ".blocks"; }
 
+    std::string blocks(int size) const { return base + "_m" + std::to_string(size) + ".blocks"; }
+
     std::string with_suffix(std::string sfx) const { return base + "." + sfx; }
 
     bool has_valid_bed_prefix() const
