@@ -146,7 +146,7 @@ void make_blocks(int argc, char *argv[])
         std::cout << "[Chr " << cid << "]: Partitioned into " << blocks.size() << " blocks."
                   << std::endl;
         std::cout << "[Chr " << cid << "]: Writing blocks to output file." << std::endl;
-        write_marker_blocks_to_file(blocks, bfiles.blocks());
+        write_marker_blocks_to_file(blocks, bfiles.blocks(max_block_size));
     }
 
     std::cout << "Done." << std::endl;
