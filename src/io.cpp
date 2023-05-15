@@ -175,7 +175,6 @@ std::vector<float> read_correlations_from_mtx(const std::string path)
         if (line.empty()) {
             break;
         }
-        std::cout << line << std::endl;
         if (line.starts_with("%"))
         {
             dim_line = true;
@@ -196,8 +195,6 @@ std::vector<float> read_correlations_from_mtx(const std::string path)
         int i = std::stoi(mtx_line[0]) - 1;
         int j = std::stoi(mtx_line[1]) - 1;
         float c = (float)std::stod(mtx_line[2]);
-        printf("%i, %i, %f \n", i + 1, j + 1, c);
-        printf("\n");
         corrs[i * nj + j] = c;
         corrs[j * nj + i] = c;
     }
