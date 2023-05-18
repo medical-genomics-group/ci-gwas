@@ -879,7 +879,7 @@ void block_diagonal_pc(int argc, char *argv[])
         std::cout << "Retained " << (parents.size() - num_phen) << " / " << num_markers
                   << " markers" << std::endl;
 
-        gcs.to_file(make_path(outdir, "skeleton", ""));
+        gcs.to_file(make_path(outdir, block.to_file_string(), ""));
     }
 }
 
