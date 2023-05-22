@@ -124,6 +124,8 @@ void write_ints_to_binary(const int *data, const size_t nvals, const std::string
 
 void write_floats_to_binary(const float *data, const size_t nvals, const std::string path);
 
+void append_floats_to_binary(const float *data, const size_t nvals, const std::string path);
+
 std::vector<MarkerBlock> read_blocks_from_file(const std::string path);
 
 void check_prepped_bed_path(const std::string basepath);

@@ -172,7 +172,8 @@ std::vector<float> read_correlations_from_mtx(const std::string path)
 
     while (std::getline(mtx_file, line))
     {
-        if (line.empty()) {
+        if (line.empty())
+        {
             break;
         }
         if (line.starts_with("%"))
@@ -255,6 +256,17 @@ void write_ints_to_binary(const int *data, const size_t nvals, const std::string
 {
     std::ofstream fout;
     fout.open(path, std::ios::out | std::ios::binary);
+    for (size_t i = 0; i < nvals; ++i)
+    {
+        fout.write(reinterpret_cast<const char *>(&data[i]), sizeof(float));
+    }
+    fout.close();
+}
+
+void append_floats_to_binary(const float *data, const size_t nvals, const std::string path)
+{
+    std::ofstream fout;
+    fout.open(path, std::ios::out | std::ios::binary | std::ios : app);
     for (size_t i = 0; i < nvals; ++i)
     {
         fout.write(reinterpret_cast<const char *>(&data[i]), sizeof(float));
