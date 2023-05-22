@@ -619,7 +619,7 @@ void marker_pheno_corr_dist(int argc, char *argv[])
         }
     }
 
-    for (size_t bid = first_block; bid < blocks.size(); bid++)
+    for (size_t bid = 0; bid < blocks.size(); bid++)
     {
         std::cout << std::endl;
         std::cout << "Processing block " << bid + 1 << " / " << blocks.size() << std::endl;
@@ -656,7 +656,7 @@ void marker_pheno_corr_dist(int argc, char *argv[])
         size_t marker_phen_corr_mat_size = num_markers * num_phen;
         std::vector<float> marker_phen_corr(marker_phen_corr_mat_size, 0.0);
 
-        std::cout << "Checking for significant marker - phen correlations" << std::endl;
+        std::cout << "Computing marker - phen correlations" << std::endl;
 
         cu_marker_phen_corr_pearson(
             bedblock.data(),
@@ -673,6 +673,7 @@ void marker_pheno_corr_dist(int argc, char *argv[])
             marker_phen_corr.data(), marker_phen_corr_mat_size, make_path(outdir, "mxp", ".corr")
         );
     }
+}
 
     const std::string BDPCSS_USAGE = R"(
 Run cuPC on block diagonal genomic correlation matrix with pre-computed correlations.

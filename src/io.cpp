@@ -266,7 +266,7 @@ void write_ints_to_binary(const int *data, const size_t nvals, const std::string
 void append_floats_to_binary(const float *data, const size_t nvals, const std::string path)
 {
     std::ofstream fout;
-    fout.open(path, std::ios::out | std::ios::binary | std::ios : app);
+    fout.open(path, std::ios::out | std::ios::binary | std::ios::app);
     for (size_t i = 0; i < nvals; ++i)
     {
         fout.write(reinterpret_cast<const char *>(&data[i]), sizeof(float));
