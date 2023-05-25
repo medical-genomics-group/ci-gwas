@@ -12,13 +12,13 @@ SMALL_SIZE = 12
 MEDIUM_SIZE = 14
 BIGGER_SIZE = 16
 
-plt.rc('font', size=SMALL_SIZE)  # controls default text sizes
-plt.rc('axes', titlesize=MEDIUM_SIZE)  # fontsize of the axes title
-plt.rc('axes', labelsize=MEDIUM_SIZE)  # fontsize of the x and y labels
-plt.rc('xtick', labelsize=MEDIUM_SIZE)  # fontsize of the tick labels
-plt.rc('ytick', labelsize=MEDIUM_SIZE)  # fontsize of the tick labels
-plt.rc('legend', fontsize=SMALL_SIZE)  # legend fontsize
-plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
+plt.rc("font", size=SMALL_SIZE)  # controls default text sizes
+plt.rc("axes", titlesize=MEDIUM_SIZE)  # fontsize of the axes title
+plt.rc("axes", labelsize=MEDIUM_SIZE)  # fontsize of the x and y labels
+plt.rc("xtick", labelsize=MEDIUM_SIZE)  # fontsize of the tick labels
+plt.rc("ytick", labelsize=MEDIUM_SIZE)  # fontsize of the tick labels
+plt.rc("legend", fontsize=SMALL_SIZE)  # legend fontsize
+plt.rc("figure", titlesize=BIGGER_SIZE)  # fontsize of the figure title
 
 rng = np.random.default_rng()
 
@@ -26,14 +26,14 @@ BASE_INDEX = 1
 
 
 def get_pheno_codes(phen_path):
-    with open(phen_path, 'r') as fin:
+    with open(phen_path, "r") as fin:
         header = fin.readline()
     return header.strip().split("\t")[2:]
 
 
 def get_block_out_stems(blockpath):
     res = []
-    with open(blockpath, 'r') as fin:
+    with open(blockpath, "r") as fin:
         for line in fin:
             line = line.strip()
             fields = line.split("\t")
@@ -42,24 +42,20 @@ def get_block_out_stems(blockpath):
 
 
 def load_mdim(basepath: str):
-    with open(basepath + '.mdim', 'r') as fin:
+    with open(basepath + ".mdim", "r") as fin:
         fields = fin.readline().strip().split("\t")
     return [int(f) for f in fields]
 
 
-def make_dm_ix_to_sm_ix(num_m: int, num_p: int,
-                        marker_offset: int) -> np.array:
+def make_dm_ix_to_sm_ix(num_m: int, num_p: int, marker_offset: int) -> np.array:
     ixs = np.arange(num_m + num_p)
     new_ixs = np.zeros_like(ixs)
-    new_ixs[np.where(ixs < num_m)] = ixs[np.where(
-        ixs < num_m)] + marker_offset + num_p + BASE_INDEX
-    new_ixs[np.where(
-        ixs >= num_m)] = ixs[np.where(ixs >= num_m)] - num_m + BASE_INDEX
+    new_ixs[np.where(ixs < num_m)] = ixs[np.where(ixs < num_m)] + marker_offset + num_p + BASE_INDEX
+    new_ixs[np.where(ixs >= num_m)] = ixs[np.where(ixs >= num_m)] - num_m + BASE_INDEX
     return new_ixs
 
 
-def load_mat_sparse(basepath: str, num_m: int, num_p: int, marker_offset,
-                    dtype, suffix):
+def load_mat_sparse(basepath: str, num_m: int, num_p: int, marker_offset, dtype, suffix):
     res = {}
     n = num_m + num_p
     dm = np.fromfile(basepath + suffix, dtype=dtype)
@@ -73,8 +69,7 @@ def load_mat_sparse(basepath: str, num_m: int, num_p: int, marker_offset,
     return res
 
 
-def load_sepset_sparse(basepath: str, num_m: int, num_p: int, max_level: int,
-                       marker_offset):
+def load_sepset_sparse(basepath: str, num_m: int, num_p: int, max_level: int, marker_offset):
     res = {}
     n = num_m + num_p
     dm = np.fromfile(basepath + ".sep", dtype=np.int32)
@@ -90,35 +85,30 @@ def load_sepset_sparse(basepath: str, num_m: int, num_p: int, max_level: int,
             if new_s:
                 # print(i, j, [dm[(i * n + j) * max_level + six] for six in range(max_level)])
                 if dm2sm[i] in new_s or dm2sm[j] in new_s:
-                    raise ValueError('SepSet(x, y) contains x or y')
+                    raise ValueError("SepSet(x, y) contains x or y")
                 res[(dm2sm[i], dm2sm[j])] = new_s
 
     return res
 
 
 def load_corr_sparse(basepath: str, num_m: int, num_p: int, marker_offset):
-    return load_mat_sparse(basepath, num_m, num_p, marker_offset, np.float32,
-                           ".corr")
+    return load_mat_sparse(basepath, num_m, num_p, marker_offset, np.float32, ".corr")
 
 
 def load_adj_sparse(basepath: str, num_m: int, num_p: int, marker_offset=0):
-    return load_mat_sparse(basepath, num_m, num_p, marker_offset, np.int32,
-                           ".adj")
+    return load_mat_sparse(basepath, num_m, num_p, marker_offset, np.int32, ".adj")
 
 
-def load_global_marker_indices(basepath: str,
-                               num_m: int,
-                               num_p: int,
-                               selected_marker_offset=0,
-                               global_marker_offset=0):
+def load_global_marker_indices(
+    basepath: str, num_m: int, num_p: int, selected_marker_offset=0, global_marker_offset=0
+):
     global_marker_indices = {}
     rel_to_block = np.fromfile(basepath + ".ixs", dtype=np.int32)
     dm2sm = make_dm_ix_to_sm_ix(num_m, num_p, selected_marker_offset)
     for dm_ix in range(len(dm2sm)):
         sm_ix = dm2sm[dm_ix]
         if sm_ix >= num_p:
-            global_marker_indices[
-                sm_ix] = rel_to_block[dm_ix] + global_marker_offset
+            global_marker_indices[sm_ix] = rel_to_block[dm_ix] + global_marker_offset
     return global_marker_indices
 
 
@@ -171,8 +161,9 @@ def merge_block_outputs(blockfile: str, outdir: str):
         marker_offset += bo.num_markers()
         global_marker_offset += bo.block_size()
 
-    return GlobalBdpcResult(sam, scm, ssm, gmi, marker_offset + bo.num_phen(),
-                            bo.num_phen(), bo.max_level())
+    return GlobalBdpcResult(
+        sam, scm, ssm, gmi, marker_offset + bo.num_phen(), bo.num_phen(), bo.max_level()
+    )
 
 
 def global_epm(blockfile: str, outdir: str):
@@ -216,10 +207,7 @@ def global_eps(blockfile: str, outdir: str):
     return eps
 
 
-def global_ancestor_sets(blockfile: str,
-                         outdir: str,
-                         reduced_indices=False,
-                         depth=1):
+def global_ancestor_sets(blockfile: str, outdir: str, reduced_indices=False, depth=1):
     if not reduced_indices:
         gr = merge_block_outputs(blockfile, outdir)
 
@@ -268,8 +256,7 @@ def global_parent_sets(blockfile: str, outdir: str, reduced_indices=False):
 
 
 def pag_pheno_parent_sets(pag, num_phen, neighbor_fn, depth=1):
-    """Compute upper bound of markers that could affect each phenotype or combination of phenotypes
-    """
+    """Compute upper bound of markers that could affect each phenotype or combination of phenotypes"""
     res = {}
     plr = pag.tolil().rows
     phens = set(np.arange(num_phen))
@@ -282,8 +269,7 @@ def pag_pheno_parent_sets(pag, num_phen, neighbor_fn, depth=1):
             while not q.empty():
                 v1 = q.get()
                 for v2 in plr[v1]:
-                    if not v2 in phens and not v2 in visited and neighbor_fn(
-                            pag, v1, v2):
+                    if not v2 in phens and not v2 in visited and neighbor_fn(pag, v1, v2):
                         nq.put(v2)
                         visited.add(v2)
             q = nq
@@ -300,10 +286,7 @@ def is_possible_child(pag, v1, v2):
     return is_child(pag, v1, v2) or (pag[v2, v1] == 2 and pag[v1, v2] == 1)
 
 
-def pag_exclusive_pleiotropy_sets(pag_path: str,
-                                  pheno_path: str,
-                                  neighbor_fn,
-                                  depth=1):
+def pag_exclusive_pleiotropy_sets(pag_path: str, pheno_path: str, neighbor_fn, depth=1):
     p_names = get_pheno_codes(pheno_path)
     num_phen = len(p_names)
     pag = mmread(pag_path).tocsr()
@@ -328,7 +311,6 @@ def block_size(basepath: str) -> int:
 
 
 class BlockOutput:
-
     def __init__(self, basepath: str, marker_offset=0, global_marker_offset=0):
         self.basepath = basepath
         self.mdim = load_mdim(basepath)
@@ -354,22 +336,28 @@ class BlockOutput:
         return self.num_markers() > 0
 
     def sam(self):
-        return load_adj_sparse(self.basepath, self.num_markers(),
-                               self.num_phen(), self.marker_offset)
+        return load_adj_sparse(
+            self.basepath, self.num_markers(), self.num_phen(), self.marker_offset
+        )
 
     def scm(self):
-        return load_corr_sparse(self.basepath, self.num_markers(),
-                                self.num_phen(), self.marker_offset)
+        return load_corr_sparse(
+            self.basepath, self.num_markers(), self.num_phen(), self.marker_offset
+        )
 
     def ssm(self):
-        return load_sepset_sparse(self.basepath, self.num_markers(),
-                                  self.num_phen(), self.max_level(),
-                                  self.marker_offset)
+        return load_sepset_sparse(
+            self.basepath, self.num_markers(), self.num_phen(), self.max_level(), self.marker_offset
+        )
 
     def gmi(self):
-        return load_global_marker_indices(self.basepath, self.num_markers(),
-                                          self.num_phen(), self.marker_offset,
-                                          self.global_marker_offset)
+        return load_global_marker_indices(
+            self.basepath,
+            self.num_markers(),
+            self.num_phen(),
+            self.marker_offset,
+            self.global_marker_offset,
+        )
 
     def marker_indices(self):
         first = self.num_phen() + self.marker_offset
@@ -380,8 +368,7 @@ class BlockOutput:
         return np.arange(0, self.num_phen()) + BASE_INDEX
 
     def pheno_parents(self):
-        """Compute upper bound of markers that could affect each phenotype or combination of phenotypes
-        """
+        """Compute upper bound of markers that could affect each phenotype or combination of phenotypes"""
         res = {}
         adj = self.sam()
         phens = set(self.pheno_indices())
@@ -421,8 +408,7 @@ class BlockOutput:
         return res
 
     def pheno_direct_parents(self):
-        """For each phenotype, find all markers that are direct parents to it.
-        """
+        """For each phenotype, find all markers that are direct parents to it."""
         res = {}
         adj = self.sam()
         for pix in self.pheno_indices():
@@ -498,17 +484,19 @@ class GlobalBdpcResult:
             fout.write(f"{self.num_var}\t{self.num_phen}\t{self.max_level}\n")
 
 
-def heatmap(data,
-            row_labels,
-            col_labels,
-            ax=None,
-            cbar_kw=None,
-            cbarlabel="",
-            xlabel=None,
-            ylabel=None,
-            title=None,
-            title_kw=dict(),
-            **kwargs):
+def heatmap(
+    data,
+    row_labels,
+    col_labels,
+    ax=None,
+    cbar_kw=None,
+    cbarlabel="",
+    xlabel=None,
+    ylabel=None,
+    title=None,
+    title_kw=dict(),
+    **kwargs,
+):
     """
     Create a heatmap from a numpy array and two lists of labels.
 
@@ -552,17 +540,14 @@ def heatmap(data,
     ax.tick_params(top=False, bottom=True, labeltop=False, labelbottom=True)
 
     # Rotate the tick labels and set their alignment.
-    plt.setp(ax.get_xticklabels(),
-             rotation=45,
-             ha="right",
-             rotation_mode="anchor")
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
 
     # Turn spines off and create white grid.
     ax.spines[:].set_visible(False)
 
-    ax.set_xticks(np.arange(data.shape[1] + 1) - .5, minor=True)
-    ax.set_yticks(np.arange(data.shape[0] + 1) - .5, minor=True)
-    ax.grid(which="minor", color="w", linestyle='-', linewidth=3)
+    ax.set_xticks(np.arange(data.shape[1] + 1) - 0.5, minor=True)
+    ax.set_yticks(np.arange(data.shape[0] + 1) - 0.5, minor=True)
+    ax.grid(which="minor", color="w", linestyle="-", linewidth=3)
     ax.tick_params(which="minor", bottom=False, left=False)
     ax.set_ylabel(ylabel)
     ax.set_xlabel(xlabel)
@@ -573,17 +558,18 @@ def heatmap(data,
     return im, cbar
 
 
-def plot_pleiotropy_mat(pag_path: str,
-                        pheno_path: str,
-                        neighbor_fn=is_possible_child,
-                        depth=1,
-                        ax=None,
-                        cbar_kw=None,
-                        title=None,
-                        title_kw=dict(),
-                        cmap='BuPu'):
-    poss_parents = pag_exclusive_pleiotropy_sets(pag_path, pheno_path,
-                                                 neighbor_fn, depth)
+def plot_pleiotropy_mat(
+    pag_path: str,
+    pheno_path: str,
+    neighbor_fn=is_possible_child,
+    depth=1,
+    ax=None,
+    cbar_kw=None,
+    title=None,
+    title_kw=dict(),
+    cmap="BuPu",
+):
+    poss_parents = pag_exclusive_pleiotropy_sets(pag_path, pheno_path, neighbor_fn, depth)
     p_names = get_pheno_codes(pheno_path)
     num_phen = len(p_names)
     z = [[0 for _ in range(num_phen)] for _ in range(num_phen)]
@@ -594,7 +580,7 @@ def plot_pleiotropy_mat(pag_path: str,
     mask = ~np.tri(z.shape[0], k=0, dtype=bool)
     z = np.ma.array(z, mask=mask)  # mask out the lower triangle
     cmap = mpl.colormaps[cmap]  # jet doesn't have white color
-    cmap.set_bad('w')  # default value is 'k'
+    cmap.set_bad("w")  # default value is 'k'
     im, _ = heatmap(
         z,
         p_names,
@@ -608,7 +594,8 @@ def plot_pleiotropy_mat(pag_path: str,
         ylabel=r"$y_1$",
         title=title,
         title_kw=title_kw,
-        ax=None)
+        ax=None,
+    )
 
 
 def load_ace(ace_path: str, pheno_path: str) -> np.array:
@@ -622,14 +609,16 @@ def load_ace(ace_path: str, pheno_path: str) -> np.array:
     return np.array(z)
 
 
-def plot_ace(ace_path: str,
-             pheno_path: str,
-             title=None,
-             title_kw=dict(),
-             cmap="bwr",
-             cbarlabel=r"$ACE \: (y_1 \rightarrow y_2)$",
-             cbar_kw=None,
-             ax=None):
+def plot_ace(
+    ace_path: str,
+    pheno_path: str,
+    title=None,
+    title_kw=dict(),
+    cmap="bwr",
+    cbarlabel=r"$ACE \: (y_1 \rightarrow y_2)$",
+    cbar_kw=None,
+    ax=None,
+):
     p_names = get_pheno_codes(pheno_path)
     num_phen = len(p_names)
     ace = mmread(ace_path).tocsr()
@@ -638,19 +627,21 @@ def plot_ace(ace_path: str,
         for j in range(num_phen):
             z[i][j] = ace[i, j]
     max_z = np.max(z)
-    im, _ = heatmap(np.array(z),
-                    p_names,
-                    p_names,
-                    cmap=cmap,
-                    cbarlabel=cbarlabel,
-                    cbar_kw=cbar_kw,
-                    vmin=-max_z,
-                    vmax=max_z,
-                    xlabel=r"$y_2$",
-                    ylabel=r"$y_1$",
-                    title=title,
-                    title_kw=title_kw,
-                    ax=ax)
+    im, _ = heatmap(
+        np.array(z),
+        p_names,
+        p_names,
+        cmap=cmap,
+        cbarlabel=cbarlabel,
+        cbar_kw=cbar_kw,
+        vmin=-max_z,
+        vmax=max_z,
+        xlabel=r"$y_2$",
+        ylabel=r"$y_1$",
+        title=title,
+        title_kw=title_kw,
+        ax=ax,
+    )
 
 
 @dataclass
@@ -686,18 +677,22 @@ all_edge_types = EdgeEncoding(
         (3, 3): 9,
     },
     mpl.colors.ListedColormap(
-        np.array([
-            "#ffffff",  # white
-            "#003f5c",
-            "#2f4b7c",
-            "#665191",
-            "#a05195",
-            "#d45087",
-            "#f95d6a",
-            "#ff7c43",
-            "#ffa600",
-            "#ffe300",
-        ])))
+        np.array(
+            [
+                "#ffffff",  # white
+                "#003f5c",
+                "#2f4b7c",
+                "#665191",
+                "#a05195",
+                "#d45087",
+                "#f95d6a",
+                "#ff7c43",
+                "#ffa600",
+                "#ffe300",
+            ]
+        )
+    ),
+)
 
 six_edge_types = EdgeEncoding(
     [
@@ -719,15 +714,11 @@ six_edge_types = EdgeEncoding(
         (3, 3): 6,
     },
     mpl.colors.ListedColormap(
-        np.array([
-            "#ffffff",  # white
-            "#000421",
-            "#46204c",
-            "#99305b",
-            "#dd584b",
-            "#fb9d20",
-            "#e5ed05"
-        ])))
+        np.array(
+            ["#ffffff", "#000421", "#46204c", "#99305b", "#dd584b", "#fb9d20", "#e5ed05"]  # white
+        )
+    ),
+)
 
 six_edge_types = EdgeEncoding(
     [
@@ -749,15 +740,11 @@ six_edge_types = EdgeEncoding(
         (3, 3): 6,
     },
     mpl.colors.ListedColormap(
-        np.array([
-            "#ffffff",  # white
-            "#000421",
-            "#46204c",
-            "#99305b",
-            "#dd584b",
-            "#fb9d20",
-            "#e5ed05"
-        ])))
+        np.array(
+            ["#ffffff", "#000421", "#46204c", "#99305b", "#dd584b", "#fb9d20", "#e5ed05"]  # white
+        )
+    ),
+)
 
 five_common_edge_types = EdgeEncoding(
     [
@@ -777,23 +764,29 @@ five_common_edge_types = EdgeEncoding(
         (3, 2): 5,
     },
     mpl.colors.ListedColormap(
-        np.array([
-            "#ffffff",  # white
-            "#000421",
-            "#5b2453",
-            "#bf4056",
-            "#f88a2e",
-            "#e5ed05",
-        ])))
+        np.array(
+            [
+                "#ffffff",  # white
+                "#000421",
+                "#5b2453",
+                "#bf4056",
+                "#f88a2e",
+                "#e5ed05",
+            ]
+        )
+    ),
+)
 
 
-def plot_pag(pag_path: str,
-             pheno_path: str,
-             title=None,
-             title_kw=dict(),
-             cbar_kw=None,
-             edge_encoding=all_edge_types,
-             ax=None):
+def plot_pag(
+    pag_path: str,
+    pheno_path: str,
+    title=None,
+    title_kw=dict(),
+    cbar_kw=None,
+    edge_encoding=all_edge_types,
+    ax=None,
+):
 
     p_names = get_pheno_codes(pheno_path)
     num_phen = len(p_names)
@@ -811,58 +804,57 @@ def plot_pag(pag_path: str,
     ne = len(edge_encoding.int_rep)
 
     norm = mpl.colors.BoundaryNorm(np.linspace(0, ne, ne + 1), ne)
-    fmt = mpl.ticker.FuncFormatter(
-        lambda x, pos: edge_encoding.str_rep[norm(x)])
+    fmt = mpl.ticker.FuncFormatter(lambda x, pos: edge_encoding.str_rep[norm(x)])
 
     if cbar_kw is None:
         cbar_kw = {}
     cbar_kw["ticks"] = np.arange(ne) + 0.5
     cbar_kw["format"] = fmt
 
-    im, _ = heatmap(np.array(z),
-                    p_names,
-                    p_names,
-                    cmap=edge_encoding.cmap,
-                    norm=norm,
-                    cbar_kw=cbar_kw,
-                    cbarlabel="Edge Type",
-                    xlabel=r"$y_2$",
-                    ylabel=r"$y_1$",
-                    title=title,
-                    title_kw=title_kw,
-                    ax=ax)
+    im, _ = heatmap(
+        np.array(z),
+        p_names,
+        p_names,
+        cmap=edge_encoding.cmap,
+        norm=norm,
+        cbar_kw=cbar_kw,
+        cbarlabel="Edge Type",
+        xlabel=r"$y_2$",
+        ylabel=r"$y_1$",
+        title=title,
+        title_kw=title_kw,
+        ax=ax,
+    )
 
 
-def marker_pheno_associations(blockfile: str,
-                              outdir: str,
-                              pag_path: str,
-                              pheno_path: str,
-                              bim_path: str,
-                              neighbor_fn=is_possible_child,
-                              depth=1):
+def marker_pheno_associations(
+    blockfile: str,
+    outdir: str,
+    pag_path: str,
+    pheno_path: str,
+    bim_path: str,
+    neighbor_fn=is_possible_child,
+    depth=1,
+):
     gr = merge_block_outputs(blockfile, outdir)
-    rs_ids = pd.read_csv(bim_path, sep='\t', header=None)[1].values
+    rs_ids = pd.read_csv(bim_path, sep="\t", header=None)[1].values
     p_names = get_pheno_codes(pheno_path)
     num_phen = len(p_names)
-    geps = pag_exclusive_pleiotropy_sets(pag_path, pheno_path, neighbor_fn,
-                                         depth)
+    geps = pag_exclusive_pleiotropy_sets(pag_path, pheno_path, neighbor_fn, depth)
     assoc_markers = []
 
     for pix in range(num_phen):
         for v in geps[(pix, pix)]:
             # pag is 0-based indexed, everything else uses 1-based indexing
             bim_line = int(gr.gmi[v + BASE_INDEX])
-            assoc_markers.append({
-                "phenotype": p_names[pix],
-                "rsID": rs_ids[bim_line],
-                "bim_line_ix": bim_line
-            })
+            assoc_markers.append(
+                {"phenotype": p_names[pix], "rsID": rs_ids[bim_line], "bim_line_ix": bim_line}
+            )
 
     return pd.DataFrame(assoc_markers)
 
 
-def pag_edge_types(pag_path: str,
-                   pheno_path: str) -> dict[tuple[int, int], int]:
+def pag_edge_types(pag_path: str, pheno_path: str) -> dict[tuple[int, int], int]:
     all_edges = {}
     p_names = get_pheno_codes(pheno_path)
     pag = mmread(pag_path).tocsr()
@@ -876,8 +868,7 @@ def pag_edge_types(pag_path: str,
     return all_edges
 
 
-def pag_x_to_y_edge_types(pag_path: str,
-                          pheno_path: str) -> dict[tuple[int, int], int]:
+def pag_x_to_y_edge_types(pag_path: str, pheno_path: str) -> dict[tuple[int, int], int]:
     x_to_y = {}
     p_names = get_pheno_codes(pheno_path)
     num_phen = len(p_names)
@@ -920,92 +911,71 @@ def combine_all_pheno_and_plot():
     pd_gepm = []
     for (i, j), c in gepm.items():
         np_gepm[i - 1, j - 1] = c
-        pd_gepm.append({
-            "y1": p_names[i - 1],
-            "y2": p_names[j - 1],
-            "count": c
-        })
+        pd_gepm.append({"y1": p_names[i - 1], "y2": p_names[j - 1], "count": c})
     pd_gepm = pd.DataFrame(pd_gepm)
 
     pd_pcm = []
     for i in range(1, num_phen + 1):
         for j in range(1, num_phen + 1):
-            pd_pcm.append({
-                "y1": p_names[i - 1],
-                "y2": p_names[j - 1],
-                "v": gr.scm[(i, j)]
-            })
+            pd_pcm.append({"y1": p_names[i - 1], "y2": p_names[j - 1], "v": gr.scm[(i, j)]})
     pd_pcm = pd.DataFrame(pd_pcm)
 
     plt.figure(figsize=(20, 15))
     g = pd_pcm.pivot("y1", "y2", "v")
     mask = np.triu(np.ones_like(g, dtype=bool))
     np.fill_diagonal(mask, False)
-    sns.heatmap(g,
-                xticklabels=1,
-                yticklabels=1,
-                cmap="RdBu",
-                annot=True,
-                square=True,
-                mask=mask,
-                vmax=1,
-                vmin=-1)
+    sns.heatmap(
+        g,
+        xticklabels=1,
+        yticklabels=1,
+        cmap="RdBu",
+        annot=True,
+        square=True,
+        mask=mask,
+        vmax=1,
+        vmin=-1,
+    )
 
     pd_pam = []
     for i in range(1, num_phen + 1):
         for j in range(1, num_phen + 1):
             if (i, j) in gr.sam:
-                pd_pam.append({
-                    "y1": p_names[i - 1],
-                    "y2": p_names[j - 1],
-                    "v": 1
-                })
+                pd_pam.append({"y1": p_names[i - 1], "y2": p_names[j - 1], "v": 1})
             else:
-                pd_pam.append({
-                    "y1": p_names[i - 1],
-                    "y2": p_names[j - 1],
-                    "v": 0
-                })
+                pd_pam.append({"y1": p_names[i - 1], "y2": p_names[j - 1], "v": 0})
     pd_pam = pd.DataFrame(pd_pam)
 
     plt.figure(figsize=(14, 14))
     g = pd_pam.pivot("y1", "y2", "v")
     mask = np.triu(np.ones_like(g, dtype=bool))
     np.fill_diagonal(mask, False)
-    sns.heatmap(g,
-                xticklabels=1,
-                yticklabels=1,
-                cbar=False,
-                square=True,
-                mask=mask,
-                cmap="Blues",
-                vmax=2)
+    sns.heatmap(
+        g, xticklabels=1, yticklabels=1, cbar=False, square=True, mask=mask, cmap="Blues", vmax=2
+    )
 
     num_phen = len(p_names)
     np_gepm = np.zeros(shape=(num_phen, num_phen))
     pd_gepm = []
     for (i, j), c in {k: len(v) for k, v in geps.items()}.items():
         np_gepm[i - 1, j - 1] = c
-        pd_gepm.append({
-            "y1": p_names[i - 1],
-            "y2": p_names[j - 1],
-            "count": c
-        })
+        pd_gepm.append({"y1": p_names[i - 1], "y2": p_names[j - 1], "count": c})
     pd_gepm = pd.DataFrame(pd_gepm)
 
     plt.figure(figsize=(20, 15))
     g = pd_gepm.pivot("y1", "y2", "count")
     mask = np.triu(np.ones_like(g, dtype=bool))
     np.fill_diagonal(mask, False)
-    sns.heatmap(g,
-                xticklabels=1,
-                yticklabels=1,
-                norm=matplotlib.colors.LogNorm(),
-                cmap="Blues",
-                annot=True,
-                square=True,
-                mask=mask,
-                cbar_kws={'label': '# parent markers'})
+    sns.heatmap(
+        g,
+        xticklabels=1,
+        yticklabels=1,
+        norm=matplotlib.colors.LogNorm(),
+        cmap="Blues",
+        annot=True,
+        square=True,
+        mask=mask,
+        cbar_kws={"label": "# parent markers"},
+    )
 
     pag_path = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/bdpc_d1_l6_a1e8/all_merged_pag.mtx"
 
@@ -1028,13 +998,7 @@ def combine_all_pheno_and_plot():
 
     plt.figure(figsize=(20, 15))
     g = pd_pag.pivot("y1", "y2", "edge")
-    sns.heatmap(g,
-                xticklabels=1,
-                yticklabels=1,
-                cmap="Blues",
-                annot=False,
-                square=True,
-                cbar=False)
+    sns.heatmap(g, xticklabels=1, yticklabels=1, cmap="Blues", annot=False, square=True, cbar=False)
 
     num_phen = len(p_names)
     geps = pag_exclusive_pleiotropy_sets(pag, num_phen)
@@ -1050,15 +1014,17 @@ def combine_all_pheno_and_plot():
     g = pd_gepm.pivot("y1", "y2", "count")
     mask = np.triu(np.ones_like(g, dtype=bool))
     np.fill_diagonal(mask, False)
-    sns.heatmap(g,
-                xticklabels=1,
-                yticklabels=1,
-                norm=matplotlib.colors.LogNorm(),
-                cmap="Blues",
-                annot=True,
-                square=True,
-                mask=mask,
-                cbar_kws={'label': '# parent markers'})
+    sns.heatmap(
+        g,
+        xticklabels=1,
+        yticklabels=1,
+        norm=matplotlib.colors.LogNorm(),
+        cmap="Blues",
+        annot=True,
+        square=True,
+        mask=mask,
+        cbar_kws={"label": "# parent markers"},
+    )
 
 
 def load_mr_simulation_results(
@@ -1087,31 +1053,27 @@ def load_mr_simulation_results(
             df = pd.read_csv(basepath + f"all_mr_res_it{i}.csv")
             exp_arr = exp[first_phen_ix:, first_phen_ix:].toarray()
 
-            ps = {
-                n: np.ones(shape=(n_phen, n_phen))
-                for n in ['egger', 'ivw', 'mrpresso', 'cause']
-            }
+            ps = {n: np.ones(shape=(n_phen, n_phen)) for n in ["egger", "ivw", "mrpresso", "cause"]}
 
             effects = {
-                n: np.zeros(shape=(n_phen, n_phen))
-                for n in ['egger', 'ivw', 'mrpresso', 'cause']
+                n: np.zeros(shape=(n_phen, n_phen)) for n in ["egger", "ivw", "mrpresso", "cause"]
             }
 
             for r in df.iterrows():
                 row = r[1]
-                i = int(row.loc['egger.Exposure'].split("Y")[1]) - 1
-                j = int(row.loc['egger.Outcome'].split("Y")[1]) - 1
-                ps['egger'][i, j] = row.loc['egger.p']
-                effects['egger'][i, j] = row.loc['egger.est']
-                ps['ivw'][i, j] = row.loc['ivw.p']
-                effects['ivw'][i, j] = row.loc['ivw.est']
-                ps['mrpresso'][i, j] = row.loc['mrpresso.P.value']
-                effects['mrpresso'][i, j] = row.loc['mrpresso.Causal.Estimate']
-                ps['cause'][i, j] = row.loc['CAUSE.V4']
-                effects['cause'][i, j] = row.loc['CAUSE.gamma']
+                i = int(row.loc["egger.Exposure"].split("Y")[1]) - 1
+                j = int(row.loc["egger.Outcome"].split("Y")[1]) - 1
+                ps["egger"][i, j] = row.loc["egger.p"]
+                effects["egger"][i, j] = row.loc["egger.est"]
+                ps["ivw"][i, j] = row.loc["ivw.p"]
+                effects["ivw"][i, j] = row.loc["ivw.est"]
+                ps["mrpresso"][i, j] = row.loc["mrpresso.P.value"]
+                effects["mrpresso"][i, j] = row.loc["mrpresso.Causal.Estimate"]
+                ps["cause"][i, j] = row.loc["CAUSE.V4"]
+                effects["cause"][i, j] = row.loc["CAUSE.gamma"]
 
             for t in thr:
-                for method in ['egger', 'ivw', 'mrpresso', 'cause']:
+                for method in ["egger", "ivw", "mrpresso", "cause"]:
                     obs_arr = effects[method] * (ps[method] < p_thr)
                     obs_arr_t = obs_arr.copy()
                     obs_arr_t[np.abs(obs_arr_t) < t] = 0
@@ -1119,26 +1081,19 @@ def load_mr_simulation_results(
                     P = np.sum(exp_arr != 0)
                     FP = np.sum((obs_arr_t != 0) & (exp_arr == 0))
                     TP = np.sum((obs_arr_t != 0) & (exp_arr != 0))
-                    results.append({
-                        "method":
-                        method,
-                        "replicate":
-                        i,
-                        "0-ROPE":
-                        t,
-                        "MSE":
-                        np.mean((exp_arr - obs_arr_t)**2),
-                        "FNR":
-                        np.sum((obs_arr_t == 0) & (exp_arr != 0)) / P,
-                        "FPR":
-                        np.sum((obs_arr_t != 0) & (exp_arr == 0)) / N,
-                        "TPR":
-                        np.sum((obs_arr_t != 0) & (exp_arr != 0)) / P,
-                        "TNR":
-                        np.sum((obs_arr_t == 0) & (exp_arr == 0)) / N,
-                        "FDR":
-                        FP / (TP + FP),
-                    })
+                    results.append(
+                        {
+                            "method": method,
+                            "replicate": i,
+                            "0-ROPE": t,
+                            "MSE": np.mean((exp_arr - obs_arr_t) ** 2),
+                            "FNR": np.sum((obs_arr_t == 0) & (exp_arr != 0)) / P,
+                            "FPR": np.sum((obs_arr_t != 0) & (exp_arr == 0)) / N,
+                            "TPR": np.sum((obs_arr_t != 0) & (exp_arr != 0)) / P,
+                            "TNR": np.sum((obs_arr_t == 0) & (exp_arr == 0)) / N,
+                            "FDR": FP / (TP + FP),
+                        }
+                    )
         except OSError as e:
             print(e)
 
@@ -1176,15 +1131,19 @@ def load_simulation_results(
             try:
                 exp_path = basepath + f"True_causaleffect_it{i}.mtx"
                 if real_approx:
-                    obs_path = basepath + f"simpc_d1_l14_e{e}_{i}/estimated_causaleffect_complete_mk3_md2.mtx"
+                    obs_path = (
+                        basepath
+                        + f"simpc_d1_l14_e{e}_{i}/estimated_causaleffect_complete_mk3_md2.mtx"
+                    )
                 else:
-                    obs_path = basepath + f"simpc_d1_l14_e{e}_{i}/estimated_causaleffect_complete.mtx"
+                    obs_path = (
+                        basepath + f"simpc_d1_l14_e{e}_{i}/estimated_causaleffect_complete.mtx"
+                    )
                 mdim_path = basepath + f"simpc_d1_l14_e{e}_{i}/skeleton.mdim"
-                with open(mdim_path, 'r') as fin:
+                with open(mdim_path, "r") as fin:
                     l = fin.readline()
                     fields = l.split()
-                    num_markers_selected[row,
-                                         col] = int(fields[0]) - int(fields[1])
+                    num_markers_selected[row, col] = int(fields[0]) - int(fields[1])
                 exp = bdpc.mmread(exp_path).tocsr()
                 obs = bdpc.mmread(obs_path).tocsr()
                 exp_arr = exp[first_phen_ix:, first_phen_ix:].toarray()
@@ -1205,28 +1164,20 @@ def load_simulation_results(
                     P = np.sum(exp_arr_ma != 0)
                     FP = np.sum((obs_arr_t != 0) & (exp_arr_ma == 0))
                     TP = np.sum((obs_arr_t != 0) & (exp_arr_ma != 0))
-                    results.append({
-                        "method":
-                        "CI-GWAS",
-                        "replicate":
-                        i,
-                        "alpha":
-                        10.0**-e,
-                        "0-ROPE":
-                        t,
-                        "MSE":
-                        np.mean((exp_arr_ma - obs_arr_t)**2),
-                        "FNR":
-                        np.sum((obs_arr_t == 0) & (exp_arr_ma != 0)) / P,
-                        "FPR":
-                        np.sum((obs_arr_t != 0) & (exp_arr_ma == 0)) / N,
-                        "TPR":
-                        np.sum((obs_arr_t != 0) & (exp_arr_ma != 0)) / P,
-                        "TNR":
-                        np.sum((obs_arr_t == 0) & (exp_arr_ma == 0)) / N,
-                        "FDR":
-                        FP / (TP + FP),
-                    })
+                    results.append(
+                        {
+                            "method": "CI-GWAS",
+                            "replicate": i,
+                            "alpha": 10.0**-e,
+                            "0-ROPE": t,
+                            "MSE": np.mean((exp_arr_ma - obs_arr_t) ** 2),
+                            "FNR": np.sum((obs_arr_t == 0) & (exp_arr_ma != 0)) / P,
+                            "FPR": np.sum((obs_arr_t != 0) & (exp_arr_ma == 0)) / N,
+                            "TPR": np.sum((obs_arr_t != 0) & (exp_arr_ma != 0)) / P,
+                            "TNR": np.sum((obs_arr_t == 0) & (exp_arr_ma == 0)) / N,
+                            "FDR": FP / (TP + FP),
+                        }
+                    )
 
             except FileNotFoundError as e:
                 print(e)
@@ -1250,8 +1201,8 @@ def plot_ci_gwas_simulation_results(
         ax.set_title(title, **title_kw)
         ax.set_ylabel(y)
         ax.set_xlabel("0-ROPE")
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
         ax.set_xscale("log")
         artists = []
         for e in alpha_exponents:
@@ -1272,8 +1223,7 @@ def plot_ci_gwas_simulation_results(
 
     fig = plt.figure(layout="constrained", figsize=(7, 8))
     N = num_alpha_exponents
-    plt.rcParams["axes.prop_cycle"] = plt.cycler(
-        "color", plt.cm.viridis(np.linspace(0, 1, N)))
+    plt.rcParams["axes.prop_cycle"] = plt.cycler("color", plt.cm.viridis(np.linspace(0, 1, N)))
 
     ax_dict = fig.subplot_mosaic(
         """
@@ -1292,13 +1242,15 @@ def plot_ci_gwas_simulation_results(
     plot_simulation_results_panel(ax_dict["c"], "c)", "FPR", title_kw)
     plot_simulation_results_panel(ax_dict["d"], "d)", "FNR", title_kw)
 
-    ax_dict["e"].legend(handles=[l[0] for l in art],
-                        labels=[rf"$10^{{-{e}}}$" for e in alpha_exponents],
-                        loc='center',
-                        fancybox=False,
-                        shadow=False,
-                        ncol=4,
-                        title=r"$\alpha$")
+    ax_dict["e"].legend(
+        handles=[l[0] for l in art],
+        labels=[rf"$10^{{-{e}}}$" for e in alpha_exponents],
+        loc="center",
+        fancybox=False,
+        shadow=False,
+        ncol=4,
+        title=r"$\alpha$",
+    )
     ax_dict["e"].axis("off")
 
     if suptitle:
@@ -1307,10 +1259,8 @@ def plot_ci_gwas_simulation_results(
     plt.tight_layout()
 
 
-def plot_all_simulation_results(results: pd.DataFrame,
-                                fdr_line_y=0.05,
-                                suptitle=None):
-    methods = ['CI-GWAS', 'egger', 'cause', 'ivw', 'mrpresso']
+def plot_all_simulation_results(results: pd.DataFrame, fdr_line_y=0.05, suptitle=None):
+    methods = ["CI-GWAS", "egger", "cause", "ivw", "mrpresso"]
     means = results.groupby(["method", "0-ROPE"]).mean()
     stds = results.groupby(["method", "0-ROPE"]).std()
 
@@ -1318,8 +1268,8 @@ def plot_all_simulation_results(results: pd.DataFrame,
         ax.set_title(title, **title_kw)
         ax.set_ylabel(y)
         ax.set_xlabel("0-ROPE")
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
         ax.set_xscale("log")
         artists = []
         for m in methods:
@@ -1339,7 +1289,8 @@ def plot_all_simulation_results(results: pd.DataFrame,
 
     fig = plt.figure(layout="constrained", figsize=(7, 8))
     plt.rcParams["axes.prop_cycle"] = plt.cycler(
-        "color", plt.cm.viridis(np.linspace(0, 1, len(methods))))
+        "color", plt.cm.viridis(np.linspace(0, 1, len(methods)))
+    )
 
     ax_dict = fig.subplot_mosaic(
         """
@@ -1358,13 +1309,15 @@ def plot_all_simulation_results(results: pd.DataFrame,
     plot_simulation_results_panel(ax_dict["c"], "c)", "FPR", title_kw)
     plot_simulation_results_panel(ax_dict["d"], "d)", "FNR", title_kw)
 
-    ax_dict["e"].legend(handles=[l[0] for l in art],
-                        labels=methods,
-                        loc='center',
-                        fancybox=False,
-                        shadow=False,
-                        ncol=4,
-                        title=r"method")
+    ax_dict["e"].legend(
+        handles=[l[0] for l in art],
+        labels=methods,
+        loc="center",
+        fancybox=False,
+        shadow=False,
+        ncol=4,
+        title=r"method",
+    )
     ax_dict["e"].axis("off")
 
     if suptitle:
@@ -1372,11 +1325,12 @@ def plot_all_simulation_results(results: pd.DataFrame,
 
     plt.tight_layout()
 
-def plot_block_size_experiment_results()
-    block_sizes = np.arange(1, 12) * 10 ** 3
+
+def plot_block_size_experiment_results():
+    block_sizes = np.arange(1, 12) * 10**3
     basepath = "/nfs/scistore13/robingrp/human_data/causality/block_size_effect/"
     bim_path = basepath + "ukb22828_UKB_EST_v3_ldp08.bim"
-    bim = pd.read_csv(bim_path, sep='\t', header=None)
+    bim = pd.read_csv(bim_path, sep="\t", header=None)
 
     bps = {}
 
@@ -1403,10 +1357,10 @@ def plot_block_size_experiment_results()
 
     ax = ax_dict["a"]
     title = "a)"
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
     for k, v in bps.items():
-        x = np.array(v) / 10 ** 6
+        x = np.array(v) / 10**6
         y = np.ones_like(x) * k
         ax.plot(x, y, "|", color="k")
     ax.set_ylabel("max block size")
@@ -1419,8 +1373,9 @@ def plot_block_size_experiment_results()
     ax.set_title(title, **title_kw)
     ax.set_ylabel("# selected markers")
     ax.set_xlabel("max block size")
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
 
 def plot_alpha_effect_on_davs_results():
     d = 1
@@ -1453,20 +1408,21 @@ def plot_alpha_effect_on_davs_results():
             ax = axes[i][j]
             ax.plot(diag, diag, ":", color="gray")
             x, y = ace[ex], ace[ey]
-            ax.plot(x, y, 'k.')
+            ax.plot(x, y, "k.")
             ax.set_xlim(-gmax, gmax)
             ax.set_ylim(-gmax, gmax)
-            ax.spines['top'].set_visible(False)
-            ax.spines['right'].set_visible(False)
+            ax.spines["top"].set_visible(False)
+            ax.spines["right"].set_visible(False)
             rho = np.corrcoef(x, y)
             ax.set_title(rf"$\rho={np.round(rho[0, 1], 2)}$")
             if j == 0:
                 axes[i][j].set_ylabel(rf"$\alpha=10^{{{ey}}}$")
             if i == nrows - 1:
                 axes[i][j].set_xlabel(rf"$\alpha=10^{{{ex}}}$")
-                
+
     fig.suptitle(r"$ACE; k\leq3; SK$")
     plt.tight_layout()
+
 
 def plot_compare_max_k_effect_on_ace():
     d = 1
@@ -1492,76 +1448,90 @@ def plot_compare_max_k_effect_on_ace():
 
     fig, axes = plt.subplots(1, nrows, sharex=True, sharey=True, figsize=(10, 3))
 
-
     for i, e in enumerate(es):
         ax = axes[i]
         ax.plot(diag, diag, ":", color="gray")
         x, y = ace[e], ace_mk[e]
-        ax.plot(x, y, 'k.')
+        ax.plot(x, y, "k.")
         ax.set_xlim(-gmax, gmax)
         ax.set_ylim(-gmax, gmax)
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
         rho = np.corrcoef(x, y)
         ax.set_title(rf"$\rho={np.round(rho[0, 1], 2)}; \alpha=10^{{-{e}}}$")
         ax.set_xlabel("$ACE$")
     axes[0].set_ylabel("$ACE_{k \leq 3}$")
     plt.tight_layout()
 
+
 def plot_ace_results_comp_cause_production():
 
     # supp table 3 first three cols
 
-    cause_gamma = pd.DataFrame([
-        {"y1": "bw".upper(),	"y2": "t2d".upper(), "gamma":	-0.274768438468858},
-        {"y1": "bw".upper(),	"y2": "ST".upper(), "gamma":	-0.11133390989017},
-        {"y1": "bw".upper(),	"y2": "AT".upper(), "gamma":	0.0569668051462395},
-        {"y1": "bw".upper(),	"y2": "cad".upper(), "gamma":	-0.142129232069397},
-        {"y1": "bmi".upper(),	"y2": "t2d".upper(), "gamma":	0.753001009486836},
-        {"y1": "bmi".upper(),	"y2": "ST".upper(), "gamma":	0.0724579259674975},
-        {"y1": "bmi".upper(),	"y2": "AT".upper(), "gamma":	0.127570936884617},
-        {"y1": "bmi".upper(),	"y2": "cad".upper(), "gamma":	0.254304518656026},
-        {"y1": "height".upper(),	"y2": "t2d".upper(), "gamma":	0.0133993365533514},
-        {"y1": "height".upper(),	"y2": "ST".upper(), "gamma":	-0.0158921479966716},
-        {"y1": "height".upper(),	"y2": "AT".upper(), "gamma":	-0.00266884948627959},
-        {"y1": "height".upper(),	"y2": "cad".upper(), "gamma":	-0.0646821638302025},
-        {"y1": "hdl".upper(),	"y2": "t2d".upper(), "gamma":	-0.157545489184377},
-        {"y1": "hdl".upper(),	"y2": "ST".upper(), "gamma":	-0.0346983958224145},
-        {"y1": "hdl".upper(),	"y2": "AT".upper(), "gamma":	0.00954960164699658},
-        {"y1": "hdl".upper(),	"y2": "cad".upper(), "gamma":	-0.203750511894064},
-        {"y1": "ldl".upper(),	"y2": "t2d".upper(), "gamma":	-0.125971830503692},
-        {"y1": "ldl".upper(),	"y2": "ST".upper(), "gamma":	0.0618108230339071},
-        {"y1": "ldl".upper(),	"y2": "AT".upper(), "gamma":	-0.0178475072825962},
-        {"y1": "ldl".upper(),	"y2": "cad".upper(), "gamma":	0.363195509520469},
-        {"y1": "TRIG".upper(),	"y2": "t2d".upper(), "gamma":	0.181573783879022},
-        {"y1": "TRIG".upper(),	"y2": "ST".upper(), "gamma":	0.0081104586416291},
-        {"y1": "TRIG".upper(),	"y2": "AT".upper(), "gamma":	-0.0917176821192589},
-        {"y1": "TRIG".upper(),	"y2": "cad".upper(), "gamma":	0.281762788578154},
-        {"y1": "alcohol".upper(),	"y2": "t2d".upper(), "gamma":	0.0692860734762807},
-        {"y1": "alcohol".upper(),	"y2": "ST".upper(), "gamma":	0.125010784103481},
-        {"y1": "alcohol".upper(),	"y2": "AT".upper(), "gamma":	-0.070909459789924},
-        {"y1": "alcohol".upper(),	"y2": "cad".upper(), "gamma":	0.0369981351799616},
-        {"y1": "smoke".upper(),	"y2": "t2d".upper(), "gamma":	0.153669125333255},
-        {"y1": "smoke".upper(),	"y2": "ST".upper(), "gamma":	0.287713602378084},
-        {"y1": "smoke".upper(),	"y2": "AT".upper(), "gamma":	0.129522157700426},
-        {"y1": "smoke".upper(),	"y2": "cad".upper(), "gamma":	0.479817266067469},
-        {"y1": "bfp".upper(),	"y2": "t2d".upper(), "gamma":	0.0647735280855574},
-        {"y1": "bfp".upper(),	"y2": "ST".upper(), "gamma":	0.0044428460841386},
-        {"y1": "bfp".upper(),	"y2": "AT".upper(), "gamma":	0.0957086524513934},
-        {"y1": "bfp".upper(),	"y2": "cad".upper(), "gamma":	0.133460312029649},
-        {"y1": "fg".upper(),	"y2": "t2d".upper(), "gamma":	1.32033326715937},
-        {"y1": "fg".upper(),	"y2": "ST".upper(), "gamma":	0.00957326536858055},
-        {"y1": "fg".upper(),	"y2": "AT".upper(), "gamma":	-0.200412032138845},
-        {"y1": "fg".upper(),	"y2": "cad".upper(), "gamma":	0.111579686635068},
-        {"y1": "dbp".upper(),	"y2": "t2d".upper(), "gamma":	0.0204781118822844},
-        {"y1": "dbp".upper(),	"y2": "ST".upper(), "gamma":	0.0318219908469929},
-        {"y1": "dbp".upper(),	"y2": "AT".upper(), "gamma":	0.00387409082195085},
-        {"y1": "dbp".upper(),	"y2": "cad".upper(), "gamma":	0.0371147380330953},
-        {"y1": "bp".upper(),	"y2": "t2d".upper(), "gamma":	0.0142748064016252}, # changed from sbp,
-        {"y1": "bp".upper(),	"y2": "ST".upper(), "gamma":	0.0216220295177384}, # changed from sbp,
-        {"y1": "bp".upper(),	"y2": "AT".upper(), "gamma":	0.00246673566316583}, # changed from sbp,
-        {"y1": "bp".upper(),	"y2": "cad".upper(), "gamma":	0.024807681904989},]) # changed from sbp)
-
+    cause_gamma = pd.DataFrame(
+        [
+            {"y1": "bw".upper(), "y2": "t2d".upper(), "gamma": -0.274768438468858},
+            {"y1": "bw".upper(), "y2": "ST".upper(), "gamma": -0.11133390989017},
+            {"y1": "bw".upper(), "y2": "AT".upper(), "gamma": 0.0569668051462395},
+            {"y1": "bw".upper(), "y2": "cad".upper(), "gamma": -0.142129232069397},
+            {"y1": "bmi".upper(), "y2": "t2d".upper(), "gamma": 0.753001009486836},
+            {"y1": "bmi".upper(), "y2": "ST".upper(), "gamma": 0.0724579259674975},
+            {"y1": "bmi".upper(), "y2": "AT".upper(), "gamma": 0.127570936884617},
+            {"y1": "bmi".upper(), "y2": "cad".upper(), "gamma": 0.254304518656026},
+            {"y1": "height".upper(), "y2": "t2d".upper(), "gamma": 0.0133993365533514},
+            {"y1": "height".upper(), "y2": "ST".upper(), "gamma": -0.0158921479966716},
+            {"y1": "height".upper(), "y2": "AT".upper(), "gamma": -0.00266884948627959},
+            {"y1": "height".upper(), "y2": "cad".upper(), "gamma": -0.0646821638302025},
+            {"y1": "hdl".upper(), "y2": "t2d".upper(), "gamma": -0.157545489184377},
+            {"y1": "hdl".upper(), "y2": "ST".upper(), "gamma": -0.0346983958224145},
+            {"y1": "hdl".upper(), "y2": "AT".upper(), "gamma": 0.00954960164699658},
+            {"y1": "hdl".upper(), "y2": "cad".upper(), "gamma": -0.203750511894064},
+            {"y1": "ldl".upper(), "y2": "t2d".upper(), "gamma": -0.125971830503692},
+            {"y1": "ldl".upper(), "y2": "ST".upper(), "gamma": 0.0618108230339071},
+            {"y1": "ldl".upper(), "y2": "AT".upper(), "gamma": -0.0178475072825962},
+            {"y1": "ldl".upper(), "y2": "cad".upper(), "gamma": 0.363195509520469},
+            {"y1": "TRIG".upper(), "y2": "t2d".upper(), "gamma": 0.181573783879022},
+            {"y1": "TRIG".upper(), "y2": "ST".upper(), "gamma": 0.0081104586416291},
+            {"y1": "TRIG".upper(), "y2": "AT".upper(), "gamma": -0.0917176821192589},
+            {"y1": "TRIG".upper(), "y2": "cad".upper(), "gamma": 0.281762788578154},
+            {"y1": "alcohol".upper(), "y2": "t2d".upper(), "gamma": 0.0692860734762807},
+            {"y1": "alcohol".upper(), "y2": "ST".upper(), "gamma": 0.125010784103481},
+            {"y1": "alcohol".upper(), "y2": "AT".upper(), "gamma": -0.070909459789924},
+            {"y1": "alcohol".upper(), "y2": "cad".upper(), "gamma": 0.0369981351799616},
+            {"y1": "smoke".upper(), "y2": "t2d".upper(), "gamma": 0.153669125333255},
+            {"y1": "smoke".upper(), "y2": "ST".upper(), "gamma": 0.287713602378084},
+            {"y1": "smoke".upper(), "y2": "AT".upper(), "gamma": 0.129522157700426},
+            {"y1": "smoke".upper(), "y2": "cad".upper(), "gamma": 0.479817266067469},
+            {"y1": "bfp".upper(), "y2": "t2d".upper(), "gamma": 0.0647735280855574},
+            {"y1": "bfp".upper(), "y2": "ST".upper(), "gamma": 0.0044428460841386},
+            {"y1": "bfp".upper(), "y2": "AT".upper(), "gamma": 0.0957086524513934},
+            {"y1": "bfp".upper(), "y2": "cad".upper(), "gamma": 0.133460312029649},
+            {"y1": "fg".upper(), "y2": "t2d".upper(), "gamma": 1.32033326715937},
+            {"y1": "fg".upper(), "y2": "ST".upper(), "gamma": 0.00957326536858055},
+            {"y1": "fg".upper(), "y2": "AT".upper(), "gamma": -0.200412032138845},
+            {"y1": "fg".upper(), "y2": "cad".upper(), "gamma": 0.111579686635068},
+            {"y1": "dbp".upper(), "y2": "t2d".upper(), "gamma": 0.0204781118822844},
+            {"y1": "dbp".upper(), "y2": "ST".upper(), "gamma": 0.0318219908469929},
+            {"y1": "dbp".upper(), "y2": "AT".upper(), "gamma": 0.00387409082195085},
+            {"y1": "dbp".upper(), "y2": "cad".upper(), "gamma": 0.0371147380330953},
+            {
+                "y1": "bp".upper(),
+                "y2": "t2d".upper(),
+                "gamma": 0.0142748064016252,
+            },  # changed from sbp,
+            {
+                "y1": "bp".upper(),
+                "y2": "ST".upper(),
+                "gamma": 0.0216220295177384,
+            },  # changed from sbp,
+            {
+                "y1": "bp".upper(),
+                "y2": "AT".upper(),
+                "gamma": 0.00246673566316583,
+            },  # changed from sbp,
+            {"y1": "bp".upper(), "y2": "cad".upper(), "gamma": 0.024807681904989},
+        ]
+    )  # changed from sbp)
 
     cause_ys = set(cause_gamma["y1"].values)
     cause_ys.update(set(cause_gamma["y2"].values))
@@ -1585,26 +1555,23 @@ def plot_ace_results_comp_cause_production():
     WHR = waist-hip ratio
     """
 
-    diseases = set([
-        "AT",
-        "ST",
-        "T2D",
-        "CAD"
-    ])
+    diseases = set(["AT", "ST", "T2D", "CAD"])
 
-    risk_factors = set([
-        "BMI",
-        "BP",
-        "CHOL",
-        "DBP",
-        "GLU",
-        "HDL",
-        "HbA1c",
-        "LDL",
-        "SBP",
-        "TRIG",
-        "WHR",
-    ])
+    risk_factors = set(
+        [
+            "BMI",
+            "BP",
+            "CHOL",
+            "DBP",
+            "GLU",
+            "HDL",
+            "HbA1c",
+            "LDL",
+            "SBP",
+            "TRIG",
+            "WHR",
+        ]
+    )
 
     reg_cfg = {
         "skip_na": False,
@@ -1625,9 +1592,24 @@ def plot_ace_results_comp_cause_production():
 
     cbar_kw = {"fraction": 0.046, "pad": 0.04}
     title_kw = {"loc": "left", "pad": 15, "size": 20}
-    bdpc.plot_ace(bdpc_ace_path_sk, pheno_path, ax=ax_dict["a"], title="a)", cbar_kw=cbar_kw, title_kw=title_kw, cmap='PuOr')
-    bdpc.plot_pleiotropy_mat(bdpc_pag_path_sk, pheno_path, ax=ax_dict["c"], title="c)", cbar_kw=cbar_kw, title_kw=title_kw, cmap="BuPu")
-
+    bdpc.plot_ace(
+        bdpc_ace_path_sk,
+        pheno_path,
+        ax=ax_dict["a"],
+        title="a)",
+        cbar_kw=cbar_kw,
+        title_kw=title_kw,
+        cmap="PuOr",
+    )
+    bdpc.plot_pleiotropy_mat(
+        bdpc_pag_path_sk,
+        pheno_path,
+        ax=ax_dict["c"],
+        title="c)",
+        cbar_kw=cbar_kw,
+        title_kw=title_kw,
+        cmap="BuPu",
+    )
 
     ax = ax_dict["b"]
     ace = bdpc.load_ace(bdpc_ace_path_sk, pheno_path)
@@ -1655,21 +1637,16 @@ def plot_ace_results_comp_cause_production():
             gamma = 0 if len(cg) == 0 else cg[0]
             if skip_na and (gamma == 0 or ace[i, j] == 0):
                 continue
-            rows.append({
-                "y1": pi,
-                "y2": pj,
-                "gamma": gamma,
-                "ace": ace[i, j]
-            })
+            rows.append({"y1": pi, "y2": pj, "gamma": gamma, "ace": ace[i, j]})
 
     data = pd.DataFrame(rows)
     mr = data["gamma"].values
     ace_flat = data["ace"].values
 
-    ax.scatter(mr, ace_flat, color='#d8dcd6', edgecolors='#5729ce', s=80, alpha=0.5, zorder=10)
+    ax.scatter(mr, ace_flat, color="#d8dcd6", edgecolors="#5729ce", s=80, alpha=0.5, zorder=10)
     ax.grid(linestyle=":")
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
     ax.set_ylabel("ACE")
     ax.set_xlabel("Morrison et al. 2020")
 
@@ -1680,7 +1657,7 @@ def plot_ace_results_comp_cause_production():
     linear_regressor.fit(X, y)
     linear_regressor.fit(X, y)
     x_pred = np.linspace(np.min(mr), np.max(mr), 100).reshape(-1, 1)
-    y_pred = linear_regressor.predict(x_pred)  
+    y_pred = linear_regressor.predict(x_pred)
 
     # Plot regression line.
     # * Logarithmic transformation is reverted by using the exponential one.
