@@ -7,6 +7,7 @@ import pandas as pd
 import seaborn as sns
 import queue
 from scipy.io import mmread
+from sklearn.linear_model import LinearRegression
 
 SMALL_SIZE = 12
 MEDIUM_SIZE = 14
@@ -68,7 +69,6 @@ def load_mat_sparse(basepath: str, num_m: int, num_p: int, marker_offset, dtype,
         res[(nz_sm_i[tix], nz_sm_j[tix])] = dm[nz[0][tix], nz[1][tix]]
     return res
 
-
 def load_sepset_sparse(basepath: str, num_m: int, num_p: int, max_level: int, marker_offset):
     res = {}
     n = num_m + num_p
@@ -94,6 +94,24 @@ def load_sepset_sparse(basepath: str, num_m: int, num_p: int, max_level: int, ma
 def load_corr_sparse(basepath: str, num_m: int, num_p: int, marker_offset):
     return load_mat_sparse(basepath, num_m, num_p, marker_offset, np.float32, ".corr")
 
+def load_skeleton(basepath: str, num_m: int, num_p: int, marker_offset):
+    dtype = np.int32
+    suffix = ".adj"
+    res = {}
+    n = num_m + num_p
+    dm = np.fromfile(basepath + suffix, dtype=dtype)
+    dm = dm.reshape(n, n)
+    dm2sm = make_dm_ix_to_sm_ix(num_m, num_p, marker_offset)
+    not_zero = np.where(dm != 0)
+
+    for (i, j) in zip(dm2sm[not_zero[0]], dm2sm[not_zero[1]]):
+        if i not in res:
+            res[i] = set()
+        if j not in res:
+            res[j] = set()
+        res[i].add(j)
+        res[j].add(j)
+    return res
 
 def load_adj_sparse(basepath: str, num_m: int, num_p: int, marker_offset=0):
     return load_mat_sparse(basepath, num_m, num_p, marker_offset, np.int32, ".adj")
@@ -166,21 +184,22 @@ def merge_block_outputs(blockfile: str, outdir: str):
     )
 
 
-def global_epm(blockfile: str, outdir: str):
+def global_epm(blockfile: str, outdir: str, max_depth=np.inf):
     basepaths = [outdir + s for s in get_block_out_stems(blockfile)]
 
     bo = BlockOutput(basepaths[0])
     marker_offset = bo.num_markers()
 
-    epm = bo.exclusive_pleiotropy_mat()
+    epm = bo.exclusive_pleiotropy_mat(max_depth=max_depth)
 
     for path in basepaths[1:]:
         try:
             bo = BlockOutput(path, marker_offset)
         except FileNotFoundError:
             continue
+        print("processing block: ", bo)
         marker_offset += bo.num_markers()
-        for k, v in bo.exclusive_pleiotropy_mat().items():
+        for k, v in bo.exclusive_pleiotropy_mat(max_depth=max_depth).items():
             if k in epm:
                 epm[k] += v
             else:
@@ -188,18 +207,18 @@ def global_epm(blockfile: str, outdir: str):
     return epm
 
 
-def global_eps(blockfile: str, outdir: str):
+def global_eps(blockfile: str, outdir: str, max_depth=np.inf):
     basepaths = [outdir + s for s in get_block_out_stems(blockfile)]
 
     bo = BlockOutput(basepaths[0])
     marker_offset = bo.num_markers()
 
-    eps = bo.exclusive_pleiotropy_sets()
+    eps = bo.exclusive_pleiotropy_sets(max_depth=max_depth)
 
     for path in basepaths[1:]:
         bo = BlockOutput(path, marker_offset)
         marker_offset += bo.num_markers()
-        for k, v in bo.exclusive_pleiotropy_sets().items():
+        for k, v in bo.exclusive_pleiotropy_sets(max_depth=max_depth).items():
             if k in eps:
                 eps[k].update(v)
             else:
@@ -319,9 +338,16 @@ class BlockOutput:
         # .bim row index of first marker in block definition
         self.global_marker_offset = global_marker_offset
 
+    def __str__(self) -> str:
+        chr, first, last = self.basepath.split("/")[-1].split("_")
+        return f"{chr}:{first}-{last}"
+
     def block_size(self) -> int:
         first, last = self.basepath.split("_")[-2:]
         return int(last) - int(first) + 1
+
+    def skeleton(self):
+        return load_skeleton(self.basepath, self.num_markers(), self.num_phen(), self.marker_offset)
 
     def max_level(self) -> int:
         return self.mdim[2]
@@ -367,21 +393,29 @@ class BlockOutput:
     def pheno_indices(self):
         return np.arange(0, self.num_phen()) + BASE_INDEX
 
-    def pheno_parents(self):
+    def pheno_parents(self, max_depth=np.inf):
         """Compute upper bound of markers that could affect each phenotype or combination of phenotypes"""
         res = {}
-        adj = self.sam()
+        adj = self.skeleton()
         phens = set(self.pheno_indices())
         for pix in self.pheno_indices():
             visited = set()
             q = queue.Queue()
+            next_q = queue.Queue()
             q.put(pix)
-            while not q.empty():
-                v1 = q.get()
-                for v2 in self.marker_indices():
-                    if (v1, v2) in adj and not v2 in visited:
-                        q.put(v2)
-                        visited.add(v2)
+            depth = 0
+            while depth < max_depth:
+                while not q.empty():
+                    v1 = q.get()
+                    for v2 in adj[v1]:
+                        if not v2 in phens and not v2 in visited:
+                            next_q.put(v2)
+                            visited.add(v2)
+                if next_q.empty():
+                    break
+                q = next_q
+                next_q = queue.Queue()
+                depth += 1
             res[pix] = visited
         return res
 
@@ -418,8 +452,8 @@ class BlockOutput:
                     res[pix].add(parent_candidate)
         return res
 
-    def exclusive_pleiotropy_mat(self):
-        pm = self.pheno_parents()
+    def exclusive_pleiotropy_mat(self, max_depth=np.inf):
+        pm = self.pheno_parents(max_depth=max_depth)
         pleiotropic_markers = set()
         res = {}
         for i in self.pheno_indices():
@@ -432,8 +466,8 @@ class BlockOutput:
             res[(i, i)] = len(pm[i] - pleiotropic_markers)
         return res
 
-    def exclusive_pleiotropy_sets(self):
-        pm = self.pheno_parents()
+    def exclusive_pleiotropy_sets(self, max_depth=np.inf):
+        pm = self.pheno_parents(max_depth=max_depth)
         pleiotropic_markers = set()
         res = {}
         for i in self.pheno_indices():
@@ -489,6 +523,7 @@ def heatmap(
     row_labels,
     col_labels,
     ax=None,
+    cbar=True,
     cbar_kw=None,
     cbarlabel="",
     xlabel=None,
@@ -525,12 +560,22 @@ def heatmap(
     if cbar_kw is None:
         cbar_kw = {}
 
+    if kwargs["cmap"]:
+        cm = plt.get_cmap(kwargs["cmap"])
+        cm.set_bad("white")
+        kwargs["cmap"] = cm
+
+    # ax.grid(which="major", color="gray", linestyle=":", linewidth=0.5)
+
     # Plot the heatmap
     im = ax.imshow(data, **kwargs)
 
-    # Create colorbar
-    cbar = ax.figure.colorbar(im, ax=ax, **cbar_kw)
-    cbar.ax.set_ylabel(cbarlabel, rotation=-90, va="bottom")
+    if cbar:
+        # Create colorbar
+        cbar = ax.figure.colorbar(im, ax=ax, **cbar_kw)
+        cbar.ax.set_ylabel(cbarlabel, rotation=-90, va="bottom")
+    else:
+        cbar = None
 
     # Show all ticks and label them with the respective list entries.
     ax.set_xticks(np.arange(data.shape[1]), labels=col_labels)
@@ -540,11 +585,10 @@ def heatmap(
     ax.tick_params(top=False, bottom=True, labeltop=False, labelbottom=True)
 
     # Rotate the tick labels and set their alignment.
-    plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
+    plt.setp(ax.get_xticklabels(), rotation=50, ha="right", rotation_mode="anchor")
 
     # Turn spines off and create white grid.
     ax.spines[:].set_visible(False)
-
     ax.set_xticks(np.arange(data.shape[1] + 1) - 0.5, minor=True)
     ax.set_yticks(np.arange(data.shape[0] + 1) - 0.5, minor=True)
     ax.grid(which="minor", color="w", linestyle="-", linewidth=3)
@@ -556,6 +600,46 @@ def heatmap(
         ax.set_title(title, **title_kw)
 
     return im, cbar
+
+def plot_skeleton_pleiotropy_mat(
+    outdir: str,
+    blockfile: str,
+    pheno_path: str,
+    max_depth=np.inf,
+    ax=None,
+    cbar_kw=None,
+    title=None,
+    title_kw=dict(),
+    cmap="BuPu",
+):
+    p_names = get_pheno_codes(pheno_path)
+    num_phen = len(p_names)
+
+    gepm = global_epm(blockfile, outdir, max_depth=max_depth)
+
+    z = np.zeros(shape=(num_phen, num_phen))
+    for (i, j), c in gepm.items():
+        z[i - 1, j - 1] = c
+    
+    mask = ~np.tri(z.shape[0], k=-1, dtype=bool)
+    z = np.ma.array(z, mask=mask)  # mask out the lower triangle
+    cmap = plt.get_cmap(cmap)
+    cmap.set_bad("w")  # default value is 'k'
+    im, _ = heatmap(
+        z,
+        p_names,
+        p_names,
+        cmap=cmap,
+        cbar_kw=cbar_kw,
+        cbarlabel=r"# shared parent markers",
+        # vmin=-max_z,
+        # vmax=max_z,
+        xlabel=r"$y_2$",
+        ylabel=r"$y_1$",
+        title=title,
+        title_kw=title_kw,
+        ax=ax,
+    )
 
 
 def plot_pleiotropy_mat(
@@ -575,11 +659,13 @@ def plot_pleiotropy_mat(
     z = [[0 for _ in range(num_phen)] for _ in range(num_phen)]
     for i in range(num_phen):
         for j in range(i + 1):
-            z[i][j] = len(poss_parents[(i, j)])
+            if i != j:
+                z[i][j] = len(poss_parents[(i, j)])
     z = np.array(z)
-    mask = ~np.tri(z.shape[0], k=0, dtype=bool)
-    z = np.ma.array(z, mask=mask)  # mask out the lower triangle
-    cmap = mpl.colormaps[cmap]  # jet doesn't have white color
+    mask = ~np.tri(z.shape[0], k=-1, dtype=bool)
+    z = np.ma.array(z, mask=mask)
+    # z = np.ma.masked_array(z, z == 0.0)
+    cmap = plt.get_cmap(cmap)
     cmap.set_bad("w")  # default value is 'k'
     im, _ = heatmap(
         z,
@@ -594,7 +680,7 @@ def plot_pleiotropy_mat(
         ylabel=r"$y_1$",
         title=title,
         title_kw=title_kw,
-        ax=None,
+        ax=ax,
     )
 
 
@@ -617,7 +703,11 @@ def plot_ace(
     cmap="bwr",
     cbarlabel=r"$ACE \: (y_1 \rightarrow y_2)$",
     cbar_kw=None,
+    cbar=True,
     ax=None,
+    norm=None,
+    xlabel=r"$y_2$",
+    ylabel=r"$y_1$",
 ):
     p_names = get_pheno_codes(pheno_path)
     num_phen = len(p_names)
@@ -626,22 +716,27 @@ def plot_ace(
     for i in range(num_phen):
         for j in range(num_phen):
             z[i][j] = ace[i, j]
-    max_z = np.max(z)
+    max_z = np.max(np.abs(z))
+    z = np.array(z)
+    z = np.ma.masked_array(z, z == 0.0)
     im, _ = heatmap(
-        np.array(z),
+        z,
         p_names,
         p_names,
         cmap=cmap,
         cbarlabel=cbarlabel,
         cbar_kw=cbar_kw,
-        vmin=-max_z,
-        vmax=max_z,
-        xlabel=r"$y_2$",
-        ylabel=r"$y_1$",
+        cbar=cbar,
+        # vmin=-max_z,
+        # vmax=max_z,
+        xlabel=xlabel,
+        ylabel=ylabel,
         title=title,
         title_kw=title_kw,
         ax=ax,
+        norm=norm,
     )
+    return im
 
 
 @dataclass
@@ -777,6 +872,31 @@ five_common_edge_types = EdgeEncoding(
     ),
 )
 
+two_common_edge_types = EdgeEncoding(
+    [
+        r"$y_1 \; \; \; y_2$",
+        r"$y_1$ <-> $y_2$",
+        r"$y_1$ -> $y_2$",
+        r"$y_1$ <- $y_2$",
+    ],
+    {
+        (0, 0): 0,
+        (2, 2): 1,
+        (2, 3): 2,
+        (3, 2): 3,
+    },
+    mpl.colors.ListedColormap(
+        np.array(
+            [
+                "#ffffff",  # white
+                "#b2df8a",
+                "#a6cee3",
+                "#1f78b4",
+            ]
+        )
+    ),
+)
+
 
 def plot_pag(
     pag_path: str,
@@ -818,7 +938,7 @@ def plot_pag(
         cmap=edge_encoding.cmap,
         norm=norm,
         cbar_kw=cbar_kw,
-        cbarlabel="Edge Type",
+        # cbarlabel="Edge Type",
         xlabel=r"$y_2$",
         ylabel=r"$y_1$",
         title=title,
@@ -1464,7 +1584,9 @@ def plot_compare_max_k_effect_on_ace():
     plt.tight_layout()
 
 
-def plot_ace_results_comp_cause_production():
+def plot_ace_results_comp_cause_production(
+    pag_path: str, ace_path: str, pheno_path: str, ace_norm=None
+):
 
     # supp table 3 first three cols
 
@@ -1478,10 +1600,10 @@ def plot_ace_results_comp_cause_production():
             {"y1": "bmi".upper(), "y2": "ST".upper(), "gamma": 0.0724579259674975},
             {"y1": "bmi".upper(), "y2": "AT".upper(), "gamma": 0.127570936884617},
             {"y1": "bmi".upper(), "y2": "cad".upper(), "gamma": 0.254304518656026},
-            {"y1": "height".upper(), "y2": "t2d".upper(), "gamma": 0.0133993365533514},
-            {"y1": "height".upper(), "y2": "ST".upper(), "gamma": -0.0158921479966716},
-            {"y1": "height".upper(), "y2": "AT".upper(), "gamma": -0.00266884948627959},
-            {"y1": "height".upper(), "y2": "cad".upper(), "gamma": -0.0646821638302025},
+            {"y1": "HT".upper(), "y2": "t2d".upper(), "gamma": 0.0133993365533514},
+            {"y1": "HT".upper(), "y2": "ST".upper(), "gamma": -0.0158921479966716},
+            {"y1": "HT".upper(), "y2": "AT".upper(), "gamma": -0.00266884948627959},
+            {"y1": "HT".upper(), "y2": "cad".upper(), "gamma": -0.0646821638302025},
             {"y1": "hdl".upper(), "y2": "t2d".upper(), "gamma": -0.157545489184377},
             {"y1": "hdl".upper(), "y2": "ST".upper(), "gamma": -0.0346983958224145},
             {"y1": "hdl".upper(), "y2": "AT".upper(), "gamma": 0.00954960164699658},
@@ -1494,14 +1616,14 @@ def plot_ace_results_comp_cause_production():
             {"y1": "TRIG".upper(), "y2": "ST".upper(), "gamma": 0.0081104586416291},
             {"y1": "TRIG".upper(), "y2": "AT".upper(), "gamma": -0.0917176821192589},
             {"y1": "TRIG".upper(), "y2": "cad".upper(), "gamma": 0.281762788578154},
-            {"y1": "alcohol".upper(), "y2": "t2d".upper(), "gamma": 0.0692860734762807},
-            {"y1": "alcohol".upper(), "y2": "ST".upper(), "gamma": 0.125010784103481},
-            {"y1": "alcohol".upper(), "y2": "AT".upper(), "gamma": -0.070909459789924},
-            {"y1": "alcohol".upper(), "y2": "cad".upper(), "gamma": 0.0369981351799616},
-            {"y1": "smoke".upper(), "y2": "t2d".upper(), "gamma": 0.153669125333255},
-            {"y1": "smoke".upper(), "y2": "ST".upper(), "gamma": 0.287713602378084},
-            {"y1": "smoke".upper(), "y2": "AT".upper(), "gamma": 0.129522157700426},
-            {"y1": "smoke".upper(), "y2": "cad".upper(), "gamma": 0.479817266067469},
+            {"y1": "ALC".upper(), "y2": "t2d".upper(), "gamma": 0.0692860734762807},
+            {"y1": "ALC".upper(), "y2": "ST".upper(), "gamma": 0.125010784103481},
+            {"y1": "ALC".upper(), "y2": "AT".upper(), "gamma": -0.070909459789924},
+            {"y1": "ALC".upper(), "y2": "cad".upper(), "gamma": 0.0369981351799616},
+            {"y1": "SMK".upper(), "y2": "t2d".upper(), "gamma": 0.153669125333255},
+            {"y1": "SMK".upper(), "y2": "ST".upper(), "gamma": 0.287713602378084},
+            {"y1": "SMK".upper(), "y2": "AT".upper(), "gamma": 0.129522157700426},
+            {"y1": "SMK".upper(), "y2": "cad".upper(), "gamma": 0.479817266067469},
             {"y1": "bfp".upper(), "y2": "t2d".upper(), "gamma": 0.0647735280855574},
             {"y1": "bfp".upper(), "y2": "ST".upper(), "gamma": 0.0044428460841386},
             {"y1": "bfp".upper(), "y2": "AT".upper(), "gamma": 0.0957086524513934},
@@ -1533,6 +1655,7 @@ def plot_ace_results_comp_cause_production():
         ]
     )  # changed from sbp)
 
+    pnames = get_pheno_codes(pheno_path)
     cause_ys = set(cause_gamma["y1"].values)
     cause_ys.update(set(cause_gamma["y2"].values))
     reg_pnames = cause_ys.intersection(set(pnames))
@@ -1560,7 +1683,10 @@ def plot_ace_results_comp_cause_production():
     risk_factors = set(
         [
             "BMI",
+            "HT",
             "BP",
+            "ALC",
+            "SMK",
             "CHOL",
             "DBP",
             "GLU",
@@ -1581,38 +1707,52 @@ def plot_ace_results_comp_cause_production():
         "d2rf": False,
     }
 
-    fig = plt.figure(layout="constrained", figsize=(11, 10))
+    fig = plt.figure(layout="constrained", figsize=(17, 10))
     ax_dict = fig.subplot_mosaic(
         """
-        ab
-        cX
+        abc
+        deX
         """,
         empty_sentinel="X",
     )
 
     cbar_kw = {"fraction": 0.046, "pad": 0.04}
     title_kw = {"loc": "left", "pad": 15, "size": 20}
-    bdpc.plot_ace(
-        bdpc_ace_path_sk,
+    plot_ace(
+        ace_path,
         pheno_path,
-        ax=ax_dict["a"],
-        title="a)",
+        ax=ax_dict["b"],
+        title="b)",
         cbar_kw=cbar_kw,
         title_kw=title_kw,
         cmap="PuOr",
+        norm=ace_norm,
     )
-    bdpc.plot_pleiotropy_mat(
-        bdpc_pag_path_sk,
+
+    plot_pleiotropy_mat(
+        pag_path,
         pheno_path,
-        ax=ax_dict["c"],
-        title="c)",
+        ax=ax_dict["d"],
+        title="d)",
         cbar_kw=cbar_kw,
         title_kw=title_kw,
         cmap="BuPu",
     )
 
-    ax = ax_dict["b"]
-    ace = bdpc.load_ace(bdpc_ace_path_sk, pheno_path)
+    plot_pag(
+        pag_path,
+        pheno_path,
+        ax=ax_dict["a"],
+        title="a)",
+        title_kw=title_kw,
+        edge_encoding=two_common_edge_types,
+        cbar_kw=cbar_kw,
+    )
+
+    plot_non_pleio_barplot(pag_path, pheno_path, ax=ax_dict["e"], title="e)", title_kw=title_kw)
+
+    ax = ax_dict["c"]
+    ace = load_ace(ace_path, pheno_path)
     # ace_flat = ace.flatten()
     # mr = ace_flat + rng.normal(0, 0.10, size=len(ace_flat))
 
@@ -1635,7 +1775,7 @@ def plot_ace_results_comp_cause_production():
             if len(cg) > 1:
                 raise ValueError("too many gammas")
             gamma = 0 if len(cg) == 0 else cg[0]
-            if skip_na and (gamma == 0 or ace[i, j] == 0):
+            if reg_cfg["skip_na"] and (gamma == 0 or ace[i, j] == 0):
                 continue
             rows.append({"y1": pi, "y2": pj, "gamma": gamma, "ace": ace[i, j]})
 
@@ -1647,8 +1787,8 @@ def plot_ace_results_comp_cause_production():
     ax.grid(linestyle=":")
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-    ax.set_ylabel("ACE")
-    ax.set_xlabel("Morrison et al. 2020")
+    ax.set_ylabel("CI-GWAS ACE")
+    ax.set_xlabel(r"CAUSE $\gamma$ (Morrison et al. 2020)")
 
     X = mr.reshape(-1, 1)
     y = ace_flat
@@ -1664,5 +1804,193 @@ def plot_ace_results_comp_cause_production():
     ax.plot(x_pred, y_pred, color="#696969", lw=2, linestyle="dashed")
     beta = np.round(linear_regressor.coef_[0], 2)
     mu = np.round(linear_regressor.intercept_, 2)
-    ax.set_title("b)", **title_kw)
-    ax.text(0.2, -0.05, rf"$y={mu} + {beta}x$", fontsize=13)
+    ax.set_title("c)", **title_kw)
+    ax.text(0.2, 0.12, rf"$y={mu} + {beta}x$", fontsize=13)
+    # fig.align_labels()
+    # fig.tight_layout()
+
+
+def plot_non_pleio_barplot(pag_path: str, pheno_path: str, ax=None, title=None, title_kw=None):
+    if ax is None:
+        ax = plt.gca()
+    ps = pag_exclusive_pleiotropy_sets(pag_path, pheno_path, is_possible_child)
+    p_names = get_pheno_codes(pheno_path)
+    bd = [len(ps[i, i]) for i in range(len(p_names))]
+    ax.bar(range(len(bd)), bd, color="purple")
+    ax.set_ylabel("# non-pleiotropic parent markers")
+    ax.set_xticks(np.arange(len(bd)), labels=p_names)
+    plt.setp(ax.get_xticklabels(), rotation=50, ha="right", rotation_mode="anchor")
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.grid(linestyle=":", axis="y")
+    ax.set_title(title, **title_kw)
+
+
+def plot_all_alpha_production_pags(basepath: str, pheno_path: str, l=6, d=1):
+    fig = plt.figure(layout="constrained", figsize=(17, 10))
+    ax_dict = fig.subplot_mosaic(
+        """
+        abc
+        def
+        """,
+        empty_sentinel="X",
+        sharex=True,
+        sharey=True,
+    )
+
+    ace_norm = mpl.colors.SymLogNorm(vmin=-2.0, vmax=2.0, linthresh=0.01)
+    cbar_kw = {"fraction": 0.046, "pad": 0.04}
+    # title_kw = {"loc": "left", "pad": 15, "size": 20}
+    title_kw = {}
+
+    # alphas = [2, 3, 4, 5, 6, 7, 8]
+    # panels = ["a", "b", "c", "d", "e", "f", "g", "h"]
+
+    alphas = [2, 3, 4, 5, 7, 8]
+    panels = [
+        "a",
+        "b",
+        "c",
+        "d",
+        "e",
+        "f"
+    ]
+
+    for panel, a in zip(panels, alphas):
+        try:
+            ace_path = basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_ACE_sk_mk3.mtx"
+            pag_path = basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_pag_sk_mk3.mtx"
+
+            im = plot_pag(
+                pag_path,
+                pheno_path,
+                ax=ax_dict[panel],
+                title=rf"$\alpha=10^{{-{a}}}$",
+                title_kw=title_kw,
+                edge_encoding=five_common_edge_types,
+                cbar_kw=cbar_kw,
+            )
+
+        except FileNotFoundError as e:
+            print(e)
+
+    # Create colorbar
+    # cbarlabel = r"$ACE \: (y_1 \rightarrow y_2)$"
+    # ax = ax_dict["f"]
+    # cbar = ax.figure.colorbar(im, ax=ax, **cbar_kw)
+    # cbar.ax.set_ylabel(cbarlabel, rotation=-90, va="bottom")
+
+
+def plot_all_alpha_production_aces(basepath: str, pheno_path: str, l=6, d=1):
+    fig = plt.figure(layout="constrained", figsize=(11, 10))
+    ax_dict = fig.subplot_mosaic(
+        """
+        abc
+        deX
+        """,
+        empty_sentinel="X",
+        sharex=True,
+        sharey=True,
+    )
+
+    ace_norm = mpl.colors.SymLogNorm(vmin=-2.0, vmax=2.0, linthresh=0.01)
+    cbar_kw = {"fraction": 0.046, "pad": 0.04}
+    # title_kw = {"loc": "left", "pad": 15, "size": 20}
+    title_kw = {}
+
+    # alphas = [2, 3, 4, 5, 6, 7, 8]
+    # panels = ["a", "b", "c", "d", "e", "f", "g", "h"]
+
+    alphas = [3, 4, 5, 7, 8]
+    panels = [
+        "a",
+        "b",
+        "c",
+        "d",
+        "e",
+    ]
+
+    for panel, a in zip(panels, alphas):
+        try:
+            ace_path = basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_ACE_sk_mk3.mtx"
+            pag_path = basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_pag_sk_mk3.mtx"
+
+            im = plot_ace(
+                ace_path,
+                pheno_path,
+                ax=ax_dict[panel],
+                title=rf"$\alpha=10^{{-{a}}}$",
+                cbar_kw=cbar_kw,
+                title_kw=title_kw,
+                cmap="PuOr",
+                norm=ace_norm,
+                cbar=False,
+            )
+        except FileNotFoundError as e:
+            print(e)
+
+    # Create colorbar
+    # cbarlabel = r"$ACE \: (y_1 \rightarrow y_2)$"
+    # ax = ax_dict["f"]
+    # cbar = ax.figure.colorbar(im, ax=ax, **cbar_kw)
+    # cbar.ax.set_ylabel(cbarlabel, rotation=-90, va="bottom")
+
+
+def plot_pag_and_ace(pag_path: str, ace_path: str, pheno_path: str):
+    fig = plt.figure(layout="constrained", figsize=(11, 10))
+    ax_dict = fig.subplot_mosaic(
+        """
+        ab
+        """,
+        empty_sentinel="X",
+        sharey=False,
+    )
+
+    ace_norm = mpl.colors.SymLogNorm(vmin=-2.0, vmax=2.0, linthresh=0.01)
+    cbar_kw = {"fraction": 0.046, "pad": 0.04}
+    title_kw = {"loc": "left", "pad": 15, "size": 20}
+
+    plot_ace(
+        ace_path,
+        pheno_path,
+        ax=ax_dict["b"],
+        title="b)",
+        cbar_kw=cbar_kw,
+        title_kw=title_kw,
+        cmap="PuOr",
+        norm=ace_norm,
+        # ylabel=None,
+    )
+
+    plot_pag(
+        pag_path,
+        pheno_path,
+        ax=ax_dict["a"],
+        title="a)",
+        title_kw=title_kw,
+        edge_encoding=two_common_edge_types,
+        cbar_kw=cbar_kw,
+    )
+
+def merge_parallel_davs_csvs(indir: str, outdir: str):
+    res = np.zeros(shape=(17, 17))
+    missing = []
+    for i in range(1, 18):
+        for j in range(1, 18):
+            if i == j:
+                continue
+            file = indir + f"all_merged_ACE_sk_mk3_i{i}_j{j}.csv"
+            try:
+                with open(file) as fin:
+                    next(fin)
+                    sym = fin.readline().strip()
+                    if sym == "NA":
+                        res[i - 1, j - 1] = np.nan
+                    else:
+                        res[i - 1, j - 1] = eval(sym)
+            except FileNotFoundError as e:
+                missing.append((i, j))
+
+    res[np.isnan(res)] = 0
+
+    scipy.io.mmwrite(outdir + "all_merged_ACE_sk_mk3.mtx", scipy.sparse.coo_matrix(res))
