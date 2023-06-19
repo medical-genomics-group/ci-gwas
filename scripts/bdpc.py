@@ -8,6 +8,7 @@ import seaborn as sns
 import queue
 from scipy.io import mmread
 from sklearn.linear_model import LinearRegression
+import itertools
 
 SMALL_SIZE = 12
 MEDIUM_SIZE = 14
@@ -183,6 +184,27 @@ def merge_block_outputs(blockfile: str, outdir: str):
         sam, scm, ssm, gmi, marker_offset + bo.num_phen(), bo.num_phen(), bo.max_level()
     )
 
+def global_upm(blockfile: str, outdir: str, max_depth=np.inf):
+    basepaths = [outdir + s for s in get_block_out_stems(blockfile)]
+
+    bo = BlockOutput(basepaths[0])
+    marker_offset = bo.num_markers()
+
+    upm = bo.union_pleiotropy_mat(max_depth=max_depth)
+
+    for path in basepaths[1:]:
+        try:
+            bo = BlockOutput(path, marker_offset)
+        except FileNotFoundError:
+            continue
+        print("processing block: ", bo)
+        marker_offset += bo.num_markers()
+        for k, v in bo.union_pleiotropy_mat(max_depth=max_depth).items():
+            if k in upm:
+                upm[k] += v
+            else:
+                upm[k] = v
+    return upm
 
 def global_epm(blockfile: str, outdir: str, max_depth=np.inf):
     basepaths = [outdir + s for s in get_block_out_stems(blockfile)]
@@ -466,6 +488,22 @@ class BlockOutput:
             res[(i, i)] = len(pm[i] - pleiotropic_markers)
         return res
 
+    def union_pleiotropy_mat(self, max_depth=np.inf):
+        pm = self.pheno_parents(max_depth=max_depth)
+        pleiotropic_markers = set()
+        res = {(i, i): set() for i in self.pheno_indices()}
+        for i in self.pheno_indices():
+            for j in range(i + 1, self.num_phen() + BASE_INDEX):
+                s = set.intersection(pm[i], pm[j])
+                res[(i, i)] = s.union(res[(i, i)])
+                res[(j, j)] = s.union(res[(j, j)])
+                res[(i, j)] = len(s)
+                res[(j, i)] = len(s)
+                pleiotropic_markers.update(s)
+        for i in self.pheno_indices():
+            res[(i, i)] = len(res[(i, i)])
+        return res
+
     def exclusive_pleiotropy_sets(self, max_depth=np.inf):
         pm = self.pheno_parents(max_depth=max_depth)
         pleiotropic_markers = set()
@@ -600,6 +638,66 @@ def heatmap(
         ax.set_title(title, **title_kw)
 
     return im, cbar
+
+def get_skeleton_pleiotropy_mat(
+    outdir: str,
+    blockfile: str,
+    pheno_path: str,
+    max_depth=np.inf,
+    mat_type="exclusive"
+):
+    p_names = get_pheno_codes(pheno_path)
+    num_phen = len(p_names)
+
+    if mat_type == "exclusive":
+        gepm = global_epm(blockfile, outdir, max_depth=max_depth)
+    elif mat_type == "union":
+        gepm = global_upm(blockfile, outdir, max_depth=max_depth)
+    else:
+        raise ValueError(f"Invalid mat_type: {mat_type}")
+
+    z = np.zeros(shape=(num_phen, num_phen))
+    for (i, j), c in gepm.items():
+        z[i - 1, j - 1] = c
+    
+    return z
+
+def plot_skeleton_pleiotropy_mat_z(
+    z: np.array,
+    pheno_path: str,
+    ax=None,
+    cbar_kw=None,
+    title=None,
+    title_kw=dict(),
+    cmap="BuPu",
+    norm=None,
+    cbar=True,
+    **kwargs
+):
+    p_names = get_pheno_codes(pheno_path)
+    mask = ~np.tri(z.shape[0], k=-1, dtype=bool)
+    z = np.ma.array(z, mask=mask)  # mask out the lower triangle
+    cmap = plt.get_cmap(cmap)
+    cmap.set_bad("w")  # default value is 'k'
+    cbar_kw = {"fraction": 0.046, "pad": 0.04}
+    im, _ = heatmap(
+        z,
+        p_names,
+        p_names,
+        cmap=cmap,
+        cbar_kw=cbar_kw,
+        cbarlabel=r"# shared ancestral markers",
+        # vmin=-max_z,
+        # vmax=max_z,
+        # xlabel=r"$y_2$",
+        # ylabel=r"$y_1$",
+        title=title,
+        title_kw=title_kw,
+        ax=ax,
+        norm=norm,
+        cbar=cbar,
+        **kwargs
+    )
 
 def plot_skeleton_pleiotropy_mat(
     outdir: str,
@@ -1146,305 +1244,325 @@ def combine_all_pheno_and_plot():
         cbar_kws={"label": "# parent markers"},
     )
 
+def load_simulation_results() -> pd.DataFrame:
+    @dataclass
+    class Performance:
+        mse: float
+        bias: float
+        var: float
+        mse_tp: float
+        bias_tp: float
+        var_tp: float
+        fdr: float
+        tpr: float
 
-def load_mr_simulation_results(
-    basepath: str,
-    n_rep=20,
-    n_latent=2,
-    n_marker=100,
-    n_phen=10,
-    nstep_thr_range=10,
-    max_thr_range=0.4,
-    p_thr=0.05,
-) -> pd.DataFrame:
-    first_phen_ix = n_latent + n_marker
-    rep_ids = np.arange(1, n_rep + 1)
+    def calulate_performance_metrics(
+        true_adj: np.array,
+        true_eff: np.array,
+        est_adj: np.array,
+        est_eff: np.array
+    ):
+        true_adj_masked = np.ma.array(true_adj, mask=np.tri(true_adj.shape[0], k=0))
+        est_adj_masked = np.ma.array(est_adj, mask=np.tri(true_adj.shape[0], k=0))
+        est_eff_masked = np.ma.array(est_eff, mask=np.tri(true_adj.shape[0], k=0))
+        true_eff_masked = np.ma.array(true_eff, mask=np.tri(true_adj.shape[0], k=0))
+        sig_eff = np.zeros_like(est_eff)
+        sig_eff[est_adj != 0] = est_eff[est_adj != 0]
+        tp_mat = (true_adj_masked != 0) & (est_adj_masked != 0)
+        p = np.sum(true_adj_masked != 0)
+        f = np.sum(true_adj_masked == 0)
+        tp = np.sum((true_adj_masked != 0) & (est_adj_masked != 0))
+        fp = np.sum((true_adj_masked == 0) & (est_adj_masked != 0))
+        fn = np.sum((true_adj_masked != 0) & (est_adj_masked == 0))
+        mse = np.sum((true_eff - sig_eff) ** 2)
+        bias = np.sum(true_eff - sig_eff)
+        var = np.var(true_eff - sig_eff)
+        mse_tp = np.sum((est_eff_masked[tp_mat] - true_eff_masked[tp_mat]) ** 2)
+        bias_tp = np.sum(est_eff_masked[tp_mat] - true_eff_masked[tp_mat])
+        var_tp = np.var(est_eff_masked[tp_mat] - true_eff_masked[tp_mat])
+        fdr = fp / (fp + tp)
+        tpr = tp / p
+        if np.ma.is_masked(mse_tp):
+            mse_tp = np.nan
+        if np.ma.is_masked(var_tp):
+            var_tp = np.nan
+        if np.ma.is_masked(bias_tp):
+            bias_tp = np.nan
+        return Performance(mse, bias, var, mse_tp, bias_tp, var_tp, fdr, tpr)
 
-    nstep_thr_range = 10
-    seq = np.logspace(-3.0, np.log10(max_thr_range), nstep_thr_range)
-    thr = np.insert(seq, 0, 0.0)
+    @dataclass
+    class MR:
+        method: str
+        exposure: str
+        outcome: str
+        p: str
+        estimate: str
 
-    results = []
+    mr_cn = [
+        MR("ivw", "ivw.Exposure", "ivw.Outcome", "ivw.p", "ivw.est"),
+        MR("egger", "egger.Exposure", "egger.Outcome", "egger.p", "egger.est"),
+        MR("mrpresso", "mrpresso.V1", "mrpresso.V2", "mrpresso.P.value", "mrpresso.Causal.Estimate"),
+        MR("cause", "CAUSE.V1", "CAUSE.V2", "CAUSE.V4", "CAUSE.gamma"),
+    ]
 
-    for row, i in enumerate(rep_ids):
-        try:
-            exp_path = basepath + f"True_causaleffect_it{i}.mtx"
-            exp = bdpc.mmread(exp_path).tocsr()
-            df = pd.read_csv(basepath + f"all_mr_res_it{i}.csv")
-            exp_arr = exp[first_phen_ix:, first_phen_ix:].toarray()
+    pdir = f"/nfs/scistore13/robingrp/human_data/causality/bias_as_fn_of_alpha/sim_small_effects/"
 
-            ps = {n: np.ones(shape=(n_phen, n_phen)) for n in ["egger", "ivw", "mrpresso", "cause"]}
+    d = 1
+    l = 6
+    n_arr = [2000, 4000, 8000, 16000]
+    m_arr = [200, 400, 800, 1600]
+    # m_arr = [200, 400, 1600]
+    e_arr = list(range(1, 9))
+    rep_arr = list(range(1, 21))
+    num_phen = 10
 
-            effects = {
-                n: np.zeros(shape=(n_phen, n_phen)) for n in ["egger", "ivw", "mrpresso", "cause"]
-            }
+    rows = []
 
-            for r in df.iterrows():
-                row = r[1]
-                i = int(row.loc["egger.Exposure"].split("Y")[1]) - 1
-                j = int(row.loc["egger.Outcome"].split("Y")[1]) - 1
-                ps["egger"][i, j] = row.loc["egger.p"]
-                effects["egger"][i, j] = row.loc["egger.est"]
-                ps["ivw"][i, j] = row.loc["ivw.p"]
-                effects["ivw"][i, j] = row.loc["ivw.est"]
-                ps["mrpresso"][i, j] = row.loc["mrpresso.P.value"]
-                effects["mrpresso"][i, j] = row.loc["mrpresso.Causal.Estimate"]
-                ps["cause"][i, j] = row.loc["CAUSE.V4"]
-                effects["cause"][i, j] = row.loc["CAUSE.gamma"]
+    for (n, m, rep) in itertools.product(n_arr, m_arr, rep_arr):
 
-            for t in thr:
-                for method in ["egger", "ivw", "mrpresso", "cause"]:
-                    obs_arr = effects[method] * (ps[method] < p_thr)
-                    obs_arr_t = obs_arr.copy()
-                    obs_arr_t[np.abs(obs_arr_t) < t] = 0
-                    N = np.sum(exp_arr == 0)
-                    P = np.sum(exp_arr != 0)
-                    FP = np.sum((obs_arr_t != 0) & (exp_arr == 0))
-                    TP = np.sum((obs_arr_t != 0) & (exp_arr != 0))
-                    results.append(
-                        {
-                            "method": method,
-                            "replicate": i,
-                            "0-ROPE": t,
-                            "MSE": np.mean((exp_arr - obs_arr_t) ** 2),
-                            "FNR": np.sum((obs_arr_t == 0) & (exp_arr != 0)) / P,
-                            "FPR": np.sum((obs_arr_t != 0) & (exp_arr == 0)) / N,
-                            "TPR": np.sum((obs_arr_t != 0) & (exp_arr != 0)) / P,
-                            "TNR": np.sum((obs_arr_t == 0) & (exp_arr == 0)) / N,
-                            "FDR": FP / (TP + FP),
-                        }
-                    )
-        except OSError as e:
-            print(e)
+        # load true dag
+        dag_path = pdir + f"./true_adj_mat_n{n}_SNP_{m}_it_{rep}.mtx"
+        dag = mmread(dag_path).tocsr()
+        pdag = dag[-(num_phen):,-(num_phen):].toarray()
 
-    return pd.DataFrame(results)
+        # load true causal effects
+        eff_path = pdir + f"./True_causaleffect_n{n}_SNP_{m}_it_{rep}.mtx"
+        eff = mmread(dag_path).tocsr()
+        peff = eff[-(num_phen):,-(num_phen):].toarray()
 
+        for mr in mr_cn:
+            mr_results = pd.read_csv(pdir + f"mr_res_{mr.method}_n{n}_SNP_{m}_it_{rep}.csv")
+            mr_results['i'] = mr_results[mr.exposure].apply(lambda x: int(x.split("Y")[1]) - 1)
+            mr_results['j'] = mr_results[mr.outcome].apply(lambda x: int(x.split("Y")[1]) - 1)
+            pvals = np.ones(shape=(num_phen, num_phen))
+            pvals[mr_results['i'], mr_results['j']] = mr_results[mr.p]
+            effects = np.zeros(shape=(num_phen, num_phen))
+            effects[mr_results['i'], mr_results['j']] = mr_results[mr.estimate]
+            for e in e_arr:
+                adj = pvals < 10**(-e)
+                perf = calulate_performance_metrics(pdag, peff, adj, effects)
+                rows.append({
+                    "mse": perf.mse,
+                    "var": perf.var,
+                    "bias": perf.bias,
+                    "mse_tp": perf.mse_tp,
+                    "var_tp": perf.var_tp,
+                    "bias_tp": perf.bias_tp,
+                    "fdr": perf.fdr,
+                    "tpr": perf.tpr,
+                    "n": n,
+                    "m": m,
+                    "rep": rep,
+                    "alpha": 10**(-e),
+                    "method": mr.method,
+                })
 
-def load_simulation_results(
-    basepath: str,
-    zero_lotri=False,
-    mask_lotri=False,
-    n_rep=20,
-    n_latent=2,
-    n_marker=100,
-    n_phen=10,
-    nstep_thr_range=10,
-    max_thr_range=0.4,
-    max_alpha_exponent=8,
-    min_alpha_exponent=1,
-    real_approx=False,
-) -> pd.DataFrame:
-    first_phen_ix = n_latent + n_marker
-    num_alpha_exponents = max_alpha_exponent - min_alpha_exponent + 1
-    rep_ids = np.arange(1, n_rep + 1)
-    alpha_exponents = np.arange(min_alpha_exponent, max_alpha_exponent + 1)
+        for e in e_arr:
+            indir = pdir + f"simpc_d{d}_l{l}_e{e}_i{rep}_n{n}_m{m}/"
 
-    nstep_thr_range = 10
-    seq = np.logspace(-3.0, np.log10(max_thr_range), nstep_thr_range)
-    thr = np.insert(seq, 0, 0.0)
+            mdim_path = indir + "skeleton.mdim"
+            with open(mdim_path, 'r') as fin:
+                num_var, num_phen, max_level = [int(elem) for elem in fin.readline().split()]
 
-    results = []
-    num_markers_selected = np.zeros(shape=(n_rep, num_alpha_exponents))
+            # load skeleton
+            adj = np.fromfile(indir + "skeleton.adj", dtype=np.int32).reshape(num_var, num_var)
+            padj = adj[-(num_phen):,-(num_phen):]
 
-    for row, i in enumerate(rep_ids):
-        for col, e in enumerate(alpha_exponents):
+            # load var indices
+            # var_ixs = np.fromfile(indir + "skeleton.ixs", dtype=np.int32)
+
+            # load aces
+            pace = np.zeros(shape=(num_phen, num_phen))
+            missing = []
+            for i in range(1, num_phen + 1):
+                for j in range(1, num_phen + 1):
+                    if i == j:
+                        continue
+                    file = indir + f"estimated_causaleffect_i{i}_j{j}.csv"
+                    try:
+                        with open(file) as fin:
+                            sym = fin.readline().strip()
+                            if sym == "NaN":
+                                pace[i - 1, j - 1] = 0.0
+                            else:
+                                pace[i - 1, j - 1] = eval(sym)
+                    except FileNotFoundError as e:
+                        missing.append((i, j))
+
+            perf = calulate_performance_metrics(pdag, peff, padj, pace)
+            rows.append({
+                "mse": perf.mse,
+                "var": perf.var,
+                "bias": perf.bias,
+                "mse_tp": perf.mse_tp,
+                "var_tp": perf.var_tp,
+                "bias_tp": perf.bias_tp,
+                "fdr": perf.fdr,
+                "tpr": perf.tpr,
+                "n": n,
+                "m": m,
+                "rep": rep,
+                "alpha": 10**(-e),
+                "method": "ci-gwas",
+            })
+
+    return pd.DataFrame(rows)
+
+def plot_simulation_results():
+    d = 1
+    l = 6
+    n_arr = [2000, 4000, 8000, 16000]
+    m_arr = [200, 400, 800, 1600]
+    # m_arr = [200, 400, 1600]
+    e_arr = list(range(1, 9))
+    rep_arr = list(range(1, 21))
+    num_phen = 10
+
+    df = load_simulation_results()
+    dfs = df.loc[(df['n'] == 16000) & (df['m'] == 1600)]
+    gr = dfs.groupby(["method", "alpha"])
+    means = gr.mean()
+    stds = gr.std()
+
+    alphas = 10.0 ** -np.array(e_arr[::-1])
+    # methods = ['ci-gwas', 'cause', 'mrpresso', 'egger', 'ivw']
+    methods = ['ci-gwas', 'cause', 'mrpresso', 'ivw']
+    title_kw = {"loc": "left", "pad": 15, "size": 20}
+
+    def plot_bars(x_vals, metric, means, stds, ax, title):
+        ax.set_title(title, **title_kw)
+        x = np.arange(len(x_vals))  # the label locations
+        width = 0.15  # the width of the bars
+        multiplier = 0
+
+        handles = []
+        for method in methods:
+            mu = means.loc[method][metric]
+            sig = stds.loc[method][metric]
+            offset = width * multiplier
             try:
-                exp_path = basepath + f"True_causaleffect_it{i}.mtx"
-                if real_approx:
-                    obs_path = (
-                        basepath
-                        + f"simpc_d1_l14_e{e}_{i}/estimated_causaleffect_complete_mk3_md2.mtx"
-                    )
-                else:
-                    obs_path = (
-                        basepath + f"simpc_d1_l14_e{e}_{i}/estimated_causaleffect_complete.mtx"
-                    )
-                mdim_path = basepath + f"simpc_d1_l14_e{e}_{i}/skeleton.mdim"
-                with open(mdim_path, "r") as fin:
-                    l = fin.readline()
-                    fields = l.split()
-                    num_markers_selected[row, col] = int(fields[0]) - int(fields[1])
-                exp = bdpc.mmread(exp_path).tocsr()
-                obs = bdpc.mmread(obs_path).tocsr()
-                exp_arr = exp[first_phen_ix:, first_phen_ix:].toarray()
-                obs_arr = obs.toarray()
-                lotrima = np.zeros_like(exp_arr, dtype=bool)
-                lotrima[np.tril_indices_from(lotrima)] = True
-                if mask_lotri:
-                    exp_arr_ma = np.ma.masked_where(lotrima, exp_arr)
-                elif zero_lotri:
-                    exp_arr_ma = exp_arr.copy()
-                    exp_arr_ma[lotrima] = 0
-                else:
-                    exp_arr_ma = exp_arr.copy()
-                for t in thr:
-                    obs_arr_t = obs_arr.copy()
-                    obs_arr_t[np.abs(obs_arr_t) < t] = 0
-                    N = np.sum(exp_arr_ma == 0)
-                    P = np.sum(exp_arr_ma != 0)
-                    FP = np.sum((obs_arr_t != 0) & (exp_arr_ma == 0))
-                    TP = np.sum((obs_arr_t != 0) & (exp_arr_ma != 0))
-                    results.append(
-                        {
-                            "method": "CI-GWAS",
-                            "replicate": i,
-                            "alpha": 10.0**-e,
-                            "0-ROPE": t,
-                            "MSE": np.mean((exp_arr_ma - obs_arr_t) ** 2),
-                            "FNR": np.sum((obs_arr_t == 0) & (exp_arr_ma != 0)) / P,
-                            "FPR": np.sum((obs_arr_t != 0) & (exp_arr_ma == 0)) / N,
-                            "TPR": np.sum((obs_arr_t != 0) & (exp_arr_ma != 0)) / P,
-                            "TNR": np.sum((obs_arr_t == 0) & (exp_arr_ma == 0)) / N,
-                            "FDR": FP / (TP + FP),
-                        }
-                    )
+                bars = ax.bar(x + offset, mu, width, yerr=sig, capsize=1.5, label=method)
+                handles.append(bars)
+            except StopIteration:
+                pass
+            multiplier += 1
 
-            except FileNotFoundError as e:
-                print(e)
-
-    return pd.DataFrame(results)
-
-
-def plot_ci_gwas_simulation_results(
-    results: pd.DataFrame,
-    suptitle=None,
-    min_alpha_exponent=1,
-    max_alpha_exponent=8,
-    fdr_line_y=0.05,
-):
-    means = results.groupby(["alpha", "0-ROPE"]).mean()
-    stds = results.groupby(["alpha", "0-ROPE"]).std()
-    alpha_exponents = np.arange(min_alpha_exponent, max_alpha_exponent + 1)
-    num_alpha_exponents = max_alpha_exponent - min_alpha_exponent + 1
-
-    def plot_simulation_results_panel(ax, title: str, y: str, title_kw: dict):
-        ax.set_title(title, **title_kw)
-        ax.set_ylabel(y)
-        ax.set_xlabel("0-ROPE")
+        ax.set_ylabel(metric)
+        if title == 'e)' or title == 'd)':
+            ax.set_xlabel(r"$\alpha$")
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
-        ax.set_xscale("log")
-        artists = []
-        for e in alpha_exponents:
-            alpha = 10.0**-e
-            mu = means[y][alpha]
-            x = mu.index
-            sig = stds[y][alpha]
-            hi = mu + sig
-            lo = mu - sig
-            a = ax.plot(mu)
-            artists.append(a)
-            ax.fill_between(x, hi, lo, alpha=0.1)
-        if y == "FDR":
-            ax.axhline(fdr_line_y, linestyle="--")
-        return artists
+        ax.set_xticks(x + width, x_vals)
+        plt.setp(ax.get_xticklabels(), rotation=50, ha="right", rotation_mode="anchor")
+        # ax.legend(loc='upper left', ncols=3)
+        # ax.set_yscale("symlog")
+        return handles
 
-    title_kw = {"loc": "left", "pad": 15, "size": 20}
+    fig = plt.figure(layout="constrained", figsize=(10, 8))
+    ax_dict = fig.subplot_mosaic(
+        """
+        fa
+        bc
+        de
+        """,
+        empty_sentinel="X",
+        sharex=True
+    )
 
-    fig = plt.figure(layout="constrained", figsize=(7, 8))
-    N = num_alpha_exponents
-    plt.rcParams["axes.prop_cycle"] = plt.cycler("color", plt.cm.viridis(np.linspace(0, 1, N)))
+    plot_bars(alphas, "fdr", means, stds, ax_dict['a'], "a)")
+    plot_bars(alphas, "tpr", means, stds, ax_dict['b'], "b)")
+    plot_bars(alphas, "mse", means, stds, ax_dict['c'], "c)")
+    plot_bars(alphas, "bias", means, stds, ax_dict['d'], "d)")
+    h = plot_bars(alphas, "var", means, stds, ax_dict['e'], "e)")
+    ax_dict["f"].legend(
+        handles=h,
+        labels=['CI-GWAS', 'CAUSE', 'MR-PRESSO', 'IVW Regression'],
+        loc="center",
+        fancybox=False,
+        shadow=False,
+        ncol=2,
+        # title="method",
+    )
+    ax_dict["f"].axis("off")
+    plt.savefig('/nfs/scistore13/robingrp/human_data/causality/figures/figure_2.eps')
 
+def plot_simulation_results_sup():
+    d = 1
+    l = 6
+    n_arr = [2000, 4000, 8000, 16000]
+    m_arr = [200, 400, 800, 1600]
+    # m_arr = [200, 400, 1600]
+    e_arr = list(range(1, 9))
+    rep_arr = list(range(1, 21))
+    num_phen = 10
+
+    df = load_simulation_results()
+    gr = df.groupby(["method", "alpha", "n", "m"])
+    means = gr.mean()
+    stds = gr.std()
+
+    alpha = 10**(-8)
+    # methods = ['ci-gwas', 'cause', 'mrpresso', 'egger', 'ivw']
+    methods = ['ci-gwas', 'cause', 'mrpresso', 'ivw']
+    # methods = ['ci-gwas']
+
+    def plot_bars(x_tup, metric, means, stds, ax):
+        x = np.arange(len(x_tup))  # the label locations
+        width = 0.15  # the width of the bars
+        multiplier = 0
+
+        handles = []
+        for method in methods:
+            mu = means.loc[method, alpha][metric]
+            sig = stds.loc[method, alpha][metric]
+            offset = width * multiplier
+            try:
+                bars = ax.bar(x + offset, mu, width, yerr=sig, capsize=1, label=method)
+                handles.append(bars)
+            except StopIteration:
+                pass
+            multiplier += 1
+
+        # Add some text for labels, title and custom x-axis tick labels, etc.
+        ax.set_ylabel(metric)
+        ax.set_xlabel("(n, m)")
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        # ax.set_title('Penguin attributes by species')
+        ax.set_xticks(x + width, x_tup)
+        plt.setp(ax.get_xticklabels(), rotation=50, ha="right", rotation_mode="anchor")
+        # ax.legend(loc='upper left', ncols=3)
+        return handles
+
+    x_tup = list(itertools.product(n_arr, m_arr))
+
+
+    fig = plt.figure(layout="constrained", figsize=(15, 15))
     ax_dict = fig.subplot_mosaic(
         """
         ab
         cd
-        ee
+        ef
         """,
         empty_sentinel="X",
-        # set the height ratios between the rows
-        height_ratios=[1, 1, 0.3],
+        sharex=True
     )
 
-    # MSE, panel a)
-    art = plot_simulation_results_panel(ax_dict["a"], "a)", "MSE", title_kw)
-    plot_simulation_results_panel(ax_dict["b"], "b)", "FDR", title_kw)
-    plot_simulation_results_panel(ax_dict["c"], "c)", "FPR", title_kw)
-    plot_simulation_results_panel(ax_dict["d"], "d)", "FNR", title_kw)
-
-    ax_dict["e"].legend(
-        handles=[l[0] for l in art],
-        labels=[rf"$10^{{-{e}}}$" for e in alpha_exponents],
+    plot_bars(x_tup, "fdr", means, stds, ax_dict['a'])
+    plot_bars(x_tup, "tpr", means, stds, ax_dict['b'])
+    plot_bars(x_tup, "mse", means, stds, ax_dict['c'])
+    plot_bars(x_tup, "bias", means, stds, ax_dict['d'])
+    h = plot_bars(x_tup, "var", means, stds, ax_dict['e'])
+    ax_dict["f"].legend(
+        handles=h,
         loc="center",
         fancybox=False,
         shadow=False,
-        ncol=4,
-        title=r"$\alpha$",
+        ncol=2,
+        title="method",
     )
-    ax_dict["e"].axis("off")
-
-    if suptitle:
-        fig.suptitle(suptitle)
-
-    plt.tight_layout()
-
-
-def plot_all_simulation_results(results: pd.DataFrame, fdr_line_y=0.05, suptitle=None):
-    methods = ["CI-GWAS", "egger", "cause", "ivw", "mrpresso"]
-    means = results.groupby(["method", "0-ROPE"]).mean()
-    stds = results.groupby(["method", "0-ROPE"]).std()
-
-    def plot_simulation_results_panel(ax, title: str, y: str, title_kw: dict):
-        ax.set_title(title, **title_kw)
-        ax.set_ylabel(y)
-        ax.set_xlabel("0-ROPE")
-        ax.spines["top"].set_visible(False)
-        ax.spines["right"].set_visible(False)
-        ax.set_xscale("log")
-        artists = []
-        for m in methods:
-            mu = means[y][m]
-            x = mu.index
-            sig = stds[y][m]
-            hi = mu + sig
-            lo = mu - sig
-            a = ax.plot(mu)
-            artists.append(a)
-            ax.fill_between(x, hi, lo, alpha=0.1)
-        if y == "FDR":
-            ax.axhline(fdr_line_y, linestyle="--")
-        return artists
-
-    title_kw = {"loc": "left", "pad": 15, "size": 20}
-
-    fig = plt.figure(layout="constrained", figsize=(7, 8))
-    plt.rcParams["axes.prop_cycle"] = plt.cycler(
-        "color", plt.cm.viridis(np.linspace(0, 1, len(methods)))
-    )
-
-    ax_dict = fig.subplot_mosaic(
-        """
-        ab
-        cd
-        ee
-        """,
-        empty_sentinel="X",
-        # set the height ratios between the rows
-        height_ratios=[1, 1, 0.3],
-    )
-
-    # MSE, panel a)
-    art = plot_simulation_results_panel(ax_dict["a"], "a)", "MSE", title_kw)
-    plot_simulation_results_panel(ax_dict["b"], "b)", "FDR", title_kw)
-    plot_simulation_results_panel(ax_dict["c"], "c)", "FPR", title_kw)
-    plot_simulation_results_panel(ax_dict["d"], "d)", "FNR", title_kw)
-
-    ax_dict["e"].legend(
-        handles=[l[0] for l in art],
-        labels=methods,
-        loc="center",
-        fancybox=False,
-        shadow=False,
-        ncol=4,
-        title=r"method",
-    )
-    ax_dict["e"].axis("off")
-
-    if suptitle:
-        fig.suptitle(suptitle)
-
-    plt.tight_layout()
-
+    ax_dict["f"].axis("off")
+    fig.suptitle(rf"$\alpha={{{alpha}}}$")
 
 def plot_block_size_experiment_results():
     block_sizes = np.arange(1, 12) * 10**3
@@ -1972,11 +2090,11 @@ def plot_pag_and_ace(pag_path: str, ace_path: str, pheno_path: str):
         cbar_kw=cbar_kw,
     )
 
-def merge_parallel_davs_csvs(indir: str, outdir: str):
-    res = np.zeros(shape=(17, 17))
+def merge_parallel_davs_csvs(indir: str, outdir: str, num_phen: int):
+    res = np.zeros(shape=(num_phen, num_phen))
     missing = []
-    for i in range(1, 18):
-        for j in range(1, 18):
+    for i in range(1, num_phen + 1):
+        for j in range(1, num_phen + 1):
             if i == j:
                 continue
             file = indir + f"all_merged_ACE_sk_mk3_i{i}_j{j}.csv"
