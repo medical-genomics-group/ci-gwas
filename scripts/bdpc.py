@@ -1004,6 +1004,7 @@ def plot_pag(
     cbar_kw=None,
     edge_encoding=all_edge_types,
     ax=None,
+    cbar=True
 ):
 
     p_names = get_pheno_codes(pheno_path)
@@ -1042,6 +1043,7 @@ def plot_pag(
         title=title,
         title_kw=title_kw,
         ax=ax,
+        cbar=cbar
     )
 
 
@@ -1944,6 +1946,79 @@ def plot_non_pleio_barplot(pag_path: str, pheno_path: str, ax=None, title=None, 
     ax.set_title(title, **title_kw)
 
 
+def plot_all_alpha_production_pags_and_ace(basepath: str, pheno_path: str, l=6, d=1):
+    fig = plt.figure(layout="constrained", figsize=(10, 35))
+    ax_dict = fig.subplot_mosaic(
+        """
+        ah
+        bi
+        cj
+        dk
+        el
+        fm
+        gn
+        op
+        """,
+        empty_sentinel="X",
+        height_ratios=[1, 1, 1, 1, 1, 1, 1, 0.05],
+        
+    )
+
+    ace_norm = mpl.colors.SymLogNorm(vmin=-2.0, vmax=2.0, linthresh=0.01)
+    cbar_kw = {"fraction": 0.046, "pad": 0.04}
+    # title_kw = {"loc": "left", "pad": 15, "size": 20}
+    title_kw = {}
+
+    pag_panels = ["a", "b", "c", "d", "e", "f", "g"]
+    ace_panels = ["h", "i", "j", "k", "l", "m", "n"]
+    alphas = [2, 3, 4, 5, 6, 7, 8]
+
+    for pag_panel, ace_panel, a in zip(pag_panels, ace_panels, alphas):
+        try:
+            ace_path = basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_ACE_sk_mk3.mtx"
+            pag_path = basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_pag_sk_mk3.mtx"
+
+            ima = plot_ace(
+                ace_path,
+                pheno_path,
+                ax=ax_dict[ace_panel],
+                title=rf"$\alpha=10^{{-{a}}}$",
+                cbar_kw=cbar_kw,
+                title_kw=title_kw,
+                cmap="PuOr",
+                norm=ace_norm,
+                cbar=False,
+            )
+
+        except FileNotFoundError as e:
+            print(e)
+
+    fig.colorbar(ima, cax=ax_dict['p'], **cbar_kw, location='bottom')
+
+    for pag_panel, ace_panel, a in zip(pag_panels, ace_panels, alphas):
+        try:
+            ace_path = basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_ACE_sk_mk3.mtx"
+            pag_path = basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_pag_sk_mk3.mtx"
+
+            imp = plot_pag(
+                pag_path,
+                pheno_path,
+                ax=ax_dict[pag_panel],
+                title=rf"$\alpha=10^{{-{a}}}$",
+                title_kw=title_kw,
+                edge_encoding=five_common_edge_types,
+                cbar_kw=cbar_kw,
+                cbar=False
+            )
+
+        except FileNotFoundError as e:
+            print(e)
+
+    fig.colorbar(imp, cax=ax_dict['o'], location='bottom')
+    # cbar = ax.figure.colorbar(im, ax=ax, **cbar_kw)
+    # cbar.ax.set_ylabel(cbarlabel, rotation=-90, va="bottom")
+
+
 def plot_all_alpha_production_pags(basepath: str, pheno_path: str, l=6, d=1):
     fig = plt.figure(layout="constrained", figsize=(17, 10))
     ax_dict = fig.subplot_mosaic(
@@ -2112,3 +2187,159 @@ def merge_parallel_davs_csvs(indir: str, outdir: str, num_phen: int):
     res[np.isnan(res)] = 0
 
     scipy.io.mmwrite(outdir + "all_merged_ACE_sk_mk3.mtx", scipy.sparse.coo_matrix(res))
+
+
+def plot_inf_depth_pleio():
+    d = 10000
+    l = 6
+    e = 2
+    outdir = f"/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/production/bdpc_d{d}_l{l}_a1e{e}/"
+    blockfile = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/ukb22828_UKB_EST_v3_ldp08.blocks"
+    pheno_path = f"/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/production/input.phen"
+
+    z1 = get_skeleton_pleiotropy_mat(outdir, blockfile, pheno_path, max_depth=1)
+    z2 = get_skeleton_pleiotropy_mat(outdir, blockfile, pheno_path, max_depth=2)
+    zinf = get_skeleton_pleiotropy_mat(outdir, blockfile, pheno_path, mat_type="union")
+
+    fig = plt.figure(layout="constrained", figsize=(15, 10))
+    ax_dict = fig.subplot_mosaic(
+        """
+        abc
+        dXX
+        """,
+        empty_sentinel="X"
+    )
+
+    norm = mpl.colors.LogNorm(vmin=1, vmax=np.max(zinf))
+    cmap="PuBuGn"
+
+    plot_skeleton_pleiotropy_mat_z(z1, pheno_path, ax=ax_dict['a'], title='depth=1', norm=norm, cmap=cmap, cbar=False, aspect='auto')
+    ax_dict['a'].text(0, -2.5, "a)", size=20, verticalalignment='top')
+    plot_skeleton_pleiotropy_mat_z(z2, pheno_path, ax=ax_dict['b'], title='depth=2', norm=norm, cmap=cmap, cbar=False, aspect='auto')
+    ax_dict['b'].text(0, -2.5, "b)", size=20, verticalalignment='top')
+    plot_skeleton_pleiotropy_mat_z(zinf, pheno_path, ax=ax_dict['c'], title='depth=inf', norm=norm, cmap=cmap, cbar=True, aspect='auto')
+    ax_dict['c'].text(0, -2.5, "c)", size=20, verticalalignment='top')
+
+    x = np.diag(z1)
+    y = np.diag(zinf)
+
+    ax = ax_dict['d']
+
+    X = x.reshape(-1, 1)
+
+    linear_regressor = LinearRegression()
+    linear_regressor.fit(X, y)
+    linear_regressor.fit(X, y)
+    x_pred = np.linspace(np.min(x), np.max(x), 100).reshape(-1, 1)
+    y_pred = linear_regressor.predict(x_pred)
+
+    ax.plot(x_pred, y_pred, color="#696969", lw=2, linestyle="dashed")
+    beta = np.round(linear_regressor.coef_[0], 2)
+    mu = np.round(linear_regressor.intercept_, 2)
+    # ax.set_title("c)", **title_kw)
+    ax.text(100, 0.2 * 10 ** 6, rf"$y={mu} + {beta}x$", fontsize=13)
+    ax.text(100, 0.1 * 10 ** 6, rf"$\rho={np.round(np.corrcoef(x, y)[0, 1], 4)}$", fontsize=13)
+    ax.plot(x, y, 'o')
+    ax.set_ylabel('# shared ancestral markers')
+    ax.set_xlabel('# parent markers')
+    title_kw = {"loc": "left", "pad": 15, "size": 20}
+    ax_dict['d'].set_title("d)", **title_kw)
+
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    plt.savefig('/nfs/scistore13/robingrp/human_data/causality/figures/sup_figure_inf_depth_pleio.eps')
+
+
+def plot_est_ukb_corr():
+    basepath = '/nfs/scistore13/robingrp/human_data/causality/phenopc/phenopc_l14_a1e2/pheno_sk'
+    num_m = 0
+    num_p = 17
+    marker_offset = 0
+
+    fig = plt.figure(layout="constrained", figsize=(11, 5))
+    title_kw = {"loc": "left", "pad": 15, "size": 20}
+
+    ax_dict = fig.subplot_mosaic(
+        """
+        ab
+        """,
+        empty_sentinel="X",
+    )
+
+    estonia_pnames = ["AT","BMI","CAD","DBP","HT","SBP","SMK","ST","T2D"]
+    estonia_corr_path = "/nfs/scistore13/robingrp/human_data/cigwas_estonia/trait-trait.txt"
+
+    p_corrs_ukb = load_corr_sparse(basepath, num_m, num_p, marker_offset)
+    ukb_pnames = ["WHR","BMI","SBP","DBP","HbA1c","GLU","CHOL","TRIG","HDL","LDL","AT","CAD","ST","T2D","HT","ALC","SMK"]
+
+    ukb_mat = np.zeros(shape=(9, 9))
+
+    for ((i, j), c) in p_corrs_ukb.items():
+        try:    
+            ei = estonia_pnames.index(ukb_pnames[i - 1])
+            ej = estonia_pnames.index(ukb_pnames[j - 1])
+            ukb_mat[ei, ej] = c
+        except ValueError:
+            continue
+
+    est_mat = []
+    with open(estonia_corr_path, 'r') as fin:
+        next(fin)
+        for line in fin:
+            est_mat.append([eval(e) for e in line.split()[1:]])
+    est_mat = np.array(est_mat)
+    for i in range(9):
+        for j in range(i + 1, 9):
+            est_mat[j, i] = est_mat[i, j]
+
+    x = np.triu(ukb_mat, k=1).flatten()
+    y = np.triu(est_mat, k=1).flatten()
+
+    ax = ax_dict['a']
+    X = x.reshape(-1, 1)
+
+    linear_regressor = LinearRegression()
+    linear_regressor.fit(X, y)
+    linear_regressor.fit(X, y)
+    x_pred = np.linspace(np.min(x), np.max(x), 100).reshape(-1, 1)
+    y_pred = linear_regressor.predict(x_pred)
+
+    ax.plot(x_pred, y_pred, color="#696969", lw=2, linestyle="dashed")
+    beta = np.round(linear_regressor.coef_[0], 2)
+    mu = np.round(linear_regressor.intercept_, 2)
+    ax.set_title("a)", **title_kw)
+    ax.text(0, 0.55, rf"$y={mu} + {beta}x$", fontsize=13)
+    ax.text(0, 0.5, rf"$\rho={np.round(np.corrcoef(x, y)[0, 1], 4)}$", fontsize=13)
+    ax.plot(x, y, 'o')
+    ax.set_ylabel('trait-trait corr EST')
+    ax.set_xlabel('trait-trait corr UKB')
+    title_kw = {"loc": "left", "pad": 15, "size": 20}
+    # ax_dict['d'].set_title("d)", **title_kw)
+
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    z = est_mat - ukb_mat
+    mask = ~np.tri(z.shape[0], k=-1, dtype=bool)
+    z = np.ma.array(z, mask=mask)  # mask out the lower triangle
+    cmap = plt.get_cmap("coolwarm")
+    cmap.set_bad("w")  # default value is 'k'
+    cbar_kw = {"fraction": 0.046, "pad": 0.04}
+    ax_dict['b']
+
+    heatmap(
+        z,
+        estonia_pnames,
+        estonia_pnames,
+        ax_dict['b'],
+        cbarlabel=r'$\Delta corr$',
+        cmap=cmap,
+        cbar_kw=cbar_kw,
+        vmin=-0.12,
+        vmax=0.12,
+        title_kw=title_kw,
+        title='b)'
+        )
+
+    plt.savefig('/nfs/scistore13/robingrp/human_data/causality/figures/sup_figure_est_ukb_corr.eps')
