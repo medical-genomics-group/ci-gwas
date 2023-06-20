@@ -1045,6 +1045,8 @@ def plot_pag(
         ax=ax,
         cbar=cbar
     )
+    
+    return im
 
 
 def marker_pheno_associations(
@@ -1488,6 +1490,84 @@ def plot_simulation_results():
     ax_dict["f"].axis("off")
     plt.savefig('/nfs/scistore13/robingrp/human_data/causality/figures/figure_2.eps')
 
+def plot_simulation_results_sup_tp():
+    d = 1
+    l = 6
+    n_arr = [2000, 4000, 8000, 16000]
+    m_arr = [200, 400, 800, 1600]
+    # m_arr = [200, 400, 1600]
+    e_arr = list(range(1, 9))
+    rep_arr = list(range(1, 21))
+    num_phen = 10
+
+    df = load_simulation_results()
+    dfs = df.loc[(df['n'] == 16000) & (df['m'] == 1600)]
+    gr = dfs.groupby(["method", "alpha"])
+    means = gr.mean()
+    stds = gr.std()
+
+    alphas = 10.0 ** -np.array(e_arr[::-1])
+    # methods = ['ci-gwas', 'cause', 'mrpresso', 'egger', 'ivw']
+    methods = ['ci-gwas', 'cause', 'mrpresso', 'ivw']
+    title_kw = {"loc": "left", "pad": 15, "size": 20}
+
+    def plot_bars(x_vals, metric, means, stds, ax, title):
+        ax.set_title(title, **title_kw)
+        x = np.arange(len(x_vals))  # the label locations
+        width = 0.15  # the width of the bars
+        multiplier = 0
+
+        handles = []
+        for method in methods:
+            mu = means.loc[method][metric]
+            sig = stds.loc[method][metric]
+            offset = width * multiplier
+            try:
+                bars = ax.bar(x + offset, mu, width, yerr=sig, capsize=1.5, label=method)
+                handles.append(bars)
+            except StopIteration:
+                pass
+            multiplier += 1
+
+        ax.set_ylabel(metric)
+        if title == 'e)' or title == 'd)':
+            ax.set_xlabel(r"$\alpha$")
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.set_xticks(x + width, x_vals)
+        plt.setp(ax.get_xticklabels(), rotation=50, ha="right", rotation_mode="anchor")
+        # ax.legend(loc='upper left', ncols=3)
+        # ax.set_yscale("symlog")
+        return handles
+
+    fig = plt.figure(layout="constrained", figsize=(10, 8))
+    ax_dict = fig.subplot_mosaic(
+        """
+        fa
+        bc
+        de
+        """,
+        empty_sentinel="X",
+        sharex=True
+    )
+
+    plot_bars(alphas, "fdr", means, stds, ax_dict['a'], "a)")
+    plot_bars(alphas, "tpr", means, stds, ax_dict['b'], "b)")
+    plot_bars(alphas, "mse_tp", means, stds, ax_dict['c'], "c)")
+    plot_bars(alphas, "bias_tp", means, stds, ax_dict['d'], "d)")
+    h = plot_bars(alphas, "var_tp", means, stds, ax_dict['e'], "e)")
+    ax_dict["f"].legend(
+        handles=h,
+        labels=['CI-GWAS', 'CAUSE', 'MR-PRESSO', 'IVW Regression'],
+        loc="center",
+        fancybox=False,
+        shadow=False,
+        ncol=2,
+        # title="method",
+    )
+    ax_dict["f"].axis("off")
+    plt.savefig('/nfs/scistore13/robingrp/human_data/causality/figures/sup_figure_perf_tp.eps')
+
 def plot_simulation_results_sup():
     d = 1
     l = 6
@@ -1577,7 +1657,7 @@ def plot_block_size_experiment_results():
     for bs in block_sizes:
         blockfile = basepath + f"ukb22828_UKB_EST_v3_ldp08_m{bs}_chr1.blocks"
         outdir = basepath + f"bdpc_d1_l6_a1e2_m{bs}_chr1/"
-        gr = bdpc.merge_block_outputs(blockfile, outdir)
+        gr = merge_block_outputs(blockfile, outdir)
         bps[bs] = sorted(bim.loc[list(gr.gmi.values())][3].values)
 
     num_markers_selected = [len(bps[bs]) for bs in block_sizes]
@@ -1615,21 +1695,22 @@ def plot_block_size_experiment_results():
     ax.set_xlabel("max block size")
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
+    plt.savefig('/nfs/scistore13/robingrp/human_data/causality/figures/sup_figure_block_size_effect.eps')
 
 
 def plot_alpha_effect_on_davs_results():
     d = 1
     l = 6
-    es = [3, 4, 5, 6, 7, 8]
+    es = [2, 3, 4, 5, 6, 7, 8]
     nrows = len(es) - 1
-    pheno_path = f"/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/input.phen"
+    pheno_path = f"/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/production/input.phen"
 
     ace = {}
 
     for i, e in enumerate(es):
-        bdpc_ace_path_sk = f"/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/bdpc_d{d}_l{l}_a1e{e}/all_merged_ACE_sk_mk3.mtx"
+        bdpc_ace_path_sk = f"/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/production/bdpc_d{d}_l{l}_a1e{e}/all_merged_ACE_sk_mk3.mtx"
 
-        ace[e] = bdpc.load_ace(bdpc_ace_path_sk, pheno_path).flatten()
+        ace[e] = load_ace(bdpc_ace_path_sk, pheno_path).flatten()
 
     gmin = np.min([np.min(a) for a in ace.values()])
     gmax = np.max([np.max(a) for a in ace.values()])
@@ -1660,8 +1741,9 @@ def plot_alpha_effect_on_davs_results():
             if i == nrows - 1:
                 axes[i][j].set_xlabel(rf"$\alpha=10^{{{ex}}}$")
 
-    fig.suptitle(r"$ACE; k\leq3; SK$")
+    # fig.suptitle(r"$ACE; k\leq3; SK$")
     plt.tight_layout()
+    plt.savefig('/nfs/scistore13/robingrp/human_data/causality/figures/sup_figure_all_alpha_davs_corrs.eps')
 
 
 def plot_compare_max_k_effect_on_ace():
@@ -1675,10 +1757,10 @@ def plot_compare_max_k_effect_on_ace():
     ace = {}
 
     for i, e in enumerate(es):
-        bdpc_ace_path_sk_mk = f"/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/bdpc_d{d}_l{l}_a1e{e}/all_merged_ACE_sk_mk3.mtx"
-        bdpc_ace_path_sk = f"/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/bdpc_d{d}_l{l}_a1e{e}/all_merged_ACE_sk.mtx"
-        ace_mk[e] = bdpc.load_ace(bdpc_ace_path_sk_mk, pheno_path).flatten()
-        ace[e] = bdpc.load_ace(bdpc_ace_path_sk, pheno_path).flatten()
+        bdpc_ace_path_sk_mk = f"/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/production/bdpc_d{d}_l{l}_a1e{e}/all_merged_ACE_sk_mk3.mtx"
+        bdpc_ace_path_sk = f"/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/production/bdpc_d{d}_l{l}_a1e{e}/all_merged_ACE_sk.mtx"
+        ace_mk[e] = load_ace(bdpc_ace_path_sk_mk, pheno_path).flatten()
+        ace[e] = load_ace(bdpc_ace_path_sk, pheno_path).flatten()
 
     gmin = np.min([np.min(a) for a in ace.values()])
     gmax = np.max([np.max(a) for a in ace.values()])
@@ -1947,33 +2029,31 @@ def plot_non_pleio_barplot(pag_path: str, pheno_path: str, ax=None, title=None, 
 
 
 def plot_all_alpha_production_pags_and_ace(basepath: str, pheno_path: str, l=6, d=1):
-    fig = plt.figure(layout="constrained", figsize=(10, 35))
+    fig = plt.figure(layout="constrained", figsize=(12, 16))
     ax_dict = fig.subplot_mosaic(
         """
         ah
         bi
         cj
-        dk
-        el
-        fm
-        gn
         op
         """,
         empty_sentinel="X",
-        height_ratios=[1, 1, 1, 1, 1, 1, 1, 0.05],
-        
+        height_ratios=[1, 1, 1, 0.05],
+        # sharex=True,
+        # sharey=True,
     )
 
     ace_norm = mpl.colors.SymLogNorm(vmin=-2.0, vmax=2.0, linthresh=0.01)
-    cbar_kw = {"fraction": 0.046, "pad": 0.04}
+    # cbar_kw = {"fraction": 0.046, "pad": 0.04, "shrink": 0.5}
+    cbar_kw = {"shrink": 0.5}
     # title_kw = {"loc": "left", "pad": 15, "size": 20}
     title_kw = {}
 
-    pag_panels = ["a", "b", "c", "d", "e", "f", "g"]
-    ace_panels = ["h", "i", "j", "k", "l", "m", "n"]
-    alphas = [2, 3, 4, 5, 6, 7, 8]
+    pag_panels = ["a", "b", "c"]
+    ace_panels = ["h", "i", "j"]
+    alphas = [2, 4, 8]
 
-    for pag_panel, ace_panel, a in zip(pag_panels, ace_panels, alphas):
+    for pos, (ace_panel, a) in enumerate(zip(ace_panels, alphas)):
         try:
             ace_path = basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_ACE_sk_mk3.mtx"
             pag_path = basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_pag_sk_mk3.mtx"
@@ -1993,9 +2073,11 @@ def plot_all_alpha_production_pags_and_ace(basepath: str, pheno_path: str, l=6, 
         except FileNotFoundError as e:
             print(e)
 
-    fig.colorbar(ima, cax=ax_dict['p'], **cbar_kw, location='bottom')
+    ax = ax_dict['p']
+    cbar = fig.colorbar(ima, cax=ax_dict['p'], **cbar_kw, location='bottom')
+    cbar.ax.set_xlabel(r"$ACE \: (y_1 \rightarrow y_2)$")
 
-    for pag_panel, ace_panel, a in zip(pag_panels, ace_panels, alphas):
+    for pos, (pag_panel, a) in enumerate(zip(pag_panels, alphas)):
         try:
             ace_path = basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_ACE_sk_mk3.mtx"
             pag_path = basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_pag_sk_mk3.mtx"
@@ -2014,9 +2096,19 @@ def plot_all_alpha_production_pags_and_ace(basepath: str, pheno_path: str, l=6, 
         except FileNotFoundError as e:
             print(e)
 
-    fig.colorbar(imp, cax=ax_dict['o'], location='bottom')
-    # cbar = ax.figure.colorbar(im, ax=ax, **cbar_kw)
-    # cbar.ax.set_ylabel(cbarlabel, rotation=-90, va="bottom")
+    edge_encoding = five_common_edge_types
+    ne = len(edge_encoding.int_rep)
+
+    norm = mpl.colors.BoundaryNorm(np.linspace(0, ne, ne + 1), ne)
+    fmt = mpl.ticker.FuncFormatter(lambda x, pos: edge_encoding.str_rep[norm(x)])
+
+    cbar_kw["ticks"] = np.arange(ne) + 0.5
+    cbar_kw["format"] = fmt
+    ax = ax_dict['o']
+    cbar = ax.figure.colorbar(imp, cax=ax_dict['o'], location='bottom', **cbar_kw)
+    cbar.ax.tick_params(rotation=45)
+    plt.savefig('/nfs/scistore13/robingrp/human_data/causality/figures/sup_figure_pag_ace_alpha_range.eps')
+    
 
 
 def plot_all_alpha_production_pags(basepath: str, pheno_path: str, l=6, d=1):
