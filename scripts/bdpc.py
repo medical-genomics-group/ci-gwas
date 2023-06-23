@@ -563,7 +563,7 @@ class GlobalBdpcResult:
 
         with open(basepath + ".ssm", "w") as fout:
             for (t1, t2), v in self.ssm.items():
-                outline = " ".join([str(e) for e in [t1, t2] + v])
+                outline = " ".join([str(e) for e in [t1, t2] + sorted(list(v))])
                 fout.write(outline + "\n")
 
         with open(basepath + ".mdim", "w") as fout:
