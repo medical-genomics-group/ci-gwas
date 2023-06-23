@@ -168,6 +168,7 @@ const int PHENOPC_NARGS = 6;
 
 void phenotype_pc(int argc, char *argv[])
 {
+    std::cout << "Computing skeleton for phenotypes only" << std::endl;
     check_nargs(argc, PHENOPC_NARGS, PHENOPC_USAGE);
 
     std::string phen_path = argv[2];
@@ -550,6 +551,10 @@ void block_diagonal_pc(int argc, char *argv[])
     check_path(phen_path);
     check_path(block_path);
     check_path(outdir);
+
+    // call phenopc to compute skeleton phenotypes only
+    *char[PHENOPC_NARGS] phenopc_argv = {argv[0], argv[1], argv[2], argv[5], argv[6], argv[8]};
+    phenotype_pc(PHENOPC_NARGS, phenopc_argv);
 
     Phen phen = load_phen(phen_path);
     BfilesBase bfiles(bed_base_path);
