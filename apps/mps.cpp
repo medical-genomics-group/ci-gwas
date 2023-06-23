@@ -553,7 +553,7 @@ void block_diagonal_pc(int argc, char *argv[])
     check_path(outdir);
 
     // call phenopc to compute skeleton phenotypes only
-    *char[PHENOPC_NARGS] phenopc_argv = {argv[0], argv[1], argv[2], argv[5], argv[6], argv[8]};
+    char *phenopc_argv[PHENOPC_NARGS] = {argv[0], argv[1], argv[2], argv[5], argv[6], argv[8]};
     phenotype_pc(PHENOPC_NARGS, phenopc_argv);
 
     Phen phen = load_phen(phen_path);
@@ -967,7 +967,7 @@ void block_diagonal_pc_single(int argc, char *argv[])
     else
     {
         std::cout << "No significant correlations found. Skipping block." << std::endl;
-        continue;
+        return;
     }
 
     std::cout << "Computing all correlations" << std::endl;
