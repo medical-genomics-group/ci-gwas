@@ -87,7 +87,7 @@ def load_sepset_sparse(basepath: str, num_m: int, num_p: int, max_level: int, ma
                 # print(i, j, [dm[(i * n + j) * max_level + six] for six in range(max_level)])
                 if dm2sm[i] in new_s or dm2sm[j] in new_s:
                     raise ValueError("SepSet(x, y) contains x or y")
-                res[(dm2sm[i], dm2sm[j])] = new_s
+                res[(dm2sm[i], dm2sm[j])] = set(new_s)
 
     return res
 
