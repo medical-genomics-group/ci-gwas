@@ -152,7 +152,11 @@ def add_sam(a, b, num_p: int):
 
 
 def add_ssm(a, b):
-    a.update(b)
+    for k, v in b.items():
+        if k in a:
+            a[k] = a[k] | v
+        else:
+            a[k] = v
 
 
 def merge_block_outputs(blockfile: str, outdir: str):
@@ -179,6 +183,16 @@ def merge_block_outputs(blockfile: str, outdir: str):
         add_gmi(gmi, bo.gmi())
         marker_offset += bo.num_markers()
         global_marker_offset += bo.block_size()
+
+    try:
+        phenopc_out = outdir + "pheno_sk"
+        bo = BlockOutput(phenopc_out)
+        add_sam(sam, bo.sam(), bo.num_phen())
+        add_scm(scm, bo.scm())
+        add_ssm(ssm, bo.ssm())
+        add_gmi(gmi, bo.gmi())
+    except FileNotFoundError as e:
+        print(e)
 
     return GlobalBdpcResult(
         sam, scm, ssm, gmi, marker_offset + bo.num_phen(), bo.num_phen(), bo.max_level()
