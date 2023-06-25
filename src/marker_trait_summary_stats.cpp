@@ -1,6 +1,8 @@
 #include <mps/io.h>
 #include <mps/marker_trait_summary_stats.h>
 
+#include <string>
+
 MarkerTraitSummaryStats::MarkerTraitSummaryStats(const std::string path)
 {
     std::string line;

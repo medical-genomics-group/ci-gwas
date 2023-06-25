@@ -1,6 +1,8 @@
 #include <mps/io.h>
 #include <mps/trait_summary_stats.h>
 
+#include <string>
+
 TraitSummaryStats::TraitSummaryStats(const std::string path)
 {
     std::string line;
@@ -15,7 +17,7 @@ TraitSummaryStats::TraitSummaryStats(const std::string path)
 
     header = split_line(line);
     num_phen = header.size();
-    corrs = std::vector(num_phen * num_phen, 0.0);
+    corrs = std::vector(num_phen * num_phen, (float)0.0);
     int curr_corr_line = 0;
 
     while (std::getline(corr_file, line))
@@ -33,7 +35,7 @@ TraitSummaryStats::TraitSummaryStats(const std::string path)
     {
         for (size_t j = i + 1; j < num_phen; j++)
         {
-            corrs[j * num_phen + i] = corrs[i * num_phen + j]
+            corrs[j * num_phen + i] = corrs[i * num_phen + j];
         }
     }
 }

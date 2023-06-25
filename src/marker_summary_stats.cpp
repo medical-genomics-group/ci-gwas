@@ -1,6 +1,8 @@
 #include <mps/io.h>
 #include <mps/marker_summary_stats.h>
 
+#include <string>
+
 MarkerSummaryStats::MarkerSummaryStats(const std::string path)
 {
     std::vector<float> triu_corrs = read_floats_from_binary(path);
