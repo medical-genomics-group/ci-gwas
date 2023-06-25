@@ -505,9 +505,10 @@ void cuda_skeleton_summary_stats(int argc, char *argv[])
     // load everything
     std::cout << "Loading input files" << std::endl;
     std::vector<MarkerBlock> blocks = read_blocks_from_file(block_path);
+    MarkerBlock block = blocks[block_ix];
     TraitSummaryStats pxp = TraitSummaryStats(pxp_path);
     MarkerSummaryStats mxm = MarkerSummaryStats(mxm_path);
-    MarkerTraitSummaryStats mxp = MarkerTraitSummaryStats(mxp_path, blocks[block_ix]);
+    MarkerTraitSummaryStats mxp = MarkerTraitSummaryStats(mxp_path, block);
 
     // check if all dims check out
     if (pxp.get_num_phen() != mxp.get_num_phen())
@@ -528,7 +529,7 @@ void cuda_skeleton_summary_stats(int argc, char *argv[])
     size_t num_markers = mxm.get_num_markers();
     size_t num_var = num_markers + num_phen;
     std::vector<float> sq_corrs(num_var * num_var, 1.0);
-    std::vector<float> marker_corr = mxm.get_corr();
+    std::vector<float> marker_corr = mxm.get_corrs();
 
     size_t sq_row_ix = 0;
     size_t sq_col_ix = 0;
@@ -547,7 +548,7 @@ void cuda_skeleton_summary_stats(int argc, char *argv[])
         }
     }
 
-    std::vector<float> marker_phen_corr = mxp.corrs();
+    std::vector<float> marker_phen_corr = mxp.get_corrs();
     sq_row_ix = 0;
     sq_col_ix = num_markers;
     for (size_t i = 0; i < marker_phen_corr.size(); ++i)
@@ -565,7 +566,7 @@ void cuda_skeleton_summary_stats(int argc, char *argv[])
         }
     }
 
-    std::vector<float> phen_corr = pxp.corrs();
+    std::vector<float> phen_corr = pxp.get_corrs();
     sq_row_ix = num_markers;
     sq_col_ix = num_markers;
     for (size_t i = 0; i < phen_corr.size(); ++i)
