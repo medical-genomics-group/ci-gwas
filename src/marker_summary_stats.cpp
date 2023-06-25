@@ -5,7 +5,7 @@ MarkerSummaryStats::MarkerSummaryStats(const std::string path)
 {
     std::vector<float> triu_corrs = read_floats_from_binary(path);
     num_markers = ((sqrt(4 * 2 * triu_corrs.size() + 1) - 1) / 2) + 1;
-    corrs = std::vector(num_markers * num_markers, (float)0.0);
+    corrs = std::vector(num_markers * num_markers, (float)1.0);
     size_t corr_ix = 0;
     for (size_t i = 0; i < num_markers; i++)
     {

@@ -6,9 +6,12 @@
 #include <mps/cuPC-S.h>
 #include <mps/cuPC_call_prep.h>
 #include <mps/io.h>
+#include <mps/marker_summary_stats.h>
+#include <mps/marker_trait_summary_stats.h>
 #include <mps/parent_set.h>
 #include <mps/phen.h>
 #include <mps/prep.h>
+#include <mps/trait_summary_stats.h>
 #include <sys/stat.h>
 
 #include <array>
@@ -461,7 +464,7 @@ void marker_pheno_corr_dist(int argc, char *argv[])
 const std::string CUSKSS_USAGE = R"(
 Run cuda-skeleton on a block of markers and traits with pre-computed correlations.
 
-usage: mps bdpcss <mxm> <mxp> <mxp> <block-ix> <.blocks> <alpha> <max-level> <depth> <num-samples> <outdir>
+usage: mps cuskss <mxm> <mxp> <pxp> <block-ix> <.blocks> <alpha> <max-level> <depth> <num-samples> <outdir>
 
 arguments:
     mxm             correlations between markers in block. Binary of floats, upper triangular, without diagonal.
@@ -473,13 +476,12 @@ arguments:
     max-level       maximal size of seperation sets in cuPC ( <= 14)
     depth           max depth at which marker variables are kept as ancestors
     num-samples     number of samples used for computing correlations
-    num-phen        number of phenotypes
     outdir          outdir
 )";
 
-const int CUSKSS_NARGS = 13;
+const int CUSKSS_NARGS = 12;
 
-void block_diagonal_pc_summary_stat(int argc, char *argv[])
+void cuda_skeleton_summary_stats(int argc, char *argv[])
 {
     check_nargs(argc, CUSKSS_NARGS, CUSKSS_USAGE);
 
@@ -492,14 +494,116 @@ void block_diagonal_pc_summary_stat(int argc, char *argv[])
     int max_level = std::stoi(argv[8]);
     int depth = std::stoi(argv[9]);
     int num_individuals = std::stoi(argv[10]);
-    int num_phen = std::stoi(argv[11]);
-    std::string outdir = (std::string)argv[12];
+    std::string outdir = (std::string)argv[11];
 
     check_path(mxm_path);
     check_path(mxp_path);
     check_path(pxp_path);
     check_path(block_path);
     check_path(outdir);
+
+    // load everything
+    std::cout << "Loading input files" << std::endl;
+    std::vector<MarkerBlock> blocks = read_blocks_from_file(block_path);
+    TraitSummaryStats pxp = TraitSummaryStats(pxp_path);
+    MarkerSummaryStats mxm = MarkerSummaryStats(mxm_path);
+    MarkerTraitSummaryStats mxp = MarkerTraitSummaryStats(mxp_path, blocks[block_ix]);
+
+    // check if all dims check out
+    if (pxp.get_num_phen() != mxp.get_num_phen())
+    {
+        std::cout << "Numbers of traits seem to differ between pxp and mxp" << std::endl;
+        exit(1);
+    }
+    if (mxm.get_num_markers() != mxp.get_num_markers())
+    {
+        std::cout << "Numbers of markers seem to differ between mxm and mxp" << std::endl;
+        exit(1);
+    }
+
+    // dims ok, now merge them all into one matrix.
+
+    // make n2 matrix to please cuPC
+    size_t num_phen = pxp.get_num_phen();
+    size_t num_markers = mxm.get_num_markers();
+    size_t num_var = num_markers + num_phen;
+    std::vector<float> sq_corrs(num_var * num_var, 1.0);
+    std::vector<float> marker_corr = mxm.get_corr();
+
+    size_t sq_row_ix = 0;
+    size_t sq_col_ix = 0;
+    for (size_t i = 0; i < marker_corr.size(); ++i)
+    {
+        sq_corrs[num_var * sq_row_ix + sq_col_ix] = (float)marker_corr[i];
+        if (sq_col_ix == num_markers - 1)
+        {
+            ++sq_row_ix;
+            // marker_corr is square
+            sq_col_ix = 0;
+        }
+        else
+        {
+            ++sq_col_ix;
+        }
+    }
+
+    std::vector<float> marker_phen_corr = mxp.corrs();
+    sq_row_ix = 0;
+    sq_col_ix = num_markers;
+    for (size_t i = 0; i < marker_phen_corr.size(); ++i)
+    {
+        sq_corrs[num_var * sq_row_ix + sq_col_ix] = (float)marker_phen_corr[i];
+        sq_corrs[num_var * sq_col_ix + sq_row_ix] = (float)marker_phen_corr[i];
+        if (sq_col_ix == (num_var - 1))
+        {
+            sq_col_ix = num_markers;
+            ++sq_row_ix;
+        }
+        else
+        {
+            ++sq_col_ix;
+        }
+    }
+
+    std::vector<float> phen_corr = pxp.corrs();
+    sq_row_ix = num_markers;
+    sq_col_ix = num_markers;
+    for (size_t i = 0; i < phen_corr.size(); ++i)
+    {
+        sq_corrs[num_var * sq_row_ix + sq_col_ix] = (float)phen_corr[i];
+        if (sq_col_ix == (num_var - 1))
+        {
+            ++sq_row_ix;
+            sq_col_ix = num_markers;
+        }
+        else
+        {
+            ++sq_col_ix;
+        }
+    }
+
+    std::vector<float> Th = threshold_array(num_individuals, alpha);
+
+    // call cuPC
+    int p = num_var;
+    const size_t sepset_size = p * p * ML;
+    const size_t g_size = num_var * num_var;
+    std::vector<float> pmax(g_size, 0.0);
+    std::vector<int> G(g_size, 1);
+    std::vector<int> sepset(sepset_size, 0);
+    int l = 0;
+    Skeleton(sq_corrs.data(), &p, G.data(), Th.data(), &l, &max_level, pmax.data(), sepset.data());
+
+    std::cout << "Reducing data to phenotype parent sets" << std::endl;
+
+    std::unordered_set<int> parents = parent_set(G, num_var, num_markers, depth);
+
+    ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, parents, num_var, num_phen, max_level);
+
+    std::cout << "Retained " << (parents.size() - num_phen) << " / " << num_markers << " markers"
+              << std::endl;
+
+    gcs.to_file(make_path(outdir, block.to_file_string(), ""));
 }
 
 const std::string BDPC_USAGE = R"(
@@ -1790,6 +1894,7 @@ commands:
     block                   Build approximately unlinked blocks of markers
     mcorrkb-chr             Compute the banded Kendall correlation matrix for a given chromosome
     mpcorr-dist             Compute all marker-phenotype and phenotype-phenotype correlations
+    cuskss                  Run cuda-skeleton on a block of markers and traits with pre-computed correlations.
 
 contact:
     nick.machnik@gmail.com
@@ -1808,6 +1913,10 @@ auto main(int argc, char *argv[]) -> int
     if ((cmd == "--help") || (cmd == "-h"))
     {
         std::cout << MPS_USAGE << std::endl;
+    }
+    else if (cmd == "cuskss")
+    {
+        cuda_skeleton_summary_stats(argc, argv);
     }
     else if (cmd == "prep")
     {

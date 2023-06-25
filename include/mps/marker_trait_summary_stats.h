@@ -17,6 +17,9 @@ class MarkerTraitSummaryStats
 
    public:
     MarkerTraitSummaryStats(const std::string path);
+    MarkerTraitSummaryStats::MarkerTraitSummaryStats(
+        const std::string path, const MarkerBlock block
+    );
     std::vector<std::string> get_header() { return header; };
     std::vector<float> get_corrs() { return corrs; };
     int get_num_phen() { return num_phen; };

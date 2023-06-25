@@ -32,15 +32,15 @@ TEST(read_trait_summary_stats, expected_results)
     std::vector<std::string> exp_header = {"AT", "BMI", "CAD"};
 
     std::vector<float> exp_corrs = {
-        0.0,
+        1.0,
         0.0608594558771734,
         0.074239793758568,
         0.0608594558771734,
-        0.0,
+        1.0,
         0.0675875270156859,
         0.074239793758568,
         0.0675875270156859,
-        0.0};
+        1.0};
 
     int exp_num_phen = 3;
 
@@ -79,7 +79,7 @@ TEST(read_marker_trait_summary_stats, expected_results)
 TEST(read_marker_summary_stats, expected_results)
 {
     std::vector<float> exp_corrs = {
-        0.0, 0.299969, 0.924167, 0.299969, 0.0, 0.0, 0.924167, 0.0, 0.0};
+        1.0, 0.299969, 0.924167, 0.299969, 1.0, 0.0, 0.924167, 0.0, 1.0};
 
     int exp_num_markers = 3;
 

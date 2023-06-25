@@ -15,7 +15,7 @@ TraitSummaryStats::TraitSummaryStats(const std::string path)
 
     header = split_line(line);
     num_phen = header.size();
-    corrs = std::vector(num_phen * num_phen, (float)0.0);
+    corrs = std::vector(num_phen * num_phen, (float)1.0);
     int curr_corr_line = 0;
 
     while (std::getline(corr_file, line))
