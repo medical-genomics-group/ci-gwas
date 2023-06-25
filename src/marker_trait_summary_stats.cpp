@@ -72,7 +72,6 @@ MarkerTraitSummaryStats::MarkerTraitSummaryStats(const std::string path, const M
             std::vector<std::string> fields = split_line(line);
             for (size_t j = 3; j < num_phen + 3; j++)
             {
-                std::cout << fields[j] << std::endl;
                 corrs.push_back(std::stof(fields[j]));
             }
             num_markers += 1;
