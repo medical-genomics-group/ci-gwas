@@ -21,10 +21,10 @@ TraitSummaryStats::TraitSummaryStats(const std::string path)
     while (std::getline(corr_file, line))
     {
         std::vector<std::string> fields = split_line(line);
-        std::cout << "line: " << curr_corr_line << std::endl;
-        for (auto e : fields)
+
+        if (fields.empty())
         {
-            std::cout << e << std::endl;
+            break;
         }
 
         for (size_t j = 1; j <= num_phen; j++)
