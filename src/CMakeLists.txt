@@ -29,7 +29,7 @@ add_library(prep STATIC prep.cpp ${HEADER_LIST})
 target_include_directories(prep PUBLIC ../include)
 target_compile_features(prep PUBLIC cxx_std_20)
 
-add_library(io STATIC io.cpp bim.cpp phen.cpp ${HEADER_LIST})
+add_library(io STATIC io.cpp bim.cpp phen.cpp trait_summary_stats.cpp marker_trait_summary_stats.cpp marker_summary_stats.cpp ${HEADER_LIST})
 target_include_directories(io PUBLIC ../include)
 target_compile_features(io PUBLIC cxx_std_20)
 

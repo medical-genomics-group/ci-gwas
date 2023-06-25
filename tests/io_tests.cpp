@@ -1,26 +1,70 @@
 #include <gtest/gtest.h>
 #include <mps/bim.h>
 #include <mps/io.h>
+#include <mps/marker_summary_stats.h>
+#include <mps/marker_trait_summary_stats.h>
+#include <mps/trait_summary_stats.h>
 
 #include <filesystem>
 #include <string>
 #include <vector>
 
+void expect_near_vec(std::vector<float> exp, std::vector<float> obs)
+{
+    EXPECT_EQ(exp.size(), obs.size());
+    for (size_t i = 0; i < exp.size(); i++)
+    {
+        EXPECT_NEAR(exp[i], obs[i], 0.001);
+    }
+}
+
+void expect_eq_vec(std::vector<std::string> exp, std::vector<std::string> obs)
+{
+    EXPECT_EQ(exp.size(), obs.size());
+    for (size_t i = 0; i < exp.size(); i++)
+    {
+        EXPECT_EQ(exp[i], obs[i]);
+    }
+}
+
+TEST(read_trait_summary_stats, expected_results)
+{
+    std::vector<std::string> exp_header = {"AT", "BMI", "CAD"};
+
+    std::vector<float> exp_corrs = {
+        0.0,
+        0.0608594558771734,
+        0.074239793758568,
+        0.0608594558771734,
+        0.0,
+        0.0675875270156859,
+        0.074239793758568,
+        0.0675875270156859,
+        0.0};
+
+    int exp_num_phen = 3;
+
+    TraitSummaryStats obs = TraitSummaryStats("../../tests/test_files/trait_summary_stats.txt");
+
+    EXPECT_EQ(exp_num_phen, obs.num_phen);
+    expect_eq_vec(exp_num_phen, obs.header);
+    expect_near_vec(exp_header, obs.corrs);
+}
+
 TEST(read_correlations_from_mtx, expected_results)
 {
-    std::vector<float> exp_vals =
-        {1.0,
-         .01676169840066658,
-         -.026459418125921043,
-         .01676169840066658,
-         1.0,
-         .013313834590098538,
-         -.026459418125921043,
-         .013313834590098538,
-         1.0};
+    std::vector<float> exp_vals = {
+        1.0,
+        .01676169840066658,
+        -.026459418125921043,
+        .01676169840066658,
+        1.0,
+        .013313834590098538,
+        -.026459418125921043,
+        .013313834590098538,
+        1.0};
 
-    std::vector<float>
-        obs_vals = read_correlations_from_mtx("../../tests/test_files/test.mtx");
+    std::vector<float> obs_vals = read_correlations_from_mtx("../../tests/test_files/test.mtx");
 
     EXPECT_EQ(obs_vals.size(), exp_vals.size());
     for (size_t i = 0; i < exp_vals.size(); ++i)
