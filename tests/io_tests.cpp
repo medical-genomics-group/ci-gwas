@@ -47,8 +47,46 @@ TEST(read_trait_summary_stats, expected_results)
     TraitSummaryStats obs = TraitSummaryStats("../../tests/test_files/trait_summary_stats.txt");
 
     EXPECT_EQ(exp_num_phen, obs.num_phen);
-    expect_eq_vec(exp_num_phen, obs.header);
-    expect_near_vec(exp_header, obs.corrs);
+    expect_eq_vec(exp_header, obs.header);
+    expect_near_vec(exp_corrs, obs.corrs);
+}
+
+TEST(read_marker_trait_summary_stats, expected_results)
+{
+    std::vector<std::string> exp_header = {"chr", "snp", "ref", "AT", "BMI", "CAD"};
+
+    std::vector<float> exp_corrs = {
+        0.000223856407456135,
+        0.00251450803069785,
+        0.0020396777545704,
+        0.00178306833327991,
+        0.00399935678478479,
+        -0.00115459573691031,
+    };
+
+    int exp_num_phen = 3;
+    int exp_num_markers = 2;
+
+    MarkerTraitSummaryStats obs =
+        MarkerTraitSummaryStats("../../tests/test_files/marker_trait_summary_stats.txt");
+
+    EXPECT_EQ(exp_num_phen, obs.num_phen);
+    EXPECT_EQ(exp_num_markers, obs.num_markers);
+    expect_eq_vec(exp_header, obs.header);
+    expect_near_vec(exp_corrs, obs.corrs);
+}
+
+TEST(read_marker_summary_stats, expected_results)
+{
+    std::vector<float> exp_corrs = {
+        0.0, 0.299969, 0.924167, 0.299969, 0.0, 0.0, 0.924167, 0.0, 0.0};
+
+    int exp_num_markers = 3;
+
+    MarkerSummaryStats obs = MarkerSummaryStats("../../tests/test_files/1_marker_corrk.bin");
+
+    EXPECT_EQ(exp_num_markers, obs.num_markers);
+    expect_near_vec(exp_corrs, obs.corrs);
 }
 
 TEST(read_correlations_from_mtx, expected_results)
