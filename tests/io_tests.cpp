@@ -85,6 +85,11 @@ TEST(read_marker_summary_stats, expected_results)
 
     MarkerSummaryStats obs = MarkerSummaryStats("../../tests/test_files/1_marker_corrk.bin");
 
+    for (auto e : obs.get_corrs())
+    {
+        std::cout << e << std::endl;
+    }
+
     EXPECT_EQ(exp_num_markers, obs.get_num_markers());
     expect_near_vec(exp_corrs, obs.get_corrs());
 }
