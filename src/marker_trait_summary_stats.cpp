@@ -1,8 +1,6 @@
 #include <mps/io.h>
 #include <mps/marker_trait_summary_stats.h>
 
-#include <string>
-
 MarkerTraitSummaryStats::MarkerTraitSummaryStats(const std::string path)
 {
     std::string line;
@@ -29,10 +27,10 @@ MarkerTraitSummaryStats::MarkerTraitSummaryStats(const std::string path)
 
     while (std::getline(corr_file, line))
     {
-        split_line(line);
+        std::vector<std::string> fields = split_line(line);
         for (size_t j = 3; j < num_phen + 3; j++)
         {
-            corrs.push_back(std::stof(line[j]));
+            corrs.push_back(std::stof(fields[j]));
         }
         num_markers += 1;
     }

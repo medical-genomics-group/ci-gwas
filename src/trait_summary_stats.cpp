@@ -1,8 +1,6 @@
 #include <mps/io.h>
 #include <mps/trait_summary_stats.h>
 
-#include <string>
-
 TraitSummaryStats::TraitSummaryStats(const std::string path)
 {
     std::string line;
@@ -22,10 +20,10 @@ TraitSummaryStats::TraitSummaryStats(const std::string path)
 
     while (std::getline(corr_file, line))
     {
-        split_line(line);
+        std::vector<std::string> fields = split_line(line);
         for (size_t j = 1; j <= num_phen; j++)
         {
-            corrs[curr_corr_line * num_phen + j - 1] = std::stof(line[j]);
+            corrs[curr_corr_line * num_phen + j - 1] = std::stof(fields[j]);
         }
         curr_corr_line += 1;
     }
