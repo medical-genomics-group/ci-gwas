@@ -14,18 +14,19 @@ TraitSummaryStats::TraitSummaryStats(const std::string path)
     }
 
     header = split_line(line);
-    for (auto e : header)
-    {
-        std::cout << e << std::endl;
-    }
     num_phen = header.size();
-    std::cout << num_phen << std::endl;
     corrs = std::vector(num_phen * num_phen, (float)0.0);
     int curr_corr_line = 0;
 
     while (std::getline(corr_file, line))
     {
         std::vector<std::string> fields = split_line(line);
+        std::cout << "line: " << curr_corr_line << std::endl;
+        for (auto e : fields)
+        {
+            std::cout << e << std::endl;
+        }
+
         for (size_t j = 1; j <= num_phen; j++)
         {
             corrs[curr_corr_line * num_phen + j - 1] = std::stof(fields[j]);
