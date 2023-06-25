@@ -496,8 +496,6 @@ void cuda_skeleton_summary_stats(int argc, char *argv[])
     int num_individuals = std::stoi(argv[10]);
     std::string outdir = (std::string)argv[11];
 
-    std::cout << "Got all input args" << std::endl;
-
     check_path(mxm_path);
     check_path(mxp_path);
     check_path(pxp_path);
@@ -506,10 +504,14 @@ void cuda_skeleton_summary_stats(int argc, char *argv[])
 
     // load everything
     std::cout << "Loading input files" << std::endl;
+    std::cout << "Loading blocks" << std::endl;
     std::vector<MarkerBlock> blocks = read_blocks_from_file(block_path);
     MarkerBlock block = blocks[block_ix];
+    std::cout << "Loading pxp" << std::endl;
     TraitSummaryStats pxp = TraitSummaryStats(pxp_path);
+    std::cout << "Loading mxm" << std::endl;
     MarkerSummaryStats mxm = MarkerSummaryStats(mxm_path);
+    std::cout << "Loading mxp" << std::endl;
     MarkerTraitSummaryStats mxp = MarkerTraitSummaryStats(mxp_path, block);
 
     // check if all dims check out
