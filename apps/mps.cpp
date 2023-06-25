@@ -477,11 +477,11 @@ arguments:
     outdir          outdir
 )";
 
-const int BDPCSS_NARGS = 13;
+const int CUSKSS_NARGS = 13;
 
 void block_diagonal_pc_summary_stat(int argc, char *argv[])
 {
-    check_nargs(argc, BDPCSS_NARGS, BDPCSS_USAGE);
+    check_nargs(argc, CUSKSS_NARGS, CUSKSS_USAGE);
 
     std::string mxm_path = argv[2];
     std::string mxp_path = argv[3];
@@ -501,22 +501,6 @@ void block_diagonal_pc_summary_stat(int argc, char *argv[])
     check_path(block_path);
     check_path(indir);
     check_path(outdir);
-
-        // everything below here is bs
-
-    std::cout << "Loading phenotype correlations" << std::endl;
-    std::vector<float> phen_corr = read_floats_from_binary(make_path(indir, "ppcorr", ".bin"));
-    if (phen_corr.size() != (num_phen * num_phen))
-    {
-        std::cerr << "unexpected number of correlations in ppcorr.bin. Expected "
-                  << (num_phen * num_phen) << " , found " << phen_corr.size() << std::endl;
-        exit(1);
-    }
-
-    std::cout << "Loading blocks" << std::endl;
-    std::vector<MarkerBlock> blocks = read_blocks_from_file(block_path);
-
-    std::cout << "Found " << blocks.size() << " blocks" << std::endl;
 }
 
 const std::string BDPC_USAGE = R"(
