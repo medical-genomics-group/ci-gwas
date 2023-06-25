@@ -72,7 +72,14 @@ MarkerTraitSummaryStats::MarkerTraitSummaryStats(const std::string path, const M
             std::vector<std::string> fields = split_line(line);
             for (size_t j = 3; j < num_phen + 3; j++)
             {
-                corrs.push_back(std::stof(fields[j]));
+                if ((fields[j] == "NA") || (fields[j] == "NaN") || (fields[j] == "nan"))
+                {
+                    corrs.push_back(0.0);
+                }
+                else
+                {
+                    corrs.push_back(std::stof(fields[j]));
+                }
             }
             num_markers += 1;
         }
