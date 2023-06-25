@@ -16,4 +16,7 @@ class TraitSummaryStats
 
    public:
     TraitSummaryStats(const std::string path);
+    std::vector<std::string> get_header() { return header; };
+    std::vector<float> get_corrs() { return corrs; };
+    int get_num_phen() { return num_phen; };
 };

@@ -46,9 +46,9 @@ TEST(read_trait_summary_stats, expected_results)
 
     TraitSummaryStats obs = TraitSummaryStats("../../tests/test_files/trait_summary_stats.txt");
 
-    EXPECT_EQ(exp_num_phen, obs.num_phen);
-    expect_eq_vec(exp_header, obs.header);
-    expect_near_vec(exp_corrs, obs.corrs);
+    EXPECT_EQ(exp_num_phen, obs.get_num_phen());
+    expect_eq_vec(exp_header, obs.get_header());
+    expect_near_vec(exp_corrs, obs.get_corrs());
 }
 
 TEST(read_marker_trait_summary_stats, expected_results)
@@ -70,10 +70,10 @@ TEST(read_marker_trait_summary_stats, expected_results)
     MarkerTraitSummaryStats obs =
         MarkerTraitSummaryStats("../../tests/test_files/marker_trait_summary_stats.txt");
 
-    EXPECT_EQ(exp_num_phen, obs.num_phen);
-    EXPECT_EQ(exp_num_markers, obs.num_markers);
-    expect_eq_vec(exp_header, obs.header);
-    expect_near_vec(exp_corrs, obs.corrs);
+    EXPECT_EQ(exp_num_phen, obs.get_num_phen());
+    EXPECT_EQ(exp_num_markers, obs.get_num_markers());
+    expect_eq_vec(exp_header, obs.get_header());
+    expect_near_vec(exp_corrs, obs.get_corrs());
 }
 
 TEST(read_marker_summary_stats, expected_results)
@@ -85,8 +85,8 @@ TEST(read_marker_summary_stats, expected_results)
 
     MarkerSummaryStats obs = MarkerSummaryStats("../../tests/test_files/1_marker_corrk.bin");
 
-    EXPECT_EQ(exp_num_markers, obs.num_markers);
-    expect_near_vec(exp_corrs, obs.corrs);
+    EXPECT_EQ(exp_num_markers, obs.get_num_markers());
+    expect_near_vec(exp_corrs, obs.get_corrs());
 }
 
 TEST(read_correlations_from_mtx, expected_results)

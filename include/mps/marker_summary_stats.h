@@ -15,4 +15,6 @@ class MarkerSummaryStats
 
    public:
     MarkerSummaryStats(const std::string path);
+    std::vector<float> get_corrs() { return corrs; };
+    int get_num_markers() { return num_markers; };
 };
