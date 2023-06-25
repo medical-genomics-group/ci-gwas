@@ -15,15 +15,17 @@ TraitSummaryStats(const std::string path)
 
     header = split_line(line);
     num_phen = header.size();
-    corrs = {};
+    corrs = std::vector(num_phen * num_phen, 0.0);
+    int curr_corr_line = 0;
 
     while (std::getline(corr_file, line))
     {
         split_line(line);
-        for (size_t i = 1; i <= num_phen; i++)
+        for (size_t j = 1; j <= num_phen; j++)
         {
-            corrs.push_back(std::stof(line[i]));
+            corrs[curr_corr_line * num_phen + j - 1] = std::stof(line[j]);
         }
+        curr_corr_line += 1;
     }
 
     // make corrs symmetric
