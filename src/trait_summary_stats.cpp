@@ -1,7 +1,7 @@
 #include <mps/io.h>
 #include <mps/trait_summary_stats.h>
 
-TraitSummaryStats(const std::string path)
+TraitSummaryStats::TraitSummaryStats(const std::string path)
 {
     std::string line;
     std::ifstream corr_file(path);

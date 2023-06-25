@@ -1,7 +1,7 @@
 #include <mps/io.h>
 #include <mps/marker_trait_summary_stats.h>
 
-MarkerTraitSummaryStats(const std::string path)
+MarkerTraitSummaryStats::MarkerTraitSummaryStats(const std::string path)
 {
     std::string line;
     std::ifstream corr_file(path);
