@@ -485,11 +485,14 @@ void cuda_skeleton_summary_stats(int argc, char *argv[])
 {
     check_nargs(argc, CUSKSS_NARGS, CUSKSS_USAGE);
 
+    std::cout << "got args: " << argv << std::endl;
+
     std::string mxm_path = argv[2];
     std::string mxp_path = argv[3];
     std::string pxp_path = argv[4];
     int block_ix = std::stoi(argv[5]);
     std::string block_path = argv[6];
+    std::cout << "alpha arg: " << argv[7] << std::endl;
     float alpha = std::stof(argv[7]);
     int max_level = std::stoi(argv[8]);
     int depth = std::stoi(argv[9]);
