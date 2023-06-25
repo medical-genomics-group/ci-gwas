@@ -499,7 +499,6 @@ void block_diagonal_pc_summary_stat(int argc, char *argv[])
     check_path(mxp_path);
     check_path(pxp_path);
     check_path(block_path);
-    check_path(indir);
     check_path(outdir);
 }
 
