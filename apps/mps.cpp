@@ -458,19 +458,16 @@ void marker_pheno_corr_dist(int argc, char *argv[])
     }
 }
 
-const std::string BDPCSS_USAGE = R"(
-Run cuPC on block diagonal genomic correlation matrix with pre-computed correlations.
+const std::string CUSKSS_USAGE = R"(
+Run cuda-skeleton on a block of markers and traits with pre-computed correlations.
 
-usage: mps bdpcss <indir> <.blocks> <alpha> <max-level> <depth> <num-samples> <num-phen> <outdir>
-
-indir should contain two files for each block defined in .blocks:
-    - <CHR>_<START>_<STOP>_mmcorr.bin
-    - <CHR>_<START>_<STOP>_mpcorr.bin
-plus the correlations between phenotypes:
-    - ppcorr.bin
+usage: mps bdpcss <mxm> <mxp> <mxp> <block-ix> <.blocks> <alpha> <max-level> <depth> <num-samples> <outdir>
 
 arguments:
-    indir           location of precomputed correlation files
+    mxm             correlations between markers in block. Binary of floats, upper triangular, without diagonal.
+    mxp             correlations between markers in all blocks and all traits. Text format, rectangular.
+    pxp             correlations between all traits. Text format, rectangular, only upper triangle is used.
+    block-ix        0-based index of the marker block in the .blocks file
     .blocks         file with genomic block definitions
     alpha           significance level
     max-level       maximal size of seperation sets in cuPC ( <= 14)
@@ -480,24 +477,32 @@ arguments:
     outdir          outdir
 )";
 
-const int BDPCSS_NARGS = 10;
+const int BDPCSS_NARGS = 13;
 
 void block_diagonal_pc_summary_stat(int argc, char *argv[])
 {
     check_nargs(argc, BDPCSS_NARGS, BDPCSS_USAGE);
 
-    std::string indir = argv[2];
-    std::string block_path = argv[3];
-    float alpha = std::stof(argv[4]);
-    int max_level = std::stoi(argv[5]);
-    int depth = std::stoi(argv[6]);
-    int num_individuals = std::stoi(argv[7]);
-    int num_phen = std::stoi(argv[8]);
-    std::string outdir = (std::string)argv[9];
+    std::string mxm_path = argv[2];
+    std::string mxp_path = argv[3];
+    std::string pxp_path = argv[4];
+    int block_ix = std::stoi(argv[5]);
+    std::string block_path = argv[6];
+    float alpha = std::stof(argv[7]);
+    int max_level = std::stoi(argv[8]);
+    int depth = std::stoi(argv[9]);
+    int num_individuals = std::stoi(argv[10]);
+    int num_phen = std::stoi(argv[11]);
+    std::string outdir = (std::string)argv[12];
 
+    check_path(mxm_path);
+    check_path(mxp_path);
+    check_path(pxp_path);
     check_path(block_path);
     check_path(indir);
     check_path(outdir);
+
+        // everything below here is bs
 
     std::cout << "Loading phenotype correlations" << std::endl;
     std::vector<float> phen_corr = read_floats_from_binary(make_path(indir, "ppcorr", ".bin"));
