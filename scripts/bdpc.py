@@ -1,12 +1,16 @@
 import numpy as np
 import matplotlib as mpl
+import matplotlib.patches as mpatches
 from matplotlib import pyplot as plt
+from matplotlib.tri import Triangulation
 from dataclasses import dataclass
 import json
 import pandas as pd
 import seaborn as sns
 import queue
 from scipy.io import mmread
+import scipy
+
 from sklearn.linear_model import LinearRegression
 import itertools
 
@@ -26,6 +30,79 @@ rng = np.random.default_rng()
 
 BASE_INDEX = 1
 
+cause_gamma = pd.DataFrame(
+    [
+        {"y1": "bw".upper(), "y2": "t2d".upper(), "gamma": -0.274768438468858, "p_value": 0.0639138595336843},
+        {"y1": "bw".upper(), "y2": "ST".upper(), "gamma": -0.11133390989017, "p_value": 0.0877269352676329},
+        {"y1": "bw".upper(), "y2": "AT".upper(), "gamma": 0.0569668051462395, "p_value": 0.725407139890355},
+        {"y1": "bw".upper(), "y2": "cad".upper(), "gamma": -0.142129232069397, "p_value": 0.00142540782923592},
+        {"y1": "bmi".upper(), "y2": "t2d".upper(), "gamma": 0.753001009486836, "p_value": 0.00483103642108524},
+        {"y1": "bmi".upper(), "y2": "ST".upper(), "gamma": 0.0724579259674975, "p_value": 0.229567550936659},
+        {"y1": "bmi".upper(), "y2": "AT".upper(), "gamma": 0.127570936884617, "p_value": 0.164044172388618},
+        {"y1": "bmi".upper(), "y2": "cad".upper(), "gamma": 0.254304518656026, "p_value": 1.24E-04},
+        {"y1": "HT".upper(), "y2": "t2d".upper(), "gamma": 0.0133993365533514, "p_value": 0.964876784670837},
+        {"y1": "HT".upper(), "y2": "ST".upper(), "gamma": -0.0158921479966716, "p_value": 0.54766997929668},
+        {"y1": "HT".upper(), "y2": "AT".upper(), "gamma": -0.00266884948627959, "p_value": 1},
+        {"y1": "HT".upper(), "y2": "cad".upper(), "gamma": -0.0646821638302025, "p_value": 1.80E-04},
+        {"y1": "hdl".upper(), "y2": "t2d".upper(), "gamma": -0.157545489184377, "p_value": 0.0563712638516308},
+        {"y1": "hdl".upper(), "y2": "ST".upper(), "gamma": -0.0346983958224145, "p_value": 0.269303011987186},
+        {"y1": "hdl".upper(), "y2": "AT".upper(), "gamma": 0.00954960164699658, "p_value": 0.99836256615099},
+        {"y1": "hdl".upper(), "y2": "cad".upper(), "gamma": -0.203750511894064, "p_value": 4.42E-04},
+        {"y1": "ldl".upper(), "y2": "t2d".upper(), "gamma": -0.125971830503692, "p_value": 0.3242828409554},
+        {"y1": "ldl".upper(), "y2": "ST".upper(), "gamma": 0.0618108230339071, "p_value": 0.0457418341958065},
+        {"y1": "ldl".upper(), "y2": "AT".upper(), "gamma": -0.0178475072825962, "p_value": 0.869422530345408},
+        {"y1": "ldl".upper(), "y2": "cad".upper(), "gamma": 0.363195509520469, "p_value": 6.29E-12},
+        {"y1": "TRIG".upper(), "y2": "t2d".upper(), "gamma": 0.181573783879022, "p_value": 0.15119741082514},
+        {"y1": "TRIG".upper(), "y2": "ST".upper(), "gamma": 0.0081104586416291, "p_value": 0.98962812259515},
+        {"y1": "TRIG".upper(), "y2": "AT".upper(), "gamma": -0.0917176821192589, "p_value": 0.167567891536276},
+        {"y1": "TRIG".upper(), "y2": "cad".upper(), "gamma": 0.281762788578154, "p_value": 0.0853378458891273},
+        {"y1": "ALC".upper(), "y2": "t2d".upper(), "gamma": 0.0692860734762807, "p_value": 0.993922398394544},
+        {"y1": "ALC".upper(), "y2": "ST".upper(), "gamma": 0.125010784103481, "p_value": 0.253475957376267},
+        {"y1": "ALC".upper(), "y2": "AT".upper(), "gamma": -0.070909459789924, "p_value": 0.807946004128504},
+        {"y1": "ALC".upper(), "y2": "cad".upper(), "gamma": 0.0369981351799616, "p_value": 0.815004206171256},
+        {"y1": "SMK".upper(), "y2": "t2d".upper(), "gamma": 0.153669125333255, "p_value": 0.671514364328843},
+        {"y1": "SMK".upper(), "y2": "ST".upper(), "gamma": 0.287713602378084, "p_value": 0.0230622332612941},
+        {"y1": "SMK".upper(), "y2": "AT".upper(), "gamma": 0.129522157700426, "p_value": 0.501793441537144},
+        {"y1": "SMK".upper(), "y2": "cad".upper(), "gamma": 0.479817266067469, "p_value": 9.21E-08},
+        {"y1": "bfp".upper(), "y2": "t2d".upper(), "gamma": 0.0647735280855574, "p_value": 0.999860686969604},
+        {"y1": "bfp".upper(), "y2": "ST".upper(), "gamma": 0.0044428460841386, "p_value": 0.999999416083672},
+        {"y1": "bfp".upper(), "y2": "AT".upper(), "gamma": 0.0957086524513934, "p_value": 0.569696461982255},
+        {"y1": "bfp".upper(), "y2": "cad".upper(), "gamma": 0.133460312029649, "p_value": 0.328145432358914},
+        {"y1": "fg".upper(), "y2": "t2d".upper(), "gamma": 1.32033326715937, "p_value": 0.0133860198514224},
+        {"y1": "fg".upper(), "y2": "ST".upper(), "gamma": 0.00957326536858055, "p_value": 0.992341254004135},
+        {"y1": "fg".upper(), "y2": "AT".upper(), "gamma": -0.200412032138845, "p_value": 0.34591203996851},
+        {"y1": "fg".upper(), "y2": "cad".upper(), "gamma": 0.111579686635068, "p_value": 0.247491416509988},
+        {"y1": "dbp".upper(), "y2": "t2d".upper(), "gamma": 0.0204781118822844, "p_value": 0.020117240438985},
+        {"y1": "dbp".upper(), "y2": "ST".upper(), "gamma": 0.0318219908469929, "p_value": 0.00113343221355482},
+        {"y1": "dbp".upper(), "y2": "AT".upper(), "gamma": 0.00387409082195085, "p_value": 0.593576411806745},
+        {"y1": "dbp".upper(), "y2": "cad".upper(), "gamma": 0.0371147380330953, "p_value": 1.32E-26},
+        {"y1": "bp".upper(),"y2": "t2d".upper(),"gamma": 0.0142748064016252, "p_value": 0.0101128632377118},  # changed from sbp,
+        {"y1": "bp".upper(),"y2": "ST".upper(),"gamma": 0.0216220295177384, "p_value": 4.12E-09},  # changed from sbp,
+        {"y1": "bp".upper(),"y2": "AT".upper(),"gamma": 0.00246673566316583, "p_value": 0.755589637124656},  # changed from sbp,
+        {"y1": "bp".upper(), "y2": "cad".upper(), "gamma": 0.024807681904989, "p_value": 6.59E-31},
+    ]
+)
+
+diseases = set(["AT", "ST", "T2D", "CAD"])
+
+risk_factors = set(
+    [
+        "BMI",
+        "HT",
+        "BP",
+        "ALC",
+        "SMK",
+        "CHOL",
+        "DBP",
+        "GLU",
+        "HDL",
+        "HbA1c",
+        "LDL",
+        "SBP",
+        "TRIG",
+        "WHR",
+    ]
+)
 
 def get_pheno_codes(phen_path):
     with open(phen_path, "r") as fin:
@@ -1001,9 +1078,10 @@ two_common_edge_types = EdgeEncoding(
         np.array(
             [
                 "#ffffff",  # white
-                "#b2df8a",
-                "#a6cee3",
-                "#1f78b4",
+                "#b2df8a",  # green
+                "#fcc006",  # marigold
+                # "#a6cee3", # light blue
+                "#1f78b4", # darker blue
             ]
         )
     ),
@@ -1062,6 +1140,88 @@ def plot_pag(
     
     return im
 
+def plot_direct_link_cause_comparison(
+    pag_path: str,
+    pheno_path: str,
+    p_thr=0.05,
+    title=None,
+    title_kw=dict(),
+    ax=None,
+):
+    if ax is None:
+        plt.figure(figsize=(3, 10))
+        ax = plt.gca()
+    
+    risk_factor_list = sorted(list(risk_factors))
+    disease_list = sorted(list(diseases))
+
+    p_names = get_pheno_codes(pheno_path)
+    num_phen = len(p_names)
+
+    pag =  mmread(pag_path).tocsr()
+
+    ci_gwas_links = [[0 for _ in range(len(diseases))] for _ in range(len(risk_factors))]
+    cause_links = [[0 for _ in range(len(diseases))] for _ in range(len(risk_factors))]
+
+    for i in range(num_phen):
+        for j in range(num_phen):
+            v1 = pag[i, j]
+            v2 = pag[j, i]
+            name_i = p_names[i]
+            name_j = p_names[j]
+            if name_i in risk_factors and name_j in diseases:
+                mat_row = risk_factor_list.index(p_names[i])
+                mat_col = disease_list.index(p_names[j])
+                cp = cause_gamma[(cause_gamma["y1"] == name_i) & (cause_gamma["y2"] == name_j)].p_value.values
+                if (v1, v2) == (2, 3):
+                    ci_gwas_links[mat_row][mat_col] = 1
+                if len(cp) >= 1 and cp[0] <= p_thr:
+                    cause_links[mat_row][mat_col] = 1
+
+    col_labels = disease_list
+    row_labels = risk_factor_list
+
+    M = len(diseases)
+    N = len(risk_factors)
+    x = np.arange(M + 1)
+    y = np.arange(N + 1)
+    xs, ys = np.meshgrid(x, y)
+
+    triangles1 = [(i + j*(M+1), i+1 + j*(M+1), i + (j+1)*(M+1)) for j in range(N) for i in range(M)]
+    triangles2 = [(i+1 + j*(M+1), i+1 + (j+1)*(M+1), i + (j+1)*(M+1)) for j in range(N) for i in range(M)]
+    triang1 = Triangulation(xs.ravel()-0.5, ys.ravel()-0.5, triangles1)
+    triang2 = Triangulation(xs.ravel()-0.5, ys.ravel()-0.5, triangles2)
+    img1 = ax.tripcolor(triang1, np.array(ci_gwas_links).ravel(), cmap=mpl.colors.ListedColormap(['w', "#fcb001"]))
+    img2 = ax.tripcolor(triang2, np.array(cause_links).ravel(), cmap=mpl.colors.ListedColormap(['w', "#448ee4"]))
+
+    # Show all ticks and label them with the respective list entries.
+    ax.set_xticks(np.arange(M), labels=col_labels)
+    ax.set_yticks(np.arange(N), labels=row_labels)
+
+    # Let the horizontal axes labeling appear on top.
+    ax.tick_params(top=False, bottom=True, labeltop=False, labelbottom=True)
+
+    # Rotate the tick labels and set their alignment.
+    plt.setp(ax.get_xticklabels(), rotation=50, ha="right", rotation_mode="anchor")
+
+    # Turn spines off and create white grid.
+    ax.spines[:].set_visible(False)
+    ax.set_xticks(np.arange(M + 1) - 0.5, minor=True)
+    ax.set_yticks(np.arange(N + 1) - 0.5, minor=True)
+    ax.grid(which="minor", color="gray", linestyle="--", linewidth=1)
+    ax.tick_params(which="minor", bottom=False, left=False)
+    ax.set_ylabel("risk factor")
+    ax.set_xlabel("disease")
+
+    ci_gwas_patch = mpatches.Patch(color="#fcb001", label='CI-GWAS')
+    cause_patch = mpatches.Patch(color="#448ee4", label='CAUSE')
+
+    plt.legend(handles=[ci_gwas_patch, cause_patch], bbox_to_anchor=(1, 0.5), loc="lower left")
+
+    if title:
+        ax.set_title(title, **title_kw)
+
+    return img1, img2
 
 def marker_pheno_associations(
     blockfile: str,
@@ -1345,9 +1505,254 @@ def load_simulation_results() -> pd.DataFrame:
 
         # load true causal effects
         eff_path = pdir + f"./True_causaleffect_n{n}_SNP_{m}_it_{rep}.mtx"
-        eff = mmread(dag_path).tocsr()
+        eff = mmread(eff_path).tocsr()
         peff = eff[-(num_phen):,-(num_phen):].toarray()
+        peff = np.triu(peff, k=1)
 
+        # mr with skeleton input
+        for mr in mr_cn:
+            for e in e_arr:
+                try:
+                    mr_file = pdir + f"mr_e{e}/mr_skeleton_{mr.method}_n{n}_SNP_{m}_it_{rep}.csv"
+                    mr_results = pd.read_csv(mr_file)
+                    try:
+                        mr_results['i'] = mr_results[mr.exposure].apply(lambda x: int(x.split("Y")[1]) - 1)
+                        mr_results['j'] = mr_results[mr.outcome].apply(lambda x: int(x.split("Y")[1]) - 1)
+                    except KeyError as error:
+                        print(f"failed in mr file: {mr_file}")
+                        print(error)
+                        continue
+                    pvals = np.ones(shape=(num_phen, num_phen))
+                    pvals[mr_results['i'], mr_results['j']] = mr_results[mr.p]
+                    effects = np.zeros(shape=(num_phen, num_phen))
+                    effects[mr_results['i'], mr_results['j']] = mr_results[mr.estimate]
+                    adj = pvals < 10**(-e)
+                    perf = calulate_performance_metrics(pdag, peff, adj, effects)
+                    rows.append({
+                        "mse": perf.mse,
+                        "var": perf.var,
+                        "bias": perf.bias,
+                        "mse_tp": perf.mse_tp,
+                        "var_tp": perf.var_tp,
+                        "bias_tp": perf.bias_tp,
+                        "fdr": perf.fdr,
+                        "tpr": perf.tpr,
+                        "n": n,
+                        "m": m,
+                        "rep": rep,
+                        "alpha": 10**(-e),
+                        "method": f"{mr.method} + cuda-skeleton",
+                    })
+                except FileNotFoundError as error:
+                    print(error)
+
+
+        # mr standalone
+        for mr in mr_cn:
+            mr_results = pd.read_csv(pdir + f"mr_res_{mr.method}_n{n}_SNP_{m}_it_{rep}.csv")
+            mr_results['i'] = mr_results[mr.exposure].apply(lambda x: int(x.split("Y")[1]) - 1)
+            mr_results['j'] = mr_results[mr.outcome].apply(lambda x: int(x.split("Y")[1]) - 1)
+            pvals = np.ones(shape=(num_phen, num_phen))
+            pvals[mr_results['i'], mr_results['j']] = mr_results[mr.p]
+            effects = np.zeros(shape=(num_phen, num_phen))
+            effects[mr_results['i'], mr_results['j']] = mr_results[mr.estimate]
+            for e in e_arr:
+                adj = pvals < 10**(-e)
+                perf = calulate_performance_metrics(pdag, peff, adj, effects)
+                rows.append({
+                    "mse": perf.mse,
+                    "var": perf.var,
+                    "bias": perf.bias,
+                    "mse_tp": perf.mse_tp,
+                    "var_tp": perf.var_tp,
+                    "bias_tp": perf.bias_tp,
+                    "fdr": perf.fdr,
+                    "tpr": perf.tpr,
+                    "n": n,
+                    "m": m,
+                    "rep": rep,
+                    "alpha": 10**(-e),
+                    "method": mr.method,
+                })
+
+        for e in e_arr:
+            indir = pdir + f"simpc_d{d}_l{l}_e{e}_i{rep}_n{n}_m{m}/"
+
+            mdim_path = indir + "skeleton.mdim"
+            with open(mdim_path, 'r') as fin:
+                num_var, num_phen, max_level = [int(elem) for elem in fin.readline().split()]
+
+            # load skeleton
+            adj = np.fromfile(indir + "skeleton.adj", dtype=np.int32).reshape(num_var, num_var)
+            padj = adj[-(num_phen):,-(num_phen):]
+
+            # load var indices
+            # var_ixs = np.fromfile(indir + "skeleton.ixs", dtype=np.int32)
+
+            # load aces
+            pace = np.zeros(shape=(num_phen, num_phen))
+            missing = []
+            for i in range(1, num_phen + 1):
+                for j in range(1, num_phen + 1):
+                    if i == j:
+                        continue
+                    file = indir + f"estimated_causaleffect_i{i}_j{j}.csv"
+                    try:
+                        with open(file) as fin:
+                            sym = fin.readline().strip()
+                            if sym == "NaN":
+                                pace[i - 1, j - 1] = 0.0
+                            else:
+                                pace[i - 1, j - 1] = eval(sym)
+                    except FileNotFoundError as e:
+                        missing.append((i, j))
+
+            perf = calulate_performance_metrics(pdag, peff, padj, pace)
+            rows.append({
+                "mse": perf.mse,
+                "var": perf.var,
+                "bias": perf.bias,
+                "mse_tp": perf.mse_tp,
+                "var_tp": perf.var_tp,
+                "bias_tp": perf.bias_tp,
+                "fdr": perf.fdr,
+                "tpr": perf.tpr,
+                "n": n,
+                "m": m,
+                "rep": rep,
+                "alpha": 10**(-e),
+                "method": "ci-gwas",
+            })
+
+    return pd.DataFrame(rows)
+
+
+def load_n16k_m1600_simulation_results() -> pd.DataFrame:
+    @dataclass
+    class Performance:
+        mse: float
+        bias: float
+        var: float
+        mse_tp: float
+        bias_tp: float
+        var_tp: float
+        fdr: float
+        tpr: float
+
+    def calulate_performance_metrics(
+        true_adj: np.array,
+        true_eff: np.array,
+        est_adj: np.array,
+        est_eff: np.array
+    ):
+        true_adj_masked = np.ma.array(true_adj, mask=np.tri(true_adj.shape[0], k=0))
+        est_adj_masked = np.ma.array(est_adj, mask=np.tri(true_adj.shape[0], k=0))
+        est_eff_masked = np.ma.array(est_eff, mask=np.tri(true_adj.shape[0], k=0))
+        true_eff_masked = np.ma.array(true_eff, mask=np.tri(true_adj.shape[0], k=0))
+        sig_eff = np.zeros_like(est_eff)
+        sig_eff[est_adj != 0] = est_eff[est_adj != 0]
+        tp_mat = (true_adj_masked != 0) & (est_adj_masked != 0)
+        p = np.sum(true_adj_masked != 0)
+        f = np.sum(true_adj_masked == 0)
+        tp = np.sum((true_adj_masked != 0) & (est_adj_masked != 0))
+        fp = np.sum((true_adj_masked == 0) & (est_adj_masked != 0))
+        fn = np.sum((true_adj_masked != 0) & (est_adj_masked == 0))
+        mse = np.sum((true_eff - sig_eff) ** 2)
+        bias = np.sum(true_eff - sig_eff)
+        var = np.var(true_eff - sig_eff)
+        mse_tp = np.sum((est_eff_masked[tp_mat] - true_eff_masked[tp_mat]) ** 2)
+        bias_tp = np.sum(est_eff_masked[tp_mat] - true_eff_masked[tp_mat])
+        var_tp = np.var(est_eff_masked[tp_mat] - true_eff_masked[tp_mat])
+        fdr = fp / (fp + tp)
+        tpr = tp / p
+        if np.ma.is_masked(mse_tp):
+            mse_tp = np.nan
+        if np.ma.is_masked(var_tp):
+            var_tp = np.nan
+        if np.ma.is_masked(bias_tp):
+            bias_tp = np.nan
+        return Performance(mse, bias, var, mse_tp, bias_tp, var_tp, fdr, tpr)
+
+    @dataclass
+    class MR:
+        method: str
+        exposure: str
+        outcome: str
+        p: str
+        estimate: str
+
+    mr_cn = [
+        MR("ivw", "ivw.Exposure", "ivw.Outcome", "ivw.p", "ivw.est"),
+        MR("egger", "egger.Exposure", "egger.Outcome", "egger.p", "egger.est"),
+        MR("mrpresso", "mrpresso.V1", "mrpresso.V2", "mrpresso.P.value", "mrpresso.Causal.Estimate"),
+        MR("cause", "CAUSE.V1", "CAUSE.V2", "CAUSE.V4", "CAUSE.gamma"),
+    ]
+
+    pdir = f"/nfs/scistore13/robingrp/human_data/causality/bias_as_fn_of_alpha/sim_small_effects/"
+
+    d = 1
+    l = 6
+    n_arr = [16000]
+    m_arr = [1600]
+    # m_arr = [200, 400, 1600]
+    e_arr = list(range(1, 9))
+    rep_arr = list(range(1, 21))
+    num_phen = 10
+
+    rows = []
+
+    for (n, m, rep) in itertools.product(n_arr, m_arr, rep_arr):
+
+        # load true dag
+        dag_path = pdir + f"./true_adj_mat_n{n}_SNP_{m}_it_{rep}.mtx"
+        dag = mmread(dag_path).tocsr()
+        pdag = dag[-(num_phen):,-(num_phen):].toarray()
+
+        # load true causal effects
+        eff_path = pdir + f"./True_causaleffect_n{n}_SNP_{m}_it_{rep}.mtx"
+        eff = mmread(eff_path).tocsr()
+        peff = eff[-(num_phen):,-(num_phen):].toarray()
+        peff = np.triu(peff, k=1)
+
+        # mr with skeleton input
+        for mr in mr_cn:
+            for e in e_arr:
+                try:
+                    mr_file = pdir + f"mr_e{e}/mr_skeleton_{mr.method}_n{n}_SNP_{m}_it_{rep}.csv"
+                    mr_results = pd.read_csv(mr_file)
+                    try:
+                        mr_results['i'] = mr_results[mr.exposure].apply(lambda x: int(x.split("Y")[1]) - 1)
+                        mr_results['j'] = mr_results[mr.outcome].apply(lambda x: int(x.split("Y")[1]) - 1)
+                    except KeyError as error:
+                        print(f"failed in mr file: {mr_file}")
+                        print(error)
+                        continue
+                    pvals = np.ones(shape=(num_phen, num_phen))
+                    pvals[mr_results['i'], mr_results['j']] = mr_results[mr.p]
+                    effects = np.zeros(shape=(num_phen, num_phen))
+                    effects[mr_results['i'], mr_results['j']] = mr_results[mr.estimate]
+                    adj = pvals < 10**(-e)
+                    perf = calulate_performance_metrics(pdag, peff, adj, effects)
+                    rows.append({
+                        "mse": perf.mse,
+                        "var": perf.var,
+                        "bias": perf.bias,
+                        "mse_tp": perf.mse_tp,
+                        "var_tp": perf.var_tp,
+                        "bias_tp": perf.bias_tp,
+                        "fdr": perf.fdr,
+                        "tpr": perf.tpr,
+                        "n": n,
+                        "m": m,
+                        "rep": rep,
+                        "alpha": 10**(-e),
+                        "method": f"{mr.method} + cuda-skeleton",
+                    })
+                except FileNotFoundError as error:
+                    print(error)
+
+
+        # mr standalone
         for mr in mr_cn:
             mr_results = pd.read_csv(pdir + f"mr_res_{mr.method}_n{n}_SNP_{m}_it_{rep}.csv")
             mr_results['i'] = mr_results[mr.exposure].apply(lambda x: int(x.split("Y")[1]) - 1)
@@ -1801,76 +2206,8 @@ def plot_compare_max_k_effect_on_ace():
 
 
 def plot_ace_results_comp_cause_production(
-    pag_path: str, ace_path: str, pheno_path: str, ace_norm=None
+    pag_path: str, ace_path: str, pheno_path: str, ace_norm=None, regression=False, p_thr=0.05
 ):
-
-    # supp table 3 first three cols
-
-    cause_gamma = pd.DataFrame(
-        [
-            {"y1": "bw".upper(), "y2": "t2d".upper(), "gamma": -0.274768438468858},
-            {"y1": "bw".upper(), "y2": "ST".upper(), "gamma": -0.11133390989017},
-            {"y1": "bw".upper(), "y2": "AT".upper(), "gamma": 0.0569668051462395},
-            {"y1": "bw".upper(), "y2": "cad".upper(), "gamma": -0.142129232069397},
-            {"y1": "bmi".upper(), "y2": "t2d".upper(), "gamma": 0.753001009486836},
-            {"y1": "bmi".upper(), "y2": "ST".upper(), "gamma": 0.0724579259674975},
-            {"y1": "bmi".upper(), "y2": "AT".upper(), "gamma": 0.127570936884617},
-            {"y1": "bmi".upper(), "y2": "cad".upper(), "gamma": 0.254304518656026},
-            {"y1": "HT".upper(), "y2": "t2d".upper(), "gamma": 0.0133993365533514},
-            {"y1": "HT".upper(), "y2": "ST".upper(), "gamma": -0.0158921479966716},
-            {"y1": "HT".upper(), "y2": "AT".upper(), "gamma": -0.00266884948627959},
-            {"y1": "HT".upper(), "y2": "cad".upper(), "gamma": -0.0646821638302025},
-            {"y1": "hdl".upper(), "y2": "t2d".upper(), "gamma": -0.157545489184377},
-            {"y1": "hdl".upper(), "y2": "ST".upper(), "gamma": -0.0346983958224145},
-            {"y1": "hdl".upper(), "y2": "AT".upper(), "gamma": 0.00954960164699658},
-            {"y1": "hdl".upper(), "y2": "cad".upper(), "gamma": -0.203750511894064},
-            {"y1": "ldl".upper(), "y2": "t2d".upper(), "gamma": -0.125971830503692},
-            {"y1": "ldl".upper(), "y2": "ST".upper(), "gamma": 0.0618108230339071},
-            {"y1": "ldl".upper(), "y2": "AT".upper(), "gamma": -0.0178475072825962},
-            {"y1": "ldl".upper(), "y2": "cad".upper(), "gamma": 0.363195509520469},
-            {"y1": "TRIG".upper(), "y2": "t2d".upper(), "gamma": 0.181573783879022},
-            {"y1": "TRIG".upper(), "y2": "ST".upper(), "gamma": 0.0081104586416291},
-            {"y1": "TRIG".upper(), "y2": "AT".upper(), "gamma": -0.0917176821192589},
-            {"y1": "TRIG".upper(), "y2": "cad".upper(), "gamma": 0.281762788578154},
-            {"y1": "ALC".upper(), "y2": "t2d".upper(), "gamma": 0.0692860734762807},
-            {"y1": "ALC".upper(), "y2": "ST".upper(), "gamma": 0.125010784103481},
-            {"y1": "ALC".upper(), "y2": "AT".upper(), "gamma": -0.070909459789924},
-            {"y1": "ALC".upper(), "y2": "cad".upper(), "gamma": 0.0369981351799616},
-            {"y1": "SMK".upper(), "y2": "t2d".upper(), "gamma": 0.153669125333255},
-            {"y1": "SMK".upper(), "y2": "ST".upper(), "gamma": 0.287713602378084},
-            {"y1": "SMK".upper(), "y2": "AT".upper(), "gamma": 0.129522157700426},
-            {"y1": "SMK".upper(), "y2": "cad".upper(), "gamma": 0.479817266067469},
-            {"y1": "bfp".upper(), "y2": "t2d".upper(), "gamma": 0.0647735280855574},
-            {"y1": "bfp".upper(), "y2": "ST".upper(), "gamma": 0.0044428460841386},
-            {"y1": "bfp".upper(), "y2": "AT".upper(), "gamma": 0.0957086524513934},
-            {"y1": "bfp".upper(), "y2": "cad".upper(), "gamma": 0.133460312029649},
-            {"y1": "fg".upper(), "y2": "t2d".upper(), "gamma": 1.32033326715937},
-            {"y1": "fg".upper(), "y2": "ST".upper(), "gamma": 0.00957326536858055},
-            {"y1": "fg".upper(), "y2": "AT".upper(), "gamma": -0.200412032138845},
-            {"y1": "fg".upper(), "y2": "cad".upper(), "gamma": 0.111579686635068},
-            {"y1": "dbp".upper(), "y2": "t2d".upper(), "gamma": 0.0204781118822844},
-            {"y1": "dbp".upper(), "y2": "ST".upper(), "gamma": 0.0318219908469929},
-            {"y1": "dbp".upper(), "y2": "AT".upper(), "gamma": 0.00387409082195085},
-            {"y1": "dbp".upper(), "y2": "cad".upper(), "gamma": 0.0371147380330953},
-            {
-                "y1": "bp".upper(),
-                "y2": "t2d".upper(),
-                "gamma": 0.0142748064016252,
-            },  # changed from sbp,
-            {
-                "y1": "bp".upper(),
-                "y2": "ST".upper(),
-                "gamma": 0.0216220295177384,
-            },  # changed from sbp,
-            {
-                "y1": "bp".upper(),
-                "y2": "AT".upper(),
-                "gamma": 0.00246673566316583,
-            },  # changed from sbp,
-            {"y1": "bp".upper(), "y2": "cad".upper(), "gamma": 0.024807681904989},
-        ]
-    )  # changed from sbp)
-
     pnames = get_pheno_codes(pheno_path)
     cause_ys = set(cause_gamma["y1"].values)
     cause_ys.update(set(cause_gamma["y2"].values))
@@ -1893,27 +2230,6 @@ def plot_ace_results_comp_cause_production(
     TRIG = blood triglyceride levels
     WHR = waist-hip ratio
     """
-
-    diseases = set(["AT", "ST", "T2D", "CAD"])
-
-    risk_factors = set(
-        [
-            "BMI",
-            "HT",
-            "BP",
-            "ALC",
-            "SMK",
-            "CHOL",
-            "DBP",
-            "GLU",
-            "HDL",
-            "HbA1c",
-            "LDL",
-            "SBP",
-            "TRIG",
-            "WHR",
-        ]
-    )
 
     reg_cfg = {
         "skip_na": False,
@@ -1973,6 +2289,7 @@ def plot_ace_results_comp_cause_production(
     # mr = ace_flat + rng.normal(0, 0.10, size=len(ace_flat))
 
     rows = []
+    significant_rows = []
     for i, pi in enumerate(pnames):
         if pi not in reg_pnames:
             continue
@@ -1988,42 +2305,50 @@ def plot_ace_results_comp_cause_production(
             if pi in diseases and pj in risk_factors and not reg_cfg["d2rf"]:
                 continue
             cg = cause_gamma[(cause_gamma["y1"] == pi) & (cause_gamma["y2"] == pj)].gamma.values
+            cp = cause_gamma[(cause_gamma["y1"] == pi) & (cause_gamma["y2"] == pj)].p_value.values
             if len(cg) > 1:
                 raise ValueError("too many gammas")
             gamma = 0 if len(cg) == 0 else cg[0]
+            p_val = 1 if len(cg) == 0 else cp[0]
             if reg_cfg["skip_na"] and (gamma == 0 or ace[i, j] == 0):
                 continue
             rows.append({"y1": pi, "y2": pj, "gamma": gamma, "ace": ace[i, j]})
+            if p_val <= p_thr:
+                significant_rows.append({"y1": pi, "y2": pj, "gamma": gamma, "ace": ace[i, j]})
 
     data = pd.DataFrame(rows)
     mr = data["gamma"].values
     ace_flat = data["ace"].values
 
+    sig_data = pd.DataFrame(significant_rows)
+    sig_mr = sig_data["gamma"].values
+    sig_ace_flat = sig_data["ace"].values
+
     ax.scatter(mr, ace_flat, color="#d8dcd6", edgecolors="#5729ce", s=80, alpha=0.5, zorder=10)
+    ax.scatter(sig_mr, sig_ace_flat, color="#f10c45", edgecolors="#5729ce", s=80, alpha=0.5, zorder=11)
     ax.grid(linestyle=":")
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
     ax.set_ylabel("CI-GWAS ACE")
     ax.set_xlabel(r"CAUSE $\gamma$ (Morrison et al. 2020)")
-
-    X = mr.reshape(-1, 1)
-    y = ace_flat
-
-    linear_regressor = LinearRegression()
-    linear_regressor.fit(X, y)
-    linear_regressor.fit(X, y)
-    x_pred = np.linspace(np.min(mr), np.max(mr), 100).reshape(-1, 1)
-    y_pred = linear_regressor.predict(x_pred)
-
-    # Plot regression line.
-    # * Logarithmic transformation is reverted by using the exponential one.
-    ax.plot(x_pred, y_pred, color="#696969", lw=2, linestyle="dashed")
-    beta = np.round(linear_regressor.coef_[0], 2)
-    mu = np.round(linear_regressor.intercept_, 2)
     ax.set_title("c)", **title_kw)
-    ax.text(0.2, 0.12, rf"$y={mu} + {beta}x$", fontsize=13)
-    # fig.align_labels()
-    # fig.tight_layout()
+
+    if regression:
+        X = mr.reshape(-1, 1)
+        y = ace_flat
+
+        linear_regressor = LinearRegression()
+        linear_regressor.fit(X, y)
+        linear_regressor.fit(X, y)
+        x_pred = np.linspace(np.min(mr), np.max(mr), 100).reshape(-1, 1)
+        y_pred = linear_regressor.predict(x_pred)
+
+        # Plot regression line.
+        # * Logarithmic transformation is reverted by using the exponential one.
+        ax.plot(x_pred, y_pred, color="#696969", lw=2, linestyle="dashed")
+        beta = np.round(linear_regressor.coef_[0], 2)
+        mu = np.round(linear_regressor.intercept_, 2)
+        ax.text(0.2, 0.12, rf"$y={mu} + {beta}x$", fontsize=13)
 
 
 def plot_non_pleio_barplot(pag_path: str, pheno_path: str, ax=None, title=None, title_kw=None):
@@ -2271,14 +2596,15 @@ def plot_pag_and_ace(pag_path: str, ace_path: str, pheno_path: str):
         cbar_kw=cbar_kw,
     )
 
-def merge_parallel_davs_csvs(indir: str, outdir: str, num_phen: int):
+def merge_parallel_davs_csvs(indir: str, infile_suffix: str, outfile: str, num_phen: int):
     res = np.zeros(shape=(num_phen, num_phen))
     missing = []
     for i in range(1, num_phen + 1):
         for j in range(1, num_phen + 1):
             if i == j:
                 continue
-            file = indir + f"all_merged_ACE_sk_mk3_i{i}_j{j}.csv"
+            file = indir + infile_suffix + f"_i{i}_j{j}.csv"
+            # file = indir + f"all_merged_ACE_sk_mk3_i{i}_j{j}.csv"
             try:
                 with open(file) as fin:
                     next(fin)
@@ -2292,7 +2618,7 @@ def merge_parallel_davs_csvs(indir: str, outdir: str, num_phen: int):
 
     res[np.isnan(res)] = 0
 
-    scipy.io.mmwrite(outdir + "all_merged_ACE_sk_mk3.mtx", scipy.sparse.coo_matrix(res))
+    scipy.io.mmwrite(outfile, scipy.sparse.coo_matrix(res))
 
 
 def plot_inf_depth_pleio():
