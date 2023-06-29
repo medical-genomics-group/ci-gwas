@@ -78,12 +78,11 @@ TEST(read_marker_trait_summary_stats, expected_results)
 
 TEST(read_marker_summary_stats, expected_results)
 {
-    std::vector<float> exp_corrs = {
-        1.0, 0.299969, 0.924167, 0.299969, 1.0, 0.0, 0.924167, 0.0, 1.0};
+    std::vector<float> exp_corrs = {1., -0.0262947, 1., 0.21663797, 0.9148115, 1.};
 
     int exp_num_markers = 3;
 
-    MarkerSummaryStats obs = MarkerSummaryStats("../../tests/test_files/1_marker_corrk.bin");
+    MarkerSummaryStats obs = MarkerSummaryStats("../../tests/test_files/small_mxm.bin");
 
     EXPECT_EQ(exp_num_markers, obs.get_num_markers());
     expect_near_vec(exp_corrs, obs.get_corrs());
