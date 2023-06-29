@@ -1627,7 +1627,7 @@ def load_simulation_results() -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def load_n16k_m1600_simulation_results() -> pd.DataFrame:
+def load_n16k_m1600_simulation_results(mr_skeleton=False) -> pd.DataFrame:
     @dataclass
     class Performance:
         mse: float
@@ -1714,42 +1714,43 @@ def load_n16k_m1600_simulation_results() -> pd.DataFrame:
         peff = eff[-(num_phen):,-(num_phen):].toarray()
         peff = np.triu(peff, k=1)
 
-        # mr with skeleton input
-        for mr in mr_cn:
-            for e in e_arr:
-                try:
-                    mr_file = pdir + f"mr_e{e}/mr_skeleton_{mr.method}_n{n}_SNP_{m}_it_{rep}.csv"
-                    mr_results = pd.read_csv(mr_file)
+        if mr_skeleton:
+            # mr with skeleton input
+            for mr in mr_cn:
+                for e in e_arr:
                     try:
-                        mr_results['i'] = mr_results[mr.exposure].apply(lambda x: int(x.split("Y")[1]) - 1)
-                        mr_results['j'] = mr_results[mr.outcome].apply(lambda x: int(x.split("Y")[1]) - 1)
-                    except KeyError as error:
-                        print(f"failed in mr file: {mr_file}")
+                        mr_file = pdir + f"mr_e{e}/mr_skeleton_{mr.method}_n{n}_SNP_{m}_it_{rep}.csv"
+                        mr_results = pd.read_csv(mr_file)
+                        try:
+                            mr_results['i'] = mr_results[mr.exposure].apply(lambda x: int(x.split("Y")[1]) - 1)
+                            mr_results['j'] = mr_results[mr.outcome].apply(lambda x: int(x.split("Y")[1]) - 1)
+                        except KeyError as error:
+                            print(f"failed in mr file: {mr_file}")
+                            print(error)
+                            continue
+                        pvals = np.ones(shape=(num_phen, num_phen))
+                        pvals[mr_results['i'], mr_results['j']] = mr_results[mr.p]
+                        effects = np.zeros(shape=(num_phen, num_phen))
+                        effects[mr_results['i'], mr_results['j']] = mr_results[mr.estimate]
+                        adj = pvals < 10**(-e)
+                        perf = calulate_performance_metrics(pdag, peff, adj, effects)
+                        rows.append({
+                            "mse": perf.mse,
+                            "var": perf.var,
+                            "bias": perf.bias,
+                            "mse_tp": perf.mse_tp,
+                            "var_tp": perf.var_tp,
+                            "bias_tp": perf.bias_tp,
+                            "fdr": perf.fdr,
+                            "tpr": perf.tpr,
+                            "n": n,
+                            "m": m,
+                            "rep": rep,
+                            "alpha": 10**(-e),
+                            "method": f"{mr.method} + cuda-skeleton",
+                        })
+                    except FileNotFoundError as error:
                         print(error)
-                        continue
-                    pvals = np.ones(shape=(num_phen, num_phen))
-                    pvals[mr_results['i'], mr_results['j']] = mr_results[mr.p]
-                    effects = np.zeros(shape=(num_phen, num_phen))
-                    effects[mr_results['i'], mr_results['j']] = mr_results[mr.estimate]
-                    adj = pvals < 10**(-e)
-                    perf = calulate_performance_metrics(pdag, peff, adj, effects)
-                    rows.append({
-                        "mse": perf.mse,
-                        "var": perf.var,
-                        "bias": perf.bias,
-                        "mse_tp": perf.mse_tp,
-                        "var_tp": perf.var_tp,
-                        "bias_tp": perf.bias_tp,
-                        "fdr": perf.fdr,
-                        "tpr": perf.tpr,
-                        "n": n,
-                        "m": m,
-                        "rep": rep,
-                        "alpha": 10**(-e),
-                        "method": f"{mr.method} + cuda-skeleton",
-                    })
-                except FileNotFoundError as error:
-                    print(error)
 
 
         # mr standalone
@@ -1801,7 +1802,7 @@ def load_n16k_m1600_simulation_results() -> pd.DataFrame:
                 for j in range(1, num_phen + 1):
                     if i == j:
                         continue
-                    file = indir + f"estimated_causaleffect_i{i}_j{j}.csv"
+                    file = indir + f"estimated_causaleffect_i{i}_j{j}_lut.csv"
                     try:
                         with open(file) as fin:
                             sym = fin.readline().strip()
@@ -1841,7 +1842,7 @@ def plot_simulation_results():
     rep_arr = list(range(1, 21))
     num_phen = 10
 
-    df = load_simulation_results()
+    df = load_n16k_m1600_simulation_results()
     dfs = df.loc[(df['n'] == 16000) & (df['m'] == 1600)]
     gr = dfs.groupby(["method", "alpha"])
     means = gr.mean()
@@ -1907,7 +1908,6 @@ def plot_simulation_results():
         # title="method",
     )
     ax_dict["f"].axis("off")
-    plt.savefig('/nfs/scistore13/robingrp/human_data/causality/figures/figure_2.eps')
 
 def plot_simulation_results_sup_tp():
     d = 1
@@ -1919,7 +1919,7 @@ def plot_simulation_results_sup_tp():
     rep_arr = list(range(1, 21))
     num_phen = 10
 
-    df = load_simulation_results()
+    df = load_n16k_m1600_simulation_results()
     dfs = df.loc[(df['n'] == 16000) & (df['m'] == 1600)]
     gr = dfs.groupby(["method", "alpha"])
     means = gr.mean()
@@ -1985,7 +1985,6 @@ def plot_simulation_results_sup_tp():
         # title="method",
     )
     ax_dict["f"].axis("off")
-    plt.savefig('/nfs/scistore13/robingrp/human_data/causality/figures/sup_figure_perf_tp.eps')
 
 def plot_simulation_results_sup():
     d = 1
@@ -2773,5 +2772,3 @@ def plot_est_ukb_corr():
         title_kw=title_kw,
         title='b)'
         )
-
-    plt.savefig('/nfs/scistore13/robingrp/human_data/causality/figures/sup_figure_est_ukb_corr.eps')
