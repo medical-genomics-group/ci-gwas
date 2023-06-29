@@ -78,7 +78,10 @@ TEST(read_marker_trait_summary_stats, expected_results)
 
 TEST(read_marker_summary_stats, expected_results)
 {
-    std::vector<float> exp_corrs = {1., -0.0262947, 1., 0.21663797, 0.9148115, 1.};
+    std::vector<float> exp_corrs = {
+        1., -0.0262947, 0.21663797,
+        -0.0262947, 1., 0.9148115,
+        0.21663797, 0.9148115, 1.};
 
     int exp_num_markers = 3;
 
