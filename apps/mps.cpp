@@ -523,6 +523,9 @@ void cuda_skeleton_summary_stats(int argc, char *argv[])
     if (mxm.get_num_markers() != mxp.get_num_markers())
     {
         std::cout << "Numbers of markers seem to differ between mxm and mxp" << std::endl;
+        std::cout << "mxp: " << mxp.get_num_markers() << " x " << mxp.get_num_phen() << std::endl;
+        std::cout << "mxm: " << mxm.get_num_markers() << " x " << mxm.get_num_markers()
+                  << std::endl;
         exit(1);
     }
 
