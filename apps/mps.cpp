@@ -590,6 +590,10 @@ void cuda_skeleton_summary_stats(int argc, char *argv[])
         }
     }
 
+    write_floats_to_binary(
+        sq_corrs.data(), sq_corrs.size(), make_path(outdir, block.to_file_string(), ".corrmat")
+    );
+
     std::vector<float> Th = threshold_array(num_individuals, alpha);
 
     // call cuPC
@@ -1142,6 +1146,10 @@ void block_diagonal_pc_single(int argc, char *argv[])
             ++sq_col_ix;
         }
     }
+
+    write_floats_to_binary(
+        sq_corrs.data(), sq_corrs.size(), make_path(outdir, block.to_file_string(), ".corrmat")
+    );
 
     std::cout << "Running cuPC" << std::endl;
 
