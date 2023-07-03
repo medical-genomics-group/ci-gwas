@@ -942,14 +942,23 @@ void block_diagonal_pc_single(int argc, char *argv[])
 {
     check_nargs(argc, BDPC_SINGLE_NARGS, BDPC_SINGLE_USAGE);
 
+    std::cout << "Got args: " << std::endl;
     std::string phen_path = argv[2];
+    std::cout << ".phen: " << phen_path << std::endl;
     std::string bed_base_path = argv[3];
+    std::cout << "bfiles: " << bed_base_path << std::endl;
     std::string block_path = argv[4];
+    std::cout << ".blocks: " << block_path << std::endl;
     float alpha = std::stof(argv[5]);
+    std::cout << "alpha: " << alpha << std::endl;
     int max_level = std::stoi(argv[6]);
+    std::cout << "max_level: " << max_level << std::endl;
     int depth = std::stoi(argv[7]);
+    std::cout << "depth: " << depth << std::endl;
     std::string outdir = (std::string)argv[8];
+    std::cout << "outdir: " << outdir << std::endl;
     int block_index = std::stoi(argv[9]);
+    std::cout << "block-index: " << block_index << std::endl;
 
     std::cout << "Checking paths" << std::endl;
 
@@ -971,7 +980,6 @@ void block_diagonal_pc_single(int argc, char *argv[])
     BimInfo bim(bfiles.bim());
     size_t num_individuals = dims.get_num_samples();
     size_t num_phen = phen.get_num_phen();
-    // TODO: testcase for num_phen = 1;
     size_t phen_corr_mat_size = num_phen * (num_phen - 1) / 2;
     std::vector<float> phen_corr(phen_corr_mat_size, 0.0);
     std::cout << "Found " << num_phen << " phenotypes" << std::endl;
