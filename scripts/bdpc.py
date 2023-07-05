@@ -873,6 +873,28 @@ def plot_pleiotropy_mat(
     )
 
 
+def load_ace_directed_only(ace_path: str, pag_path: str, pheno_path: str) -> np.array:
+    p_names = get_pheno_codes(pheno_path)
+    num_phen = len(p_names)
+    ace = mmread(ace_path).tocsr()
+    pag = mmread(pag_path).tocsr()
+    directed = [[False for _ in range(num_phen)] for _ in range(num_phen)]
+    for i in range(num_phen):
+        for j in range(num_phen):
+            v1 = pag[i, j]
+            v2 = pag[j, i]
+            if (v1, v2) == (2, 3):
+                directed[i][j] = True
+
+    z = [[0.0 for _ in range(num_phen)] for _ in range(num_phen)]
+    for i in range(num_phen):
+        for j in range(num_phen):
+            if directed[i][j]:
+                z[i][j] = ace[i, j]
+    
+    return np.array(z)
+
+
 def load_ace(ace_path: str, pheno_path: str) -> np.array:
     p_names = get_pheno_codes(pheno_path)
     num_phen = len(p_names)
@@ -882,6 +904,65 @@ def load_ace(ace_path: str, pheno_path: str) -> np.array:
         for j in range(num_phen):
             z[i][j] = ace[i, j]
     return np.array(z)
+
+
+def plot_ace_directed_only(
+    ace_path: str,
+    pag_path: str,
+    pheno_path: str,
+    title=None,
+    title_kw=dict(),
+    cmap="bwr",
+    cbarlabel=r"$ACE \: (y_1 \rightarrow y_2)$",
+    cbar_kw=None,
+    cbar=True,
+    ax=None,
+    norm=None,
+    xlabel=r"$y_2$",
+    ylabel=r"$y_1$",
+):
+    p_names = get_pheno_codes(pheno_path)
+    num_phen = len(p_names)
+    ace = mmread(ace_path).tocsr()
+
+    pag = mmread(pag_path).tocsr()
+
+    directed = [[False for _ in range(num_phen)] for _ in range(num_phen)]
+
+    for i in range(num_phen):
+        for j in range(num_phen):
+            v1 = pag[i, j]
+            v2 = pag[j, i]
+            if (v1, v2) == (2, 3):
+                directed[i][j] = True
+
+    z = [[0.0 for _ in range(num_phen)] for _ in range(num_phen)]
+    for i in range(num_phen):
+        for j in range(num_phen):
+            if directed[i][j]:
+                z[i][j] = ace[i, j]
+    
+    max_z = np.max(np.abs(z))
+    z = np.array(z)
+    z = np.ma.masked_array(z, z == 0.0)
+    im, _ = heatmap(
+        z,
+        p_names,
+        p_names,
+        cmap=cmap,
+        cbarlabel=cbarlabel,
+        cbar_kw=cbar_kw,
+        cbar=cbar,
+        # vmin=-max_z,
+        # vmax=max_z,
+        xlabel=xlabel,
+        ylabel=ylabel,
+        title=title,
+        title_kw=title_kw,
+        ax=ax,
+        norm=norm,
+    )
+    return im
 
 
 def plot_ace(
@@ -1684,9 +1765,36 @@ def load_simulation_results() -> pd.DataFrame:
                                 pace[i - 1, j - 1] = eval(sym)
                     except FileNotFoundError as e:
                         missing.append((i, j))
+            
+            ixs_path = indir + "skeleton.ixs"
+            var_ixs = np.fromfile(ixs_path, dtype=np.int32)
 
+            # load true dag
+            dag_path = pdir + f"./true_adj_mat_n{n}_SNP_{m}_it_{rep}.mtx"
+            full_dag = mmread(dag_path).tocsr()
+
+            # load pag
+            full_pag = mmread(pag_path).tocsr()
+
+            dag_mxp = full_dag.toarray()[:m, -num_phen:]
+            pag_mxp_sub = full_pag[:, -num_phen:].toarray()
+            pag_mxp = np.zeros_like(dag_mxp)
+            for sub_ix, glob_ix in enumerate(var_ixs):
+                if glob_ix < m:
+                    pag_mxp[glob_ix, :] = pag_mxp_sub[sub_ix, :]
+
+            mxp_p = np.sum(dag_mxp != 0)
+            mxp_tp = np.sum((dag_mxp != 0) & (pag_mxp != 0))
+            mxp_fp = np.sum((dag_mxp == 0) & (pag_mxp != 0))
+            mxp_fdr = mxp_fp / (mxp_fp + mxp_tp)
+            mxp_tpr = mxp_tp / mxp_p
+
+            # perf = calulate_performance_metrics(pdag, peff, padj, pace)
+            
             perf = calulate_performance_metrics(pdag, peff, est_dag, pace)
             rows.append({
+                "marker-trait fdr": mxp_fdr,
+                "marker-trait tpr": mxp_tpr,
                 "edge orientation": perf.correct_orientation,
                 "mse": perf.mse,
                 "var": perf.var,
@@ -1839,9 +1947,34 @@ def load_n16k_m1600_simulation_results(mr_skeleton=False) -> pd.DataFrame:
                     except FileNotFoundError as e:
                         missing.append((i, j))
 
+            ixs_path = indir + "skeleton.ixs"
+            var_ixs = np.fromfile(ixs_path, dtype=np.int32)
+
+            # load true dag
+            dag_path = pdir + f"./true_adj_mat_n{n}_SNP_{m}_it_{rep}.mtx"
+            full_dag = mmread(dag_path).tocsr()
+
+            # load pag
+            full_pag = mmread(pag_path).tocsr()
+
+            dag_mxp = full_dag.toarray()[:m, -num_phen:]
+            pag_mxp_sub = full_pag[:, -num_phen:].toarray()
+            pag_mxp = np.zeros_like(dag_mxp)
+            for sub_ix, glob_ix in enumerate(var_ixs):
+                if glob_ix < m:
+                    pag_mxp[glob_ix, :] = pag_mxp_sub[sub_ix, :]
+
+            mxp_p = np.sum(dag_mxp != 0)
+            mxp_tp = np.sum((dag_mxp != 0) & (pag_mxp != 0))
+            mxp_fp = np.sum((dag_mxp == 0) & (pag_mxp != 0))
+            mxp_fdr = mxp_fp / (mxp_fp + mxp_tp)
+            mxp_tpr = mxp_tp / mxp_p
+
             # perf = calulate_performance_metrics(pdag, peff, padj, pace)
             perf = calulate_performance_metrics(pdag, peff, est_dag, pace)
             rows.append({
+                "marker-trait fdr": mxp_fdr,
+                "marker-trait tpr": mxp_tpr,
                 "edge orientation": perf.correct_orientation,
                 "mse": perf.mse,
                 "var": perf.var,
@@ -1959,6 +2092,122 @@ def plot_simulation_results_with_orientation():
     methods = ['ci-gwas', 'cause', 'mrpresso', 'ivw']
     title_kw = {"loc": "left", "pad": 15, "size": 20}
 
+    def plot_ci_gwas_bars(x_vals, metric, means, stds, ax, title, axhline=False):
+        ax.set_title(title, **title_kw)
+        x = np.arange(len(x_vals))  # the label locations
+        width = 0.5  # the width of the bars
+        multiplier = 0
+
+        handles = []
+        for method in ["ci-gwas"]:
+            mu = means.loc[method][metric]
+            sig = stds.loc[method][metric]
+            offset = width * multiplier
+            try:
+                bars = ax.bar(x + offset, mu, width, yerr=sig, capsize=1.5, label=method)
+                handles.append(bars)
+            except StopIteration:
+                pass
+            multiplier += 1
+
+        ax.set_ylabel(metric)
+        if title == 'e)' or title == 'd)':
+            ax.set_xlabel(r"$\alpha$")
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.set_xticks(x, x_vals)
+        plt.setp(ax.get_xticklabels(), rotation=50, ha="right", rotation_mode="anchor")
+        if axhline:
+            ax.axhline(0.05, linestyle="dashed", color="k")
+        # ax.legend(loc='upper left', ncols=3)
+        # ax.set_yscale("symlog")
+        return handles
+
+    def plot_bars(x_vals, metric, means, stds, ax, title):
+        ax.set_title(title, **title_kw)
+        x = np.arange(len(x_vals))  # the label locations
+        width = 0.15  # the width of the bars
+        multiplier = 0
+
+        handles = []
+        for method in methods:
+            mu = means.loc[method][metric]
+            sig = stds.loc[method][metric]
+            offset = width * multiplier
+            try:
+                bars = ax.bar(x + offset, mu, width, yerr=sig, capsize=1.5, label=method)
+                handles.append(bars)
+            except StopIteration:
+                pass
+            multiplier += 1
+
+        ax.set_ylabel(metric)
+        if title == 'g)' or title == 'h)':
+            ax.set_xlabel(r"$\alpha$")
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.set_xticks(x + width, x_vals)
+        plt.setp(ax.get_xticklabels(), rotation=50, ha="right", rotation_mode="anchor")
+        # ax.legend(loc='upper left', ncols=3)
+        # ax.set_yscale("symlog")
+        return handles
+
+    fig = plt.figure(layout="constrained", figsize=(10, 8))
+    ax_dict = fig.subplot_mosaic(
+        """
+        ii
+        ab
+        cd
+        ef
+        gh
+        """,
+        empty_sentinel="X",
+        sharex=True,
+        # set the height ratios between the rows
+        height_ratios=[0.2, 0.6, 1, 1, 1],
+    )
+
+    plot_ci_gwas_bars(alphas, "marker-trait fdr", means, stds, ax_dict['a'], "a)", axhline=True)
+    plot_ci_gwas_bars(alphas, "marker-trait tpr", means, stds, ax_dict['b'], "b)")
+    plot_bars(alphas, "fdr", means, stds, ax_dict['c'], "c)")
+    plot_bars(alphas, "tpr", means, stds, ax_dict['d'], "d)")
+    plot_bars(alphas, "edge orientation", means, stds, ax_dict['e'], "e)")
+    plot_bars(alphas, "mse", means, stds, ax_dict['f'], "f)")
+    plot_bars(alphas, "bias", means, stds, ax_dict['g'], "g)")
+    h = plot_bars(alphas, "var", means, stds, ax_dict['h'], "h)")
+    ax_dict["i"].legend(
+        handles=h,
+        labels=['CI-GWAS', 'CAUSE', 'MR-PRESSO', 'IVW Regression'],
+        loc="center",
+        fancybox=False,
+        shadow=False,
+        ncol=4,
+        # title="method",
+    )
+    ax_dict["i"].axis("off")
+
+
+def plot_simulation_results_sup_tp_with_orientation():
+    d = 1
+    l = 6
+    n_arr = [2000, 4000, 8000, 16000]
+    m_arr = [200, 400, 800, 1600]
+    # m_arr = [200, 400, 1600]
+    e_arr = list(range(1, 9))
+    rep_arr = list(range(1, 21))
+    num_phen = 10
+
+    df = load_n16k_m1600_simulation_results()
+    dfs = df.loc[(df['n'] == 16000) & (df['m'] == 1600)]
+    gr = dfs.groupby(["method", "alpha"])
+    means = gr.mean()
+    stds = gr.std()
+
+    alphas = 10.0 ** -np.array(e_arr[::-1])
+    # methods = ['ci-gwas', 'cause', 'mrpresso', 'egger', 'ivw']
+    methods = ['ci-gwas', 'cause', 'mrpresso', 'ivw']
+    title_kw = {"loc": "left", "pad": 15, "size": 20}
+
     def plot_bars(x_vals, metric, means, stds, ax, title):
         ax.set_title(title, **title_kw)
         x = np.arange(len(x_vals))  # the label locations
@@ -2005,9 +2254,9 @@ def plot_simulation_results_with_orientation():
     plot_bars(alphas, "fdr", means, stds, ax_dict['a'], "a)")
     plot_bars(alphas, "tpr", means, stds, ax_dict['b'], "b)")
     plot_bars(alphas, "edge orientation", means, stds, ax_dict['c'], "c)")
-    plot_bars(alphas, "mse", means, stds, ax_dict['d'], "d)")
-    plot_bars(alphas, "bias", means, stds, ax_dict['e'], "e)")
-    h = plot_bars(alphas, "var", means, stds, ax_dict['f'], "f)")
+    plot_bars(alphas, "mse_tp", means, stds, ax_dict['d'], "d)")
+    plot_bars(alphas, "bias_tp", means, stds, ax_dict['e'], "e)")
+    h = plot_bars(alphas, "var_tp", means, stds, ax_dict['f'], "f)")
     ax_dict["g"].legend(
         handles=h,
         labels=['CI-GWAS', 'CAUSE', 'MR-PRESSO', 'IVW Regression'],
@@ -2018,6 +2267,7 @@ def plot_simulation_results_with_orientation():
         # title="method",
     )
     ax_dict["g"].axis("off")
+
 
 def plot_simulation_results_sup_tp():
     d = 1
@@ -2059,7 +2309,7 @@ def plot_simulation_results_sup_tp():
             multiplier += 1
 
         ax.set_ylabel(metric)
-        if title == 'e)' or title == 'd)':
+        if title == 'b)' or title == 'c)':
             ax.set_xlabel(r"$\alpha$")
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
@@ -2069,22 +2319,19 @@ def plot_simulation_results_sup_tp():
         # ax.set_yscale("symlog")
         return handles
 
-    fig = plt.figure(layout="constrained", figsize=(10, 8))
+    fig = plt.figure(layout="constrained", figsize=(10, 6))
     ax_dict = fig.subplot_mosaic(
         """
         fa
         bc
-        de
         """,
         empty_sentinel="X",
         sharex=True
     )
 
-    plot_bars(alphas, "fdr", means, stds, ax_dict['a'], "a)")
-    plot_bars(alphas, "tpr", means, stds, ax_dict['b'], "b)")
-    plot_bars(alphas, "mse_tp", means, stds, ax_dict['c'], "c)")
-    plot_bars(alphas, "bias_tp", means, stds, ax_dict['d'], "d)")
-    h = plot_bars(alphas, "var_tp", means, stds, ax_dict['e'], "e)")
+    plot_bars(alphas, "mse_tp", means, stds, ax_dict['a'], "a)")
+    plot_bars(alphas, "bias_tp", means, stds, ax_dict['b'], "b)")
+    h = plot_bars(alphas, "var_tp", means, stds, ax_dict['c'], "c)")
     ax_dict["f"].legend(
         handles=h,
         labels=['CI-GWAS', 'CAUSE', 'MR-PRESSO', 'IVW Regression'],
@@ -2095,6 +2342,7 @@ def plot_simulation_results_sup_tp():
         # title="method",
     )
     ax_dict["f"].axis("off")
+
 
 def plot_simulation_results_sup(alpha=10**(-8)):
     d = 1
@@ -2114,8 +2362,41 @@ def plot_simulation_results_sup(alpha=10**(-8)):
     # methods = ['ci-gwas', 'cause', 'mrpresso', 'egger', 'ivw']
     methods = ['ci-gwas', 'cause', 'mrpresso', 'ivw']
     # methods = ['ci-gwas']
+    title_kw = {"loc": "left", "pad": 15, "size": 20}
 
-    def plot_bars(x_tup, metric, means, stds, ax):
+    def plot_ci_gwas_bars(x_vals, metric, means, stds, ax, title, axhline=False):
+        ax.set_title(title, **title_kw)
+        x = np.arange(len(x_vals))  # the label locations
+        width = 0.5  # the width of the bars
+        multiplier = 0
+
+        handles = []
+        for method in ["ci-gwas"]:
+            mu = means.loc[method, alpha][metric]
+            sig = stds.loc[method, alpha][metric]
+            offset = width * multiplier
+            try:
+                bars = ax.bar(x + offset, mu, width, yerr=sig, capsize=1.5, label=method)
+                handles.append(bars)
+            except StopIteration:
+                pass
+            multiplier += 1
+
+        ax.set_ylabel(metric)
+        if title == 'e)' or title == 'd)':
+            ax.set_xlabel(r"$\alpha$")
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.set_xticks(x, x_vals)
+        plt.setp(ax.get_xticklabels(), rotation=50, ha="right", rotation_mode="anchor")
+        if axhline:
+            ax.axhline(0.05, linestyle="dashed", color="k")
+        # ax.legend(loc='upper left', ncols=3)
+        # ax.set_yscale("symlog")
+        return handles
+
+    def plot_bars(x_tup, metric, means, stds, ax, title):
+        ax.set_title(title, **title_kw)
         x = np.arange(len(x_tup))  # the label locations
         width = 0.15  # the width of the bars
         multiplier = 0
@@ -2134,7 +2415,8 @@ def plot_simulation_results_sup(alpha=10**(-8)):
 
         # Add some text for labels, title and custom x-axis tick labels, etc.
         ax.set_ylabel(metric)
-        ax.set_xlabel("(n, m)")
+        if title == 'g)' or title == 'h)':
+            ax.set_xlabel("(n, m)")
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
         # ax.set_title('Penguin attributes by species')
@@ -2149,24 +2431,27 @@ def plot_simulation_results_sup(alpha=10**(-8)):
     fig = plt.figure(layout="constrained", figsize=(10, 8))
     ax_dict = fig.subplot_mosaic(
         """
-        gg
+        ii
         ab
         cd
         ef
+        gh
         """,
         empty_sentinel="X",
         sharex=True,
         # set the height ratios between the rows
-        height_ratios=[0.2, 1, 1, 1],
+        height_ratios=[0.2, 0.6, 1, 1, 1],
     )
 
-    plot_bars(x_tup, "fdr", means, stds, ax_dict['a'])
-    plot_bars(x_tup, "tpr", means, stds, ax_dict['b'])
-    plot_bars(x_tup, "edge orientation", means, stds, ax_dict['c'])
-    plot_bars(x_tup, "mse", means, stds, ax_dict['d'])
-    plot_bars(x_tup, "bias", means, stds, ax_dict['e'])
-    h = plot_bars(x_tup, "var", means, stds, ax_dict['f'])
-    ax_dict["g"].legend(
+    plot_ci_gwas_bars(x_tup, "marker-trait fdr", means, stds, ax_dict['a'], "a)", axhline=True)
+    plot_ci_gwas_bars(x_tup, "marker-trait tpr", means, stds, ax_dict['b'], "b)")
+    plot_bars(x_tup, "fdr", means, stds, ax_dict['c'], "c)")
+    plot_bars(x_tup, "tpr", means, stds, ax_dict['d'], "d)")
+    plot_bars(x_tup, "edge orientation", means, stds, ax_dict['e'], "e)")
+    plot_bars(x_tup, "mse", means, stds, ax_dict['f'], "f)")
+    plot_bars(x_tup, "bias", means, stds, ax_dict['g'], "g)")
+    h = plot_bars(x_tup, "var", means, stds, ax_dict['h'], "h)")
+    ax_dict["i"].legend(
         handles=h,
         loc="center",
         fancybox=False,
@@ -2174,7 +2459,7 @@ def plot_simulation_results_sup(alpha=10**(-8)):
         ncol=4,
         title="method",
     )
-    ax_dict["g"].axis("off")
+    ax_dict["i"].axis("off")
     fig.suptitle(rf"$\alpha={{{alpha}}}$")
 
 def plot_block_size_experiment_results():
@@ -2318,7 +2603,7 @@ def plot_compare_max_k_effect_on_ace():
 
 
 def plot_ace_results_comp_cause_production(
-    pag_path: str, ace_path: str, pheno_path: str, ace_norm=None, regression=False, p_thr=0.05
+    pag_path: str, ace_path: str, pheno_path: str, ace_norm=None, regression=False, p_thr=0.05, directed_only=False,
 ):
     pnames = get_pheno_codes(pheno_path)
     cause_ys = set(cause_gamma["y1"].values)
@@ -2362,16 +2647,29 @@ def plot_ace_results_comp_cause_production(
 
     cbar_kw = {"fraction": 0.046, "pad": 0.04}
     title_kw = {"loc": "left", "pad": 15, "size": 20}
-    plot_ace(
-        ace_path,
-        pheno_path,
-        ax=ax_dict["b"],
-        title="b)",
-        cbar_kw=cbar_kw,
-        title_kw=title_kw,
-        cmap="PuOr",
-        norm=ace_norm,
-    )
+    if directed_only:
+        plot_ace_directed_only(
+            ace_path,
+            pag_path,
+            pheno_path,
+            ax=ax_dict["b"],
+            title="b)",
+            cbar_kw=cbar_kw,
+            title_kw=title_kw,
+            cmap="PuOr",
+            norm=ace_norm,
+        )
+    else:
+        plot_ace(
+            ace_path,
+            pheno_path,
+            ax=ax_dict["b"],
+            title="b)",
+            cbar_kw=cbar_kw,
+            title_kw=title_kw,
+            cmap="PuOr",
+            norm=ace_norm,
+        )
 
     plot_pleiotropy_mat(
         pag_path,
@@ -2396,7 +2694,10 @@ def plot_ace_results_comp_cause_production(
     plot_non_pleio_barplot(pag_path, pheno_path, ax=ax_dict["e"], title="e)", title_kw=title_kw)
 
     ax = ax_dict["c"]
-    ace = load_ace(ace_path, pheno_path)
+    if directed_only:
+        ace = load_ace_directed_only(ace_path, pag_path, pheno_path)
+    else:
+        ace = load_ace(ace_path, pheno_path)
     # ace_flat = ace.flatten()
     # mr = ace_flat + rng.normal(0, 0.10, size=len(ace_flat))
 
