@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib as mpl
+import matplotlib
 import matplotlib.patches as mpatches
 from matplotlib import pyplot as plt
 from matplotlib.tri import Triangulation
@@ -10,6 +11,8 @@ import seaborn as sns
 import queue
 from scipy.io import mmread
 import scipy
+
+from adjustText import adjust_text
 
 from sklearn.linear_model import LinearRegression
 import itertools
@@ -29,6 +32,35 @@ plt.rc("figure", titlesize=BIGGER_SIZE)  # fontsize of the figure title
 rng = np.random.default_rng()
 
 BASE_INDEX = 1
+
+chr_lengths = {
+    1: 	248956422,
+    2: 	242193529,
+    3: 	198295559,
+    4: 	190214555,
+    5: 	181538259,
+    6: 	170805979,
+    7: 	159345973,
+    8: 	145138636,
+    9: 	138394717,
+    10: 	133797422,
+    11: 	135086622,
+    12: 	133275309,
+    13: 	114364328,
+    14: 	107043718,
+    15: 	101991189,
+    16: 	90338345,
+    17: 	83257441,
+    18: 	80373285,
+    19: 	58617616,
+    20: 	64444167,
+    21: 	46709983,
+    22: 	50818468,
+}
+
+global_chr_starts = {
+    i: sum(chr_lengths[j] for j in range(1, i)) for i in range(1, 24)
+}
 
 cause_gamma = pd.DataFrame(
     [
@@ -76,10 +108,10 @@ cause_gamma = pd.DataFrame(
         {"y1": "dbp".upper(), "y2": "ST".upper(), "gamma": 0.0318219908469929, "p_value": 0.00113343221355482},
         {"y1": "dbp".upper(), "y2": "AT".upper(), "gamma": 0.00387409082195085, "p_value": 0.593576411806745},
         {"y1": "dbp".upper(), "y2": "cad".upper(), "gamma": 0.0371147380330953, "p_value": 1.32E-26},
-        {"y1": "bp".upper(),"y2": "t2d".upper(),"gamma": 0.0142748064016252, "p_value": 0.0101128632377118},  # changed from sbp,
-        {"y1": "bp".upper(),"y2": "ST".upper(),"gamma": 0.0216220295177384, "p_value": 4.12E-09},  # changed from sbp,
-        {"y1": "bp".upper(),"y2": "AT".upper(),"gamma": 0.00246673566316583, "p_value": 0.755589637124656},  # changed from sbp,
-        {"y1": "bp".upper(), "y2": "cad".upper(), "gamma": 0.024807681904989, "p_value": 6.59E-31},
+        {"y1": "sbp".upper(),"y2": "t2d".upper(),"gamma": 0.0142748064016252, "p_value": 0.0101128632377118},  # changed from sbp,
+        {"y1": "sbp".upper(),"y2": "ST".upper(),"gamma": 0.0216220295177384, "p_value": 4.12E-09},  # changed from sbp,
+        {"y1": "sbp".upper(),"y2": "AT".upper(),"gamma": 0.00246673566316583, "p_value": 0.755589637124656},  # changed from sbp,
+        {"y1": "sbp".upper(), "y2": "cad".upper(), "gamma": 0.024807681904989, "p_value": 6.59E-31},
     ]
 )
 
@@ -89,7 +121,6 @@ risk_factors = set(
     [
         "BMI",
         "HT",
-        "BP",
         "ALC",
         "SMK",
         "CHOL",
@@ -203,7 +234,7 @@ def load_global_marker_indices(
     dm2sm = make_dm_ix_to_sm_ix(num_m, num_p, selected_marker_offset)
     for dm_ix in range(len(dm2sm)):
         sm_ix = dm2sm[dm_ix]
-        if sm_ix >= num_p:
+        if sm_ix >= (num_p + BASE_INDEX):
             global_marker_indices[sm_ix] = rel_to_block[dm_ix] + global_marker_offset
     return global_marker_indices
 
@@ -658,6 +689,7 @@ def heatmap(
     xlabel=None,
     ylabel=None,
     title=None,
+    bad_color=None,
     title_kw=dict(),
     **kwargs,
 ):
@@ -691,7 +723,10 @@ def heatmap(
 
     if kwargs["cmap"]:
         cm = plt.get_cmap(kwargs["cmap"])
-        cm.set_bad("white")
+        if bad_color is None:
+            cm.set_bad("white")
+        else:
+            cm.set_bad(bad_color)
         kwargs["cmap"] = cm
 
     # ax.grid(which="major", color="gray", linestyle=":", linewidth=0.5)
@@ -1062,51 +1097,34 @@ all_edge_types = EdgeEncoding(
 six_edge_types = EdgeEncoding(
     [
         r"$y_1 \; \; \; y_2$",
-        r"$y_1$ <-o $y_2$",
-        r"$y_1$ o-> $y_2$",
         r"$y_1$ <-> $y_2$",
         r"$y_1$ -> $y_2$",
         r"$y_1$ <- $y_2$",
-        r"$y_1$ - $y_2$",
-    ],
-    {
-        (0, 0): 0,
-        (1, 2): 1,
-        (2, 1): 2,
-        (2, 2): 3,
-        (2, 3): 4,
-        (3, 2): 5,
-        (3, 3): 6,
-    },
-    mpl.colors.ListedColormap(
-        np.array(
-            ["#ffffff", "#000421", "#46204c", "#99305b", "#dd584b", "#fb9d20", "#e5ed05"]  # white
-        )
-    ),
-)
-
-six_edge_types = EdgeEncoding(
-    [
-        r"$y_1 \; \; \; y_2$",
         r"$y_1$ <-o $y_2$",
         r"$y_1$ o-> $y_2$",
-        r"$y_1$ <-> $y_2$",
-        r"$y_1$ -> $y_2$",
-        r"$y_1$ <- $y_2$",
-        r"$y_1$ - $y_2$",
+        r"$y_1$ o-o $y_2$",
     ],
     {
         (0, 0): 0,
-        (1, 2): 1,
-        (2, 1): 2,
-        (2, 2): 3,
-        (2, 3): 4,
-        (3, 2): 5,
-        (3, 3): 6,
+        (2, 2): 1,
+        (2, 3): 2,
+        (3, 2): 3,
+        (1, 2): 4,
+        (2, 1): 5,
+        (1, 1): 6,
     },
     mpl.colors.ListedColormap(
         np.array(
-            ["#ffffff", "#000421", "#46204c", "#99305b", "#dd584b", "#fb9d20", "#e5ed05"]  # white
+            [
+                "#ffffff",  # white
+                "#b2df8a",  # green
+                "#fcc006",  # marigold
+                # "#a6cee3", # light blue
+                "#1f78b4", # darker blue
+                "#c20078", # magenta
+                "#fd411e", # orange red
+                "#d8dcd6", # light grey
+            ]
         )
     ),
 )
@@ -1114,29 +1132,30 @@ six_edge_types = EdgeEncoding(
 five_common_edge_types = EdgeEncoding(
     [
         r"$y_1 \; \; \; y_2$",
-        r"$y_1$ <-o $y_2$",
-        r"$y_1$ o-> $y_2$",
         r"$y_1$ <-> $y_2$",
         r"$y_1$ -> $y_2$",
         r"$y_1$ <- $y_2$",
+        r"$y_1$ <-o $y_2$",
+        r"$y_1$ o-> $y_2$",
     ],
     {
         (0, 0): 0,
-        (1, 2): 1,
-        (2, 1): 2,
-        (2, 2): 3,
-        (2, 3): 4,
-        (3, 2): 5,
+        (2, 2): 1,
+        (2, 3): 2,
+        (3, 2): 3,
+        (1, 2): 4,
+        (2, 1): 5,
     },
     mpl.colors.ListedColormap(
         np.array(
             [
                 "#ffffff",  # white
-                "#000421",
-                "#5b2453",
-                "#bf4056",
-                "#f88a2e",
-                "#e5ed05",
+                "#b2df8a",  # green
+                "#fcc006",  # marigold
+                # "#a6cee3", # light blue
+                "#1f78b4", # darker blue
+                "#c20078", # magenta
+                "#fd411e", # orange red
             ]
         )
     ),
@@ -1221,6 +1240,223 @@ def plot_pag(
     
     return im
 
+
+def get_possibly_causal_paths(pag_path: str, pheno_path: str):
+    p_names = get_pheno_codes(pheno_path)
+    num_phen = len(p_names)
+    pag = mmread(pag_path).tocsr()
+
+    causal_paths = np.zeros(shape=(num_phen, num_phen))
+
+    for start_node in range(num_phen):
+        q = queue.Queue()
+        q.put(start_node)
+        descendants = set()
+        while not q.empty():
+            current_node = q.get()
+            for neighbor in range(num_phen):
+                link = (pag[current_node, neighbor], pag[neighbor, current_node])
+                if neighbor not in descendants and (link == (2, 3) or link == (2, 1)):
+                    descendants.add(neighbor)
+                    q.put(neighbor)
+        for j in descendants:
+            causal_paths[start_node, j] = 1
+
+    return causal_paths
+
+
+def get_causal_paths(pag_path: str, pheno_path: str):
+    p_names = get_pheno_codes(pheno_path)
+    num_phen = len(p_names)
+    pag = mmread(pag_path).tocsr()
+
+    causal_paths = np.zeros(shape=(num_phen, num_phen))
+
+    for start_node in range(num_phen):
+        q = queue.Queue()
+        q.put(start_node)
+        descendants = set()
+        while not q.empty():
+            current_node = q.get()
+            for neighbor in range(num_phen):
+                if neighbor not in descendants and (pag[current_node, neighbor], pag[neighbor, current_node]) == (2, 3):
+                    descendants.add(neighbor)
+                    q.put(neighbor)
+        for j in descendants:
+            causal_paths[start_node, j] = 1
+
+    return causal_paths
+
+
+
+def plot_ace_rf_to_d(
+    ace_path: str,
+    pag_path: str,
+    pheno_path: str,
+    title=None,
+    title_kw=dict(),
+    ax=None,
+    cbarlabel=r"$ACE \: (y_1 \rightarrow y_2)$",
+    cmap='bwr',
+    cbar=True,
+    xlabel=None,
+    ylabel=None,
+    cbar_kw=None,
+    norm=None,
+    **kwargs,
+):
+    if ax is None:
+        plt.figure(figsize=(3, 10))
+        ax = plt.gca()
+    
+    disease_list = sorted(list(diseases))
+
+    p_names = get_pheno_codes(pheno_path)
+    num_phen = len(p_names)
+
+    ace = mmread(ace_path).tocsr()
+    z = [[0.0 for _ in range(num_phen)] for _ in range(num_phen)]
+    for i in range(num_phen):
+        for j in range(num_phen):
+            z[i][j] = ace[i, j]
+
+    rf_to_d_ace = {}
+
+    cause_ys = set(cause_gamma["y1"].values)
+    cause_ys.update(set(cause_gamma["y2"].values))
+    reg_pnames = cause_ys.intersection(set(p_names))
+
+    for i in range(num_phen):
+        for j in range(num_phen):
+            name_i = p_names[i]
+            name_j = p_names[j]
+            if name_i in risk_factors and name_j in diseases:
+                rf_to_d_ace[(name_i, name_j)] = z[i][j]
+
+    rf_intersection = sorted(list(risk_factors.intersection(reg_pnames)))
+    rf_cg_only = sorted(list(risk_factors - set(rf_intersection)))
+
+    risk_factor_list = rf_intersection + rf_cg_only
+
+    rf_to_d_ace_mat = [[0 for _ in range(len(diseases))] for _ in range(len(risk_factors))]
+
+    for i, rf in enumerate(risk_factor_list):
+        for j, ds in enumerate(disease_list):
+            if (rf, ds) in rf_to_d_ace:
+                rf_to_d_ace_mat[i][j] = rf_to_d_ace[(rf, ds)]
+
+    col_labels = [r'$\bf{{{0}}}$'.format(e) for e in disease_list]
+    row_labels = [r'$\bf{{{0}}}$'.format(e) for e in rf_intersection] + rf_cg_only
+
+    links = get_rf_to_d_causal_path_mat(pag_path, pheno_path)
+
+    z = np.array(rf_to_d_ace_mat)
+
+    z[(z == 0.0) & (links != 0)] = np.nan
+
+    im, _ = heatmap(
+        z,
+        risk_factor_list,
+        disease_list,
+        cmap=cmap,
+        cbarlabel=cbarlabel,
+        cbar_kw=cbar_kw,
+        cbar=cbar,
+        xlabel=xlabel,
+        ylabel=ylabel,
+        title=title,
+        title_kw=title_kw,
+        ax=ax,
+        norm=norm,
+        bad_color="#d8dcd6",
+        **kwargs
+    )
+    return im
+
+
+def get_rf_to_d_causal_path_mat(
+    pag_path: str,
+    pheno_path: str,
+):
+    
+    disease_list = sorted(list(diseases))
+    p_names = get_pheno_codes(pheno_path)
+    num_phen = len(p_names)
+    causal_paths = get_causal_paths(pag_path, pheno_path)
+    ci_gwas_links = {}
+    cause_ys = set(cause_gamma["y1"].values)
+    cause_ys.update(set(cause_gamma["y2"].values))
+    reg_pnames = cause_ys.intersection(set(p_names))
+    for i in range(num_phen):
+        for j in range(num_phen):
+            name_i = p_names[i]
+            name_j = p_names[j]
+            if name_i in risk_factors and name_j in diseases:
+                if causal_paths[i, j] == 1:
+                    ci_gwas_links[(name_i, name_j)] = 1
+
+    rf_intersection = sorted(list(risk_factors.intersection(reg_pnames)))
+    rf_cg_only = sorted(list(risk_factors - set(rf_intersection)))
+    risk_factor_list = rf_intersection + rf_cg_only
+    ci_gwas_links_mat = [[0 for _ in range(len(diseases))] for _ in range(len(risk_factors))]
+    for i, rf in enumerate(risk_factor_list):
+        for j, ds in enumerate(disease_list):
+            if (rf, ds) in ci_gwas_links:
+                ci_gwas_links_mat[i][j] = 1
+    return np.array(ci_gwas_links_mat)
+
+
+def plot_causal_paths(
+    pag_path: str,
+    pheno_path: str,
+    title=None,
+    title_kw=dict(),
+    ax=None,        
+):
+    if ax is None:
+        plt.figure(figsize=(10, 10))
+        ax = plt.gca()
+    
+    p_names = get_pheno_codes(pheno_path)
+
+    ci_gwas_link_mat = get_causal_paths(pag_path, pheno_path)
+
+    return heatmap(np.array(ci_gwas_link_mat), p_names, p_names, cbar=False, ax=ax, title=title, title_kw=title_kw, cmap="Greys", vmax=1.5)
+
+
+def plot_causal_paths_rf_to_d(
+    pag_path: str,
+    pheno_path: str,
+    title=None,
+    title_kw=dict(),
+    ax=None,        
+):
+    if ax is None:
+        plt.figure(figsize=(3, 10))
+        ax = plt.gca()
+    
+    disease_list = sorted(list(diseases))
+
+    p_names = get_pheno_codes(pheno_path)
+    num_phen = len(p_names)
+
+    cause_ys = set(cause_gamma["y1"].values)
+    cause_ys.update(set(cause_gamma["y2"].values))
+    reg_pnames = cause_ys.intersection(set(p_names))
+
+    rf_intersection = sorted(list(risk_factors.intersection(reg_pnames)))
+    rf_cg_only = sorted(list(risk_factors - set(rf_intersection)))
+
+    risk_factor_list = rf_intersection + rf_cg_only
+
+    ci_gwas_link_mat = get_rf_to_d_causal_path_mat(pag_path, pheno_path)
+
+    col_labels = [r'$\bf{{{0}}}$'.format(e) for e in disease_list]
+    row_labels = [r'$\bf{{{0}}}$'.format(e) for e in rf_intersection] + rf_cg_only
+
+    return heatmap(np.array(ci_gwas_links_mat), risk_factor_list, disease_list, cbar=False, ax=ax, title=title, title_kw=title_kw, cmap="Greys", vmax=1.5)
+
+
 def plot_direct_link_cause_comparison(
     pag_path: str,
     pheno_path: str,
@@ -1233,34 +1469,48 @@ def plot_direct_link_cause_comparison(
         plt.figure(figsize=(3, 10))
         ax = plt.gca()
     
-    risk_factor_list = sorted(list(risk_factors))
     disease_list = sorted(list(diseases))
 
     p_names = get_pheno_codes(pheno_path)
     num_phen = len(p_names)
 
-    pag =  mmread(pag_path).tocsr()
+    causal_paths = get_causal_paths(pag_path, pheno_path)
 
-    ci_gwas_links = [[0 for _ in range(len(diseases))] for _ in range(len(risk_factors))]
-    cause_links = [[0 for _ in range(len(diseases))] for _ in range(len(risk_factors))]
+    ci_gwas_links = {}
+    cause_links = {}
+
+    cause_ys = set(cause_gamma["y1"].values)
+    cause_ys.update(set(cause_gamma["y2"].values))
+    reg_pnames = cause_ys.intersection(set(p_names))
 
     for i in range(num_phen):
         for j in range(num_phen):
-            v1 = pag[i, j]
-            v2 = pag[j, i]
             name_i = p_names[i]
             name_j = p_names[j]
             if name_i in risk_factors and name_j in diseases:
-                mat_row = risk_factor_list.index(p_names[i])
-                mat_col = disease_list.index(p_names[j])
                 cp = cause_gamma[(cause_gamma["y1"] == name_i) & (cause_gamma["y2"] == name_j)].p_value.values
-                if (v1, v2) == (2, 3):
-                    ci_gwas_links[mat_row][mat_col] = 1
+                if causal_paths[i, j] == 1:
+                    ci_gwas_links[(name_i, name_j)] = 1
                 if len(cp) >= 1 and cp[0] <= p_thr:
-                    cause_links[mat_row][mat_col] = 1
+                    cause_links[(name_i, name_j)] = 1
 
-    col_labels = disease_list
-    row_labels = risk_factor_list
+    rf_intersection = sorted(list(risk_factors.intersection(reg_pnames)))
+    rf_cg_only = sorted(list(risk_factors - set(rf_intersection)))
+
+    risk_factor_list = rf_intersection + rf_cg_only
+
+    ci_gwas_links_mat = [[0 for _ in range(len(diseases))] for _ in range(len(risk_factors))]
+    cause_links_mat = [[0 for _ in range(len(diseases))] for _ in range(len(risk_factors))]
+
+    for i, rf in enumerate(risk_factor_list):
+        for j, ds in enumerate(disease_list):
+            if (rf, ds) in ci_gwas_links:
+                ci_gwas_links_mat[i][j] = 1
+            if (rf, ds) in cause_links:
+                cause_links_mat[i][j] = 1
+
+    col_labels = [r'$\bf{{{0}}}$'.format(e) for e in disease_list]
+    row_labels = [r'$\bf{{{0}}}$'.format(e) for e in rf_intersection] + rf_cg_only
 
     M = len(diseases)
     N = len(risk_factors)
@@ -1272,11 +1522,12 @@ def plot_direct_link_cause_comparison(
     triangles2 = [(i+1 + j*(M+1), i+1 + (j+1)*(M+1), i + (j+1)*(M+1)) for j in range(N) for i in range(M)]
     triang1 = Triangulation(xs.ravel()-0.5, ys.ravel()-0.5, triangles1)
     triang2 = Triangulation(xs.ravel()-0.5, ys.ravel()-0.5, triangles2)
-    img1 = ax.tripcolor(triang1, np.array(ci_gwas_links).ravel(), cmap=mpl.colors.ListedColormap(['w', "#fcb001"]))
-    img2 = ax.tripcolor(triang2, np.array(cause_links).ravel(), cmap=mpl.colors.ListedColormap(['w', "#448ee4"]))
+    img1 = ax.tripcolor(triang1, np.array(ci_gwas_links_mat).ravel(), cmap=mpl.colors.ListedColormap(['w', "#fcb001"]))
+    img2 = ax.tripcolor(triang2, np.array(cause_links_mat).ravel(), cmap=mpl.colors.ListedColormap(['w', "#448ee4"]))
 
     # Show all ticks and label them with the respective list entries.
-    ax.set_xticks(np.arange(M), labels=col_labels)
+    ax.set_xticks(np.arange(M))
+    ax.set_xticklabels(col_labels)
     ax.set_yticks(np.arange(N), labels=row_labels)
 
     # Let the horizontal axes labeling appear on top.
@@ -1297,12 +1548,13 @@ def plot_direct_link_cause_comparison(
     ci_gwas_patch = mpatches.Patch(color="#fcb001", label='CI-GWAS')
     cause_patch = mpatches.Patch(color="#448ee4", label='CAUSE')
 
-    plt.legend(handles=[ci_gwas_patch, cause_patch], bbox_to_anchor=(1, 0.5), loc="lower left")
+    ax.legend(handles=[ci_gwas_patch, cause_patch], bbox_to_anchor=(1, 0.5), loc="lower left")
 
     if title:
         ax.set_title(title, **title_kw)
 
     return img1, img2
+
 
 def marker_pheno_associations(
     blockfile: str,
@@ -1314,7 +1566,10 @@ def marker_pheno_associations(
     depth=1,
 ):
     gr = merge_block_outputs(blockfile, outdir)
-    rs_ids = pd.read_csv(bim_path, sep="\t", header=None)[1].values
+    bim_df = pd.read_csv(bim_path, sep="\t", header=None)
+    rs_ids = bim_df[1].values
+    chrs = bim_df[0].values
+    on_chr_positions = bim_df[3].values
     p_names = get_pheno_codes(pheno_path)
     num_phen = len(p_names)
     geps = pag_exclusive_pleiotropy_sets(pag_path, pheno_path, neighbor_fn, depth)
@@ -1325,7 +1580,7 @@ def marker_pheno_associations(
             # pag is 0-based indexed, everything else uses 1-based indexing
             bim_line = int(gr.gmi[v + BASE_INDEX])
             assoc_markers.append(
-                {"phenotype": p_names[pix], "rsID": rs_ids[bim_line], "bim_line_ix": bim_line}
+                {"phenotype": p_names[pix], "rsID": rs_ids[bim_line], "bim_line_ix": bim_line, "chr": chrs[bim_line], "bp": on_chr_positions[bim_line]}
             )
 
     return pd.DataFrame(assoc_markers)
@@ -1814,8 +2069,10 @@ def load_simulation_results() -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def load_n16k_m1600_simulation_results(mr_skeleton=False) -> pd.DataFrame:
+def load_n16k_m1600_simulation_results(mr_skeleton=False, mr_git_thr=False) -> pd.DataFrame:
     pdir = f"/nfs/scistore13/robingrp/human_data/causality/bias_as_fn_of_alpha/sim_small_effects/"
+    mr_skeleton_pdir = "/nfs/scistore13/robingrp/smahmoud/Example1/mr_res_skeleton/"
+    mr_git_thr_pdir = "/nfs/scistore13/robingrp/smahmoud/Example1/mr_res_git_thr/"
 
     d = 1
     l = 6
@@ -1823,13 +2080,13 @@ def load_n16k_m1600_simulation_results(mr_skeleton=False) -> pd.DataFrame:
     m_arr = [1600]
     # m_arr = [200, 400, 1600]
     e_arr = list(range(1, 9))
+    alpha_str_arr = ["0.1", "0.01", "0.001", "1e-04", "1e-05", "1e-06", "1e-07", "1e-08"]
     rep_arr = list(range(1, 21))
     num_phen = 10
 
     rows = []
 
     for (n, m, rep) in itertools.product(n_arr, m_arr, rep_arr):
-
         # load true dag
         dag_path = pdir + f"./true_adj_mat_n{n}_SNP_{m}_it_{rep}.mtx"
         dag = mmread(dag_path).tocsr()
@@ -1841,12 +2098,81 @@ def load_n16k_m1600_simulation_results(mr_skeleton=False) -> pd.DataFrame:
         peff = eff[-(num_phen):,-(num_phen):].toarray()
         peff = np.triu(peff, k=1)
 
+        # load true dag
+        dag_mxp = dag.toarray()[:m, -num_phen:]
+
+        if mr_git_thr:
+            for mr in mr_cn:
+                for a_str in alpha_str_arr:
+                    try:
+                        mr_file = mr_git_thr_pdir + f"mr_skeleton_{mr.method}_n{n}_SNP_{m}_alpha_{a_str}_it_{rep}.csv"
+                        mr_results = pd.read_csv(mr_file)
+                        try:
+                            mr_results['i'] = mr_results[mr.exposure].apply(lambda x: int(x.split("Y")[1]) - 1)
+                            mr_results['j'] = mr_results[mr.outcome].apply(lambda x: int(x.split("Y")[1]) - 1)
+                        except KeyError as error:
+                            print(f"failed in mr file: {mr_file}")
+                            print(error)
+                            continue
+
+                        git_path = mr_git_thr_pdir + f"git_n{n}_SNP_{m}_alpha_{a_str}_it_{rep}.csv"
+                        git_mxp = pd.read_csv(git_path).to_numpy()
+
+                        mxp_p = np.sum(dag_mxp != 0)
+                        mxp_tp = np.sum((dag_mxp != 0) & (git_mxp))
+                        mxp_fp = np.sum((dag_mxp == 0) & (git_mxp != 0))
+                        mxp_fdr = mxp_fp / (mxp_fp + mxp_tp)
+                        mxp_tpr = mxp_tp / mxp_p
+
+                        pvals = np.ones(shape=(num_phen, num_phen))
+                        pvals[mr_results['i'], mr_results['j']] = mr_results[mr.p]
+                        effects = np.zeros(shape=(num_phen, num_phen))
+                        effects[mr_results['i'], mr_results['j']] = mr_results[mr.estimate]
+                        adj = pvals < float(a_str)
+                        perf = calulate_performance_metrics(pdag, peff, adj, effects)
+                        rows.append({
+                            "marker-trait fdr": mxp_fdr,
+                            "marker-trait tpr": mxp_tpr,
+                            "edge orientation": perf.correct_orientation,
+                            "mse": perf.mse,
+                            "var": perf.var,
+                            "bias": perf.bias,
+                            "mse_tp": perf.mse_tp,
+                            "var_tp": perf.var_tp,
+                            "bias_tp": perf.bias_tp,
+                            "fdr": perf.fdr,
+                            "tpr": perf.tpr,
+                            "n": n,
+                            "m": m,
+                            "rep": rep,
+                            "alpha": float(a_str),
+                            "method": f"{mr.method}, g_it thr",
+                        })
+                    except FileNotFoundError as error:
+                        print(error)
+                        rows.append({
+                            "edge orientation": np.nan,
+                            "mse": np.nan,
+                            "var": np.nan,
+                            "bias": np.nan,
+                            "mse_tp": np.nan,
+                            "var_tp": np.nan,
+                            "bias_tp": np.nan,
+                            "fdr": np.nan,
+                            "tpr": np.nan,
+                            "n": n,
+                            "m": m,
+                            "rep": rep,
+                            "alpha": float(a_str),
+                            "method": f"{mr.method}, g_it thr",
+                        })
+
         if mr_skeleton:
             # mr with skeleton input
             for mr in mr_cn:
                 for e in e_arr:
                     try:
-                        mr_file = pdir + f"mr_e{e}/mr_skeleton_{mr.method}_n{n}_SNP_{m}_it_{rep}.csv"
+                        mr_file = mr_skeleton_pdir + f"mr_e{e}/mr_skeleton_{mr.method}_n{n}_SNP_{m}_it_{rep}.csv"
                         mr_results = pd.read_csv(mr_file)
                         try:
                             mr_results['i'] = mr_results[mr.exposure].apply(lambda x: int(x.split("Y")[1]) - 1)
@@ -1879,6 +2205,22 @@ def load_n16k_m1600_simulation_results(mr_skeleton=False) -> pd.DataFrame:
                         })
                     except FileNotFoundError as error:
                         print(error)
+                        rows.append({
+                            "edge orientation": np.nan,
+                            "mse": np.nan,
+                            "var": np.nan,
+                            "bias": np.nan,
+                            "mse_tp": np.nan,
+                            "var_tp": np.nan,
+                            "bias_tp": np.nan,
+                            "fdr": np.nan,
+                            "tpr": np.nan,
+                            "n": n,
+                            "m": m,
+                            "rep": rep,
+                            "alpha": 10**(-e),
+                            "method": f"{mr.method} + cuda-skeleton",
+                        })
 
 
         # mr standalone
@@ -2043,7 +2385,7 @@ def plot_simulation_results():
         # ax.set_yscale("symlog")
         return handles
 
-    fig = plt.figure(layout="constrained", figsize=(10, 8))
+    fig = plt.figure(layout="tight", figsize=(10, 8))
     ax_dict = fig.subplot_mosaic(
         """
         fa
@@ -2152,7 +2494,7 @@ def plot_simulation_results_with_orientation():
         # ax.set_yscale("symlog")
         return handles
 
-    fig = plt.figure(layout="constrained", figsize=(10, 8))
+    fig = plt.figure(layout="tight", figsize=(10, 8))
     ax_dict = fig.subplot_mosaic(
         """
         ii
@@ -2237,7 +2579,7 @@ def plot_simulation_results_sup_tp_with_orientation():
         # ax.set_yscale("symlog")
         return handles
 
-    fig = plt.figure(layout="constrained", figsize=(10, 8))
+    fig = plt.figure(layout="tight", figsize=(10, 8))
     ax_dict = fig.subplot_mosaic(
         """
         gg
@@ -2319,7 +2661,7 @@ def plot_simulation_results_sup_tp():
         # ax.set_yscale("symlog")
         return handles
 
-    fig = plt.figure(layout="constrained", figsize=(10, 6))
+    fig = plt.figure(layout="tight", figsize=(10, 6))
     ax_dict = fig.subplot_mosaic(
         """
         fa
@@ -2428,7 +2770,7 @@ def plot_simulation_results_sup(alpha=10**(-8)):
     x_tup = list(itertools.product(n_arr, m_arr))
 
 
-    fig = plt.figure(layout="constrained", figsize=(10, 8))
+    fig = plt.figure(layout="tight", figsize=(10, 8))
     ax_dict = fig.subplot_mosaic(
         """
         ii
@@ -2463,24 +2805,29 @@ def plot_simulation_results_sup(alpha=10**(-8)):
     fig.suptitle(rf"$\alpha={{{alpha}}}$")
 
 def plot_block_size_experiment_results():
-    block_sizes = np.arange(1, 12) * 10**3
+    num_phen = 17
+    block_sizes = np.arange(1, 13) * 10**3
     basepath = "/nfs/scistore13/robingrp/human_data/causality/block_size_effect/"
     bim_path = basepath + "ukb22828_UKB_EST_v3_ldp08.bim"
     bim = pd.read_csv(bim_path, sep="\t", header=None)
 
     bps = {}
+    block_boundaries = {}
 
     for bs in block_sizes:
         blockfile = basepath + f"ukb22828_UKB_EST_v3_ldp08_m{bs}_chr1.blocks"
-        outdir = basepath + f"bdpc_d1_l6_a1e2_m{bs}_chr1/"
+        outdir = basepath + f"bdpc_d1_l6_a1e4_m{bs}_chr1/"
         gr = merge_block_outputs(blockfile, outdir)
+        print(bs, gr.gmi)
         bps[bs] = sorted(bim.loc[list(gr.gmi.values())][3].values)
+        block_df = pd.read_csv(blockfile, sep='\t', names=['chr', 'first', 'last'])
+        block_boundaries[bs] = np.array(sorted(bim.loc[block_df['first']][3].values))
 
     num_markers_selected = [len(bps[bs]) for bs in block_sizes]
 
     title_kw = {"loc": "left", "pad": 15, "size": 20}
 
-    fig = plt.figure(layout="constrained", figsize=(10, 4))
+    fig = plt.figure(layout="tight", figsize=(10, 4))
 
     ax_dict = fig.subplot_mosaic(
         """
@@ -2498,10 +2845,12 @@ def plot_block_size_experiment_results():
     for k, v in bps.items():
         x = np.array(v) / 10**6
         y = np.ones_like(x) * k
-        ax.plot(x, y, "|", color="k")
+        ax.plot(x, y, "v", color="k", alpha=0.5)
+        ax.plot(block_boundaries[k] / 10**6, np.ones_like(block_boundaries[k]) * k, "|", color="r", alpha=0.5)
     ax.set_ylabel("max block size")
-    ax.set_xlabel("position of selected marker [Mbp]")
+    ax.set_xlabel("position on chr1 [Mbp]")
     ax.set_title(title, **title_kw)
+    ax.set_yticks(block_sizes)
 
     ax = ax_dict["b"]
     title = "b)"
@@ -2511,7 +2860,6 @@ def plot_block_size_experiment_results():
     ax.set_xlabel("max block size")
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-    plt.savefig('/nfs/scistore13/robingrp/human_data/causality/figures/sup_figure_block_size_effect.eps')
 
 
 def plot_alpha_effect_on_davs_results():
@@ -2559,7 +2907,6 @@ def plot_alpha_effect_on_davs_results():
 
     # fig.suptitle(r"$ACE; k\leq3; SK$")
     plt.tight_layout()
-    plt.savefig('/nfs/scistore13/robingrp/human_data/causality/figures/sup_figure_all_alpha_davs_corrs.eps')
 
 
 def plot_compare_max_k_effect_on_ace():
@@ -2603,13 +2950,8 @@ def plot_compare_max_k_effect_on_ace():
 
 
 def plot_ace_results_comp_cause_production(
-    pag_path: str, ace_path: str, pheno_path: str, ace_norm=None, regression=False, p_thr=0.05, directed_only=False,
+    pag_path: str, ace_path: str, pheno_path: str, ace_norm=None, p_thr=0.05
 ):
-    pnames = get_pheno_codes(pheno_path)
-    cause_ys = set(cause_gamma["y1"].values)
-    cause_ys.update(set(cause_gamma["y2"].values))
-    reg_pnames = cause_ys.intersection(set(pnames))
-
     """
     AT = Asthma
     BMI = Body mass index
@@ -2628,54 +2970,35 @@ def plot_ace_results_comp_cause_production(
     WHR = waist-hip ratio
     """
 
-    reg_cfg = {
-        "skip_na": False,
-        "rf2rf": False,
-        "d2d": False,
-        "rf2d": True,
-        "d2rf": False,
-    }
-
-    fig = plt.figure(layout="constrained", figsize=(17, 10))
+    fig = plt.figure(layout="tight", figsize=(17, 10))
     ax_dict = fig.subplot_mosaic(
         """
-        abc
-        deX
+        ace
+        bde
         """,
         empty_sentinel="X",
+        width_ratios=[1, 1, 0.7],
     )
 
     cbar_kw = {"fraction": 0.046, "pad": 0.04}
     title_kw = {"loc": "left", "pad": 15, "size": 20}
-    if directed_only:
-        plot_ace_directed_only(
-            ace_path,
-            pag_path,
-            pheno_path,
-            ax=ax_dict["b"],
-            title="b)",
-            cbar_kw=cbar_kw,
-            title_kw=title_kw,
-            cmap="PuOr",
-            norm=ace_norm,
-        )
-    else:
-        plot_ace(
-            ace_path,
-            pheno_path,
-            ax=ax_dict["b"],
-            title="b)",
-            cbar_kw=cbar_kw,
-            title_kw=title_kw,
-            cmap="PuOr",
-            norm=ace_norm,
-        )
+
+    plot_ace(
+        ace_path,
+        pheno_path,
+        ax=ax_dict["d"],
+        title="d)",
+        cbar_kw=cbar_kw,
+        title_kw=title_kw,
+        cmap="PuOr",
+        norm=ace_norm,
+    )
 
     plot_pleiotropy_mat(
         pag_path,
         pheno_path,
-        ax=ax_dict["d"],
-        title="d)",
+        ax=ax_dict["a"],
+        title="a)",
         cbar_kw=cbar_kw,
         title_kw=title_kw,
         cmap="BuPu",
@@ -2684,22 +3007,37 @@ def plot_ace_results_comp_cause_production(
     plot_pag(
         pag_path,
         pheno_path,
-        ax=ax_dict["a"],
-        title="a)",
+        ax=ax_dict["c"],
+        title="c)",
         title_kw=title_kw,
         edge_encoding=two_common_edge_types,
         cbar_kw=cbar_kw,
     )
 
-    plot_non_pleio_barplot(pag_path, pheno_path, ax=ax_dict["e"], title="e)", title_kw=title_kw)
+    plot_non_pleio_barplot(pag_path, pheno_path, ax=ax_dict["b"], title="b)", title_kw=title_kw)
 
-    ax = ax_dict["c"]
-    if directed_only:
-        ace = load_ace_directed_only(ace_path, pag_path, pheno_path)
-    else:
-        ace = load_ace(ace_path, pheno_path)
-    # ace_flat = ace.flatten()
-    # mr = ace_flat + rng.normal(0, 0.10, size=len(ace_flat))
+    plot_direct_link_cause_comparison(pag_path, pheno_path, p_thr=p_thr, title="e)", title_kw=title_kw, ax=ax_dict["e"])
+
+
+def plot_cause_ci_gwas_ace_comparison(ace_path, pheno_path, p_thr=0.0001, title=None, title_kw={}, ax=None):
+    reg_cfg = {
+        "skip_na": True,
+        "rf2rf": False,
+        "d2d": False,
+        "rf2d": True,
+        "d2rf": False,
+    }
+
+    if ax is None:
+        plt.figure(figsize=(5, 5))
+        ax = plt.gca()
+
+    pnames = get_pheno_codes(pheno_path)
+    cause_ys = set(cause_gamma["y1"].values)
+    cause_ys.update(set(cause_gamma["y2"].values))
+    reg_pnames = cause_ys.intersection(set(pnames))
+
+    ace = load_ace(ace_path, pheno_path)
 
     rows = []
     significant_rows = []
@@ -2723,7 +3061,7 @@ def plot_ace_results_comp_cause_production(
                 raise ValueError("too many gammas")
             gamma = 0 if len(cg) == 0 else cg[0]
             p_val = 1 if len(cg) == 0 else cp[0]
-            if reg_cfg["skip_na"] and (gamma == 0 or ace[i, j] == 0):
+            if reg_cfg["skip_na"] and (p_val >= p_thr and ace[i, j] == 0):
                 continue
             rows.append({"y1": pi, "y2": pj, "gamma": gamma, "ace": ace[i, j]})
             if p_val <= p_thr:
@@ -2732,6 +3070,8 @@ def plot_ace_results_comp_cause_production(
     data = pd.DataFrame(rows)
     mr = data["gamma"].values
     ace_flat = data["ace"].values
+    exposures = data["y1"].values
+    outcomes = data["y2"].values
 
     sig_data = pd.DataFrame(significant_rows)
     sig_mr = sig_data["gamma"].values
@@ -2739,29 +3079,20 @@ def plot_ace_results_comp_cause_production(
 
     ax.scatter(mr, ace_flat, color="#d8dcd6", edgecolors="#5729ce", s=80, alpha=0.5, zorder=10)
     ax.scatter(sig_mr, sig_ace_flat, color="#f10c45", edgecolors="#5729ce", s=80, alpha=0.5, zorder=11)
+
+    texts = []
+    for i in range(len(mr)):
+        txt = fr"{exposures[i]}$\rightarrow${outcomes[i]}"
+        texts.append(ax.annotate(txt, (mr[i], ace_flat[i])))
+
+    adjust_text(texts)
+
     ax.grid(linestyle=":")
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
     ax.set_ylabel("CI-GWAS ACE")
     ax.set_xlabel(r"CAUSE $\gamma$ (Morrison et al. 2020)")
-    ax.set_title("c)", **title_kw)
-
-    if regression:
-        X = mr.reshape(-1, 1)
-        y = ace_flat
-
-        linear_regressor = LinearRegression()
-        linear_regressor.fit(X, y)
-        linear_regressor.fit(X, y)
-        x_pred = np.linspace(np.min(mr), np.max(mr), 100).reshape(-1, 1)
-        y_pred = linear_regressor.predict(x_pred)
-
-        # Plot regression line.
-        # * Logarithmic transformation is reverted by using the exponential one.
-        ax.plot(x_pred, y_pred, color="#696969", lw=2, linestyle="dashed")
-        beta = np.round(linear_regressor.coef_[0], 2)
-        mu = np.round(linear_regressor.intercept_, 2)
-        ax.text(0.2, 0.12, rf"$y={mu} + {beta}x$", fontsize=13)
+    ax.set_title(title, **title_kw)
 
 
 def plot_non_pleio_barplot(pag_path: str, pheno_path: str, ax=None, title=None, title_kw=None):
@@ -2780,8 +3111,8 @@ def plot_non_pleio_barplot(pag_path: str, pheno_path: str, ax=None, title=None, 
     ax.set_title(title, **title_kw)
 
 
-def plot_all_alpha_production_pags_and_ace(basepath: str, pheno_path: str, l=6, d=1):
-    fig = plt.figure(layout="constrained", figsize=(12, 16))
+def plot_all_alpha_production_pags_and_ace(basepath: str, pheno_path: str, l=6, d=1, edge_encoding=five_common_edge_types):
+    fig = plt.figure(layout="tight", figsize=(15, 20))
     ax_dict = fig.subplot_mosaic(
         """
         ah
@@ -2790,14 +3121,14 @@ def plot_all_alpha_production_pags_and_ace(basepath: str, pheno_path: str, l=6, 
         op
         """,
         empty_sentinel="X",
-        height_ratios=[1, 1, 1, 0.05],
+        height_ratios=[1, 1, 1, 0.02],
         # sharex=True,
         # sharey=True,
     )
 
     ace_norm = mpl.colors.SymLogNorm(vmin=-2.0, vmax=2.0, linthresh=0.01)
     # cbar_kw = {"fraction": 0.046, "pad": 0.04, "shrink": 0.5}
-    cbar_kw = {"shrink": 0.5}
+    cbar_kw = {"shrink": 0.4}
     # title_kw = {"loc": "left", "pad": 15, "size": 20}
     title_kw = {}
 
@@ -2807,8 +3138,8 @@ def plot_all_alpha_production_pags_and_ace(basepath: str, pheno_path: str, l=6, 
 
     for pos, (ace_panel, a) in enumerate(zip(ace_panels, alphas)):
         try:
-            ace_path = basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_ACE_sk_mk3.mtx"
-            pag_path = basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_pag_sk_mk3.mtx"
+            ace_path = basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_ACE_ns_lut_no_direction_forced_q_pheno.mtx"
+            pag_path = basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_pag_mk3_ns_lut.mtx"
 
             ima = plot_ace(
                 ace_path,
@@ -2831,8 +3162,8 @@ def plot_all_alpha_production_pags_and_ace(basepath: str, pheno_path: str, l=6, 
 
     for pos, (pag_panel, a) in enumerate(zip(pag_panels, alphas)):
         try:
-            ace_path = basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_ACE_sk_mk3.mtx"
-            pag_path = basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_pag_sk_mk3.mtx"
+            ace_path = basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_ACE_ns_lut_no_direction_forced_q_pheno.mtx"
+            pag_path = basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_pag_mk3_ns_lut.mtx"
 
             imp = plot_pag(
                 pag_path,
@@ -2840,7 +3171,7 @@ def plot_all_alpha_production_pags_and_ace(basepath: str, pheno_path: str, l=6, 
                 ax=ax_dict[pag_panel],
                 title=rf"$\alpha=10^{{-{a}}}$",
                 title_kw=title_kw,
-                edge_encoding=five_common_edge_types,
+                edge_encoding=edge_encoding,
                 cbar_kw=cbar_kw,
                 cbar=False
             )
@@ -2848,7 +3179,6 @@ def plot_all_alpha_production_pags_and_ace(basepath: str, pheno_path: str, l=6, 
         except FileNotFoundError as e:
             print(e)
 
-    edge_encoding = five_common_edge_types
     ne = len(edge_encoding.int_rep)
 
     norm = mpl.colors.BoundaryNorm(np.linspace(0, ne, ne + 1), ne)
@@ -2859,12 +3189,11 @@ def plot_all_alpha_production_pags_and_ace(basepath: str, pheno_path: str, l=6, 
     ax = ax_dict['o']
     cbar = ax.figure.colorbar(imp, cax=ax_dict['o'], location='bottom', **cbar_kw)
     cbar.ax.tick_params(rotation=45)
-    plt.savefig('/nfs/scistore13/robingrp/human_data/causality/figures/sup_figure_pag_ace_alpha_range.eps')
     
 
 
 def plot_all_alpha_production_pags(basepath: str, pheno_path: str, l=6, d=1):
-    fig = plt.figure(layout="constrained", figsize=(17, 10))
+    fig = plt.figure(layout="tight", figsize=(17, 10))
     ax_dict = fig.subplot_mosaic(
         """
         abc
@@ -2919,7 +3248,7 @@ def plot_all_alpha_production_pags(basepath: str, pheno_path: str, l=6, d=1):
 
 
 def plot_all_alpha_production_aces(basepath: str, pheno_path: str, l=6, d=1):
-    fig = plt.figure(layout="constrained", figsize=(11, 10))
+    fig = plt.figure(layout="tight", figsize=(11, 10))
     ax_dict = fig.subplot_mosaic(
         """
         abc
@@ -2974,7 +3303,7 @@ def plot_all_alpha_production_aces(basepath: str, pheno_path: str, l=6, d=1):
 
 
 def plot_pag_and_ace(pag_path: str, ace_path: str, pheno_path: str):
-    fig = plt.figure(layout="constrained", figsize=(11, 10))
+    fig = plt.figure(layout="tight", figsize=(11, 10))
     ax_dict = fig.subplot_mosaic(
         """
         ab
@@ -3034,10 +3363,9 @@ def merge_parallel_davs_csvs(indir: str, infile_suffix: str, outfile: str, num_p
     scipy.io.mmwrite(outfile, scipy.sparse.coo_matrix(res))
 
 
-def plot_inf_depth_pleio():
+def plot_inf_depth_pleio(e=4):
     d = 10000
     l = 6
-    e = 2
     outdir = f"/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/production/bdpc_d{d}_l{l}_a1e{e}/"
     blockfile = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/ukb22828_UKB_EST_v3_ldp08.blocks"
     pheno_path = f"/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/production/input.phen"
@@ -3046,7 +3374,7 @@ def plot_inf_depth_pleio():
     z2 = get_skeleton_pleiotropy_mat(outdir, blockfile, pheno_path, max_depth=2)
     zinf = get_skeleton_pleiotropy_mat(outdir, blockfile, pheno_path, mat_type="union")
 
-    fig = plt.figure(layout="constrained", figsize=(15, 10))
+    fig = plt.figure(layout="tight", figsize=(15, 10))
     ax_dict = fig.subplot_mosaic(
         """
         abc
@@ -3070,20 +3398,18 @@ def plot_inf_depth_pleio():
 
     ax = ax_dict['d']
 
-    X = x.reshape(-1, 1)
-
-    linear_regressor = LinearRegression()
-    linear_regressor.fit(X, y)
-    linear_regressor.fit(X, y)
-    x_pred = np.linspace(np.min(x), np.max(x), 100).reshape(-1, 1)
-    y_pred = linear_regressor.predict(x_pred)
-
-    ax.plot(x_pred, y_pred, color="#696969", lw=2, linestyle="dashed")
-    beta = np.round(linear_regressor.coef_[0], 2)
-    mu = np.round(linear_regressor.intercept_, 2)
+    # X = x.reshape(-1, 1)
+    # linear_regressor = LinearRegression()
+    # linear_regressor.fit(X, y)
+    # linear_regressor.fit(X, y)
+    # x_pred = np.linspace(np.min(x), np.max(x), 100).reshape(-1, 1)
+    # y_pred = linear_regressor.predict(x_pred)
+    # ax.plot(x_pred, y_pred, color="#696969", lw=2, linestyle="dashed")
+    # beta = np.round(linear_regressor.coef_[0], 2)
+    # mu = np.round(linear_regressor.intercept_, 2)
     # ax.set_title("c)", **title_kw)
-    ax.text(100, 0.2 * 10 ** 6, rf"$y={mu} + {beta}x$", fontsize=13)
-    ax.text(100, 0.1 * 10 ** 6, rf"$\rho={np.round(np.corrcoef(x, y)[0, 1], 4)}$", fontsize=13)
+    # ax.text(100, 0.2 * 10 ** 6, rf"$y={mu} + {beta}x$", fontsize=13)
+    # ax.text(100, 0.1 * 10 ** 6, rf"$\rho={np.round(np.corrcoef(x, y)[0, 1], 4)}$", fontsize=13)
     ax.plot(x, y, 'o')
     ax.set_ylabel('# shared ancestral markers')
     ax.set_xlabel('# parent markers')
@@ -3093,8 +3419,6 @@ def plot_inf_depth_pleio():
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
 
-    plt.savefig('/nfs/scistore13/robingrp/human_data/causality/figures/sup_figure_inf_depth_pleio.eps')
-
 
 def plot_est_ukb_corr():
     basepath = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/estonian_comparison/bdpc_d1_l6_a1e2/pheno_sk"
@@ -3102,7 +3426,7 @@ def plot_est_ukb_corr():
     num_p = 9
     marker_offset = 0
 
-    fig = plt.figure(layout="constrained", figsize=(11, 5))
+    fig = plt.figure(layout="tight", figsize=(11, 5))
     title_kw = {"loc": "left", "pad": 15, "size": 20}
 
     ax_dict = fig.subplot_mosaic(
@@ -3195,3 +3519,130 @@ def plot_est_ukb_corr():
         title_kw=title_kw,
         title='b)'
         )
+
+
+def plot_age_sex_composite_figure():
+    title_kw = {"loc": "left", "pad": 15, "size": 20}
+
+    fig = plt.figure(layout="tight", figsize=(17, 12))
+    ax_dict = fig.subplot_mosaic(
+        """
+        yyyyyyy
+        XXXXXXX
+        abcdefx
+        """,
+        sharey=False,
+        width_ratios=[1, 1, 1, 1, 1, 1, 0.05],
+        height_ratios=[1, 0.01, 1],
+        empty_sentinel='X'
+    )
+
+    d = 1
+    l = 6
+    e = 4
+
+    subsets = [
+        "f_first_q",
+        "f_second_q",
+        "f_third_q",
+        "m_first_q",
+        "m_second_q",
+        "m_third_q",
+    ]
+
+    subset_print = {
+        "m_third_q": rf"$m, T_{3}$",
+        "m_second_q": rf"$m, T_{2}$",
+        "m_first_q": rf"$m, T_{1}$",
+        "f_third_q": rf"$f, T_{3}$",
+        "f_second_q": rf"$f, T_{2}$",
+        "f_first_q": rf"$f, T_{1}$",
+    }
+
+    pheno_path = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/age_sex/f_first_q.phen"
+
+    for subset, ax_name in zip(subsets, ["a", "b", "c", "d", "e", "f"]):
+        pset = "age_sex"
+        outdir = f"/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/{pset}/bdpc_{subset}_d{d}_l{l}_a1e{e}/"
+        pag_path = outdir + "all_merged_pag_mk3_ns_lut.mtx"
+        ace_path = outdir + "all_merged_ACE_ns_lut_no_direction_forced.mtx"
+        # im = plot_ace_rf_to_d(ace_path, pag_path, pheno_path, title=subset_print[subset], ax=ax_dict[ax_name], cbar=False, norm=mpl.colors.SymLogNorm(vmin=-2.0, vmax=2.0, linthresh=0.01), )
+        im = plot_ace_rf_to_d(ace_path, pag_path, pheno_path, title=subset_print[subset], ax=ax_dict[ax_name], cbar=False, cmap='Greens', vmin=0, vmax=0.2)
+
+    # cbar_kw = {"fraction": 0.046, "pad": 0.04, "shrink": 0.5}
+
+    cbar_kw = {"fraction": 2, "pad": 0}
+
+    ax = ax_dict['x']
+    cbar = ax.figure.colorbar(im, ax=ax, orientation="vertical", **cbar_kw)
+    cbar.ax.set_ylabel(r"$ACE \: (y_1 \rightarrow y_2)$", rotation=-90, va="bottom")
+    ax.axis('off')
+
+    ax = ax_dict['y']
+
+    d = 1
+    l = 6
+    e = 4
+
+    row_height = 10
+
+    subsets = [
+        "m_third_q",
+        "m_second_q",
+        "m_first_q",
+        "f_third_q",
+        "f_second_q",
+        "f_first_q",
+    ]
+
+    pheno_path = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/age_sex/f_first_q.phen"
+    bim_path = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/ukb22828_UKB_EST_v3_ldp08.bim"
+
+    traits_with_parents = set()
+    for row, subset in enumerate(subsets):
+        pset = "age_sex"
+        outdir = f"/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/{pset}/bdpc_{subset}_d{d}_l{l}_a1e{e}/"
+        traits_with_parents.update(set(pd.read_csv(outdir + "marker_phen_assoc.csv", sep='\t').phenotype.unique()))
+    traits_with_parents = list(traits_with_parents)
+
+    trait_slot_height = row_height / (len(traits_with_parents) + 1)
+
+    colors = []
+    cmap = plt.get_cmap('tab20', len(traits_with_parents))
+    for i in range(cmap.N):
+        rgb = cmap(i)[:3]  # will return rgba, we take only first 3 so we get rgb
+        colors.append(matplotlib.colors.rgb2hex(rgb))
+
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    for row, subset in enumerate(subsets):
+        pset = "age_sex"
+        outdir = f"/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/{pset}/bdpc_{subset}_d{d}_l{l}_a1e{e}/"
+        df = pd.read_csv(outdir + "marker_phen_assoc.csv", sep='\t')
+        for trait_ix, trait in enumerate(traits_with_parents):
+            sub_df = df[df['phenotype'] == trait]
+            x = (sub_df.bp.values + np.array([global_chr_starts[c] for c in sub_df.chr.values])) / 10**6
+            y = np.ones_like(x) * (row * row_height) + trait_slot_height * (trait_ix + 1)
+            ax.plot(x, y, "v", color=colors[trait_ix], alpha=0.8, label=trait)
+
+    handles = []
+    for color, trait in zip(colors, traits_with_parents):
+        handles.append(mpatches.Patch(color=color, label=trait))
+
+    ax.set_yticks(np.array(range(len(subsets))) * row_height + row_height * 0.5, [subset_print[s] for s in subsets])
+    ax.set_xticks(np.array([global_chr_starts[c] + 0.5 * chr_lengths[c] for c in range(1, 23)]) / 10**6, [f"Chr {c}" for c in range(1, 23)])
+
+    plt.setp(ax.get_xticklabels(), rotation=50, ha="right", rotation_mode="anchor")
+
+    ax.legend(handles=handles, loc='upper center',
+            fancybox=True, shadow=False, ncol=len(traits_with_parents) / 2, bbox_to_anchor=(0.5, 1.2))
+
+    for x in np.array(list(global_chr_starts.values())) / 10**6:
+        ax.axvline(x, color='gray', linestyle=":")
+
+    for row in range(len(subsets)):
+        ax.axhline(row * row_height, color='gray', linestyle=":")
+
+    ax_dict['y'].set_title("a)", **title_kw)
+    ax_dict['a'].text(-2, -2.5, "b)", size=20, verticalalignment='top')
