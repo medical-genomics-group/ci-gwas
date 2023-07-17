@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 
+float zero_if_nan(float value) { return std::isnan(value) ? 0.0 : value; }
+
 void split_line(std::string line, std::string *buf, size_t ncols);
 
 std::vector<std::string> split_line(std::string line);

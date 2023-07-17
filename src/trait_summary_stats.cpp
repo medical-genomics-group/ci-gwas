@@ -29,7 +29,8 @@ TraitSummaryStats::TraitSummaryStats(const std::string path)
 
         for (size_t j = 1; j <= num_phen; j++)
         {
-            corrs[curr_corr_line * num_phen + j - 1] = std::stof(fields[j]);
+            float corr_val = zero_if_nan(std::stof(fields[j]));
+            corrs[curr_corr_line * num_phen + j - 1] = corr_val;
         }
         curr_corr_line += 1;
     }

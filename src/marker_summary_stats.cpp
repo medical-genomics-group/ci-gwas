@@ -15,8 +15,9 @@ MarkerSummaryStats::MarkerSummaryStats(const std::string path)
     {
         for (size_t j = 0; j <= i; j++)
         {
-            corrs[i * num_markers + j] = tril_corrs[corr_ix];
-            corrs[j * num_markers + i] = tril_corrs[corr_ix];
+            float corr_val = zero_if_nan(tril_corrs[corr_ix]);
+            corrs[i * num_markers + j] = corr_val;
+            corrs[j * num_markers + i] = corr_val;
             corr_ix += 1;
         }
     }
