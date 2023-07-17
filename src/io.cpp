@@ -10,6 +10,8 @@
 #include <iterator>
 #include <sstream>
 
+float zero_if_nan(float value) { return std::isnan(value) ? 0.0 : value; }
+
 std::vector<std::string> split_line(std::string line)
 {
     std::vector<std::string> res;
