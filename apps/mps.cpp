@@ -1895,22 +1895,13 @@ const std::string MPS_USAGE = R"(
 usage: mps <command> [<args>]
 
 commands:
-    printbf                 Interpret contents of binary file as floats and print to stoud
     prep                    Prepare input (PLINK) .bed file for mps
-    scorr                   Compute the marker/phenotype correlation matrix in sparse format
-    corr                    Compute the marker/phenotype correlation matrix
-    mcorrk                  Compute pearson correlations between markers as sin(pi / 2 tau_b)
-    mcorrp                  Compute pearson correlations between markers
-    ads                     Compute sums of anti-diagonals of marker correlation matrix
-    cups                    Use cuPC to compute the parent set for each phenotype
-    bdpc                    Run cuPC on block diagonal genomic covariance matrix
-    bdpc-single             Run cuPC on a single block of block diagonal genomic covariance matrix
-    simpc                   Run cuPC on single simulated block
-    phenopc                 Run cuPC on phenotypes only
-    block                   Build approximately unlinked blocks of markers
-    mcorrkb-chr             Compute the banded Kendall correlation matrix for a given chromosome
-    mpcorr-dist             Compute all marker-phenotype and phenotype-phenotype correlations
+    block                   Tile marker x marker correlation matrix
+    cusk                    Run cuda-skeleton on block diagonal genomic covariance matrix
+    cusk-single             Run cuda-skeleton on a single block of block diagonal genomic covariance matrix
     cuskss                  Run cuda-skeleton on a block of markers and traits with pre-computed correlations.
+    cusk-sim                Run cuda-skeleton on single simulated block
+    cusk-phen               Run cuda-skeleton on phenotypes only
 
 contact:
     nick.machnik@gmail.com
@@ -1938,39 +1929,11 @@ auto main(int argc, char *argv[]) -> int
     {
         prep_bed(argc, argv);
     }
-    else if (cmd == "corr")
-    {
-        corr(argc, argv);
-    }
-    else if (cmd == "cups")
-    {
-        std::cout << "'cups' cli is not implemented yet." << std::endl;
-    }
-    else if (cmd == "printbf")
-    {
-        printbf(argc, argv);
-    }
-    else if (cmd == "mcorrp")
-    {
-        mcorrp(argc, argv);
-    }
-    else if (cmd == "mcorrk")
-    {
-        mcorrk(argc, argv);
-    }
-    else if (cmd == "scorr")
-    {
-        scorr(argc, argv);
-    }
-    else if (cmd == "ads")
-    {
-        anti_diag_sums(argc, argv);
-    }
-    else if (cmd == "bdpc")
+    else if (cmd == "cusk")
     {
         block_diagonal_pc(argc, argv);
     }
-    else if (cmd == "bdpc-single")
+    else if (cmd == "cusk-single")
     {
         block_diagonal_pc_single(argc, argv);
     }
@@ -1978,21 +1941,13 @@ auto main(int argc, char *argv[]) -> int
     {
         make_blocks(argc, argv);
     }
-    else if (cmd == "mcorrkb-chr")
-    {
-        mcorrkb_chr(argc, argv);
-    }
-    else if (cmd == "phenopc")
+    else if (cmd == "cusk-phen")
     {
         phenotype_pc(argc, argv);
     }
-    else if (cmd == "simpc")
+    else if (cmd == "cusk-sim")
     {
         sim_pc(argc, argv);
-    }
-    else if (cmd == "mpcorr-dist")
-    {
-        marker_pheno_corr_dist(argc, argv);
     }
     else
     {
