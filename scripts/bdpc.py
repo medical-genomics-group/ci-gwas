@@ -382,11 +382,15 @@ def global_ancestor_sets(blockfile: str, outdir: str, reduced_indices=False, dep
     eps = bo.pheno_ancestor_sets(depth)
 
     for path in basepaths[1:]:
-        bo = BlockOutput(path, marker_offset)
+        try:
+            bo = BlockOutput(path, marker_offset)
+        except FileNotFoundError as e:
+            print(e)
+            continue
         marker_offset += bo.num_markers()
         for k, v in bo.pheno_ancestor_sets(depth).items():
             if not reduced_indices:
-                v = {frozenset({gr.gmi[ix] for ix in s}) for s in v}
+                v = set(gr.gmi[ix] for s in v for ix in s)
             if k in eps:
                 eps[k].update(v)
             else:
@@ -613,7 +617,7 @@ class BlockOutput:
     def union_pleiotropy_mat(self, max_depth=np.inf):
         pm = self.pheno_parents(max_depth=max_depth)
         pleiotropic_markers = set()
-        res = {(i, i): set() for i in self.pheno_indices()}
+        res = {(i, i): set(pm[i]) for i in self.pheno_indices()}
         for i in self.pheno_indices():
             for j in range(i + 1, self.num_phen() + BASE_INDEX):
                 s = set.intersection(pm[i], pm[j])
@@ -770,10 +774,12 @@ def get_skeleton_pleiotropy_mat(
     blockfile: str,
     pheno_path: str,
     max_depth=np.inf,
-    mat_type="exclusive"
+    mat_type="exclusive",
+    num_phen=None,
 ):
-    p_names = get_pheno_codes(pheno_path)
-    num_phen = len(p_names)
+    if num_phen is None:
+        p_names = get_pheno_codes(pheno_path)
+        num_phen = len(p_names)
 
     if mat_type == "exclusive":
         gepm = global_epm(blockfile, outdir, max_depth=max_depth)
@@ -1457,6 +1463,105 @@ def plot_causal_paths_rf_to_d(
     return heatmap(np.array(ci_gwas_links_mat), risk_factor_list, disease_list, cbar=False, ax=ax, title=title, title_kw=title_kw, cmap="Greys", vmax=1.5)
 
 
+def plot_direct_link_cause_comparison_wide(
+    pag_path: str,
+    pheno_path: str,
+    p_thr=0.05,
+    title=None,
+    title_kw=dict(),
+    ax=None,
+):
+    if ax is None:
+        plt.figure(figsize=(3, 10))
+        ax = plt.gca()
+    
+    disease_list = sorted(list(diseases))
+
+    p_names = get_pheno_codes(pheno_path)
+    num_phen = len(p_names)
+
+    causal_paths = get_causal_paths(pag_path, pheno_path)
+
+    ci_gwas_links = {}
+    cause_links = {}
+
+    cause_ys = set(cause_gamma["y1"].values)
+    cause_ys.update(set(cause_gamma["y2"].values))
+    reg_pnames = cause_ys.intersection(set(p_names))
+
+    for i in range(num_phen):
+        for j in range(num_phen):
+            name_i = p_names[i]
+            name_j = p_names[j]
+            if name_i in risk_factors and name_j in diseases:
+                cp = cause_gamma[(cause_gamma["y1"] == name_i) & (cause_gamma["y2"] == name_j)].p_value.values
+                if causal_paths[i, j] == 1:
+                    ci_gwas_links[(name_i, name_j)] = 1
+                if len(cp) >= 1 and cp[0] <= p_thr:
+                    cause_links[(name_i, name_j)] = 1
+
+    rf_intersection = sorted(list(risk_factors.intersection(reg_pnames)))
+    rf_cg_only = sorted(list(risk_factors - set(rf_intersection)))
+
+    risk_factor_list = rf_intersection + rf_cg_only
+
+    ci_gwas_links_mat = [[0 for _ in range(len(diseases))] for _ in range(len(risk_factors))]
+    cause_links_mat = [[0 for _ in range(len(diseases))] for _ in range(len(risk_factors))]
+
+    for i, rf in enumerate(risk_factor_list):
+        for j, ds in enumerate(disease_list):
+            if (rf, ds) in ci_gwas_links:
+                ci_gwas_links_mat[i][j] = 1
+            if (rf, ds) in cause_links:
+                cause_links_mat[i][j] = 1
+
+    row_labels = [r'$\bf{{{0}}}$'.format(e) for e in disease_list]
+    col_labels = [r'$\bf{{{0}}}$'.format(e) for e in rf_intersection] + rf_cg_only
+
+    N = len(diseases)
+    M = len(risk_factors)
+    x = np.arange(M + 1)
+    y = np.arange(N + 1)
+    xs, ys = np.meshgrid(x, y)
+
+    triangles1 = [(i + j*(M+1), i+1 + j*(M+1), i + (j+1)*(M+1)) for j in range(N) for i in range(M)]
+    triangles2 = [(i+1 + j*(M+1), i+1 + (j+1)*(M+1), i + (j+1)*(M+1)) for j in range(N) for i in range(M)]
+    triang1 = Triangulation(xs.ravel()-0.5, ys.ravel()-0.5, triangles1)
+    triang2 = Triangulation(xs.ravel()-0.5, ys.ravel()-0.5, triangles2)
+    img1 = ax.tripcolor(triang1, np.array(ci_gwas_links_mat).T.ravel(), cmap=mpl.colors.ListedColormap(['w', "#fcb001"]))
+    img2 = ax.tripcolor(triang2, np.array(cause_links_mat).T.ravel(), cmap=mpl.colors.ListedColormap(['w', "#448ee4"]))
+
+    # Show all ticks and label them with the respective list entries.
+    ax.set_xticks(np.arange(M))
+    ax.set_xticklabels(col_labels)
+    ax.set_yticks(np.arange(N), labels=row_labels)
+
+    # Let the horizontal axes labeling appear on top.
+    ax.tick_params(top=False, bottom=True, labeltop=False, labelbottom=True)
+
+    # Rotate the tick labels and set their alignment.
+    plt.setp(ax.get_xticklabels(), rotation=50, ha="right", rotation_mode="anchor")
+
+    # Turn spines off and create white grid.
+    ax.spines[:].set_visible(False)
+    ax.set_xticks(np.arange(M + 1) - 0.5, minor=True)
+    ax.set_yticks(np.arange(N + 1) - 0.5, minor=True)
+    ax.grid(which="minor", color="gray", linestyle="--", linewidth=1)
+    ax.tick_params(which="minor", bottom=False, left=False)
+    ax.set_ylabel("disease")
+    ax.set_xlabel("risk factor")
+
+    ci_gwas_patch = mpatches.Patch(color="#fcb001", label='CI-GWAS')
+    cause_patch = mpatches.Patch(color="#448ee4", label='CAUSE')
+
+    ax.legend(handles=[ci_gwas_patch, cause_patch], bbox_to_anchor=(1, 0.5), loc="lower left")
+
+    if title:
+        ax.set_title(title, **title_kw)
+
+    return img1, img2
+
+
 def plot_direct_link_cause_comparison(
     pag_path: str,
     pheno_path: str,
@@ -1559,29 +1664,30 @@ def plot_direct_link_cause_comparison(
 def marker_pheno_associations(
     blockfile: str,
     outdir: str,
-    pag_path: str,
     pheno_path: str,
     bim_path: str,
-    neighbor_fn=is_possible_child,
     depth=1,
 ):
-    gr = merge_block_outputs(blockfile, outdir)
     bim_df = pd.read_csv(bim_path, sep="\t", header=None)
+
     rs_ids = bim_df[1].values
     chrs = bim_df[0].values
     on_chr_positions = bim_df[3].values
+
     p_names = get_pheno_codes(pheno_path)
     num_phen = len(p_names)
-    geps = pag_exclusive_pleiotropy_sets(pag_path, pheno_path, neighbor_fn, depth)
     assoc_markers = []
 
-    for pix in range(num_phen):
-        for v in geps[(pix, pix)]:
-            # pag is 0-based indexed, everything else uses 1-based indexing
-            bim_line = int(gr.gmi[v + BASE_INDEX])
-            assoc_markers.append(
-                {"phenotype": p_names[pix], "rsID": rs_ids[bim_line], "bim_line_ix": bim_line, "chr": chrs[bim_line], "bp": on_chr_positions[bim_line]}
-            )
+    anc_sets = global_ancestor_sets(blockfile, outdir, reduced_indices=False, depth=depth)
+
+    for pix in np.arange(0, num_phen) + BASE_INDEX:
+        for bim_line in anc_sets[pix]:
+            try:
+                assoc_markers.append(
+                    {"phenotype": p_names[pix - BASE_INDEX], "rsID": rs_ids[bim_line], "bim_line_ix": bim_line, "chr": chrs[bim_line], "bp": on_chr_positions[bim_line]}
+                )
+            except IndexError:
+                print("pix: ", pix, "bim_line: ", bim_line)
 
     return pd.DataFrame(assoc_markers)
 
@@ -2131,8 +2237,8 @@ def load_n16k_m1600_simulation_results(mr_skeleton=False, mr_git_thr=False) -> p
                         adj = pvals < float(a_str)
                         perf = calulate_performance_metrics(pdag, peff, adj, effects)
                         rows.append({
-                            "marker-trait fdr": mxp_fdr,
-                            "marker-trait tpr": mxp_tpr,
+                            # "marker-trait fdr": mxp_fdr,
+                            # "marker-trait tpr": mxp_tpr,
                             "edge orientation": perf.correct_orientation,
                             "mse": perf.mse,
                             "var": perf.var,
@@ -2146,7 +2252,7 @@ def load_n16k_m1600_simulation_results(mr_skeleton=False, mr_git_thr=False) -> p
                             "m": m,
                             "rep": rep,
                             "alpha": float(a_str),
-                            "method": f"{mr.method}, g_it thr",
+                            "method": f"{mr.method}",
                         })
                     except FileNotFoundError as error:
                         print(error)
@@ -2164,7 +2270,7 @@ def load_n16k_m1600_simulation_results(mr_skeleton=False, mr_git_thr=False) -> p
                             "m": m,
                             "rep": rep,
                             "alpha": float(a_str),
-                            "method": f"{mr.method}, g_it thr",
+                            "method": f"{mr.method}",
                         })
 
         if mr_skeleton:
@@ -2249,7 +2355,7 @@ def load_n16k_m1600_simulation_results(mr_skeleton=False, mr_git_thr=False) -> p
                     "m": m,
                     "rep": rep,
                     "alpha": 10**(-e),
-                    "method": mr.method,
+                    "method": rf"{mr.method}, $\alpha_{{IV}} = 10^{{-3}}$",
                 })
 
         for e in e_arr:
@@ -2423,7 +2529,7 @@ def plot_simulation_results_with_orientation():
     rep_arr = list(range(1, 21))
     num_phen = 10
 
-    df = load_n16k_m1600_simulation_results()
+    df = load_n16k_m1600_simulation_results(mr_git_thr=True)
     dfs = df.loc[(df['n'] == 16000) & (df['m'] == 1600)]
     gr = dfs.groupby(["method", "alpha"])
     means = gr.mean()
@@ -2621,7 +2727,7 @@ def plot_simulation_results_sup_tp():
     rep_arr = list(range(1, 21))
     num_phen = 10
 
-    df = load_n16k_m1600_simulation_results()
+    df = load_n16k_m1600_simulation_results(mr_git_thr=True)
     dfs = df.loc[(df['n'] == 16000) & (df['m'] == 1600)]
     gr = dfs.groupby(["method", "alpha"])
     means = gr.mean()
@@ -2770,7 +2876,7 @@ def plot_simulation_results_sup(alpha=10**(-8)):
     x_tup = list(itertools.product(n_arr, m_arr))
 
 
-    fig = plt.figure(layout="tight", figsize=(10, 8))
+    fig = plt.figure(layout="tight", figsize=(15, 8))
     ax_dict = fig.subplot_mosaic(
         """
         ii
@@ -2970,14 +3076,15 @@ def plot_ace_results_comp_cause_production(
     WHR = waist-hip ratio
     """
 
-    fig = plt.figure(layout="tight", figsize=(17, 10))
+    fig = plt.figure(layout="tight", figsize=(12, 14))
     ax_dict = fig.subplot_mosaic(
         """
-        ace
-        bde
+        ab
+        cd
+        ee
         """,
         empty_sentinel="X",
-        width_ratios=[1, 1, 0.7],
+        height_ratios=[1, 1, 0.7],
     )
 
     cbar_kw = {"fraction": 0.046, "pad": 0.04}
@@ -3016,7 +3123,54 @@ def plot_ace_results_comp_cause_production(
 
     plot_non_pleio_barplot(pag_path, pheno_path, ax=ax_dict["b"], title="b)", title_kw=title_kw)
 
-    plot_direct_link_cause_comparison(pag_path, pheno_path, p_thr=p_thr, title="e)", title_kw=title_kw, ax=ax_dict["e"])
+    plot_direct_link_cause_comparison_wide(pag_path, pheno_path, p_thr=p_thr, title="e)", title_kw=title_kw, ax=ax_dict["e"])
+
+
+def cause_ci_gwas_ace_comparison_df(ace_path, pheno_path, p_thr=0.0001, title=None, title_kw={}, ax=None):
+    reg_cfg = {
+        "skip_na": True,
+        "rf2rf": False,
+        "d2d": False,
+        "rf2d": True,
+        "d2rf": False,
+    }
+
+    pnames = get_pheno_codes(pheno_path)
+    cause_ys = set(cause_gamma["y1"].values)
+    cause_ys.update(set(cause_gamma["y2"].values))
+    reg_pnames = cause_ys.intersection(set(pnames))
+
+    ace = load_ace(ace_path, pheno_path)
+
+    rows = []
+    significant_rows = []
+    for i, pi in enumerate(pnames):
+        if pi not in reg_pnames:
+            continue
+        for j, pj in enumerate(pnames):
+            if pj not in reg_pnames:
+                continue
+            if pi in risk_factors and pj in risk_factors and not reg_cfg["rf2rf"]:
+                continue
+            if pi in risk_factors and pj in diseases and not reg_cfg["rf2d"]:
+                continue
+            if pi in diseases and pj in diseases and not reg_cfg["d2d"]:
+                continue
+            if pi in diseases and pj in risk_factors and not reg_cfg["d2rf"]:
+                continue
+            cg = cause_gamma[(cause_gamma["y1"] == pi) & (cause_gamma["y2"] == pj)].gamma.values
+            cp = cause_gamma[(cause_gamma["y1"] == pi) & (cause_gamma["y2"] == pj)].p_value.values
+            if len(cg) > 1:
+                raise ValueError("too many gammas")
+            gamma = 0 if len(cg) == 0 else cg[0]
+            p_val = 1 if len(cg) == 0 else cp[0]
+            if reg_cfg["skip_na"] and (p_val >= p_thr and ace[i, j] == 0):
+                continue
+            rows.append({"y1": pi, "y2": pj, "gamma": gamma, "ace": ace[i, j]})
+            if p_val <= p_thr:
+                significant_rows.append({"y1": pi, "y2": pj, "gamma": gamma, "ace": ace[i, j]})
+
+    return pd.DataFrame(rows)
 
 
 def plot_cause_ci_gwas_ace_comparison(ace_path, pheno_path, p_thr=0.0001, title=None, title_kw={}, ax=None):
@@ -3109,6 +3263,7 @@ def plot_non_pleio_barplot(pag_path: str, pheno_path: str, ax=None, title=None, 
     ax.spines["right"].set_visible(False)
     ax.grid(linestyle=":", axis="y")
     ax.set_title(title, **title_kw)
+    ax.set_box_aspect(1)
 
 
 def plot_all_alpha_production_pags_and_ace(basepath: str, pheno_path: str, l=6, d=1, edge_encoding=five_common_edge_types):
@@ -3624,7 +3779,7 @@ def plot_age_sex_composite_figure():
             sub_df = df[df['phenotype'] == trait]
             x = (sub_df.bp.values + np.array([global_chr_starts[c] for c in sub_df.chr.values])) / 10**6
             y = np.ones_like(x) * (row * row_height) + trait_slot_height * (trait_ix + 1)
-            ax.plot(x, y, "v", color=colors[trait_ix], alpha=0.8, label=trait)
+            ax.plot(x, y, "o", color=colors[trait_ix], alpha=0.8, label=trait)
 
     handles = []
     for color, trait in zip(colors, traits_with_parents):
@@ -3646,3 +3801,65 @@ def plot_age_sex_composite_figure():
 
     ax_dict['y'].set_title("a)", **title_kw)
     ax_dict['a'].text(-2, -2.5, "b)", size=20, verticalalignment='top')
+
+
+
+def plot_est_ukb_marker_positions():
+
+    plt.figure(figsize=(14, 2))
+    ax = plt.gca()
+
+    blockfile = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/estonian_comparison/ukb22828_UKB_EST_v3_ldp08_estonia_intersect_m11000.blocks"
+    bim_path = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/estonian_comparison/ukb22828_UKB_EST_v3_ldp08_estonia_intersect_a1_forced.bim"
+    outdir_ukb = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/estonian_comparison/bdpc_d1_l6_a1e8_wo_bp/"
+    outdir_est = "/nfs/scistore13/robingrp/human_data/cigwas_estonia/bdpc_d1_l6_a1e8_wo_bp/"
+    pheno_path = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/estonian_comparison/ukb_wo_bp.phen"
+
+    ukb_assoc = marker_pheno_associations(blockfile, outdir_ukb, pheno_path, bim_path)
+    est_assoc = marker_pheno_associations(blockfile, outdir_est, pheno_path, bim_path)
+
+    row_height = 0.5
+
+    traits_with_parents = set()
+    for assoc in [ukb_assoc, est_assoc]:
+        traits_with_parents.update(set(assoc.phenotype.unique()))
+    traits_with_parents = list(traits_with_parents)
+
+    trait_slot_height = row_height / (len(traits_with_parents) + 1)
+
+    colors = []
+    cmap = plt.get_cmap('tab20', len(traits_with_parents))
+    for i in range(cmap.N):
+        rgb = cmap(i)[:3]  # will return rgba, we take only first 3 so we get rgb
+        colors.append(matplotlib.colors.rgb2hex(rgb))
+
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    for row, df in enumerate([ukb_assoc, est_assoc]):
+        for trait_ix, trait in enumerate(traits_with_parents):
+            sub_df = df[df['phenotype'] == trait]
+            x = (sub_df.bp.values + np.array([global_chr_starts[c] for c in sub_df.chr.values])) / 10**6
+            y = np.ones_like(x) * (row * row_height) + trait_slot_height * (trait_ix + 1)
+            ax.plot(x, y, "o", color=colors[trait_ix], alpha=0.8, label=trait)
+
+    handles = []
+    for color, trait in zip(colors, traits_with_parents):
+        handles.append(mpatches.Patch(color=color, label=trait))
+
+    ax.set_yticks(np.array(range(2)) * row_height + row_height * 0.5, ["UKB", "EST"])
+    ax.set_xticks(np.array([global_chr_starts[c] + 0.5 * chr_lengths[c] for c in range(1, 23)]) / 10**6, [f"Chr {c}" for c in range(1, 23)])
+
+    plt.setp(ax.get_xticklabels(), rotation=50, ha="right", rotation_mode="anchor")
+
+    ax.legend(handles=handles, loc='upper center',
+            fancybox=True, shadow=False, ncol=len(traits_with_parents), bbox_to_anchor=(0.5, 1.2))
+
+    for x in np.array(list(global_chr_starts.values())) / 10**6:
+        ax.axvline(x, color='gray', linestyle=":")
+
+    for row in range(2):
+        ax.axhline(row * row_height, color='gray', linestyle=":")
+
+    # ax_dict['y'].set_title("a)", **title_kw)
+    # ax_dict['a'].text(-2, -2.5, "b)", size=20, verticalalignment='top')

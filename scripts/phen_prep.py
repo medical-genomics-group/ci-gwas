@@ -85,8 +85,8 @@ class FamFile:
 
 def is_standardized(df: pd.DataFrame) -> bool:
     return np.all(
-        np.abs(df.iloc[:, 2:].std(axis=0).values - 1) < 0.1) and np.all(
-            np.abs(df.iloc[:, 2:].mean(axis=0).values) < 0.1)
+        np.abs(df.std(axis=0).values - 1) < 0.1) and np.all(
+            np.abs(df.mean(axis=0).values) < 0.1)
 
 
 def merge_phenos(phenos: list[PhenotypesFile], fam: FamFile) -> pd.DataFrame:
@@ -96,7 +96,7 @@ def merge_phenos(phenos: list[PhenotypesFile], fam: FamFile) -> pd.DataFrame:
     for p in phenos:
         curr_df = p.df(fam=fam_df)
         assert is_standardized(
-            curr_df), f"data in {p.filepath} seems not precisely standardized"
+            curr_df.iloc[:, 2:]), f"data in {p.filepath} seems not precisely standardized"
         dfs.append(curr_df)
 
     return pd.concat([fam_df[["FID", "IID"]], *dfs], axis=1)
