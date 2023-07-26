@@ -179,7 +179,7 @@ TEST(LoadBlocks, ExpectedResults)
 
 TEST(LoadBedBlock, ExpectedResults)
 {
-    MarkerBlock block("1", 1, 2);
+    MarkerBlock block("1", 1, 2, 0);
     BedDims dims(10, 5);
     BimInfo bim("../../tests/test_files/small.bim");
     std::vector<unsigned char> obs =
@@ -193,7 +193,7 @@ TEST(LoadBedBlock, ExpectedResults)
 
 TEST(LoadBedBlockSecondChr, ExpectedResults)
 {
-    MarkerBlock block("19", 0, 1);
+    MarkerBlock block("19", 0, 1, 0);
     BedDims dims(10, 5);
     BimInfo bim("../../tests/test_files/small.bim");
     std::vector<unsigned char> obs =
