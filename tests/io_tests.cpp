@@ -79,9 +79,7 @@ TEST(read_marker_trait_summary_stats, expected_results)
 TEST(read_marker_summary_stats, expected_results)
 {
     std::vector<float> exp_corrs = {
-        1., -0.0262947, 0.21663797,
-        -0.0262947, 1., 0.9148115,
-        0.21663797, 0.9148115, 1.};
+        1., -0.0262947, 0.21663797, -0.0262947, 1., 0.9148115, 0.21663797, 0.9148115, 1.};
 
     int exp_num_markers = 3;
 
@@ -169,7 +167,9 @@ TEST(FloatToAndFromBinary, ExpectedResults)
 TEST(LoadBlocks, ExpectedResults)
 {
     std::vector<MarkerBlock> exp{
-        MarkerBlock("1", 101, 202), MarkerBlock("1", 303, 404), MarkerBlock("1", 505, 606)};
+        MarkerBlock("1", 101, 202, 0),
+        MarkerBlock("1", 303, 404, 0),
+        MarkerBlock("1", 505, 606, 0)};
     std::vector<MarkerBlock> obs = read_blocks_from_file("../../tests/test_files/test.blocks");
     for (size_t i = 0; i < exp.size(); i++)
     {

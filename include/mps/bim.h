@@ -50,15 +50,13 @@ struct BimInfo
         for (size_t i = 0; i < chr_ids.size(); i++)
         {
             size_t num_blocks = (num_markers_on_chr[i] + size - 1) / size;
-            size_t global_offset = 0;
             for (size_t bid = 0; bid < num_blocks; bid++)
             {
                 size_t bstart = bid * size;
                 size_t bend = std::min(bstart + size - 1, num_markers_on_chr[i]);
-                MarkerBlock block = MarkerBlock(chr_ids[i], bstart, bend, global_offset);
-                global_offset += block.block_size();
+                MarkerBlock block = MarkerBlock(chr_ids[i], bstart, bend, global_chr_start[i]);
                 res.push_back(block);
-                        }
+            }
         }
         return res;
     }

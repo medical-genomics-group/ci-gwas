@@ -11,11 +11,11 @@ class MarkerBlock
     // index on the chromosome
     size_t first_marker_ix;
     size_t last_marker_ix;
-    size_t global_offset;
+    size_t chr_global_offset;
 
    public:
     MarkerBlock(std::string chr, size_t ix1, size_t ix2, size_t offset)
-        : chr_id(chr), first_marker_ix(ix1), last_marker_ix(ix2), global_offset(offset)
+        : chr_id(chr), first_marker_ix(ix1), last_marker_ix(ix2), chr_global_offset(offset)
     {
     }
 
@@ -51,9 +51,9 @@ class MarkerBlock
 
     size_t get_last_marker_ix() const { return last_marker_ix; }
 
-    size_t get_first_marker_global_ix() const { return first_marker_ix + global_offset; }
+    size_t get_first_marker_global_ix() const { return first_marker_ix + chr_global_offset; }
 
-    size_t get_last_marker_global_ix() const { return last_marker_ix + global_offset; }
+    size_t get_last_marker_global_ix() const { return last_marker_ix + chr_global_offset; }
 
     size_t block_size() const { return last_marker_ix - first_marker_ix + 1; }
 };
