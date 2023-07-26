@@ -77,13 +77,24 @@ std::vector<MarkerBlock> read_blocks_from_file(const std::string path)
     std::string line;
     std::ifstream block_file(path);
     std::vector<MarkerBlock> blocks;
+    size_t global_offset = 0;
+    size_t num_markers_on_chr = 0;
+    std::string curr_chr = "";
 
     while (std::getline(block_file, line))
     {
         split_line(line, block_line, 3);
-        blocks.push_back(MarkerBlock(
-            (std::string)block_line[0], std::stoi(block_line[1]), std::stoi(block_line[2])
-        ));
+        std::string chr = (std::string)block_line[0];
+        if (chr != curr_chr)
+        {
+            curr_chr = chr;
+            global_offset += num_markers_on_chr;
+            num_markers_on_chr = 0;
+        }
+        MarkerBlock block =
+            MarkerBlock(chr, std::stoi(block_line[1]), std::stoi(block_line[2]), global_offset);
+        blocks.push_back(block);
+        num_markers_on_chr += block.block_size();
     }
 
     return blocks;

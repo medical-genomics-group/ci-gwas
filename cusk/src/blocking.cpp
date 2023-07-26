@@ -60,10 +60,10 @@ std::vector<MarkerBlock> blocks_from_minima(
     size_t prev = 0;
     for (auto pos : minima)
     {
-        res.push_back(MarkerBlock(chr_id, prev, pos));
+        res.push_back(MarkerBlock(chr_id, prev, pos, 0));
         prev = pos + 1;
     }
-    res.push_back(MarkerBlock(chr_id, prev, num_vars - 1));
+    res.push_back(MarkerBlock(chr_id, prev, num_vars - 1, 0));
     return res;
 }
 
