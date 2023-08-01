@@ -4,6 +4,8 @@ import argparse
 import sys
 import subprocess
 
+MPS_PATH = "./cusk/build/apps/mps"
+
 
 class TypeCheck:
     def __init__(self, type_fn, name: str, min_val=None, max_val=None):
@@ -172,12 +174,6 @@ def main():
         help="number of samples used for computing correlations",
     )
     cuskss_parser.add_argument(
-        "num_samples",
-        type=TypeCheck(int, "num-samples", 1, None),
-        help="number of samples used for computing correlations",
-        default=1,
-    )
-    cuskss_parser.add_argument(
         "outdir",
         type=str,
         help="directory for output",
@@ -198,22 +194,59 @@ def main():
 
 
 def prep_bed(args):
-    res = subprocess.run(["mps", args.bfiles], check=True)
+    subprocess.run([MPS_PATH, "prep", args.bfiles], check=True)
 
 
 def block(args):
-    res = subprocess.run(
-        ["mps", args.bfiles, args.max_block_size, args.device_mem_gb, args.corr_width],
+    subprocess.run(
+        [
+            MPS_PATH,
+            "block",
+            args.bfiles,
+            args.max_block_size,
+            args.device_mem_gb,
+            args.corr_width,
+        ],
         check=True,
     )
 
 
 def cusk(args):
-    pass
+    subprocess.run(
+        [
+            MPS_PATH,
+            "cusk-single",
+            args.phen,
+            args.bfiles,
+            args.blocks,
+            args.alpha,
+            args.max_level,
+            args.max_depth,
+            args.outdir,
+            args.block_index,
+        ],
+        check=True,
+    )
 
 
 def cuskss(args):
-    pass
+    subprocess.run(
+        [
+            MPS_PATH,
+            "cuskss",
+            args.mxm,
+            args.mxp,
+            args.pxp,
+            args.block_index,
+            args.blocks,
+            args.alpha,
+            args.max_level,
+            args.max_depth,
+            args.num_samples,
+            args.outdir,
+        ],
+        check=True,
+    )
 
 
 def srfci(args):
