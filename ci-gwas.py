@@ -7,6 +7,13 @@ import subprocess
 MPS_PATH = "./cusk/build/apps/mps"
 
 
+class MyParser(argparse.ArgumentParser):
+    def error(self, message):
+        sys.stderr.write('error: %s\n' % message)
+        self.print_help()
+        sys.exit(2)
+
+
 class TypeCheck:
     def __init__(self, type_fn, name: str, min_val=None, max_val=None):
         self._type_fn = type_fn
@@ -24,7 +31,7 @@ class TypeCheck:
 
 
 def main():
-    ci_gwas_parser = argparse.ArgumentParser(
+    ci_gwas_parser = MyParser(
         prog="ci-gwas",
         description="Causal inference for multiple risk factors and diseases from summary statistic data",
     )
@@ -79,7 +86,6 @@ def main():
     cusk_parser.add_argument(
         "block-index",
         type=TypeCheck(int, "block-index", 0, None),
-        type=str,
         help="0-based index of the block to run cusk on",
     )
     cusk_parser.add_argument(
@@ -142,7 +148,6 @@ def main():
     cuskss_parser.add_argument(
         "block-index",
         type=TypeCheck(int, "block-index", 0, None),
-        type=str,
         help="0-based index of the block to run cusk on",
     )
     cuskss_parser.add_argument(
@@ -189,7 +194,8 @@ def main():
     sdavs_parser = subparsers.add_parser("sdavs", help="Run sDAVS to infer ACEs")
     sdavs_parser.set_defaults(func=sdavs)
 
-    args = ci_gwas_parser.parse_args(sys.argv[1:])
+    # args = ci_gwas_parser.parse_args(sys.argv[1:])
+    args = ci_gwas_parser.parse_args()
     args.func(args)
 
 
