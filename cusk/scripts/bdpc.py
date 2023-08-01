@@ -390,7 +390,7 @@ def global_ancestor_sets(blockfile: str, outdir: str, reduced_indices=False, dep
         marker_offset += bo.num_markers()
         for k, v in bo.pheno_ancestor_sets(depth).items():
             if not reduced_indices:
-                v = set(gr.gmi[ix] for s in v for ix in s)
+                v = set(gr.gmi[ix] for ix in v)
             if k in eps:
                 eps[k].update(v)
             else:
@@ -574,8 +574,7 @@ class BlockOutput:
             res[pix] = set()
             for parent in self.marker_indices():
                 if (pix, parent) in adj:
-                    anc_set = set()
-                    anc_set.add(parent)
+                    res[pix].add(parent)
                     q = queue.Queue()
                     q.put(parent)
                     next_q = queue.Queue()
@@ -583,10 +582,9 @@ class BlockOutput:
                         while not q.empty():
                             v1 = q.get()
                             for v2 in self.marker_indices():
-                                if (v1, v2) in adj and not v2 in anc_set:
+                                if (v1, v2) in adj and not v2 in res[pix]:
                                     next_q.put(v2)
-                                    anc_set.add(v2)
-                    res[pix].add(frozenset(anc_set))
+                                    res[pix].add(v2)
         return res
 
     def pheno_direct_parents(self):
@@ -1202,11 +1200,21 @@ def plot_pag(
     cbar_kw=None,
     edge_encoding=all_edge_types,
     ax=None,
-    cbar=True
+    cbar=True,
+    pheno_names=None,
+    pheno_subset=None,
 ):
 
-    p_names = get_pheno_codes(pheno_path)
-    num_phen = len(p_names)
+    if pheno_names is None:
+        pheno_names = get_pheno_codes(pheno_path)
+    num_phen = len(pheno_names)
+
+    if pheno_subset is None:
+        pheno_indices = list(range(num_phen))
+    else:
+        pheno_indices = [pheno_names.index(e) for e in pheno_subset]
+        num_phen = len(pheno_indices)
+        pheno_names = pheno_subset
 
     pag = mmread(pag_path).tocsr()
 
@@ -1214,8 +1222,8 @@ def plot_pag(
 
     for i in range(num_phen):
         for j in range(i):
-            v1 = pag[i, j]
-            v2 = pag[j, i]
+            v1 = pag[pheno_indices[i], pheno_indices[j]]
+            v2 = pag[pheno_indices[j], pheno_indices[i]]
             z[i][j] = edge_encoding.int_rep[(v1, v2)]
 
     ne = len(edge_encoding.int_rep)
@@ -1230,8 +1238,8 @@ def plot_pag(
 
     im, _ = heatmap(
         np.array(z),
-        p_names,
-        p_names,
+        pheno_names,
+        pheno_names,
         cmap=edge_encoding.cmap,
         norm=norm,
         cbar_kw=cbar_kw,
@@ -1659,6 +1667,36 @@ def plot_direct_link_cause_comparison(
         ax.set_title(title, **title_kw)
 
     return img1, img2
+
+
+def marker_pheno_associations_with_pnames(
+    blockfile: str,
+    outdir: str,
+    p_names: list[str],
+    bim_path: str,
+    depth=1,
+):
+    bim_df = pd.read_csv(bim_path, sep="\t", header=None)
+
+    rs_ids = bim_df[1].values
+    chrs = bim_df[0].values
+    on_chr_positions = bim_df[3].values
+
+    num_phen = len(p_names)
+    assoc_markers = []
+
+    anc_sets = global_ancestor_sets(blockfile, outdir, reduced_indices=False, depth=depth)
+
+    for pix in np.arange(0, num_phen) + BASE_INDEX:
+        for bim_line in anc_sets[pix]:
+            try:
+                assoc_markers.append(
+                    {"phenotype": p_names[pix - BASE_INDEX], "rsID": rs_ids[bim_line], "bim_line_ix": bim_line, "chr": chrs[bim_line], "bp": on_chr_positions[bim_line]}
+                )
+            except IndexError:
+                print("pix: ", pix, "bim_line: ", bim_line)
+
+    return pd.DataFrame(assoc_markers)
 
 
 def marker_pheno_associations(
@@ -3266,17 +3304,16 @@ def plot_non_pleio_barplot(pag_path: str, pheno_path: str, ax=None, title=None, 
     ax.set_box_aspect(1)
 
 
-def plot_all_alpha_production_pags_and_ace(basepath: str, pheno_path: str, l=6, d=1, edge_encoding=five_common_edge_types):
-    fig = plt.figure(layout="tight", figsize=(15, 20))
+def plot_all_alpha_production_pags_and_ace(basepath: str, pheno_path: str, l=6, d=1, edge_encoding=two_common_edge_types):
+    fig = plt.figure(layout="tight", figsize=(12, 14))
     ax_dict = fig.subplot_mosaic(
         """
-        ah
-        bi
-        cj
+        ac
+        bd
         op
         """,
         empty_sentinel="X",
-        height_ratios=[1, 1, 1, 0.02],
+        height_ratios=[1, 1, 0.02],
         # sharex=True,
         # sharey=True,
     )
@@ -3287,13 +3324,14 @@ def plot_all_alpha_production_pags_and_ace(basepath: str, pheno_path: str, l=6, 
     # title_kw = {"loc": "left", "pad": 15, "size": 20}
     title_kw = {}
 
-    pag_panels = ["a", "b", "c"]
-    ace_panels = ["h", "i", "j"]
-    alphas = [2, 4, 8]
+    pag_panels = ["a", "b"]
+    ace_panels = ["c", "d"]
+    alphas = [4, 8]
 
     for pos, (ace_panel, a) in enumerate(zip(ace_panels, alphas)):
         try:
-            ace_path = basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_ACE_ns_lut_no_direction_forced_q_pheno.mtx"
+            ace_path = basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_ACE_ns_lut_no_direction_forced.mtx"
+            # ace_path = basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_ACE_ns_lut_no_direction_forced_q_pheno.mtx"
             pag_path = basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_pag_mk3_ns_lut.mtx"
 
             ima = plot_ace(
@@ -3317,7 +3355,8 @@ def plot_all_alpha_production_pags_and_ace(basepath: str, pheno_path: str, l=6, 
 
     for pos, (pag_panel, a) in enumerate(zip(pag_panels, alphas)):
         try:
-            ace_path = basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_ACE_ns_lut_no_direction_forced_q_pheno.mtx"
+            ace_path = basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_ACE_ns_lut_no_direction_forced.mtx"
+            # ace_path = basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_ACE_ns_lut_no_direction_forced_q_pheno.mtx"
             pag_path = basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_pag_mk3_ns_lut.mtx"
 
             imp = plot_pag(
@@ -3719,8 +3758,8 @@ def plot_age_sex_composite_figure():
     for subset, ax_name in zip(subsets, ["a", "b", "c", "d", "e", "f"]):
         pset = "age_sex"
         outdir = f"/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/{pset}/bdpc_{subset}_d{d}_l{l}_a1e{e}/"
-        pag_path = outdir + "all_merged_pag_mk3_ns_lut.mtx"
-        ace_path = outdir + "all_merged_ACE_ns_lut_no_direction_forced.mtx"
+        pag_path = outdir + "all_merged_pag_mk3_ns_lut_correct_n.mtx"
+        ace_path = outdir + "all_merged_ACE_ns_lut_no_direction_forced_correct_n.mtx"
         # im = plot_ace_rf_to_d(ace_path, pag_path, pheno_path, title=subset_print[subset], ax=ax_dict[ax_name], cbar=False, norm=mpl.colors.SymLogNorm(vmin=-2.0, vmax=2.0, linthresh=0.01), )
         im = plot_ace_rf_to_d(ace_path, pag_path, pheno_path, title=subset_print[subset], ax=ax_dict[ax_name], cbar=False, cmap='Greens', vmin=0, vmax=0.2)
 
@@ -3803,25 +3842,68 @@ def plot_age_sex_composite_figure():
     ax_dict['a'].text(-2, -2.5, "b)", size=20, verticalalignment='top')
 
 
-
 def plot_est_ukb_marker_positions():
+    title_kw = {"loc": "left", "pad": 15, "size": 20}
 
-    plt.figure(figsize=(14, 2))
-    ax = plt.gca()
+    fig = plt.figure(layout="tight", figsize=(17, 12))
+    ax_dict = fig.subplot_mosaic(
+        """
+        yyyyyyy
+        """,
+        sharey=False,
+        width_ratios=[1, 1, 1, 1, 1, 1, 0.05],
+        empty_sentinel='X'
+    )
+
+    d = 1
+    l = 6
+    e = 4
+
+    subsets = [
+        "f_first_q",
+        "f_second_q",
+        "f_third_q",
+        "m_first_q",
+        "m_second_q",
+        "m_third_q",
+    ]
+
+    subset_print = {
+        "m_third_q": rf"$m, T_{3}$",
+        "m_second_q": rf"$m, T_{2}$",
+        "m_first_q": rf"$m, T_{1}$",
+        "f_third_q": rf"$f, T_{3}$",
+        "f_second_q": rf"$f, T_{2}$",
+        "f_first_q": rf"$f, T_{1}$",
+    }
+
+    p_names = ["AT", "CAD", "HT", "SMK", "ST", "T2D"]
+
+    ax = ax_dict['y']
+
+    d = 1
+    l = 6
+    e = 4
+
+    row_height = 10
 
     blockfile = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/estonian_comparison/ukb22828_UKB_EST_v3_ldp08_estonia_intersect_m11000.blocks"
     bim_path = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/estonian_comparison/ukb22828_UKB_EST_v3_ldp08_estonia_intersect_a1_forced.bim"
-    outdir_ukb = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/estonian_comparison/bdpc_d1_l6_a1e8_wo_bp/"
-    outdir_est = "/nfs/scistore13/robingrp/human_data/cigwas_estonia/bdpc_d1_l6_a1e8_wo_bp/"
-    pheno_path = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/estonian_comparison/ukb_wo_bp.phen"
+    common_out_path = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/estonian_comparison/age_sex_split/"
 
-    ukb_assoc = marker_pheno_associations(blockfile, outdir_ukb, pheno_path, bim_path)
-    est_assoc = marker_pheno_associations(blockfile, outdir_est, pheno_path, bim_path)
+    ukb_assoc = {
+        subset: marker_pheno_associations_with_pnames(blockfile, common_out_path + f'ukb/bdpc_d{d}_l{l}_{subset}_wo_bp_bmi_a1e{e}/', p_names, bim_path) for subset in subsets
+    }
 
-    row_height = 0.5
+    est_assoc = {
+        subset: marker_pheno_associations_with_pnames(blockfile, common_out_path + f'est/bdpc_d{d}_l{l}_{subset}_wo_bp_bmi_a1e{e}/', p_names, bim_path) for subset in subsets
+    }
 
     traits_with_parents = set()
-    for assoc in [ukb_assoc, est_assoc]:
+
+    for assoc in ukb_assoc.values():
+        traits_with_parents.update(set(assoc.phenotype.unique()))
+    for assoc in est_assoc.values():
         traits_with_parents.update(set(assoc.phenotype.unique()))
     traits_with_parents = list(traits_with_parents)
 
@@ -3836,30 +3918,228 @@ def plot_est_ukb_marker_positions():
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
 
-    for row, df in enumerate([ukb_assoc, est_assoc]):
-        for trait_ix, trait in enumerate(traits_with_parents):
+    for set_id, assoc_set in zip(["UKB", "EST"], [ukb_assoc, est_assoc]):
+        for subset_id, subset in enumerate(subsets):
+            row = subset_id * 2 + int(set_id == "EST")
+            df = assoc_set[subset]
+            for trait_ix, trait in enumerate(traits_with_parents):
+                sub_df = df[df['phenotype'] == trait]
+                x = (sub_df.bp.values + np.array([global_chr_starts[c] for c in sub_df.chr.values])) / 10**6
+                y = np.ones_like(x) * (row * row_height) + trait_slot_height * (trait_ix + 1)
+                ax.plot(x, y, "o", color=colors[trait_ix], alpha=0.8, label=trait)
+
+    handles = []
+    for color, trait in zip(colors, traits_with_parents):
+        handles.append(mpatches.Patch(color=color, label=trait))
+
+    ylabels = []
+    for subset in subsets:
+        ylabels.append(subset_print[subset] + ", UKB")
+        ylabels.append(subset_print[subset] + ", EST")
+
+    ax.set_yticks(np.array(range(len(ylabels))) * row_height + row_height * 0.5, ylabels)
+    ax.set_xticks(np.array([global_chr_starts[c] + 0.5 * chr_lengths[c] for c in range(1, 23)]) / 10**6, [f"Chr {c}" for c in range(1, 23)])
+
+    plt.setp(ax.get_xticklabels(), rotation=50, ha="right", rotation_mode="anchor")
+
+    ax.legend(handles=handles, loc='upper center',
+            fancybox=True, shadow=False, ncol=len(traits_with_parents) / 2, bbox_to_anchor=(0.5, 1.2))
+
+    for x in np.array(list(global_chr_starts.values())) / 10**6:
+        ax.axvline(x, color='gray', linestyle=":")
+
+    for row in range(len(ylabels)):
+        ax.axhline(row * row_height, color='gray', linestyle=":")
+
+    ax_dict['y'].set_title("a)", **title_kw)
+
+
+def plot_ukb_age_sex_marker_positions_ss_vs_no_ss():
+    title_kw = {"loc": "left", "pad": 15, "size": 20}
+
+    fig = plt.figure(layout="tight", figsize=(17, 12))
+    ax_dict = fig.subplot_mosaic(
+        """
+        yyyyyyy
+        """,
+        sharey=False,
+        width_ratios=[1, 1, 1, 1, 1, 1, 0.05],
+        empty_sentinel='X'
+    )
+
+    d = 1
+    l = 6
+    e = 4
+
+    subsets = [
+        "f_first_q",
+        "f_second_q",
+        "f_third_q",
+        "m_first_q",
+        "m_second_q",
+        "m_third_q",
+    ]
+
+    subset_print = {
+        "m_third_q": rf"$m, T_{3}$",
+        "m_second_q": rf"$m, T_{2}$",
+        "m_first_q": rf"$m, T_{1}$",
+        "f_third_q": rf"$f, T_{3}$",
+        "f_second_q": rf"$f, T_{2}$",
+        "f_first_q": rf"$f, T_{1}$",
+    }
+
+    p_names = ["AT", "BMI", "CAD", "HT", "SMK", "ST", "T2D"]
+
+    ax = ax_dict['y']
+
+    d = 1
+    l = 6
+    e = 4
+
+    row_height = 10
+
+    blockfile = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/estonian_comparison/ukb22828_UKB_EST_v3_ldp08_estonia_intersect_m11000.blocks"
+    blockfile2 = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/ukb22828_UKB_EST_v3_ldp08.blocks"
+    bim_path = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/estonian_comparison/ukb22828_UKB_EST_v3_ldp08_estonia_intersect_a1_forced.bim"
+    common_out_path = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/estonian_comparison/age_sex_split/"
+    cusk_out_path = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/age_sex/"
+
+    cusk_ss_assoc = {
+        subset: marker_pheno_associations_with_pnames(blockfile, common_out_path + f'ukb/bdpc_d{d}_l{l}_{subset}_wo_bp_a1e{e}/', p_names, bim_path) for subset in subsets
+    }
+
+    pheno_path = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/age_sex/f_first_q.phen"
+    cusk_assoc = {
+        subset: marker_pheno_associations(blockfile2, cusk_out_path + f'bdpc_{subset}_d{d}_l{l}_a1e{e}/', pheno_path, bim_path) for subset in subsets
+    }
+
+    # traits_with_parents = set()
+
+    # for assoc in cusk_ss_assoc.values():
+    #     traits_with_parents.update(set(assoc.phenotype.unique()))
+    # for assoc in cusk_assoc.values():
+    #     traits_with_parents.update(set(assoc.phenotype.unique()))
+    # traits_with_parents = list(traits_with_parents)
+
+    trait_slot_height = row_height / (len(p_names) + 1)
+
+    colors = []
+    cmap = plt.get_cmap('tab20', len(p_names))
+    for i in range(cmap.N):
+        rgb = cmap(i)[:3]  # will return rgba, we take only first 3 so we get rgb
+        colors.append(matplotlib.colors.rgb2hex(rgb))
+
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    for set_id, assoc_set in zip(["cusk-ss", "cusk"], [cusk_ss_assoc, cusk_assoc]):
+        for subset_id, subset in enumerate(subsets):
+            row = subset_id * 2 + int(set_id == "cusk")
+            df = assoc_set[subset]
+            for trait_ix, trait in enumerate(p_names):
+                sub_df = df[df['phenotype'] == trait]
+                x = (sub_df.bp.values + np.array([global_chr_starts[c] for c in sub_df.chr.values])) / 10**6
+                y = np.ones_like(x) * (row * row_height) + trait_slot_height * (trait_ix + 1)
+                ax.plot(x, y, "o", color=colors[trait_ix], alpha=0.8, label=trait)
+
+    handles = []
+    for color, trait in zip(colors, p_names):
+        handles.append(mpatches.Patch(color=color, label=trait))
+
+    ylabels = []
+    for subset in subsets:
+        ylabels.append(subset_print[subset] + ", cusk-ss")
+        ylabels.append(subset_print[subset] + ", cusk")
+
+    ax.set_yticks(np.array(range(len(ylabels))) * row_height + row_height * 0.5, ylabels)
+    ax.set_xticks(np.array([global_chr_starts[c] + 0.5 * chr_lengths[c] for c in range(1, 23)]) / 10**6, [f"Chr {c}" for c in range(1, 23)])
+
+    plt.setp(ax.get_xticklabels(), rotation=50, ha="right", rotation_mode="anchor")
+
+    ax.legend(handles=handles, loc='upper center',
+            fancybox=True, shadow=False, ncol=len(p_names) / 2, bbox_to_anchor=(0.5, 1.2))
+
+    for x in np.array(list(global_chr_starts.values())) / 10**6:
+        ax.axvline(x, color='gray', linestyle=":")
+
+    for row in range(len(ylabels)):
+        ax.axhline(row * row_height, color='gray', linestyle=":")
+
+    ax_dict['y'].set_title("a)", **title_kw)
+
+
+def plot_est_ukb_full_db_marker_positions():
+    title_kw = {"loc": "left", "pad": 15, "size": 20}
+
+    fig = plt.figure(layout="tight", figsize=(17, 12))
+    ax_dict = fig.subplot_mosaic(
+        """
+        yyyyyyy
+        """,
+        sharey=False,
+        width_ratios=[1, 1, 1, 1, 1, 1, 0.05],
+        empty_sentinel='X'
+    )
+
+    d = 1
+    l = 6
+    e = 4
+
+    p_names = ["AT", "BMI", "CAD", "DBP", "HT", "SBP", "SMK", "ST", "T2D"]
+
+    ax = ax_dict['y']
+
+    d = 1
+    l = 6
+    e = 4
+
+    row_height = 10
+
+    blockfile = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/estonian_comparison/ukb22828_UKB_EST_v3_ldp08_estonia_intersect_m11000.blocks"
+    bim_path = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/estonian_comparison/ukb22828_UKB_EST_v3_ldp08_estonia_intersect_a1_forced.bim"
+    common_out_path = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/estonian_comparison/"
+
+    est_assoc = marker_pheno_associations_with_pnames(blockfile, common_out_path + f'est/bdpc_d{d}_l{l}_a1e{e}/', p_names, bim_path)
+    ukb_assoc = marker_pheno_associations_with_pnames(blockfile, common_out_path + f'ukb/bdpc_d{d}_l{l}_a1e{e}/', p_names, bim_path)
+
+    trait_slot_height = row_height / (len(p_names) + 1)
+
+    colors = []
+    cmap = plt.get_cmap('tab20', len(p_names))
+    for i in range(cmap.N):
+        rgb = cmap(i)[:3]  # will return rgba, we take only first 3 so we get rgb
+        colors.append(matplotlib.colors.rgb2hex(rgb))
+
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    for row, assoc_set in enumerate([est_assoc, ukb_assoc]):
+        df = assoc_set
+        for trait_ix, trait in enumerate(p_names):
             sub_df = df[df['phenotype'] == trait]
             x = (sub_df.bp.values + np.array([global_chr_starts[c] for c in sub_df.chr.values])) / 10**6
             y = np.ones_like(x) * (row * row_height) + trait_slot_height * (trait_ix + 1)
             ax.plot(x, y, "o", color=colors[trait_ix], alpha=0.8, label=trait)
 
     handles = []
-    for color, trait in zip(colors, traits_with_parents):
+    for color, trait in zip(colors, p_names):
         handles.append(mpatches.Patch(color=color, label=trait))
 
-    ax.set_yticks(np.array(range(2)) * row_height + row_height * 0.5, ["UKB", "EST"])
+    ylabels = ["EST", "UKB"]
+
+    ax.set_yticks(np.array(range(len(ylabels))) * row_height + row_height * 0.5, ylabels)
     ax.set_xticks(np.array([global_chr_starts[c] + 0.5 * chr_lengths[c] for c in range(1, 23)]) / 10**6, [f"Chr {c}" for c in range(1, 23)])
 
     plt.setp(ax.get_xticklabels(), rotation=50, ha="right", rotation_mode="anchor")
 
     ax.legend(handles=handles, loc='upper center',
-            fancybox=True, shadow=False, ncol=len(traits_with_parents), bbox_to_anchor=(0.5, 1.2))
+            fancybox=True, shadow=False, ncol=len(p_names) / 2, bbox_to_anchor=(0.5, 1.2))
 
     for x in np.array(list(global_chr_starts.values())) / 10**6:
         ax.axvline(x, color='gray', linestyle=":")
 
-    for row in range(2):
+    for row in range(len(ylabels)):
         ax.axhline(row * row_height, color='gray', linestyle=":")
 
-    # ax_dict['y'].set_title("a)", **title_kw)
-    # ax_dict['a'].text(-2, -2.5, "b)", size=20, verticalalignment='top')
+    ax_dict['y'].set_title("a)", **title_kw)
