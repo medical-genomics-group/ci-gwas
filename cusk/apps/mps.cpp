@@ -1969,6 +1969,7 @@ commands:
     cusk                    Run cuda-skeleton on block diagonal genomic covariance matrix
     cusk-single             Run cuda-skeleton on a single block of block diagonal genomic covariance matrix
     cuskss                  Run cuda-skeleton on a block of markers and traits with pre-computed correlations.
+    cuskss-trait-only       Run cuda-skeleton on a set of pre-computed trait-trait correlations.
     cusk-sim                Run cuda-skeleton on single simulated block
     cusk-phen               Run cuda-skeleton on phenotypes only
 
@@ -1993,6 +1994,10 @@ auto main(int argc, char *argv[]) -> int
     else if (cmd == "cuskss")
     {
         cuda_skeleton_summary_stats(argc, argv);
+    }
+    else if (cmd == "cuskss-trait-only")
+    {
+        cuskss_trait_only(argc, argv);
     }
     else if (cmd == "prep")
     {
