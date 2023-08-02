@@ -461,6 +461,67 @@ void marker_pheno_corr_dist(int argc, char *argv[])
     }
 }
 
+const std::string CUSKSS_TRAIT_ONLY_USAGE = R"(
+Run cuda-skeleton on precomputed trait-trait correlations.
+
+usage: mps cuskss-trait-only <pxp> <alpha> <max-level> <num-samples> <outdir>
+
+arguments:
+    pxp             correlations between all traits. Text format, rectangular, only upper triangle is used.
+    alpha           significance level
+    max-level       maximal size of seperation sets in cuPC ( <= 14)
+    num-samples     number of samples used for computing correlations
+    outdir          outdir
+)";
+
+const int CUSKSS_TRAIT_ONLY = 7;
+
+void cuskss_trait_only(int argc, char *argv[])
+{
+    check_nargs(argc, CUSKSS_TRAIT_ONLY, CUSKSS_TRAIT_ONLY_USAGE);
+
+    std::string pxp_path = argv[2];
+    float alpha = std::stof(argv[3]);
+    int max_level = std::stoi(argv[4]);
+    int num_individuals = std::stoi(argv[5]);
+    std::string outdir = (std::string)argv[6];
+
+    check_path(pxp_path);
+    check_path(outdir);
+
+    // load everything
+    std::cout << "Loading input files" << std::endl;
+    std::cout << "Loading pxp" << std::endl;
+    TraitSummaryStats pxp = TraitSummaryStats(pxp_path);
+
+    // make n2 matrix to please cuPC
+    size_t num_phen = pxp.get_num_phen();
+    size_t num_markers = 0;
+    size_t num_var = num_markers + num_phen;
+    std::vector<float> sq_corrs = pxp.get_corrs();
+
+    std::vector<float> Th = threshold_array(num_individuals, alpha);
+
+    // call cuPC
+    int p = num_var;
+    const size_t sepset_size = p * p * ML;
+    const size_t g_size = num_var * num_var;
+    std::vector<float> pmax(g_size, 0.0);
+    std::vector<int> G(g_size, 1);
+    std::vector<int> sepset(sepset_size, 0);
+    int l = 0;
+    Skeleton(sq_corrs.data(), &p, G.data(), Th.data(), &l, &max_level, pmax.data(), sepset.data());
+
+    std::unordered_set<int> parents = {};
+    for (size_t i = 0; i < num_phen; i++)
+    {
+        parents.insert(i);
+    }
+
+    ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, parents, p, num_phen, max_level);
+    gcs.to_file(make_path(outdir, "pheno_sk", ""));
+}
+
 const std::string CUSKSS_USAGE = R"(
 Run cuda-skeleton on a block of markers and traits with pre-computed correlations.
 
