@@ -63,11 +63,11 @@ MarkerTraitSummaryStats::MarkerTraitSummaryStats(const std::string path, const M
     size_t line_num = 0;
     while (std::getline(corr_file, line))
     {
-        if (line_num > block.get_last_marker_ix())
+        if (line_num > block.get_last_marker_global_ix())
         {
             break;
         }
-        else if (line_num >= block.get_first_marker_ix())
+        else if (line_num >= block.get_first_marker_global_ix())
         {
             std::vector<std::string> fields = split_line(line);
             for (size_t j = 3; j < num_phen + 3; j++)

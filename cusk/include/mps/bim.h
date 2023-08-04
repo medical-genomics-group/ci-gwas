@@ -54,7 +54,8 @@ struct BimInfo
             {
                 size_t bstart = bid * size;
                 size_t bend = std::min(bstart + size - 1, num_markers_on_chr[i]);
-                res.push_back(MarkerBlock(chr_ids[i], bstart, bend));
+                MarkerBlock block = MarkerBlock(chr_ids[i], bstart, bend, global_chr_start[i]);
+                res.push_back(block);
             }
         }
         return res;
