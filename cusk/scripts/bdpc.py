@@ -4904,7 +4904,7 @@ def plot_est_ukb_full_db_marker_positions():
     l = 6
     e = 4
 
-    p_names = ["AT", "BMI", "CAD", "DBP", "HT", "SBP", "SMK", "ST", "T2D"]
+    p_names = ["AT", "CAD", "HT", "SMK", "ST", "T2D"]
 
     ax = ax_dict["y"]
 
@@ -4919,10 +4919,10 @@ def plot_est_ukb_full_db_marker_positions():
     common_out_path = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/estonian_comparison/"
 
     est_assoc = marker_pheno_associations_with_pnames(
-        blockfile, common_out_path + f"est/bdpc_d{d}_l{l}_a1e{e}/", p_names, bim_path
+        blockfile, common_out_path + f"est/bdpc_d{d}_l{l}_a1e{e}_wo_bp_bmi/", p_names, bim_path
     )
     ukb_assoc = marker_pheno_associations_with_pnames(
-        blockfile, common_out_path + f"ukb/bdpc_d{d}_l{l}_a1e{e}/", p_names, bim_path
+        blockfile, common_out_path + f"ukb/bdpc_d{d}_l{l}_a1e{e}_wo_bp_bmi/", p_names, bim_path
     )
 
     trait_slot_height = row_height / (len(p_names) + 1)
@@ -4982,3 +4982,222 @@ def plot_est_ukb_full_db_marker_positions():
         ax.axhline(row * row_height, color="gray", linestyle=":")
 
     ax_dict["y"].set_title("a)", **title_kw)
+
+
+
+def plot_ukb_full_db_marker_positions_ss_vs_data():
+    title_kw = {"loc": "left", "pad": 15, "size": 20}
+
+    fig = plt.figure(layout="tight", figsize=(17, 8))
+    ax_dict = fig.subplot_mosaic(
+        """
+        yyyyyyy
+        """,
+        sharey=False,
+        width_ratios=[1, 1, 1, 1, 1, 1, 0.05],
+        empty_sentinel="X",
+    )
+
+    d = 1
+    l = 6
+    e = 4
+
+    p_names = ["AT", "CAD", "ST", "T2D", "HT", "SMK"]
+
+    ax = ax_dict["y"]
+
+    d = 1
+    l = 6
+    e = 4
+
+    row_height = 10
+
+    ss_blocks = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/estonian_comparison/ukb22828_UKB_EST_v3_ldp08_estonia_intersect_m11000.blocks"
+    data_blocks = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection//ukb22828_UKB_EST_v3_ldp08.blocks"
+    ss_bim = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/ukb22828_UKB_EST_v3_ldp08.bim"
+    data_bim = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/estonian_comparison/ukb22828_UKB_EST_v3_ldp08_estonia_intersect_a1_forced.bim"
+    pss_path = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/"
+
+    data_assoc = marker_pheno_associations_with_pnames(
+        data_blocks, pss_path + f"production/cusk_d{d}_l{l}_a1e{e}_est_intersect_wo_bp_bmi/", p_names, data_bim
+    )
+    ss_assoc = marker_pheno_associations_with_pnames(
+        ss_blocks, pss_path + f"estonian_comparison/ukb/bdpc_d{d}_l{l}_a1e{e}_wo_bp_bmi/", p_names, ss_bim
+    )
+
+    trait_slot_height = row_height / (len(p_names) + 1)
+
+    colors = []
+    cmap = plt.get_cmap("tab20", len(p_names))
+    for i in range(cmap.N):
+        rgb = cmap(i)[:3]  # will return rgba, we take only first 3 so we get rgb
+        colors.append(matplotlib.colors.rgb2hex(rgb))
+
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    for row, assoc_set in enumerate([data_assoc, ss_assoc]):
+        df = assoc_set
+        for trait_ix, trait in enumerate(p_names):
+            sub_df = df[df["phenotype"] == trait]
+            x = (
+                sub_df.bp.values
+                + np.array([global_chr_starts[c] for c in sub_df.chr.values])
+            ) / 10**6
+            y = np.ones_like(x) * (row * row_height) + trait_slot_height * (
+                trait_ix + 1
+            )
+            ax.plot(x, y, "o", color=colors[trait_ix], alpha=0.8, label=trait)
+
+    handles = []
+    for color, trait in zip(colors, p_names):
+        handles.append(mpatches.Patch(color=color, label=trait))
+
+    ylabels = ["raw-data", "sum-stat"]
+
+    ax.set_yticks(
+        np.array(range(len(ylabels))) * row_height + row_height * 0.5, ylabels
+    )
+    ax.set_xticks(
+        np.array([global_chr_starts[c] + 0.5 * chr_lengths[c] for c in range(1, 23)])
+        / 10**6,
+        [f"Chr {c}" for c in range(1, 23)],
+    )
+
+    plt.setp(ax.get_xticklabels(), rotation=50, ha="right", rotation_mode="anchor")
+
+    ax.legend(
+        handles=handles,
+        loc="upper center",
+        fancybox=True,
+        shadow=False,
+        ncol=len(p_names) / 2,
+        bbox_to_anchor=(0.5, 1.2),
+    )
+
+    for x in np.array(list(global_chr_starts.values())) / 10**6:
+        ax.axvline(x, color="gray", linestyle=":")
+
+    for row in range(len(ylabels)):
+        ax.axhline(row * row_height, color="gray", linestyle=":")
+
+    ax_dict["y"].set_title("a)", **title_kw)
+
+
+def plot_ukb_full_db_marker_positions_6_vs_17():
+    title_kw = {"loc": "left", "pad": 15, "size": 20}
+
+    fig = plt.figure(layout="tight", figsize=(17, 8))
+    ax_dict = fig.subplot_mosaic(
+        """
+        yyyyyyy
+        """,
+        sharey=False,
+        width_ratios=[1, 1, 1, 1, 1, 1, 0.05],
+        empty_sentinel="X",
+    )
+
+    d = 1
+    l = 6
+    e = 4
+
+    # small_set_names = ["AT", "CAD", "HT", "SMK", "ST", "T2D"]
+    # full_set_names = [
+    #     "WHR",
+    #     "BMI",
+    #     "SBP",
+    #     "DBP",
+    #     "HbA1c",
+    #     "GLU",
+    #     "CHOL",
+    #     "TRIG",
+    #     "HDL",
+    #     "LDL",
+    #     "AT",
+    #     "CAD",
+    #     "ST",
+    #     "T2D",
+    #     "HT",
+    #     "ALC",
+    #     "SMK"]
+
+    ax = ax_dict["y"]
+
+    d = 1
+    l = 6
+    e = 4
+
+    row_height = 10
+
+    small_set_pheno = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/production/est_intersect_wo_bp_bmi.phen"
+    full_set_pheno = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/production/input.phen"
+    blocks = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection//ukb22828_UKB_EST_v3_ldp08.blocks"
+    bim = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/ukb22828_UKB_EST_v3_ldp08.bim"
+    pss_path = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/"
+
+    small_set_assoc = marker_pheno_associations(
+        blocks, pss_path + f"production/cusk_d{d}_l{l}_a1e{e}_est_intersect_wo_bp_bmi/", small_set_pheno, bim
+    )
+    full_set_assoc = marker_pheno_associations(
+        blocks, pss_path + f"production/bdpc_d{d}_l{l}_a1e{e}/", full_set_pheno, bim
+    )
+    p_names = list(set(full_set_assoc.phenotype.unique()) | set(small_set_assoc.phenotype.unique()))
+
+    trait_slot_height = row_height / (len(p_names) + 1)
+
+    colors = []
+    cmap = plt.get_cmap("tab20", len(p_names))
+    for i in range(cmap.N):
+        rgb = cmap(i)[:3]  # will return rgba, we take only first 3 so we get rgb
+        colors.append(matplotlib.colors.rgb2hex(rgb))
+
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    for row, assoc_set in enumerate([small_set_assoc, full_set_assoc]):
+        df = assoc_set
+        for trait_ix, trait in enumerate(p_names):
+            sub_df = df[df["phenotype"] == trait]
+            x = (
+                sub_df.bp.values
+                + np.array([global_chr_starts[c] for c in sub_df.chr.values])
+            ) / 10**6
+            y = np.ones_like(x) * (row * row_height) + trait_slot_height * (
+                trait_ix + 1
+            )
+            ax.plot(x, y, "o", color=colors[trait_ix], alpha=0.8, label=trait)
+
+    handles = []
+    for color, trait in zip(colors, p_names):
+        handles.append(mpatches.Patch(color=color, label=trait))
+
+    ylabels = ["6 traits", "17 traits"]
+
+    ax.set_yticks(
+        np.array(range(len(ylabels))) * row_height + row_height * 0.5, ylabels
+    )
+    ax.set_xticks(
+        np.array([global_chr_starts[c] + 0.5 * chr_lengths[c] for c in range(1, 23)])
+        / 10**6,
+        [f"Chr {c}" for c in range(1, 23)],
+    )
+
+    plt.setp(ax.get_xticklabels(), rotation=50, ha="right", rotation_mode="anchor")
+
+    ax.legend(
+        handles=handles,
+        loc="upper center",
+        fancybox=True,
+        shadow=False,
+        ncol=len(p_names) / 2,
+        bbox_to_anchor=(0.5, 1.2),
+    )
+
+    for x in np.array(list(global_chr_starts.values())) / 10**6:
+        ax.axvline(x, color="gray", linestyle=":")
+
+    for row in range(len(ylabels)):
+        ax.axhline(row * row_height, color="gray", linestyle=":")
+
+    ax_dict["y"].set_title("a)", **title_kw)
+
