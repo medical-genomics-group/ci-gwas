@@ -21,6 +21,8 @@
 #include <string>
 #include <vector>
 
+bool WRITE_FULL_CORRMATS = false;
+
 /**
  * @brief Compute number of variables from upper triangular matrix (diag excluded)
  *
@@ -651,9 +653,9 @@ void cuda_skeleton_summary_stats(int argc, char *argv[])
         }
     }
 
-    // write_floats_to_binary(
-    //     sq_corrs.data(), sq_corrs.size(), make_path(outdir, block.to_file_string(), ".all_corrs")
-    // );
+    if (WRITE_FULL_CORRMATS) {
+        write_floats_to_binary( sq_corrs.data(), sq_corrs.size(), make_path(outdir, block.to_file_string(), ".all_corrs"));
+    }
 
     std::vector<float> Th = threshold_array(num_individuals, alpha);
 
@@ -1216,9 +1218,9 @@ void block_diagonal_pc_single(int argc, char *argv[])
         }
     }
 
-    // write_floats_to_binary(
-    //     sq_corrs.data(), sq_corrs.size(), make_path(outdir, block.to_file_string(), ".all_corrs")
-    // );
+    if (WRITE_FULL_CORRMATS) {
+        write_floats_to_binary( sq_corrs.data(), sq_corrs.size(), make_path(outdir, block.to_file_string(), ".all_corrs"));
+    }
 
     std::cout << "Running cuPC" << std::endl;
 
