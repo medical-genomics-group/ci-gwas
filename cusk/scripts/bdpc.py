@@ -5201,3 +5201,28 @@ def plot_ukb_full_db_marker_positions_6_vs_17():
 
     ax_dict["y"].set_title("a)", **title_kw)
 
+
+def average_corrs():
+    wdir = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/production/bdpc_d1_l6_a1e4/"
+
+    with open(wdir + "all_merged.mdim", 'r') as fin:
+        line = next(fin)
+        fields = line.split()
+        num_var = int(fields[0])
+        num_phen = int(fields[1])
+        num_markers = num_var - num_phen
+
+    corr = bdpc.mmread(wdir + "all_merged_scm.mtx")
+    adj = bdpc.mmread(wdir + "all_merged_sam.mtx")
+
+    corr = corr.toarray()
+    adj = adj.toarray()
+    pxp_corr = corr[:num_phen, :num_phen]
+    pxp_adj = adj[:num_phen, :num_phen]
+    mxp_corr = corr[:num_phen, num_phen:]
+    mxp_adj = adj[:num_phen, num_phen:]
+    mxm_corr = corr[num_phen:, num_phen:]
+    mxm_adj = adj[num_phen:, num_phen:]
+
+    print("pxp corr mean, var: ", np.mean(np.abs(pxp_corr[pxp_adj == 1])), np.var(np.abs(pxp_corr[pxp_adj == 1])))
+    print("mxp corr mean, var: ", np.mean(np.abs(mxp_corr[mxp_adj == 1])), np.var(np.abs(mxp_corr[mxp_adj == 1])))
