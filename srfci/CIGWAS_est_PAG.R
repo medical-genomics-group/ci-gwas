@@ -7,10 +7,33 @@ print(myargs)
 input_filestem = myargs[1]
 num_individuals = as.numeric(myargs[2])
 output_file = myargs[3]
+srfci_mode = myargs[4] # one of [mpu, mpd, std]
+# sRFCI can be run in three different modes:
+# mpu: limit unshielded triples to traits, leave marker-trait links undirected, run all subsequent steps as in original RFCI, orient marker-trait edges in the end as marker -> trait
+# mpd: limit unshielded triples to traits, then direct marker-trait links as marker -> trait, then orient v-structures and run all subsequent steps
+# std: run standard RFCI on the whole graph, without any modifications.
 
 print(paste0("input_filestem: ", input_filestem))
 print(paste0("num_individuals: ", num_individuals))
 print(paste0("output_file: ", output_file))
+print(paste0("mode: ", srfci_mode))
+
+if (srfci_mode == "mpu") {
+    unsh_triple_pheno_only = TRUE
+    force_marker_to_trait_before_R1 = FALSE
+    force_marker_to_trait_in_the_end = TRUE
+} else if (srfci_mode == "mpd") {
+    unsh_triple_pheno_only = TRUE
+    force_marker_to_trait_before_R1 = TRUE
+    force_marker_to_trait_in_the_end = FALSE
+} else if (srfci_mode == "std") {
+    unsh_triple_pheno_only = FALSE
+    force_marker_to_trait_before_R1 = FALSE
+    force_marker_to_trait_in_the_end = FALSE
+} else {
+    print("mode has to be one of [mpu, mpd, std]")
+    exit()
+}
 
 form_sepset <- function(seps, nvar, max_level){
   res <- rep(list(rep(list(NULL), times=nvar)), nvar)
@@ -63,12 +86,10 @@ cormat <- readMM(paste0(input_filestem, "_scm.mtx"))
 suffStat <- list(C=cormat, n=num_individuals)
 indepTest = gaussCItest
 alpha=0.05
-
 conservative = FALSE 
 maj.rule = FALSE
 
 print("Searching for unshielded triples")
-unsh_triple_pheno_only = FALSE
 if (unsh_triple_pheno_only) {
     u.t <- find.unsh.triple(adjmat[1:num_phen,1:num_phen], check = FALSE)
 } else {
@@ -86,16 +107,15 @@ r.v. <- rfci.vStruc(suffStat=suffStat,
                     conservative=(conservative || maj.rule),
                     version.unf=c(1, 1),
                     maj.rule=maj.rule,
-                    verbose=TRUE)
+                    verbose=FALSE)
 A <- r.v.$amat
 sepset <- r.v.$sepset
-force_marker_to_trait = FALSE
-if (force_marker_to_trait) {
+if (force_marker_to_trait_before_R1) {
     A[1:num_phen,(num_phen+1):num_var][A[1:num_phen,(num_phen+1):num_var]==1]<-3
     A[(num_phen+1):num_var,1:num_phen][A[(num_phen+1):num_var,1:num_phen]==1]<-2
 }
 
-print("Applying R5-R10")
+print("Applying R1-R10")
 estimate_pag_with_traits_only = FALSE
 if (estimate_pag_with_traits_only) {
     res <- udag2apag(A[1:num_phen,1:num_phen], suffStat = suffStat, indepTest = gaussCItest, alpha, sepset, rules = rep(TRUE, 10), 
@@ -107,6 +127,11 @@ if (estimate_pag_with_traits_only) {
 
 Amat <- res$graph
 MMfile3 <- file.path(output_file)
+
+if (force_marker_to_trait_in_the_end) {
+    Amat[1:num_phen,(num_phen+1):num_var][Amat[1:num_phen,(num_phen+1):num_var]==1]<-3
+    Amat[(num_phen+1):num_var,1:num_phen][Amat[(num_phen+1):num_var,1:num_phen]==1]<-2
+}
 
 writeMM(Amat, file=MMfile3)
 print("Done")
