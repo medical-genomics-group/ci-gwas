@@ -12,6 +12,7 @@ srfci_mode = myargs[4] # one of [mpu, mpd, std]
 # mpu: limit unshielded triples to traits, leave marker-trait links undirected, run all subsequent steps as in original RFCI, orient marker-trait edges in the end as marker -> trait
 # mpd: limit unshielded triples to traits, then direct marker-trait links as marker -> trait, then orient v-structures and run all subsequent steps
 # std: run standard RFCI on the whole graph, without any modifications.
+alpha = as.numeric(myargs[5])
 
 print(paste0("input_filestem: ", input_filestem))
 print(paste0("num_individuals: ", num_individuals))
@@ -85,8 +86,7 @@ cormat <- readMM(paste0(input_filestem, "_scm.mtx"))
 
 suffStat <- list(C=cormat, n=num_individuals)
 indepTest = gaussCItest
-alpha=0.05
-conservative = FALSE 
+conservative = TRUE 
 maj.rule = FALSE
 
 print("Searching for unshielded triples")
