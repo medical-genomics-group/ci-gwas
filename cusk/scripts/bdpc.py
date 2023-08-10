@@ -1367,6 +1367,32 @@ all_edge_types = EdgeEncoding(
     ),
 )
 
+simulation_edge_types = EdgeEncoding(
+    [
+        r"$y_1 \; \; \; y_2$",
+        r"$y_1$ -> $y_2$",
+        r"$y_1$ <- $y_2$",
+        r"$y_1$ - $y_2$",
+    ],
+    {
+        (0, 0): 0,
+        (2, 3): 1,
+        (3, 2): 2,
+        (3, 3): 3,
+    },
+    mpl.colors.ListedColormap(
+        np.array(
+            [
+                "#ffffff",  # white
+                "#fcc006",  # marigold
+                # "#a6cee3", # light blue
+                "#1f78b4",  # darker blue
+                "#10a674", # blueish green
+            ]
+        )
+    ),
+)
+
 six_edge_types = EdgeEncoding(
     [
         r"$y_1 \; \; \; y_2$",
@@ -1394,7 +1420,7 @@ six_edge_types = EdgeEncoding(
                 "#fcc006",  # marigold
                 # "#a6cee3", # light blue
                 "#1f78b4",  # darker blue
-                "#c20078",  # magenta
+                "#510ac9",  # violet blue
                 "#fd411e",  # orange red
                 "#d8dcd6",  # light grey
             ]
@@ -1427,7 +1453,7 @@ five_common_edge_types = EdgeEncoding(
                 "#fcc006",  # marigold
                 # "#a6cee3", # light blue
                 "#1f78b4",  # darker blue
-                "#c20078",  # magenta
+                "#510ac9",  # violet blue
                 "#fd411e",  # orange red
             ]
         )
@@ -1472,6 +1498,8 @@ def plot_pag(
     cbar=True,
     pheno_names=None,
     pheno_subset=None,
+    pheno_offset=0,
+    pag=None,
 ):
     if pheno_names is None:
         pheno_names = get_pheno_codes(pheno_path)
@@ -1484,14 +1512,15 @@ def plot_pag(
         num_phen = len(pheno_indices)
         pheno_names = pheno_subset
 
-    pag = mmread(pag_path).tocsr()
+    if pag is None:
+        pag = mmread(pag_path).tocsr()
 
     z = [[0 for _ in range(num_phen)] for _ in range(num_phen)]
 
     for i in range(num_phen):
         for j in range(i):
-            v1 = pag[pheno_indices[i], pheno_indices[j]]
-            v2 = pag[pheno_indices[j], pheno_indices[i]]
+            v1 = pag[pheno_offset + pheno_indices[i], pheno_offset + pheno_indices[j]]
+            v2 = pag[pheno_offset + pheno_indices[j], pheno_offset + pheno_indices[i]]
             z[i][j] = edge_encoding.int_rep[(v1, v2)]
 
     ne = len(edge_encoding.int_rep)
@@ -2379,8 +2408,32 @@ def pag_to_dag_possibly_directed(pag: np.array):
     return dag
 
 
+def path_in_sem(adj: np.array):
+    num_var = adj.shape[0]
+    causal_paths = np.zeros(shape=(num_var, num_var))
+    for start_node in range(num_var):
+        q = queue.Queue()
+        q.put(start_node)
+        descendants = set()
+        while not q.empty():
+            current_node = q.get()
+            # assuming that links are always
+            # ordered towards variables with larger index
+            for neighbor in range(current_node + 1, num_var):
+                link = adj[current_node, neighbor] != 0
+                if neighbor not in descendants and link:
+                    descendants.add(neighbor)
+                    q.put(neighbor)
+        for j in descendants:
+            causal_paths[start_node, j] = 1
+    return causal_paths
+
+
 def calulate_performance_metrics(
-    true_adj: np.array, true_eff: np.array, est_adj: np.array, est_eff: np.array
+    true_adj: np.array,
+    true_eff: np.array,
+    est_adj: np.array,
+    est_eff: np.array
 ):
     sym_est_adj = make_adj_symmetric(est_adj)
     true_adj_masked = np.ma.array(true_adj, mask=np.tri(true_adj.shape[0], k=0))
@@ -2388,8 +2441,9 @@ def calulate_performance_metrics(
     sym_est_adj_masked = np.ma.array(sym_est_adj, mask=np.tri(true_adj.shape[0], k=0))
     est_eff_masked = np.ma.array(est_eff, mask=np.tri(true_adj.shape[0], k=0))
     true_eff_masked = np.ma.array(true_eff, mask=np.tri(true_adj.shape[0], k=0))
-    sig_eff = np.zeros_like(est_eff)
-    sig_eff[est_adj != 0] = est_eff[est_adj != 0]
+    
+    # no need to subset here. for MR, we do it before
+    sig_eff = est_eff
     tp_mat = (true_adj_masked != 0) & (est_adj_masked != 0)
 
     exp_link_types = make_link_type_dict(true_adj)
@@ -2414,7 +2468,10 @@ def calulate_performance_metrics(
     mse_tp = np.sum((est_eff_masked[tp_mat] - true_eff_masked[tp_mat]) ** 2)
     bias_tp = np.sum(est_eff_masked[tp_mat] - true_eff_masked[tp_mat])
     var_tp = np.var(est_eff_masked[tp_mat] - true_eff_masked[tp_mat])
-    fdr = fp / (fp + tp)
+    if (fp + tp) == 0:
+        fdr = np.nan
+    else:
+        fdr = fp / (fp + tp)
     tpr = tp / p
     if np.ma.is_masked(mse_tp):
         mse_tp = np.nan
@@ -2453,44 +2510,6 @@ def load_simulation_results() -> pd.DataFrame:
         peff = eff[-(num_phen):, -(num_phen):].toarray()
         peff = np.triu(peff, k=1)
 
-        # # mr with skeleton input
-        # for mr in mr_cn:
-        #     for e in e_arr:
-        #         try:
-        #             mr_file = pdir + f"mr_e{e}/mr_skeleton_{mr.method}_n{n}_SNP_{m}_it_{rep}.csv"
-        #             mr_results = pd.read_csv(mr_file)
-        #             try:
-        #                 mr_results['i'] = mr_results[mr.exposure].apply(lambda x: int(x.split("Y")[1]) - 1)
-        #                 mr_results['j'] = mr_results[mr.outcome].apply(lambda x: int(x.split("Y")[1]) - 1)
-        #             except KeyError as error:
-        #                 print(f"failed in mr file: {mr_file}")
-        #                 print(error)
-        #                 continue
-        #             pvals = np.ones(shape=(num_phen, num_phen))
-        #             pvals[mr_results['i'], mr_results['j']] = mr_results[mr.p]
-        #             effects = np.zeros(shape=(num_phen, num_phen))
-        #             effects[mr_results['i'], mr_results['j']] = mr_results[mr.estimate]
-        #             adj = pvals < 10**(-e)
-        #             perf = calulate_performance_metrics(pdag, peff, adj, effects)
-        #             rows.append({
-        #                 "edge orientation": perf.correct_orientation,
-        #                 "mse": perf.mse,
-        #                 "var": perf.var,
-        #                 "bias": perf.bias,
-        #                 "mse_tp": perf.mse_tp,
-        #                 "var_tp": perf.var_tp,
-        #                 "bias_tp": perf.bias_tp,
-        #                 "fdr": perf.fdr,
-        #                 "tpr": perf.tpr,
-        #                 "n": n,
-        #                 "m": m,
-        #                 "rep": rep,
-        #                 "alpha": 10**(-e),
-        #                 "method": f"{mr.method} + cuda-skeleton",
-        #             })
-        #         except FileNotFoundError as error:
-        #             print(error)
-
         # mr standalone
         for mr in mr_cn:
             mr_results = pd.read_csv(
@@ -2508,17 +2527,19 @@ def load_simulation_results() -> pd.DataFrame:
             effects[mr_results["i"], mr_results["j"]] = mr_results[mr.estimate]
             for e in e_arr:
                 adj = pvals < 10 ** (-e)
-                perf = calulate_performance_metrics(pdag, peff, adj, effects)
+                eff_copy = np.copy(effects)
+                eff_copy[~adj] = 0
+                perf = calulate_performance_metrics(pdag, peff, adj, eff_copy)
                 rows.append(
                     {
-                        "edge orientation": perf.correct_orientation,
+                        # "edge orientation": perf.correct_orientation,
                         "mse": perf.mse,
                         "var": perf.var,
                         "bias": perf.bias,
                         "mse_tp": perf.mse_tp,
                         "var_tp": perf.var_tp,
                         "bias_tp": perf.bias_tp,
-                        "fdr": perf.fdr,
+                        # "fdr": perf.fdr,
                         "tpr": perf.tpr,
                         "n": n,
                         "m": m,
@@ -2538,11 +2559,11 @@ def load_simulation_results() -> pd.DataFrame:
                 ]
 
             # load skeleton
-            # adj = np.fromfile(indir + "skeleton.adj", dtype=np.int32).reshape(num_var, num_var)
-            # padj = adj[-(num_phen):,-(num_phen):]
+            adj = np.fromfile(indir + "skeleton.adj", dtype=np.int32).reshape(num_var, num_var)
+            padj = adj[-(num_phen):,-(num_phen):]
 
             # load pag
-            pag_path = indir + "estimated_pag_lut.mtx"
+            pag_path = indir + "estimated_pag_mpu.mtx"
             est_pag = mmread(pag_path).tocsr()[-(num_phen):, -(num_phen):].toarray()
             est_dag = pag_to_dag_directed(est_pag)
 
@@ -2556,7 +2577,7 @@ def load_simulation_results() -> pd.DataFrame:
                 for j in range(1, num_phen + 1):
                     if i == j:
                         continue
-                    file = indir + f"estimated_causaleffect_i{i}_j{j}.csv"
+                    file = indir + f"estimated_causaleffect_i{i}_j{j}_mpu.csv"
                     try:
                         with open(file) as fin:
                             sym = fin.readline().strip()
@@ -2590,14 +2611,14 @@ def load_simulation_results() -> pd.DataFrame:
             mxp_fdr = mxp_fp / (mxp_fp + mxp_tp)
             mxp_tpr = mxp_tp / mxp_p
 
-            # perf = calulate_performance_metrics(pdag, peff, padj, pace)
+            perf = calulate_performance_metrics(pdag, peff, padj, pace)
 
-            perf = calulate_performance_metrics(pdag, peff, est_dag, pace)
+            # perf = calulate_performance_metrics(pdag, peff, est_dag, pace)
             rows.append(
                 {
                     "marker-trait fdr": mxp_fdr,
                     "marker-trait tpr": mxp_tpr,
-                    "edge orientation": perf.correct_orientation,
+                    # "edge orientation": perf.correct_orientation,
                     "mse": perf.mse,
                     "var": perf.var,
                     "bias": perf.bias,
@@ -2656,6 +2677,7 @@ def load_n16k_m1600_simulation_results(
         eff = mmread(eff_path).tocsr()
         peff = eff[-(num_phen):, -(num_phen):].toarray()
         peff = np.triu(peff, k=1)
+        peff[path_in_sem(pdag) == 0] = 0
 
         # load true dag
         dag_mxp = dag.toarray()[:m, -num_phen:]
@@ -2700,6 +2722,7 @@ def load_n16k_m1600_simulation_results(
                             mr.estimate
                         ]
                         adj = pvals < float(a_str)
+                        effects[~adj] = 0
                         perf = calulate_performance_metrics(pdag, peff, adj, effects)
                         rows.append(
                             {
@@ -2712,7 +2735,7 @@ def load_n16k_m1600_simulation_results(
                                 "mse_tp": perf.mse_tp,
                                 "var_tp": perf.var_tp,
                                 "bias_tp": perf.bias_tp,
-                                "fdr": perf.fdr,
+                                # "fdr": np.nan,
                                 "tpr": perf.tpr,
                                 "n": n,
                                 "m": m,
@@ -2769,7 +2792,8 @@ def load_n16k_m1600_simulation_results(
                         effects[mr_results["i"], mr_results["j"]] = mr_results[
                             mr.estimate
                         ]
-                        adj = pvals < 10 ** (-e)
+                        adj = pvals < float(a_str)
+                        effects[~adj] = 0
                         perf = calulate_performance_metrics(pdag, peff, adj, effects)
                         rows.append(
                             {
@@ -2826,8 +2850,10 @@ def load_n16k_m1600_simulation_results(
             effects = np.zeros(shape=(num_phen, num_phen))
             effects[mr_results["i"], mr_results["j"]] = mr_results[mr.estimate]
             for e in e_arr:
-                adj = pvals < 10 ** (-e)
-                perf = calulate_performance_metrics(pdag, peff, adj, effects)
+                adj = pvals < float(a_str)
+                eff_copy = np.copy(effects)
+                eff_copy[~adj] = 0
+                perf = calulate_performance_metrics(pdag, peff, adj, eff_copy)
                 rows.append(
                     {
                         "edge orientation": perf.correct_orientation,
@@ -2857,11 +2883,11 @@ def load_n16k_m1600_simulation_results(
                 ]
 
             # load skeleton
-            # adj = np.fromfile(indir + "skeleton.adj", dtype=np.int32).reshape(num_var, num_var)
-            # padj = adj[-(num_phen):,-(num_phen):]
+            adj = np.fromfile(indir + "skeleton.adj", dtype=np.int32).reshape(num_var, num_var)
+            padj = adj[-(num_phen):,-(num_phen):]
 
             # load pag
-            pag_path = indir + "estimated_pag_lut.mtx"
+            pag_path = indir + "estimated_pag_mpu.mtx"
             est_pag = mmread(pag_path).tocsr()[-(num_phen):, -(num_phen):].toarray()
             est_dag = pag_to_dag_directed(est_pag)
 
@@ -2875,7 +2901,7 @@ def load_n16k_m1600_simulation_results(
                 for j in range(1, num_phen + 1):
                     if i == j:
                         continue
-                    file = indir + f"estimated_causaleffect_i{i}_j{j}_lut.csv"
+                    file = indir + f"estimated_causaleffect_i{i}_j{j}_mpu.csv"
                     try:
                         with open(file) as fin:
                             sym = fin.readline().strip()
@@ -2909,12 +2935,12 @@ def load_n16k_m1600_simulation_results(
             mxp_fdr = mxp_fp / (mxp_fp + mxp_tp)
             mxp_tpr = mxp_tp / mxp_p
 
-            # perf = calulate_performance_metrics(pdag, peff, padj, pace)
-            perf = calulate_performance_metrics(pdag, peff, est_dag, pace)
+            perf = calulate_performance_metrics(pdag, peff, padj, pace)
+            # perf = calulate_performance_metrics(pdag, peff, est_dag, pace)
             rows.append(
                 {
-                    "marker-trait fdr": mxp_fdr,
-                    "marker-trait tpr": mxp_tpr,
+                    "x -> y fdr": mxp_fdr,
+                    "x -> y tpr": mxp_tpr,
                     "edge orientation": perf.correct_orientation,
                     "mse": perf.mse,
                     "var": perf.var,
@@ -3015,7 +3041,7 @@ def plot_simulation_results():
     ax_dict["f"].axis("off")
 
 
-def plot_simulation_results_with_orientation():
+def plot_simulation_results_figure_2():
     d = 1
     l = 6
     n_arr = [2000, 4000, 8000, 16000]
@@ -3064,7 +3090,7 @@ def plot_simulation_results_with_orientation():
         ax.set_xticks(x, x_vals)
         plt.setp(ax.get_xticklabels(), rotation=50, ha="right", rotation_mode="anchor")
         if axhline:
-            ax.axhline(0.05, linestyle="dashed", color="k")
+            ax.axhline(0.05, linestyle="dotted", color="gray")
         # ax.legend(loc='upper left', ncols=3)
         # ax.set_yscale("symlog")
         return handles
@@ -3100,31 +3126,31 @@ def plot_simulation_results_with_orientation():
         # ax.set_yscale("symlog")
         return handles
 
-    fig = plt.figure(layout="tight", figsize=(10, 8))
+    fig = plt.figure(layout="tight", figsize=(10, 10))
     ax_dict = fig.subplot_mosaic(
         """
-        ii
-        ab
-        cd
-        ef
-        gh
+        i
+        a
+        b
+        c
+        d
+        e
         """,
         empty_sentinel="X",
         sharex=True,
         # set the height ratios between the rows
-        height_ratios=[0.2, 0.6, 1, 1, 1],
+        height_ratios=[0.2, 0.6, 0.6, 0.6, 0.6, 1],
     )
 
     plot_ci_gwas_bars(
-        alphas, "marker-trait fdr", means, stds, ax_dict["a"], "a)", axhline=True
+        alphas, "x -> y fdr", means, stds, ax_dict["a"], "a)", axhline=True
     )
-    plot_ci_gwas_bars(alphas, "marker-trait tpr", means, stds, ax_dict["b"], "b)")
-    plot_bars(alphas, "fdr", means, stds, ax_dict["c"], "c)")
+    plot_ci_gwas_bars(alphas, "x -> y tpr", means, stds, ax_dict["b"], "b)")
+    plot_ci_gwas_bars(alphas, "fdr", means, stds, ax_dict["c"], "c)", axhline=True)
     plot_bars(alphas, "tpr", means, stds, ax_dict["d"], "d)")
-    plot_bars(alphas, "edge orientation", means, stds, ax_dict["e"], "e)")
-    plot_bars(alphas, "mse", means, stds, ax_dict["f"], "f)")
-    plot_bars(alphas, "bias", means, stds, ax_dict["g"], "g)")
-    h = plot_bars(alphas, "var", means, stds, ax_dict["h"], "h)")
+    h = plot_bars(alphas, "mse", means, stds, ax_dict["e"], "e)")
+    # plot_bars(alphas, "bias", means, stds, ax_dict["g"], "g)")
+    # h = plot_bars(alphas, "var", means, stds, ax_dict["h"], "h)")
     ax_dict["i"].legend(
         handles=h,
         labels=["CI-GWAS", "CAUSE", "MR-PRESSO", "IVW Regression"],
@@ -3402,12 +3428,12 @@ def plot_simulation_results_sup(alpha=10 ** (-8)):
         x_tup, "marker-trait fdr", means, stds, ax_dict["a"], "a)", axhline=True
     )
     plot_ci_gwas_bars(x_tup, "marker-trait tpr", means, stds, ax_dict["b"], "b)")
-    plot_bars(x_tup, "fdr", means, stds, ax_dict["c"], "c)")
+    plot_ci_gwas_bars(x_tup, "fdr", means, stds, ax_dict["c"], "c)", axhline=True)
     plot_bars(x_tup, "tpr", means, stds, ax_dict["d"], "d)")
-    plot_bars(x_tup, "edge orientation", means, stds, ax_dict["e"], "e)")
-    plot_bars(x_tup, "mse", means, stds, ax_dict["f"], "f)")
-    plot_bars(x_tup, "bias", means, stds, ax_dict["g"], "g)")
-    h = plot_bars(x_tup, "var", means, stds, ax_dict["h"], "h)")
+    # plot_bars(x_tup, "edge orientation", means, stds, ax_dict["e"], "e)")
+    plot_bars(x_tup, "mse", means, stds, ax_dict["f"], "e)")
+    plot_bars(x_tup, "bias", means, stds, ax_dict["g"], "f)")
+    h = plot_bars(x_tup, "var", means, stds, ax_dict["h"], "g)")
     ax_dict["i"].legend(
         handles=h,
         loc="center",
@@ -3851,11 +3877,11 @@ def plot_all_alpha_production_pags_and_ace(
         try:
             ace_path = (
                 basepath
-                + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_ACE_ns_lut_no_direction_forced.mtx"
+                + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_ACE_mpu.mtx"
             )
-            # ace_path = basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_ACE_ns_lut_no_direction_forced_q_pheno.mtx"
+            # ace_path = basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_ACE_mpu_q_pheno.mtx"
             pag_path = (
-                basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_pag_mk3_ns_lut.mtx"
+                basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_pag_mpu.mtx"
             )
 
             ima = plot_ace(
@@ -3881,11 +3907,11 @@ def plot_all_alpha_production_pags_and_ace(
         try:
             ace_path = (
                 basepath
-                + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_ACE_ns_lut_no_direction_forced.mtx"
+                + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_ACE_mpu.mtx"
             )
-            # ace_path = basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_ACE_ns_lut_no_direction_forced_q_pheno.mtx"
+            # ace_path = basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_ACE_mpu_q_pheno.mtx"
             pag_path = (
-                basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_pag_mk3_ns_lut.mtx"
+                basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_pag_mpu.mtx"
             )
 
             imp = plot_pag(
@@ -4079,6 +4105,8 @@ def merge_parallel_davs_csvs(
     res[np.isnan(res)] = 0
 
     scipy.io.mmwrite(outfile, scipy.sparse.coo_matrix(res))
+    
+    return missing
 
 
 def plot_inf_depth_pleio(e=4):
@@ -4301,8 +4329,8 @@ def plot_ukb_age_sex_causal_path_aces():
     for subset, ax_name in zip(subsets, ["a", "b", "c", "d", "e", "f"]):
         pset = "age_sex"
         outdir = f"/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/{pset}/bdpc_{subset}_d{d}_l{l}_a1e{e}/"
-        pag_path = outdir + "all_merged_pag_mk3_ns_lut_correct_n.mtx"
-        ace_path = outdir + "all_merged_ACE_ns_lut_no_direction_forced_correct_n.mtx"
+        pag_path = outdir + "all_merged_pag_mpu.mtx"
+        ace_path = outdir + "all_merged_ACE_mpu.mtx"
         # im = plot_ace_rf_to_d(ace_path, pag_path, pheno_path, title=subset_print[subset], ax=ax_dict[ax_name], cbar=False, norm=mpl.colors.SymLogNorm(vmin=-2.0, vmax=2.0, linthresh=0.01), )
         im = plot_ace_rf_to_d(
             ace_path,
@@ -5226,3 +5254,62 @@ def average_corrs():
 
     print("pxp corr mean, var: ", np.mean(np.abs(pxp_corr[pxp_adj == 1])), np.var(np.abs(pxp_corr[pxp_adj == 1])))
     print("mxp corr mean, var: ", np.mean(np.abs(mxp_corr[mxp_adj == 1])), np.var(np.abs(mxp_corr[mxp_adj == 1])))
+
+
+def plot_compare_correlations_matrices():
+    sumstat_corrs = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/estonian_comparison/ukb/bdpc_d1_l6_a1e4_wo_bp_bmi/3_0_3967.all_corrs"
+    rawdata_corrs = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/estonian_comparison/bdpc_d1_l6_a1e4/3_0_3967.all_corrs"
+
+    ssm = np.fromfile(sumstat_corrs, dtype=np.float32).reshape(3974, 3974)
+    rdm = np.fromfile(rawdata_corrs, dtype=np.float32).reshape(3974, 3974)
+
+    num_markers = 3968
+    ssm_mxm = ssm[:num_markers, :num_markers]
+    rdm_mxm = rdm[:num_markers, :num_markers]
+
+    num_phen = 6
+    ssm_mxp = ssm[:num_markers, num_markers:]
+    rdm_mxp = rdm[:num_markers, num_markers:]
+
+    ssm_pxp = ssm[num_markers:, num_markers:]
+    rdm_pxp = rdm[num_markers:, num_markers:]
+
+    fig = plt.figure(layout="constrained", figsize=(15, 5))
+    ax_dict = fig.subplot_mosaic(
+        """
+        abc
+        """
+    )
+
+    ax = ax_dict['a']
+    diag = np.linspace(np.min([ssm_mxm.min(), rdm_mxm.min()]), np.max([ssm_mxm.max(), rdm_mxm.max()]), 10)
+    ax.plot(diag, diag, ":", color="gray")
+    ax.plot(ssm_mxm.flatten(), rdm_mxm.flatten(), '.', rasterized=True)
+    ax.set_title("MxM")
+    ax.set_ylabel('sumstat')
+    ax.set_xlabel('rawdata')
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.set_box_aspect(1)
+
+    ax = ax_dict['b']
+    diag = np.linspace(np.min([ssm_mxp.min(), rdm_mxp.min()]), np.max([ssm_mxp.max(), rdm_mxp.max()]), 10)
+    ax.plot(diag, diag, ":", color="gray")
+    ax.plot(ssm_mxp.flatten(), rdm_mxp.flatten(), '.', rasterized=True)
+    ax.set_title("MxP")
+    ax.set_ylabel('sumstat')
+    ax.set_xlabel('rawdata')
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.set_box_aspect(1)
+
+    ax = ax_dict['c']
+    diag = np.linspace(np.min([ssm_pxp.min(), rdm_pxp.min()]), np.max([ssm_pxp.max(), rdm_pxp.max()]), 10)
+    ax.plot(diag, diag, ":", color="gray")
+    ax.plot(ssm_pxp.flatten(), rdm_pxp.flatten(), '.', rasterized=True)
+    ax.set_title("PxP")
+    ax.set_ylabel('sumstat')
+    ax.set_xlabel('rawdata')
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.set_box_aspect(1)
