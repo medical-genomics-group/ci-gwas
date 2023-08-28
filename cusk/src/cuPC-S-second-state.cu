@@ -6,6 +6,41 @@
 
 #include <iostream>
 
+/*
+NOTES REGARDING MODIFICATIONS
+
+PURPOSE:
+The idea of the second stage is to re-run cuPC with a reduced set of variables, with the aim to
+learn better separation sets. Single-stage cuPC has the problems that i) the separation sets are
+order-dependent ii) when run at an alpha that controls the FDR for adjacencies, many links are
+removed due to small marginal correlations. Therefore, we run stage 1 at a small alpha to find the
+skeleton, and stage 2 with a large alpha to find more conditional independencies (as opposed to
+marginal ones).
+//
+
+DESCRIPTION:
+At each level, we compare the partial correlations (pcorr) found with all separation sets, i.e. we
+don't stop at the first one that is sufficient for independence. We then pick the one that reduces
+the pcorr the most.
+If some separation set is found, the link is removed from the graph.
+However, it is still checked in the next level, but in a modified routine, equivalent to l1:
+we add one variable at a time to the found separation set, recording the pcorrs, and again choosing
+the set with the lowest pcorr. If no new set has a lower pcorr than the one from the previous level,
+this link has found its final separation set and does not need to be updated anymore.
+As long as not separation set was found, a link remains in the graph and the search for a sepset
+follows the usual routine of checking all combinations at a level.
+
+So we have one new routine which handles the l1-like sepset extensions for all links that have a
+(non-empty) sepset already. This is called before the normal l2, l3, etc.
+
+The normal l1, l2, l3... routines have to be modified:
+the local minimum for each thread should be traced, then compared among all threads in a block,
+and then among all blocks.
+//
+
+
+*/
+
 //========================> Main Function Parameter <========================
 // Description : this function just calculate one Stage of PC stable algorithm
 //@param C          = Correlation matrix
