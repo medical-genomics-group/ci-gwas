@@ -86,6 +86,8 @@ void cusk_second_stage(
     int *GPrime_cuda;
     int *mutex_cuda;
     int *pcorr_cuda;
+    int *unfinished_cuda;
+    int *unfinished_prime_cuda;
 
     int n = *P;
     int nprime = 0;
@@ -358,7 +360,7 @@ void cusk_second_stage(
             THREADS_PER_BLOCK = dim3(1, 1, 1);
             find_min_pcorr<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
                 G_cuda,
-                G_prime_cuda,
+                Gprime_cuda,
                 SepSet_cuda,
                 pMax_cuda,
                 pcorr_cuda,
@@ -421,16 +423,17 @@ __global__ void find_min_pcorr(
     int n
 )
 {
+    int min_nbr_idx;
     int XIdx = bx;
     int YIdx = by;
     if (unfinished[XIdx * n + YIdx] == 0)
     {
         return;
     }
+    bool new_min = false;
     int SizeOfArr = GPrime[XIdx * n + n - 1];
     // set to previous pMax
     float min_z = pMax[XIdx * n + YIdx];
-    int min_nbr_idx;
 
     for (int NbrIdxPointer = 0; NbrIdxPointer < SizeOfArr; NbrIdxPointer++)
     {
@@ -443,7 +446,7 @@ __global__ void find_min_pcorr(
         }
     }
 
-    if new_min
+    if (new_min)
     {
         Sepset[(XIdx * n + YIdx) * ML + (l - 1)] = min_nbr_idx;
         pMax[XIdx * n + YIdx] = Z;
