@@ -48,6 +48,8 @@
 #define NumOfBlockForEachNodeL14 2
 #define ML 14
 
+#define PCORR_MAX_DEGREE 100
+
 //==========================> Function Declaration <==========================
 __global__ void cal_Indepl0(float *C, int *G, float th, float *pMax, int n);
 __global__ void cal_Indepl1(

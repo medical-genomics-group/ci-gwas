@@ -59,9 +59,6 @@ of the impl just send one thread per edge.
 //@param Ncol       = Number of Col in Nbr matrix
 //============================================================================
 
-// the maximum node degree allowed after l0
-#define PCORR_MAX_DEGREE = 100;
-
 void print_degree_distribution(int *GPrime_cuda, int n)
 {
     int degree = 0;
