@@ -103,6 +103,9 @@ void Skeleton(
 
     // initialize sepset element selection matrix
     HANDLE_ERROR(cudaMalloc((void **)&pcorr_cuda, n * n * PCORR_MAX_DEGREE * sizeof(int)));
+    // marks which sepsets should not still be updated
+    HANDLE_ERROR(cudaMalloc((void **)&unfinished_cuda, n * n * sizeof(int)));
+    HANDLE_ERROR(cudaMalloc((void **)&unfinished_prime_cuda, n * n * sizeof(int)));
     HANDLE_ERROR(cudaMalloc((void **)&mutex_cuda, n * n * sizeof(int)));
     HANDLE_ERROR(cudaMalloc((void **)&mutex_cuda, n * n * sizeof(int)));
     HANDLE_ERROR(cudaMalloc((void **)&nprime_cuda, 1 * sizeof(int)));
@@ -115,6 +118,7 @@ void Skeleton(
     HANDLE_ERROR(cudaMemcpy(C_cuda, C, n * n * sizeof(float), cudaMemcpyHostToDevice));
     // initialize a 0 matrix
     HANDLE_ERROR(cudaMemset(mutex_cuda, 0, n * n * sizeof(int)));
+    HANDLE_ERROR(cudaMemset(unfinished_cuda, 1, n * n * sizeof(int)));
 
     CudaCheckError();
     //----------------------------------------------------------
@@ -172,6 +176,12 @@ void Skeleton(
                 break;
             }
 
+            // compact the list of adjacencies for which sepsets should be updated
+            scan_compact<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, n * sizeof(int)>>>(
+                unfinished_prime_cuda, unfinished_cuda, n, nprime_cuda
+            );
+            CudaCheckError();
+
             //================================> Begin The Gaussian CI Test
             //<==============================
             // CHeck whether a CI test is possible
@@ -188,11 +198,9 @@ void Skeleton(
                 fflush(stdout);
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL1, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL1, 1, 1);
-                // HANDLE_ERROR( cudaMalloc((void**)&SepSet_cuda,  n * n * 1 * sizeof(int)) );
                 check_sepsets_l1<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, pcorr_cuda, Th[1], n
+                    C_cuda, G_cuda, GPrime_cuda, pcorr_cuda, n
                 );
-                // HANDLE_ERROR( cudaFree(SepSet_cuda) );
                 CudaCheckError();
             }
             else if (*l == 2)
@@ -427,6 +435,10 @@ void Skeleton(
             {
                 // TODO: add PC serial
             }
+
+            // find best sepset candidate, remove edges with sepsets that
+            // yield Z below threshold
+            // call find_min_sepset()
         }
     }  // if l > 0
 
@@ -498,13 +510,68 @@ __global__ void cal_Indepl0(float *C, int *G, float th, float *pMax, int n)
     }
 }
 
-__global__ void check_sepsets_l1(float *C, int *G, int *GPrime, int *pcorrs, float th, int n)
+__global__ void find_min_pcorr(
+    int *G,
+    int *GPrime,
+    int *mutex,
+    int *Sepset,
+    float *pMax,
+    int *pcorrs,
+    int *unfinished,
+    float th,
+    int l,
+    int n
+)
+{
+    int XIdx = bx;
+    int YIdx = by;
+    if (unfinished[XIdx * n + YIdx] == 0)
+    {
+        return;
+    }
+    int SizeOfArr = GPrime[XIdx * n + n - 1];
+    // set to previous pMax
+    float min_z = pMax[XIdx * n + YIdx];
+    int min_nbr_idx;
+
+    for (int NbrIdxPointer = 0; NbrIdxPointer < SizeOfArr; NbrIdxPointer++)
+    {
+        float curr_z = pcorrs[(XIdx * n + YIdx) * PCORR_MAX_DEGREE + NbrIdxPointer];
+        if (curr_z < min_z)
+        {
+            new_min = true;
+            min_z = curr_z;
+            min_nbr_idx = GPrime[XIdx * n + NbrIdxPointer];
+        }
+    }
+
+    if new_min
+    {
+        Sepset[(XIdx * n + YIdx) * ML + (l - 1)] = min_nbr_idx;
+        pMax[XIdx * n + YIdx] = Z;
+        if (Z < th)
+        {
+            G[XIdx * n + YIdx] = 0;
+            G[YIdx * n + XIdx] = 0;
+        }
+    }
+    else
+    {
+        // mark as finished
+        unfinished[XIdx * n + YIdx] = 0;
+    }
+}
+
+__global__ void check_sepsets_l1(
+    float *C, int *G, int *GPrime, int *pcorrs, int *unfinished_prime, int n
+)
 {
     int YIdx;
     int XIdx = by;
     int NbrIdxPointer;
     int NbrIdx;
     int SizeOfArr;
+    int num_unfinished_sepsets;
     int NumberOfJump;
     int NumOfGivenJump;
     float M0;
@@ -515,6 +582,7 @@ __global__ void check_sepsets_l1(float *C, int *G, int *GPrime, int *pcorrs, flo
 
     NoEdgeFlag = 0;
     SizeOfArr = GPrime[XIdx * n + n - 1];
+    num_unfinished_sepsets = unfinished_prime[XIdx * n + n - 1];
     if ((SizeOfArr % ParGivenL1) == 0)
     {
         NumberOfJump = SizeOfArr / ParGivenL1;
@@ -549,13 +617,14 @@ __global__ void check_sepsets_l1(float *C, int *G, int *GPrime, int *pcorrs, flo
         {
             NbrIdx = G_Chunk[NbrIdxPointer];
             M1[0] = C[XIdx * n + NbrIdx];
-            for (int d2 = 0; d2 < SizeOfArr; d2++)
+            for (int d2 = 0; d2 < num_unfinished_sepsets; d2++)
             {
-                if (d2 == NbrIdxPointer)
+                YIdx = unfinished_prime[d2];
+
+                if (YIdx == NbrIdx)
                 {
                     continue;
                 }
-                YIdx = G_Chunk[d2];
 
                 M0 = C[XIdx * n + YIdx];
                 M1[1] = C[YIdx * n + NbrIdx];
