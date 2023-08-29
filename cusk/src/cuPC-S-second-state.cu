@@ -184,24 +184,16 @@ void Skeleton(
 
             if (*l == 1)
             {
-                cudaEventRecord(start);
                 printf("Starting lvl 1\n");
                 fflush(stdout);
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL1, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL1, 1, 1);
                 // HANDLE_ERROR( cudaMalloc((void**)&SepSet_cuda,  n * n * 1 * sizeof(int)) );
-                cal_Indepl1<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, Th[1], n
+                check_sepsets_l1<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
+                    C_cuda, G_cuda, GPrime_cuda, pcorr_cuda, Th[1], n
                 );
                 // HANDLE_ERROR( cudaFree(SepSet_cuda) );
                 CudaCheckError();
-                HANDLE_ERROR(cudaDeviceSynchronize());
-                CudaCheckError();
-                cudaEventRecord(stop);
-                cudaEventSynchronize(stop);
-                cudaEventElapsedTime(&milliseconds, start, stop);
-                printf("spent seconds: %f \n", milliseconds * 0.001);
-                fflush(stdout);
             }
             else if (*l == 2)
             {
@@ -506,9 +498,7 @@ __global__ void cal_Indepl0(float *C, int *G, float th, float *pMax, int n)
     }
 }
 
-__global__ void cal_Indepl1(
-    float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax, float th, int n
-)
+__global__ void check_sepsets_l1(float *C, int *G, int *GPrime, int *pcorrs, float th, int n)
 {
     int YIdx;
     int XIdx = by;
@@ -517,7 +507,6 @@ __global__ void cal_Indepl1(
     int SizeOfArr;
     int NumberOfJump;
     int NumOfGivenJump;
-    __shared__ int NoEdgeFlag;
     float M0;
     float H[2][2];
     float M1[2];
@@ -555,15 +544,7 @@ __global__ void cal_Indepl1(
 
     for (int d1 = 0; d1 < NumOfGivenJump; d1++)
     {
-        __syncthreads();
-        if (NoEdgeFlag == 1)
-        {
-            return;
-        }
-        __syncthreads();
         NbrIdxPointer = tx + bx * ParGivenL1 + d1 * ParGivenL1 * NumOfBlockForEachNodeL1;
-        NoEdgeFlag = 1;
-        __syncthreads();
         if (NbrIdxPointer < SizeOfArr)
         {
             NbrIdx = G_Chunk[NbrIdxPointer];
@@ -575,30 +556,17 @@ __global__ void cal_Indepl1(
                     continue;
                 }
                 YIdx = G_Chunk[d2];
-                if (G[XIdx * n + YIdx] == 1)
-                {
-                    NoEdgeFlag = 0;
-                    M0 = C[XIdx * n + YIdx];
-                    M1[1] = C[YIdx * n + NbrIdx];
 
-                    H[0][0] = 1 - (M1[0] * M1[0]);
-                    H[0][1] = M0 - (M1[0] * M1[1]);
-                    H[1][1] = 1 - (M1[1] * M1[1]);
+                M0 = C[XIdx * n + YIdx];
+                M1[1] = C[YIdx * n + NbrIdx];
 
-                    rho = H[0][1] / (sqrt(fabs(H[0][0])) * sqrt(fabs(H[1][1])));
-                    Z = fabs(0.5 * (log(fabs((1 + rho))) - log(fabs(1 - rho))));
+                H[0][0] = 1 - (M1[0] * M1[0]);
+                H[0][1] = M0 - (M1[0] * M1[1]);
+                H[1][1] = 1 - (M1[1] * M1[1]);
 
-                    if (Z < th)
-                    {
-                        if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
-                        {
-                            G[XIdx * n + YIdx] = 0;
-                            G[YIdx * n + XIdx] = 0;
-                            pMax[XIdx * n + YIdx] = Z;
-                            Sepset[(XIdx * n + YIdx) * ML] = NbrIdx;
-                        }
-                    }
-                }
+                rho = H[0][1] / (sqrt(fabs(H[0][0])) * sqrt(fabs(H[1][1])));
+                Z = fabs(0.5 * (log(fabs((1 + rho))) - log(fabs(1 - rho))));
+                pcorrs[(XIdx * n + YIdx) * PCORR_MAX_DEGREE + NbrIdxPointer] = Z;
             }
         }
     }
