@@ -36,6 +36,13 @@ So we have one new routine which handles the l1-like sepset extensions for all l
 The normal l1, l2, l3... routines have to be modified:
 the local minimum for each thread should be traced, then compared among all threads in a block,
 and then among all blocks.
+The easiest way to do this seems to be to have a datastructure
+pcorr_cuda of dims n * n * max-degree-after-l0 (float);
+I hope that max-degree-after-l0 isn't too large, otherwise this might get large.
+The mutex section is completely removed from the routines, they simply write the pcorr
+obtained to pcorr_cuda, which is then reduced in a final step.
+The reduction can probably be done using scan/reduce, but I would probably in my first iteration
+of the impl just send one thread per edge.
 //
 
 
@@ -53,6 +60,9 @@ and then among all blocks.
 //@param Nrow       = Number Of row in Nbr matrix
 //@param Ncol       = Number of Col in Nbr matrix
 //============================================================================
+
+// the maximum node degree allowed after l0
+#define PCORR_MAX_DEGREE = 100;
 
 void print_degree_distribution(int *GPrime_cuda, int n)
 {
@@ -80,6 +90,7 @@ void Skeleton(
     int *SepSet_cuda;
     int *GPrime_cuda;
     int *mutex_cuda;
+    int *pcorr_cuda;
 
     int n = *P;
     int nprime = 0;
@@ -88,12 +99,11 @@ void Skeleton(
 
     bool FinishFlag = false;
 
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-    float milliseconds = 0;
     *l = 0;
 
+    // initialize sepset element selection matrix
+    HANDLE_ERROR(cudaMalloc((void **)&pcorr_cuda, n * n * PCORR_MAX_DEGREE * sizeof(int)));
+    HANDLE_ERROR(cudaMalloc((void **)&mutex_cuda, n * n * sizeof(int)));
     HANDLE_ERROR(cudaMalloc((void **)&mutex_cuda, n * n * sizeof(int)));
     HANDLE_ERROR(cudaMalloc((void **)&nprime_cuda, 1 * sizeof(int)));
     HANDLE_ERROR(cudaMalloc((void **)&SepSet_cuda, n * n * ML * sizeof(int)));
@@ -113,7 +123,6 @@ void Skeleton(
         CudaCheckError();
         if (*l == 0)
         {
-            cudaEventRecord(start);
             printf("Starting lvl 0\n");
             fflush(stdout);
 
@@ -139,11 +148,6 @@ void Skeleton(
             THREADS_PER_BLOCK = dim3(ML, 1, 1);
             SepSet_initialize<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(SepSet_cuda, n);
             CudaCheckError();
-            cudaEventRecord(stop);
-            cudaEventSynchronize(stop);
-            cudaEventElapsedTime(&milliseconds, start, stop);
-            printf("spent seconds: %f \n", milliseconds * 0.001);
-            fflush(stdout);
         }
         else
         {
@@ -159,6 +163,14 @@ void Skeleton(
 
             printf("nprime: %i \n", nprime);
             fflush(stdout);
+
+            // Check if the max degree is too large
+            if (nprime > PCORR_MAX_DEGREE)
+            {
+                printf("max degree exceeds allowed value");
+                fflush(stdout);
+                break;
+            }
 
             //================================> Begin The Gaussian CI Test
             //<==============================
