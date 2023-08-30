@@ -577,7 +577,7 @@ __global__ void check_sepsets_l1(
                     continue;
                 }
 
-                printf("updating pcorr: x: %d, y: %d, z: %d \n", XIdx, YIdx, NbrIdx);
+                // printf("updating pcorr: x: %d, y: %d, z: %d \n", XIdx, YIdx, NbrIdx);
 
                 M0 = C[XIdx * n + YIdx];
                 M1[1] = C[YIdx * n + NbrIdx];
@@ -589,6 +589,10 @@ __global__ void check_sepsets_l1(
                 rho = H[0][1] / (sqrt(fabs(H[0][0])) * sqrt(fabs(H[1][1])));
                 Z = fabs(0.5 * (log(fabs((1 + rho))) - log(fabs(1 - rho))));
                 pcorrs[(XIdx * n + YIdx) * PCORR_MAX_DEGREE + NbrIdxPointer] = Z;
+                if (Z == 0.0)
+                {
+                    printf("found z=0 at: x: %d, y: %d, z: %d \n", XIdx, YIdx, NbrIdx);
+                }
             }
         }
     }
