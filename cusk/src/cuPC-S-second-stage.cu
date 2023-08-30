@@ -59,6 +59,18 @@ of the impl just send one thread per edge.
 //@param Ncol       = Number of Col in Nbr matrix
 //============================================================================
 
+__global__ void print_matrix(float *M, int n)
+{
+    for (int i = 0; i < n; i++)
+    {
+        for (int j = 0; j < n; j++)
+        {
+            printf("%d ", M[i * n + j]);
+        }
+        printf("\n");
+    }
+}
+
 __global__ void print_matrix(int *M, int n)
 {
     for (int i = 0; i < n; i++)
@@ -175,6 +187,10 @@ void cusk_second_stage(
             );
             CudaCheckError();
             HANDLE_ERROR(cudaMemcpy(&nprime, nprime_cuda, 1 * sizeof(int), cudaMemcpyDeviceToHost));
+
+            printf("pMax_cuda: \n");
+            print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(pMax_cuda, n);
+            cudaDeviceSynchronize();
 
             printf("G_cuda: \n");
             print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(G_cuda, n);
