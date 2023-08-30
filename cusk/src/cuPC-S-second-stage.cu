@@ -577,6 +577,8 @@ __global__ void check_sepsets_l1(
                     continue;
                 }
 
+                printf("updating pcorr: x: %d, y: %d, z: %d \n", XIdx, YIdx, NbrIdx);
+
                 M0 = C[XIdx * n + YIdx];
                 M1[1] = C[YIdx * n + NbrIdx];
 
