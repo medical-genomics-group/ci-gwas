@@ -149,22 +149,22 @@ void cusk_second_stage(
             CudaCheckError();
             HANDLE_ERROR(cudaMemcpy(&nprime, nprime_cuda, 1 * sizeof(int), cudaMemcpyDeviceToHost));
 
-            printf("G_cuda: \n") for (i = 0; i < n; i++)
+            printf("G_cuda: \n") for (i = 0; i < n; i++);
             {
                 for (j = 0; j < n; j++)
                 {
-                    printf("%d ", G_cuda[i * n + j])
+                    printf("%d ", G_cuda[i * n + j]);
                 }
-                printf("\n")
+                printf("\n");
             }
 
-            printf("GPrime_cuda: \n") for (i = 0; i < n; i++)
+            printf("GPrime_cuda: \n") for (i = 0; i < n; i++);
             {
                 for (j = 0; j < n; j++)
                 {
-                    printf("%d ", GPrime_cuda[i * n + j])
+                    printf("%d ", GPrime_cuda[i * n + j]);
                 }
-                printf("\n")
+                printf("\n");
             }
 
             printf("nprime: %i \n", nprime);
@@ -186,22 +186,22 @@ void cusk_second_stage(
             );
             CudaCheckError();
 
-            printf("uf_cuda: \n") for (i = 0; i < n; i++)
+            printf("uf_cuda: \n") for (i = 0; i < n; i++);
             {
                 for (j = 0; j < n; j++)
                 {
-                    printf("%d ", unfinished_cuda[i * n + j])
+                    printf("%d ", unfinished_cuda[i * n + j]);
                 }
-                printf("\n")
+                printf("\n");
             }
 
-            printf("uf_prime_cuda: \n") for (i = 0; i < n; i++)
+            printf("uf_prime_cuda: \n") for (i = 0; i < n; i++);
             {
                 for (j = 0; j < n; j++)
                 {
-                    printf("%d ", unfinished_prime_cuda[i * n + j])
+                    printf("%d ", unfinished_prime_cuda[i * n + j]);
                 }
-                printf("\n")
+                printf("\n");
             }
 
             //================================> Begin The Gaussian CI Test
