@@ -112,7 +112,7 @@ void cusk_second_stage(
     int *SepSet_cuda;
     int *GPrime_cuda;
     int *mutex_cuda;
-    int *pcorr_cuda;
+    float *pcorr_cuda;
     int *unfinished_cuda;
     int *unfinished_prime_cuda;
 
@@ -126,7 +126,7 @@ void cusk_second_stage(
     *l = 0;
 
     // initialize sepset element selection matrix
-    HANDLE_ERROR(cudaMalloc((void **)&pcorr_cuda, n * n * PCORR_MAX_DEGREE * sizeof(int)));
+    HANDLE_ERROR(cudaMalloc((void **)&pcorr_cuda, n * n * PCORR_MAX_DEGREE * sizeof(float)));
     // marks which sepsets should be updated
     HANDLE_ERROR(cudaMalloc((void **)&unfinished_cuda, n * n * sizeof(int)));
     HANDLE_ERROR(cudaMalloc((void **)&unfinished_prime_cuda, n * n * sizeof(int)));
@@ -455,7 +455,7 @@ __global__ void find_min_pcorr(
     int *GPrime,
     int *Sepset,
     float *pMax,
-    int *pcorrs,
+    float *pcorrs,
     int *unfinished,
     float th,
     int l,
@@ -503,7 +503,7 @@ __global__ void find_min_pcorr(
 }
 
 __global__ void check_sepsets_l1(
-    float *C, int *G, int *GPrime, int *pcorrs, int *unfinished_prime, int n
+    float *C, int *G, int *GPrime, float *pcorrs, int *unfinished_prime, int n
 )
 {
     int YIdx;
@@ -581,7 +581,7 @@ __global__ void check_sepsets_l1(
 }
 
 __global__ void check_sepsets_l2(
-    float *C, int *G, int *GPrime, int *SepSet, int *pcorrs, int *unfinished_prime, int n
+    float *C, int *G, int *GPrime, int *SepSet, float *pcorrs, int *unfinished_prime, int n
 )
 {
     int YIdx;
@@ -684,7 +684,7 @@ __global__ void check_sepsets_l2(
 }
 
 __global__ void check_sepsets_l3(
-    float *C, int *G, int *GPrime, int *SepSet, int *pcorrs, int *unfinished_prime, int n
+    float *C, int *G, int *GPrime, int *SepSet, float *pcorrs, int *unfinished_prime, int n
 )
 {
     int YIdx;
@@ -806,7 +806,7 @@ __global__ void check_sepsets_l3(
 }
 
 __global__ void check_sepsets_l4(
-    float *C, int *G, int *GPrime, int *SepSet, int *pcorrs, int *unfinished_prime, int n
+    float *C, int *G, int *GPrime, int *SepSet, float *pcorrs, int *unfinished_prime, int n
 )
 {
     int YIdx;
@@ -944,7 +944,7 @@ __global__ void check_sepsets_l4(
 }
 
 __global__ void check_sepsets_l5(
-    float *C, int *G, int *GPrime, int *SepSet, int *pcorrs, int *unfinished_prime, int n
+    float *C, int *G, int *GPrime, int *SepSet, float *pcorrs, int *unfinished_prime, int n
 )
 {
     int YIdx;
@@ -1095,7 +1095,7 @@ __global__ void check_sepsets_l5(
 }
 
 __global__ void check_sepsets_l6(
-    float *C, int *G, int *GPrime, int *SepSet, int *pcorrs, int *unfinished_prime, int n
+    float *C, int *G, int *GPrime, int *SepSet, float *pcorrs, int *unfinished_prime, int n
 )
 {
     int YIdx;
@@ -1260,7 +1260,7 @@ __global__ void check_sepsets_l6(
 }
 
 __global__ void check_sepsets_l7(
-    float *C, int *G, int *GPrime, int *SepSet, int *pcorrs, int *unfinished_prime, int n
+    float *C, int *G, int *GPrime, int *SepSet, float *pcorrs, int *unfinished_prime, int n
 )
 {
     int YIdx;
@@ -1441,7 +1441,7 @@ __global__ void check_sepsets_l7(
 }
 
 __global__ void check_sepsets_l8(
-    float *C, int *G, int *GPrime, int *SepSet, int *pcorrs, int *unfinished_prime, int n
+    float *C, int *G, int *GPrime, int *SepSet, float *pcorrs, int *unfinished_prime, int n
 )
 {
     int YIdx;
@@ -1638,7 +1638,7 @@ __global__ void check_sepsets_l8(
     }
 }
 __global__ void check_sepsets_l9(
-    float *C, int *G, int *GPrime, int *SepSet, int *pcorrs, int *unfinished_prime, int n
+    float *C, int *G, int *GPrime, int *SepSet, float *pcorrs, int *unfinished_prime, int n
 )
 {
     int YIdx;
@@ -1775,7 +1775,7 @@ __global__ void check_sepsets_l9(
 }
 
 __global__ void check_sepsets_l10(
-    float *C, int *G, int *GPrime, int *SepSet, int *pcorrs, int *unfinished_prime, int n
+    float *C, int *G, int *GPrime, int *SepSet, float *pcorrs, int *unfinished_prime, int n
 )
 {
     int YIdx;
@@ -1913,7 +1913,7 @@ __global__ void check_sepsets_l10(
     }
 }
 __global__ void check_sepsets_l11(
-    float *C, int *G, int *GPrime, int *SepSet, int *pcorrs, int *unfinished_prime, int n
+    float *C, int *G, int *GPrime, int *SepSet, float *pcorrs, int *unfinished_prime, int n
 )
 {
     int YIdx;
@@ -2047,7 +2047,7 @@ __global__ void check_sepsets_l11(
 }
 
 __global__ void check_sepsets_l12(
-    float *C, int *G, int *GPrime, int *SepSet, int *pcorrs, int *unfinished_prime, int n
+    float *C, int *G, int *GPrime, int *SepSet, float *pcorrs, int *unfinished_prime, int n
 )
 {
     int YIdx;
@@ -2186,7 +2186,7 @@ __global__ void check_sepsets_l12(
 }
 
 __global__ void check_sepsets_l13(
-    float *C, int *G, int *GPrime, int *SepSet, int *pcorrs, int *unfinished_prime, int n
+    float *C, int *G, int *GPrime, int *SepSet, float *pcorrs, int *unfinished_prime, int n
 )
 {
     int YIdx;
@@ -2325,7 +2325,7 @@ __global__ void check_sepsets_l13(
 }
 
 __global__ void check_sepsets_l14(
-    float *C, int *G, int *GPrime, int *SepSet, int *pcorrs, int *unfinished_prime, int n
+    float *C, int *G, int *GPrime, int *SepSet, float *pcorrs, int *unfinished_prime, int n
 )
 {
     int YIdx;
