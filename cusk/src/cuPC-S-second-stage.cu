@@ -66,7 +66,6 @@ void cusk_second_stage(
     float *C_cuda;  // Copy of C array in GPU
     float *pMax_cuda;
     int *G_cuda;  // Copy of G Array in GPU
-    int *dummy_cuda;
     int *nprime_cuda;
     int *SepSet_cuda;
     int *GPrime_cuda;
@@ -86,7 +85,7 @@ void cusk_second_stage(
 
     // initialize sepset element selection matrix
     HANDLE_ERROR(cudaMalloc((void **)&pcorr_cuda, n * n * PCORR_MAX_DEGREE * sizeof(int)));
-    // marks which sepsets should not still be updated
+    // marks which sepsets should be updated
     HANDLE_ERROR(cudaMalloc((void **)&unfinished_cuda, n * n * sizeof(int)));
     HANDLE_ERROR(cudaMalloc((void **)&unfinished_prime_cuda, n * n * sizeof(int)));
     HANDLE_ERROR(cudaMalloc((void **)&mutex_cuda, n * n * sizeof(int)));
@@ -161,13 +160,13 @@ void cusk_second_stage(
                 break;
             }
 
-            // printf("Compacting lists of unfinished sepsets\n");
-            // fflush(stdout);
-            // // compact the list of adjacencies for which sepsets should be updated
-            // scan_compact<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, n * sizeof(int)>>>(
-            //     unfinished_prime_cuda, unfinished_cuda, n, nprime_cuda
-            // );
-            // CudaCheckError();
+            printf("Compacting lists of unfinished sepsets\n");
+            fflush(stdout);
+            // compact the list of adjacencies for which sepsets should be updated
+            scan_compact<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, n * sizeof(int)>>>(
+                unfinished_prime_cuda, unfinished_cuda, n, nprime_cuda
+            );
+            CudaCheckError();
 
             //================================> Begin The Gaussian CI Test
             //<==============================
