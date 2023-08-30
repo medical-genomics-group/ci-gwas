@@ -59,6 +59,18 @@ of the impl just send one thread per edge.
 //@param Ncol       = Number of Col in Nbr matrix
 //============================================================================
 
+__global__ print_matrix(int *M, int n)
+{
+    for (int i = 0; i < n; i++)
+    {
+        for (int j = 0; j < n; j++)
+        {
+            printf("%d ", M[i * n + j]);
+        }
+        printf("\n");
+    }
+}
+
 void cusk_second_stage(
     float *C, int *P, int *G, float *Th, int *l, const int *maxlevel, float *pMax, int *SepSet
 )
@@ -150,24 +162,9 @@ void cusk_second_stage(
             HANDLE_ERROR(cudaMemcpy(&nprime, nprime_cuda, 1 * sizeof(int), cudaMemcpyDeviceToHost));
 
             printf("G_cuda: \n");
-            for (int i = 0; i < n; i++)
-            {
-                for (int j = 0; j < n; j++)
-                {
-                    printf("%d ", G_cuda[i * n + j]);
-                }
-                printf("\n");
-            }
-
+            print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(G_cuda, n);
             printf("GPrime_cuda: \n");
-            for (int i = 0; i < n; i++)
-            {
-                for (int j = 0; j < n; j++)
-                {
-                    printf("%d ", GPrime_cuda[i * n + j]);
-                }
-                printf("\n");
-            }
+            print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(GPrime_cuda, n);
 
             printf("nprime: %i \n", nprime);
             fflush(stdout);
@@ -189,24 +186,10 @@ void cusk_second_stage(
             CudaCheckError();
 
             printf("uf_cuda: \n");
-            for (int i = 0; i < n; i++)
-            {
-                for (int j = 0; j < n; j++)
-                {
-                    printf("%d ", unfinished_cuda[i * n + j]);
-                }
-                printf("\n");
-            }
+            print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(unfinished_cuda, n);
 
             printf("uf_prime_cuda: \n");
-            for (int i = 0; i < n; i++)
-            {
-                for (int j = 0; j < n; j++)
-                {
-                    printf("%d ", unfinished_prime_cuda[i * n + j]);
-                }
-                printf("\n");
-            }
+            print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(unfinished_prime_cuda, n);
 
             //================================> Begin The Gaussian CI Test
             //<==============================
