@@ -66,7 +66,7 @@ void cusk_second_stage(
     float *C_cuda;  // Copy of C array in GPU
     float *pMax_cuda;
     int *G_cuda;  // Copy of G Array in GPU
-    int *dummy;
+    int *dummy_cuda;
     int *nprime_cuda;
     int *SepSet_cuda;
     int *GPrime_cuda;
@@ -77,6 +77,7 @@ void cusk_second_stage(
 
     int n = *P;
     int nprime = 0;
+    int dummy = 0;
     dim3 BLOCKS_PER_GRID;
     dim3 THREADS_PER_BLOCK;
 
@@ -92,7 +93,7 @@ void cusk_second_stage(
     HANDLE_ERROR(cudaMalloc((void **)&mutex_cuda, n * n * sizeof(int)));
     HANDLE_ERROR(cudaMalloc((void **)&mutex_cuda, n * n * sizeof(int)));
     HANDLE_ERROR(cudaMalloc((void **)&nprime_cuda, 1 * sizeof(int)));
-    HANDLE_ERROR(cudaMalloc((void **)&dummy, 1 * sizeof(int)));
+    HANDLE_ERROR(cudaMalloc((void **)&dummy_cuda, 1 * sizeof(int)));
     HANDLE_ERROR(cudaMalloc((void **)&SepSet_cuda, n * n * ML * sizeof(int)));
     HANDLE_ERROR(cudaMalloc((void **)&GPrime_cuda, n * n * sizeof(int)));
     HANDLE_ERROR(cudaMalloc((void **)&C_cuda, n * n * sizeof(float)));
@@ -149,6 +150,7 @@ void cusk_second_stage(
                 GPrime_cuda, G_cuda, n, nprime_cuda
             );
             CudaCheckError();
+            HANDLE_ERROR(cudaMemcpy(&dummy, dummy_cuda, 1 * sizeof(int), cudaMemcpyDeviceToHost));
             HANDLE_ERROR(cudaMemcpy(&nprime, nprime_cuda, 1 * sizeof(int), cudaMemcpyDeviceToHost));
 
             printf("nprime: %i \n", nprime);
@@ -166,7 +168,7 @@ void cusk_second_stage(
             fflush(stdout);
             // compact the list of adjacencies for which sepsets should be updated
             scan_compact<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, n * sizeof(int)>>>(
-                unfinished_prime_cuda, unfinished_cuda, n, dummy
+                unfinished_prime_cuda, unfinished_cuda, n, dummy_cuda
             );
             CudaCheckError();
 
