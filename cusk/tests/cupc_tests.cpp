@@ -58,7 +58,7 @@ TEST(cusk_second_stage, expected_skeleton_n10)
     printf("ix | obs | exp \n");
     for (size_t i = 0; i < p * p; ++i)
     {
-        printf("%i | %i | %i \n", i, G[i], A_N10[i]);
+        printf("%d | %d | %d \n", i, G[i], A_N10[i]);
     }
 
     for (size_t i = 0; i < p * p; ++i)
