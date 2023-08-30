@@ -69,6 +69,7 @@ __global__ void print_matrix(int *M, int n)
         }
         printf("\n");
     }
+    fflush(stdout);
 }
 
 void cusk_second_stage(
