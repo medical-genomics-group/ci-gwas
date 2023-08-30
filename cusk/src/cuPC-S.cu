@@ -6387,10 +6387,6 @@ __global__ void scan_compact(int *G_Compact, const int *G, const int n, int *npr
         {
             if (G_shared[thid] != G_shared[thid - 1])
             {
-                printf("thid = %d\n", thid);
-                printf("G_shared[thid] = %d\n", G_shared[thid]);
-                printf("row = %d\n", row);
-                printf("n = %d\n", n);
                 G_Compact[row * n + G_shared[thid] - 1] = thid;
             }
             if (thid >= row_size && thid != n - 1)

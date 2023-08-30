@@ -166,6 +166,7 @@ void cusk_second_stage(
             cudaDeviceSynchronize();
             fflush(stdout);
             CudaCheckError();
+
             printf("GPrime_cuda: \n");
             print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(GPrime_cuda, n);
             cudaDeviceSynchronize();
@@ -196,6 +197,7 @@ void cusk_second_stage(
             cudaDeviceSynchronize();
             fflush(stdout);
             CudaCheckError();
+
             printf("uf_prime_cuda: \n");
             print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(unfinished_prime_cuda, n);
             cudaDeviceSynchronize();
