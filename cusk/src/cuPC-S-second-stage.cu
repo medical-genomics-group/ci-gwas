@@ -173,21 +173,6 @@ void cusk_second_stage(
             CudaCheckError();
             HANDLE_ERROR(cudaMemcpy(&nprime, nprime_cuda, 1 * sizeof(int), cudaMemcpyDeviceToHost));
 
-            printf("G_cuda: \n");
-            print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(G_cuda, n);
-            cudaDeviceSynchronize();
-            fflush(stdout);
-            CudaCheckError();
-
-            printf("GPrime_cuda: \n");
-            print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(GPrime_cuda, n);
-            cudaDeviceSynchronize();
-            fflush(stdout);
-            CudaCheckError();
-
-            printf("nprime: %i \n", nprime);
-            fflush(stdout);
-
             // Check if the max degree is too large
             if (nprime > PCORR_MAX_DEGREE)
             {
@@ -202,18 +187,6 @@ void cusk_second_stage(
             scan_compact<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, n * sizeof(int)>>>(
                 unfinished_prime_cuda, unfinished_cuda, n, nprime_cuda
             );
-            CudaCheckError();
-
-            printf("uf_cuda: \n");
-            print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(unfinished_cuda, n);
-            cudaDeviceSynchronize();
-            fflush(stdout);
-            CudaCheckError();
-
-            printf("uf_prime_cuda: \n");
-            print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(unfinished_prime_cuda, n);
-            cudaDeviceSynchronize();
-            fflush(stdout);
             CudaCheckError();
 
             //================================> Begin The Gaussian CI Test

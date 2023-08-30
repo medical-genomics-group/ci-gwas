@@ -55,12 +55,6 @@ TEST(cusk_second_stage, expected_skeleton_n10)
         C_N10.data(), &p, G.data(), Th.data(), &l, &max_level, pmax.data(), sepset.data()
     );
 
-    printf("ix | obs | exp \n");
-    for (size_t i = 0; i < p * p; ++i)
-    {
-        printf("%d | %d | %d \n", i, G[i], A_N10[i]);
-    }
-
     for (size_t i = 0; i < p * p; ++i)
     {
         EXPECT_EQ(G[i], A_N10[i]);
