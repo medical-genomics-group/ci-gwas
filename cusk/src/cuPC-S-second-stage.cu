@@ -480,6 +480,13 @@ __global__ void find_min_pcorr(
         float curr_z = pcorrs[(XIdx * n + YIdx) * PCORR_MAX_DEGREE + NbrIdxPointer];
         if (curr_z < min_z)
         {
+            printf(
+                "New min pcorr at x: %d, y: %d, nbrptr: %d, z: %f \n",
+                XIdx,
+                YIdx,
+                NbrIdxPointer,
+                curr_z
+            );
             new_min = true;
             min_z = curr_z;
             min_nbr_idx = GPrime[XIdx * n + NbrIdxPointer];
