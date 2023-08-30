@@ -360,7 +360,7 @@ void cusk_second_stage(
             THREADS_PER_BLOCK = dim3(1, 1, 1);
             find_min_pcorr<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
                 G_cuda,
-                Gprime_cuda,
+                GPrime_cuda,
                 SepSet_cuda,
                 pMax_cuda,
                 pcorr_cuda,
@@ -449,7 +449,7 @@ __global__ void find_min_pcorr(
     if (new_min)
     {
         Sepset[(XIdx * n + YIdx) * ML + (l - 1)] = min_nbr_idx;
-        pMax[XIdx * n + YIdx] = Z;
+        pMax[XIdx * n + YIdx] = min_Z;
         if (Z < th)
         {
             G[XIdx * n + YIdx] = 0;
