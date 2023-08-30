@@ -59,7 +59,7 @@ of the impl just send one thread per edge.
 //@param Ncol       = Number of Col in Nbr matrix
 //============================================================================
 
-__global__ print_matrix(int *M, int n)
+__global__ void print_matrix(int *M, int n)
 {
     for (int i = 0; i < n; i++)
     {
