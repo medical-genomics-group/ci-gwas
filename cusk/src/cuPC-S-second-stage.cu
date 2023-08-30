@@ -449,8 +449,8 @@ __global__ void find_min_pcorr(
     if (new_min)
     {
         Sepset[(XIdx * n + YIdx) * ML + (l - 1)] = min_nbr_idx;
-        pMax[XIdx * n + YIdx] = min_Z;
-        if (Z < th)
+        pMax[XIdx * n + YIdx] = min_z;
+        if (min_z < th)
         {
             G[XIdx * n + YIdx] = 0;
             G[YIdx * n + XIdx] = 0;
