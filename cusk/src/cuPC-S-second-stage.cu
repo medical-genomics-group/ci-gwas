@@ -114,6 +114,12 @@ void cusk_second_stage(
     HANDLE_ERROR(cudaMemset(mutex_cuda, 0, n * n * sizeof(int)));
     HANDLE_ERROR(cudaMemset(unfinished_cuda, 1, n * n * sizeof(int)));
 
+    printf("uf_cuda: \n");
+    print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(unfinished_cuda, n);
+    cudaDeviceSynchronize();
+    fflush(stdout);
+    CudaCheckError();
+
     CudaCheckError();
     //----------------------------------------------------------
     for (*l = 0; *l <= ML && !FinishFlag && *l <= *maxlevel; *l = *l + 1)
