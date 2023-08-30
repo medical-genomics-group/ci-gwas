@@ -164,9 +164,11 @@ void cusk_second_stage(
             printf("G_cuda: \n");
             print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(G_cuda, n);
             fflush(stdout);
+            CudaCheckError();
             printf("GPrime_cuda: \n");
             print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(GPrime_cuda, n);
             fflush(stdout);
+            CudaCheckError();
 
             printf("nprime: %i \n", nprime);
             fflush(stdout);
@@ -190,10 +192,11 @@ void cusk_second_stage(
             printf("uf_cuda: \n");
             print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(unfinished_cuda, n);
             fflush(stdout);
-
+            CudaCheckError();
             printf("uf_prime_cuda: \n");
             print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(unfinished_prime_cuda, n);
             fflush(stdout);
+            CudaCheckError();
 
             //================================> Begin The Gaussian CI Test
             //<==============================
