@@ -149,13 +149,31 @@ void cusk_second_stage(
             CudaCheckError();
             HANDLE_ERROR(cudaMemcpy(&nprime, nprime_cuda, 1 * sizeof(int), cudaMemcpyDeviceToHost));
 
+            printf("G_cuda: \n") for (i = 0; i < n; i++)
+            {
+                for (j = 0; j < n; j++)
+                {
+                    printf("%d ", G_cuda[i * n + j])
+                }
+                printf("\n")
+            }
+
+            printf("GPrime_cuda: \n") for (i = 0; i < n; i++)
+            {
+                for (j = 0; j < n; j++)
+                {
+                    printf("%d ", GPrime_cuda[i * n + j])
+                }
+                printf("\n")
+            }
+
             printf("nprime: %i \n", nprime);
             fflush(stdout);
 
             // Check if the max degree is too large
             if (nprime > PCORR_MAX_DEGREE)
             {
-                printf("max degree exceeds allowed value");
+                printf("max degree exceeds allowed value\n");
                 fflush(stdout);
                 break;
             }
@@ -167,6 +185,24 @@ void cusk_second_stage(
                 unfinished_prime_cuda, unfinished_cuda, n, nprime_cuda
             );
             CudaCheckError();
+
+            printf("uf_cuda: \n") for (i = 0; i < n; i++)
+            {
+                for (j = 0; j < n; j++)
+                {
+                    printf("%d ", unfinished_cuda[i * n + j])
+                }
+                printf("\n")
+            }
+
+            printf("uf_prime_cuda: \n") for (i = 0; i < n; i++)
+            {
+                for (j = 0; j < n; j++)
+                {
+                    printf("%d ", unfinished_prime_cuda[i * n + j])
+                }
+                printf("\n")
+            }
 
             //================================> Begin The Gaussian CI Test
             //<==============================
