@@ -97,6 +97,10 @@ __global__ void unfinished_initialize(int *uf, int n)
 
 __global__ void pMax_initialize(float *pMax, int n) { pMax[bx * n + by] = 1.0; }
 
+__global__ void pcorr_initialize(float *pcorr, int n {
+    pcorr[(bx * n + by) * PCORR_MAX_DEGREE + tx] = 1.0;
+}
+
 void cusk_second_stage(
     float *C, int *P, int *G, float *Th, int *l, const int *maxlevel, float *pMax, int *SepSet
 )
@@ -170,6 +174,8 @@ void cusk_second_stage(
             BLOCKS_PER_GRID = dim3(n * n, 1, 1);
             THREADS_PER_BLOCK = dim3(ML, 1, 1);
             SepSet_initialize<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(SepSet_cuda, n);
+            CudaCheckError();
+            pcorr_initialize<<<BLOCKS_PER_GRID, dim3(PCORR_MAX_DEGREE, 1, 1)>>>(pcorr_cuda, n);
             CudaCheckError();
             unfinished_initialize<<<dim3(n, n, 1), dim3(1, 1, 1)>>>(unfinished_cuda, n);
             CudaCheckError();
