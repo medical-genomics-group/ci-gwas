@@ -55,11 +55,11 @@ TEST(cusk_second_stage, expected_skeleton_n10)
         C_N10.data(), &p, G.data(), Th.data(), &l, &max_level, pmax.data(), sepset.data()
     );
 
-    // printf("ix | obs | exp \n");
-    // for (size_t i = 0; i < CUPCT1_ADJSIZE; ++i)
-    // {
-    //     printf("%i | %i | %i \n", i, G[i], cupct1_g[i]);
-    // }
+    printf("ix | obs | exp \n");
+    for (size_t i = 0; i < CUPCT1_ADJSIZE; ++i)
+    {
+        printf("%i | %i | %i \n", i, G[i], cupct1_g[i]);
+    }
 
     for (size_t i = 0; i < p * p; ++i)
     {
