@@ -223,6 +223,10 @@ void cusk_second_stage(
             );
             CudaCheckError();
 
+            printf("unfinished_prime_cuda: \n");
+            print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(unfinished_prime_cuda, n);
+            cudaDeviceSynchronize();
+
             //================================> Begin The Gaussian CI Test
             //<==============================
             // CHeck whether a CI test is possible
