@@ -339,22 +339,22 @@ void cusk_second_stage(
 
             // find best sepset candidate, remove edges with sepsets that
             // yield Z below threshold
-            // printf("Selecting sepsets with minimal pcorr\n");
-            // fflush(stdout);
-            // BLOCKS_PER_GRID = dim3(n, n, 1);
-            // THREADS_PER_BLOCK = dim3(1, 1, 1);
-            // find_min_pcorr<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
-            //     G_cuda,
-            //     GPrime_cuda,
-            //     SepSet_cuda,
-            //     pMax_cuda,
-            //     pcorr_cuda,
-            //     unfinished_cuda,
-            //     Th[*l],
-            //     *l,
-            //     n
-            // );
-            // CudaCheckError();
+            printf("Selecting sepsets with minimal pcorr\n");
+            fflush(stdout);
+            BLOCKS_PER_GRID = dim3(n, n, 1);
+            THREADS_PER_BLOCK = dim3(1, 1, 1);
+            find_min_pcorr<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
+                G_cuda,
+                GPrime_cuda,
+                SepSet_cuda,
+                pMax_cuda,
+                pcorr_cuda,
+                unfinished_cuda,
+                Th[*l],
+                *l,
+                n
+            );
+            CudaCheckError();
         }
     }  // if l > 0
 
