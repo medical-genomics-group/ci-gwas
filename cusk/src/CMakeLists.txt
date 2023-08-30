@@ -5,6 +5,7 @@ add_library(cuPC STATIC cuPC-S.cu cuPC-S-second-stage.cu cuPC_call_prep.cpp ${HE
 target_include_directories(cuPC PUBLIC ../include)
 target_compile_features(cuPC PUBLIC cxx_std_20)
 target_compile_options(cuPC PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
+    -dc
     -O3
     -lineinfo
     --use_fast_math
