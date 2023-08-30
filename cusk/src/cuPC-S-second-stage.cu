@@ -59,21 +59,6 @@ of the impl just send one thread per edge.
 //@param Ncol       = Number of Col in Nbr matrix
 //============================================================================
 
-void print_degree_distribution(int *GPrime_cuda, int n)
-{
-    int degree = 0;
-    printf("degrees: [");
-    for (size_t i = 0; i < n; i++)
-    {
-        HANDLE_ERROR(cudaMemcpy(
-            &degree, &GPrime_cuda[i * n + n - 1], 1 * sizeof(int), cudaMemcpyDeviceToHost
-        ));
-        printf("%i, ", degree);
-    }
-    printf("]\n");
-    fflush(stdout);
-}
-
 void cusk_second_stage(
     float *C, int *P, int *G, float *Th, int *l, const int *maxlevel, float *pMax, int *SepSet
 )
