@@ -130,46 +130,46 @@ __device__ void pseudoinversel14(
     float M2[][14], float M2Inv[][14], float v[][14], float *rv1, float *w, float res1[][14]
 );
 __global__ void check_sepsets_l1(
-    float *C, int *G, int *GPrime, int *pcorrs, int *unfinished_prime, int n
+    float *C, int *G, int *GPrime, float *pcorrs, int *unfinished_prime, int n
 );
 __global__ void check_sepsets_l2(
-    float *C, int *G, int *GPrime, int *SepSet, int *pcorrs, int *unfinished_prime, int n
+    float *C, int *G, int *GPrime, int *SepSet, float *pcorrs, int *unfinished_prime, int n
 );
 __global__ void check_sepsets_l3(
-    float *C, int *G, int *GPrime, int *SepSet, int *pcorrs, int *unfinished_prime, int n
+    float *C, int *G, int *GPrime, int *SepSet, float *pcorrs, int *unfinished_prime, int n
 );
 __global__ void check_sepsets_l4(
-    float *C, int *G, int *GPrime, int *SepSet, int *pcorrs, int *unfinished_prime, int n
+    float *C, int *G, int *GPrime, int *SepSet, float *pcorrs, int *unfinished_prime, int n
 );
 __global__ void check_sepsets_l5(
-    float *C, int *G, int *GPrime, int *SepSet, int *pcorrs, int *unfinished_prime, int n
+    float *C, int *G, int *GPrime, int *SepSet, float *pcorrs, int *unfinished_prime, int n
 );
 __global__ void check_sepsets_l6(
-    float *C, int *G, int *GPrime, int *SepSet, int *pcorrs, int *unfinished_prime, int n
+    float *C, int *G, int *GPrime, int *SepSet, float *pcorrs, int *unfinished_prime, int n
 );
 __global__ void check_sepsets_l7(
-    float *C, int *G, int *GPrime, int *SepSet, int *pcorrs, int *unfinished_prime, int n
+    float *C, int *G, int *GPrime, int *SepSet, float *pcorrs, int *unfinished_prime, int n
 );
 __global__ void check_sepsets_l8(
-    float *C, int *G, int *GPrime, int *SepSet, int *pcorrs, int *unfinished_prime, int n
+    float *C, int *G, int *GPrime, int *SepSet, float *pcorrs, int *unfinished_prime, int n
 );
 __global__ void check_sepsets_l9(
-    float *C, int *G, int *GPrime, int *SepSet, int *pcorrs, int *unfinished_prime, int n
+    float *C, int *G, int *GPrime, int *SepSet, float *pcorrs, int *unfinished_prime, int n
 );
 __global__ void check_sepsets_l10(
-    float *C, int *G, int *GPrime, int *SepSet, int *pcorrs, int *unfinished_prime, int n
+    float *C, int *G, int *GPrime, int *SepSet, float *pcorrs, int *unfinished_prime, int n
 );
 __global__ void check_sepsets_l11(
-    float *C, int *G, int *GPrime, int *SepSet, int *pcorrs, int *unfinished_prime, int n
+    float *C, int *G, int *GPrime, int *SepSet, float *pcorrs, int *unfinished_prime, int n
 );
 __global__ void check_sepsets_l12(
-    float *C, int *G, int *GPrime, int *SepSet, int *pcorrs, int *unfinished_prime, int n
+    float *C, int *G, int *GPrime, int *SepSet, float *pcorrs, int *unfinished_prime, int n
 );
 __global__ void check_sepsets_l13(
-    float *C, int *G, int *GPrime, int *SepSet, int *pcorrs, int *unfinished_prime, int n
+    float *C, int *G, int *GPrime, int *SepSet, float *pcorrs, int *unfinished_prime, int n
 );
 __global__ void check_sepsets_l14(
-    float *C, int *G, int *GPrime, int *SepSet, int *pcorrs, int *unfinished_prime, int n
+    float *C, int *G, int *GPrime, int *SepSet, float *pcorrs, int *unfinished_prime, int n
 );
 
 __global__ void find_min_pcorr(
@@ -177,7 +177,7 @@ __global__ void find_min_pcorr(
     int *GPrime,
     int *Sepset,
     float *pMax,
-    int *pcorrs,
+    float *pcorrs,
     int *unfinished,
     float th,
     int l,
