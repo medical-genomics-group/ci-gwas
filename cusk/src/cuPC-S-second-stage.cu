@@ -176,6 +176,10 @@ void cusk_second_stage(
             CudaCheckError();
             HANDLE_ERROR(cudaMemcpy(&nprime, nprime_cuda, 1 * sizeof(int), cudaMemcpyDeviceToHost));
 
+            printf("G_cuda: \n");
+            print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(G_cuda, n);
+            cudaDeviceSynchronize();
+
             // Check if the max degree is too large
             if (nprime > PCORR_MAX_DEGREE)
             {
