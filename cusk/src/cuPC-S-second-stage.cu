@@ -570,7 +570,7 @@ __global__ void check_sepsets_l1(
             M1[0] = C[XIdx * n + NbrIdx];
             for (int d2 = 0; d2 < num_unfinished_sepsets; d2++)
             {
-                YIdx = unfinished_prime[d2];
+                YIdx = unfinished_prime[XIdx * n + d2];
 
                 if (YIdx == NbrIdx)
                 {
@@ -653,7 +653,7 @@ __global__ void check_sepsets_l2(
             NbrIdx[pos_of_new_sepset_elem] = G_Chunk[NbrIdxPointer];
             for (int d2 = 0; d2 < num_unfinished_sepsets; d2++)
             {
-                YIdx = unfinished_prime[d2];
+                YIdx = unfinished_prime[XIdx * n + d2];
                 if (YIdx == NbrIdx[pos_of_new_sepset_elem])
                 {
                     continue;
@@ -756,7 +756,7 @@ __global__ void check_sepsets_l3(
             NbrIdx[pos_of_new_sepset_elem] = G_Chunk[NbrIdxPointer];
             for (int d2 = 0; d2 < num_unfinished_sepsets; d2++)
             {
-                YIdx = unfinished_prime[d2];
+                YIdx = unfinished_prime[XIdx * n + d2];
                 if (YIdx == NbrIdx[pos_of_new_sepset_elem])
                 {
                     continue;
@@ -883,7 +883,7 @@ __global__ void check_sepsets_l4(
             NbrIdx[pos_of_new_sepset_elem] = G_Chunk[NbrIdxPointer];
             for (int d2 = 0; d2 < num_unfinished_sepsets; d2++)
             {
-                YIdx = unfinished_prime[d2];
+                YIdx = unfinished_prime[XIdx * n + d2];
                 if (YIdx == NbrIdx[pos_of_new_sepset_elem])
                 {
                     continue;
@@ -1021,7 +1021,7 @@ __global__ void check_sepsets_l5(
             NbrIdx[pos_of_new_sepset_elem] = G_Chunk[NbrIdxPointer];
             for (int d2 = 0; d2 < num_unfinished_sepsets; d2++)
             {
-                YIdx = unfinished_prime[d2];
+                YIdx = unfinished_prime[XIdx * n + d2];
                 if (YIdx == NbrIdx[pos_of_new_sepset_elem])
                 {
                     continue;
@@ -1172,7 +1172,7 @@ __global__ void check_sepsets_l6(
             NbrIdx[pos_of_new_sepset_elem] = G_Chunk[NbrIdxPointer];
             for (int d2 = 0; d2 < num_unfinished_sepsets; d2++)
             {
-                YIdx = unfinished_prime[d2];
+                YIdx = unfinished_prime[XIdx * n + d2];
                 if (YIdx == NbrIdx[pos_of_new_sepset_elem])
                 {
                     continue;
@@ -1337,7 +1337,7 @@ __global__ void check_sepsets_l7(
             NbrIdx[pos_of_new_sepset_elem] = G_Chunk[NbrIdxPointer];
             for (int d2 = 0; d2 < num_unfinished_sepsets; d2++)
             {
-                YIdx = unfinished_prime[d2];
+                YIdx = unfinished_prime[XIdx * n + d2];
                 if (YIdx == NbrIdx[pos_of_new_sepset_elem])
                 {
                     continue;
@@ -1518,7 +1518,7 @@ __global__ void check_sepsets_l8(
             NbrIdx[pos_of_new_sepset_elem] = G_Chunk[NbrIdxPointer];
             for (int d2 = 0; d2 < num_unfinished_sepsets; d2++)
             {
-                YIdx = unfinished_prime[d2];
+                YIdx = unfinished_prime[XIdx * n + d2];
                 if (YIdx == NbrIdx[pos_of_new_sepset_elem])
                 {
                     continue;
@@ -1715,7 +1715,7 @@ __global__ void check_sepsets_l9(
             NbrIdx[pos_of_new_sepset_elem] = G_Chunk[NbrIdxPointer];
             for (int d2 = 0; d2 < num_unfinished_sepsets; d2++)
             {
-                YIdx = unfinished_prime[d2];
+                YIdx = unfinished_prime[XIdx * n + d2];
                 if (YIdx == NbrIdx[pos_of_new_sepset_elem])
                 {
                     continue;
@@ -1852,7 +1852,7 @@ __global__ void check_sepsets_l10(
             NbrIdx[pos_of_new_sepset_elem] = G_Chunk[NbrIdxPointer];
             for (int d2 = 0; d2 < num_unfinished_sepsets; d2++)
             {
-                YIdx = unfinished_prime[d2];
+                YIdx = unfinished_prime[XIdx * n + d2];
                 if (YIdx == NbrIdx[pos_of_new_sepset_elem])
                 {
                     continue;
@@ -1990,7 +1990,7 @@ __global__ void check_sepsets_l11(
             NbrIdx[pos_of_new_sepset_elem] = G_Chunk[NbrIdxPointer];
             for (int d2 = 0; d2 < num_unfinished_sepsets; d2++)
             {
-                YIdx = unfinished_prime[d2];
+                YIdx = unfinished_prime[XIdx * n + d2];
                 if (YIdx == NbrIdx[pos_of_new_sepset_elem])
                 {
                     continue;
@@ -2124,7 +2124,7 @@ __global__ void check_sepsets_l12(
             NbrIdx[pos_of_new_sepset_elem] = G_Chunk[NbrIdxPointer];
             for (int d2 = 0; d2 < num_unfinished_sepsets; d2++)
             {
-                YIdx = unfinished_prime[d2];
+                YIdx = unfinished_prime[XIdx * n + d2];
                 if (YIdx == NbrIdx[pos_of_new_sepset_elem])
                 {
                     continue;
@@ -2263,7 +2263,7 @@ __global__ void check_sepsets_l13(
             NbrIdx[pos_of_new_sepset_elem] = G_Chunk[NbrIdxPointer];
             for (int d2 = 0; d2 < num_unfinished_sepsets; d2++)
             {
-                YIdx = unfinished_prime[d2];
+                YIdx = unfinished_prime[XIdx * n + d2];
                 if (YIdx == NbrIdx[pos_of_new_sepset_elem])
                 {
                     continue;
@@ -2402,7 +2402,7 @@ __global__ void check_sepsets_l14(
             NbrIdx[pos_of_new_sepset_elem] = G_Chunk[NbrIdxPointer];
             for (int d2 = 0; d2 < num_unfinished_sepsets; d2++)
             {
-                YIdx = unfinished_prime[d2];
+                YIdx = unfinished_prime[XIdx * n + d2];
                 if (YIdx == NbrIdx[pos_of_new_sepset_elem])
                 {
                     continue;
