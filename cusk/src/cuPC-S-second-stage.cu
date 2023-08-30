@@ -71,6 +71,8 @@ __global__ void print_matrix(int *M, int n)
     }
 }
 
+__global__ void unfinished_initialize(int *uf, int n) { uf[bx * n + by] = 1; }
+
 void cusk_second_stage(
     float *C, int *P, int *G, float *Th, int *l, const int *maxlevel, float *pMax, int *SepSet
 )
@@ -112,14 +114,6 @@ void cusk_second_stage(
     HANDLE_ERROR(cudaMemcpy(C_cuda, C, n * n * sizeof(float), cudaMemcpyHostToDevice));
     // initialize a 0 matrix
     HANDLE_ERROR(cudaMemset(mutex_cuda, 0, n * n * sizeof(int)));
-    HANDLE_ERROR(cudaMemset(unfinished_cuda, 1, n * n * sizeof(int)));
-
-    printf("uf_cuda: \n");
-    print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(unfinished_cuda, n);
-    cudaDeviceSynchronize();
-    fflush(stdout);
-    CudaCheckError();
-
     CudaCheckError();
     //----------------------------------------------------------
     for (*l = 0; *l <= ML && !FinishFlag && *l <= *maxlevel; *l = *l + 1)
@@ -151,6 +145,8 @@ void cusk_second_stage(
             BLOCKS_PER_GRID = dim3(n * n, 1, 1);
             THREADS_PER_BLOCK = dim3(ML, 1, 1);
             SepSet_initialize<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(SepSet_cuda, n);
+            CudaCheckError();
+            unfinished_initialize<<<dim3(n, n, 1), dim3(1, 1, 1)>>>(unfinished_cuda, n);
             CudaCheckError();
         }
         else
