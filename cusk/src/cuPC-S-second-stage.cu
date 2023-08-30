@@ -71,7 +71,17 @@ __global__ void print_matrix(int *M, int n)
     }
 }
 
-__global__ void unfinished_initialize(int *uf, int n) { uf[bx * n + by] = 1; }
+__global__ void unfinished_initialize(int *uf, int n)
+{
+    if (bx == by)
+    {
+        uf[bx * n + by] = 0;
+    }
+    else
+    {
+        uf[bx * n + by] = 1;
+    }
+}
 
 void cusk_second_stage(
     float *C, int *P, int *G, float *Th, int *l, const int *maxlevel, float *pMax, int *SepSet
