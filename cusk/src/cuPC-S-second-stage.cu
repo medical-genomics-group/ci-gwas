@@ -65,7 +65,7 @@ __global__ void print_matrix(float *M, int n)
     {
         for (int j = 0; j < n; j++)
         {
-            printf("%d ", M[i * n + j]);
+            printf("%f ", M[i * n + j]);
         }
         printf("\n");
     }
