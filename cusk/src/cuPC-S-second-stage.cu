@@ -83,7 +83,7 @@ __global__ void unfinished_initialize(int *uf, int n)
     }
 }
 
-__global__ void pMax_initialize(float *pMax, int n) { uf[bx * n + by] = 1.0; }
+__global__ void pMax_initialize(float *pMax, int n) { pMax[bx * n + by] = 1.0; }
 
 void cusk_second_stage(
     float *C, int *P, int *G, float *Th, int *l, const int *maxlevel, float *pMax, int *SepSet
