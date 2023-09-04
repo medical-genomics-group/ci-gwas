@@ -194,7 +194,7 @@ void cusk_second_stage(
             THREADS_PER_BLOCK = dim3(ML, 1, 1);
             SepSet_initialize<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(SepSet_cuda, n);
             CudaCheckError();
-            pcorr_initialize<<<BLOCKS_PER_GRID, dim3(PCORR_MAX_DEGREE, 1, 1)>>>(pcorr_cuda, n);
+            pcorr_initialize<<<dim3(n, n, 1), dim3(PCORR_MAX_DEGREE, 1, 1)>>>(pcorr_cuda, n);
             CudaCheckError();
             HANDLE_ERROR(cudaMemcpy(
                 &pcorr_single_float,
