@@ -196,6 +196,14 @@ void cusk_second_stage(
             CudaCheckError();
             pcorr_initialize<<<BLOCKS_PER_GRID, dim3(PCORR_MAX_DEGREE, 1, 1)>>>(pcorr_cuda, n);
             CudaCheckError();
+            HANDLE_ERROR(cudaMemcpy(
+                &pcorr_single_float,
+                &pcorr_cuda[(2 * n + 1) * PCORR_MAX_DEGREE + 0],
+                1 * sizeof(float),
+                cudaMemcpyDeviceToHost
+            ));
+            printf("pcorr[2, 1, 0]: %f\n", pcorr_single_float);
+            fflush(stdout);
             unfinished_initialize<<<dim3(n, n, 1), dim3(1, 1, 1)>>>(unfinished_cuda, n);
             CudaCheckError();
         }
