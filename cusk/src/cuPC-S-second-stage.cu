@@ -59,6 +59,8 @@ of the impl just send one thread per edge.
 //@param Ncol       = Number of Col in Nbr matrix
 //============================================================================
 
+__global__ void print_float(float *f) { printf("%f \n", f); }
+
 __global__ void print_matrix(float *M, int n)
 {
     for (int i = 0; i < n; i++)
@@ -149,6 +151,10 @@ void cusk_second_stage(
     for (*l = 0; *l <= ML && !FinishFlag && *l <= *maxlevel; *l = *l + 1)
     {
         CudaCheckError();
+        printf("pcorr[2, 1, 0]: \n");
+        fflush(stdout);
+        print_float<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(pcorr_cuda[(2 * n + 1) * PCORR_MAX_DEGREE + 0]
+        );
         if (*l == 0)
         {
             printf("Starting lvl 0\n");
