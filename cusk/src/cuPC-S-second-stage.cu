@@ -59,6 +59,18 @@ of the impl just send one thread per edge.
 //@param Ncol       = Number of Col in Nbr matrix
 //============================================================================
 
+__device__ int is_in_arr(int x, int *arr, int n)
+{
+    for (int i = 0; i < n; i++)
+    {
+        if (arr[i] == x)
+        {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 __global__ void print_matrix(float *M, int n)
 {
     for (int i = 0; i < n; i++)
@@ -676,6 +688,11 @@ __global__ void check_sepsets_l2(
                     NbrIdx[pos] = SepSet[(XIdx * n + YIdx) * ML + pos];
                 }
 
+                if (is_in_arr(NbrIdx[pos_of_new_sepset_elem], NbdrIdx, pos_of_new_sepset_elem))
+                {
+                    continue;
+                }
+
                 M2[0][1] = C[NbrIdx[0] * n + NbrIdx[1]];
                 M2[1][0] = M2[0][1];
                 M2[1][1] = 1;
@@ -777,6 +794,11 @@ __global__ void check_sepsets_l3(
                 for (int pos = 0; pos < pos_of_new_sepset_elem; pos++)
                 {
                     NbrIdx[pos] = SepSet[(XIdx * n + YIdx) * ML + pos];
+                }
+
+                if (is_in_arr(NbrIdx[pos_of_new_sepset_elem], NbdrIdx, pos_of_new_sepset_elem))
+                {
+                    continue;
                 }
 
                 M2[0][0] = 1;
@@ -904,6 +926,11 @@ __global__ void check_sepsets_l4(
                 for (int pos = 0; pos < pos_of_new_sepset_elem; pos++)
                 {
                     NbrIdx[pos] = SepSet[(XIdx * n + YIdx) * ML + pos];
+                }
+
+                if (is_in_arr(NbrIdx[pos_of_new_sepset_elem], NbdrIdx, pos_of_new_sepset_elem))
+                {
+                    continue;
                 }
 
                 M2[0][0] = 1;
@@ -1042,6 +1069,11 @@ __global__ void check_sepsets_l5(
                 for (int pos = 0; pos < pos_of_new_sepset_elem; pos++)
                 {
                     NbrIdx[pos] = SepSet[(XIdx * n + YIdx) * ML + pos];
+                }
+
+                if (is_in_arr(NbrIdx[pos_of_new_sepset_elem], NbdrIdx, pos_of_new_sepset_elem))
+                {
+                    continue;
                 }
 
                 M2[0][0] = 1;
@@ -1193,6 +1225,11 @@ __global__ void check_sepsets_l6(
                 for (int pos = 0; pos < pos_of_new_sepset_elem; pos++)
                 {
                     NbrIdx[pos] = SepSet[(XIdx * n + YIdx) * ML + pos];
+                }
+
+                if (is_in_arr(NbrIdx[pos_of_new_sepset_elem], NbdrIdx, pos_of_new_sepset_elem))
+                {
+                    continue;
                 }
 
                 M2[0][0] = 1;
@@ -1358,6 +1395,11 @@ __global__ void check_sepsets_l7(
                 for (int pos = 0; pos < pos_of_new_sepset_elem; pos++)
                 {
                     NbrIdx[pos] = SepSet[(XIdx * n + YIdx) * ML + pos];
+                }
+
+                if (is_in_arr(NbrIdx[pos_of_new_sepset_elem], NbdrIdx, pos_of_new_sepset_elem))
+                {
+                    continue;
                 }
 
                 M2[0][0] = 1;
@@ -1539,6 +1581,11 @@ __global__ void check_sepsets_l8(
                 for (int pos = 0; pos < pos_of_new_sepset_elem; pos++)
                 {
                     NbrIdx[pos] = SepSet[(XIdx * n + YIdx) * ML + pos];
+                }
+
+                if (is_in_arr(NbrIdx[pos_of_new_sepset_elem], NbdrIdx, pos_of_new_sepset_elem))
+                {
+                    continue;
                 }
 
                 M2[0][0] = 1;
@@ -1737,6 +1784,12 @@ __global__ void check_sepsets_l9(
                 {
                     NbrIdx[pos] = SepSet[(XIdx * n + YIdx) * ML + pos];
                 }
+
+                if (is_in_arr(NbrIdx[pos_of_new_sepset_elem], NbdrIdx, pos_of_new_sepset_elem))
+                {
+                    continue;
+                }
+
                 for (int c1 = 0; c1 < 9; c1++)
                 {
                     for (int c2 = 0; c2 < 9; c2++)
@@ -1875,6 +1928,11 @@ __global__ void check_sepsets_l10(
                     NbrIdx[pos] = SepSet[(XIdx * n + YIdx) * ML + pos];
                 }
 
+                if (is_in_arr(NbrIdx[pos_of_new_sepset_elem], NbdrIdx, pos_of_new_sepset_elem))
+                {
+                    continue;
+                }
+
                 for (int c1 = 0; c1 < 10; c1++)
                 {
                     for (int c2 = 0; c2 < 10; c2++)
@@ -2004,6 +2062,16 @@ __global__ void check_sepsets_l11(
             {
                 YIdx = unfinished_prime[XIdx * n + d2];
                 if (YIdx == NbrIdx[pos_of_new_sepset_elem])
+                {
+                    continue;
+                }
+
+                for (int pos = 0; pos < pos_of_new_sepset_elem; pos++)
+                {
+                    NbrIdx[pos] = SepSet[(XIdx * n + YIdx) * ML + pos];
+                }
+
+                if (is_in_arr(NbrIdx[pos_of_new_sepset_elem], NbdrIdx, pos_of_new_sepset_elem))
                 {
                     continue;
                 }
@@ -2147,6 +2215,11 @@ __global__ void check_sepsets_l12(
                     NbrIdx[pos] = SepSet[(XIdx * n + YIdx) * ML + pos];
                 }
 
+                if (is_in_arr(NbrIdx[pos_of_new_sepset_elem], NbdrIdx, pos_of_new_sepset_elem))
+                {
+                    continue;
+                }
+
                 for (int c1 = 0; c1 < 12; c1++)
                 {
                     for (int c2 = 0; c2 < 12; c2++)
@@ -2286,6 +2359,11 @@ __global__ void check_sepsets_l13(
                     NbrIdx[pos] = SepSet[(XIdx * n + YIdx) * ML + pos];
                 }
 
+                if (is_in_arr(NbrIdx[pos_of_new_sepset_elem], NbdrIdx, pos_of_new_sepset_elem))
+                {
+                    continue;
+                }
+
                 for (int c1 = 0; c1 < 13; c1++)
                 {
                     for (int c2 = 0; c2 < 13; c2++)
@@ -2423,6 +2501,11 @@ __global__ void check_sepsets_l14(
                 for (int pos = 0; pos < pos_of_new_sepset_elem; pos++)
                 {
                     NbrIdx[pos] = SepSet[(XIdx * n + YIdx) * ML + pos];
+                }
+
+                if (is_in_arr(NbrIdx[pos_of_new_sepset_elem], NbdrIdx, pos_of_new_sepset_elem))
+                {
+                    continue;
                 }
 
                 for (int c1 = 0; c1 < 14; c1++)
