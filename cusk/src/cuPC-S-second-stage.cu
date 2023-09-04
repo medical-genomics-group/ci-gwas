@@ -149,23 +149,24 @@ void cusk_second_stage(
     for (*l = 0; *l <= ML && !FinishFlag && *l <= *maxlevel; *l = *l + 1)
     {
         CudaCheckError();
-        float pcorr_single_float;
-        HANDLE_ERROR(cudaMemcpy(
-            &pcorr_single_float,
-            &pcorr_cuda[(2 * n + 1) * PCORR_MAX_DEGREE + 0],
-            1 * sizeof(float),
-            cudaMemcpyDeviceToHost
-        ));
-        printf("pcorr[2, 1, 0]: %f\n", pcorr_single_float);
-        fflush(stdout);
-        HANDLE_ERROR(cudaMemcpy(
-            &pcorr_single_float,
-            &pcorr_cuda[(0 * n + 0) * PCORR_MAX_DEGREE + 0],
-            1 * sizeof(float),
-            cudaMemcpyDeviceToHost
-        ));
-        printf("pcorr[0, 0, 0]: %f\n", pcorr_single_float);
-        fflush(stdout);
+
+        // float pcorr_single_float;
+        // HANDLE_ERROR(cudaMemcpy(
+        //     &pcorr_single_float,
+        //     &pcorr_cuda[(2 * n + 1) * PCORR_MAX_DEGREE + 0],
+        //     1 * sizeof(float),
+        //     cudaMemcpyDeviceToHost
+        // ));
+        // printf("pcorr[2, 1, 0]: %f\n", pcorr_single_float);
+        // fflush(stdout);
+        // HANDLE_ERROR(cudaMemcpy(
+        //     &pcorr_single_float,
+        //     &pcorr_cuda[(0 * n + 0) * PCORR_MAX_DEGREE + 0],
+        //     1 * sizeof(float),
+        //     cudaMemcpyDeviceToHost
+        // ));
+        // printf("pcorr[0, 0, 0]: %f\n", pcorr_single_float);
+        // fflush(stdout);
 
         if (*l == 0)
         {
@@ -196,14 +197,6 @@ void cusk_second_stage(
             CudaCheckError();
             pcorr_initialize<<<dim3(n, n, 1), dim3(PCORR_MAX_DEGREE, 1, 1)>>>(pcorr_cuda, n);
             CudaCheckError();
-            HANDLE_ERROR(cudaMemcpy(
-                &pcorr_single_float,
-                &pcorr_cuda[(2 * n + 1) * PCORR_MAX_DEGREE + 0],
-                1 * sizeof(float),
-                cudaMemcpyDeviceToHost
-            ));
-            printf("pcorr[2, 1, 0]: %f\n", pcorr_single_float);
-            fflush(stdout);
             unfinished_initialize<<<dim3(n, n, 1), dim3(1, 1, 1)>>>(unfinished_cuda, n);
             CudaCheckError();
         }
@@ -221,17 +214,17 @@ void cusk_second_stage(
             CudaCheckError();
             HANDLE_ERROR(cudaMemcpy(&nprime, nprime_cuda, 1 * sizeof(int), cudaMemcpyDeviceToHost));
 
-            printf("pMax_cuda: \n");
-            print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(pMax_cuda, n);
-            cudaDeviceSynchronize();
+            // printf("pMax_cuda: \n");
+            // print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(pMax_cuda, n);
+            // cudaDeviceSynchronize();
 
-            printf("G_cuda: \n");
-            print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(G_cuda, n);
-            cudaDeviceSynchronize();
+            // printf("G_cuda: \n");
+            // print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(G_cuda, n);
+            // cudaDeviceSynchronize();
 
-            printf("GPrime_cuda: \n");
-            print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(GPrime_cuda, n);
-            cudaDeviceSynchronize();
+            // printf("GPrime_cuda: \n");
+            // print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(GPrime_cuda, n);
+            // cudaDeviceSynchronize();
 
             // Check if the max degree is too large
             if (nprime > PCORR_MAX_DEGREE)
@@ -249,9 +242,9 @@ void cusk_second_stage(
             );
             CudaCheckError();
 
-            printf("unfinished_prime_cuda: \n");
-            print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(unfinished_prime_cuda, n);
-            cudaDeviceSynchronize();
+            // printf("unfinished_prime_cuda: \n");
+            // print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(unfinished_prime_cuda, n);
+            // cudaDeviceSynchronize();
 
             //================================> Begin The Gaussian CI Test
             //<==============================
@@ -510,13 +503,6 @@ __global__ void find_min_pcorr(
         float curr_z = pcorrs[(XIdx * n + YIdx) * PCORR_MAX_DEGREE + NbrIdxPointer];
         if (curr_z < min_z)
         {
-            printf(
-                "New min pcorr at x: %d, y: %d, nbrptr: %d, z: %f \n",
-                XIdx,
-                YIdx,
-                NbrIdxPointer,
-                curr_z
-            );
             new_min = true;
             min_z = curr_z;
             min_nbr_idx = GPrime[XIdx * n + NbrIdxPointer];
@@ -615,10 +601,6 @@ __global__ void check_sepsets_l1(
                 rho = H[0][1] / (sqrt(fabs(H[0][0])) * sqrt(fabs(H[1][1])));
                 Z = fabs(0.5 * (log(fabs((1 + rho))) - log(fabs(1 - rho))));
                 pcorrs[(XIdx * n + YIdx) * PCORR_MAX_DEGREE + NbrIdxPointer] = Z;
-                if (Z == 0.0)
-                {
-                    printf("found z=0 at: x: %d, y: %d, z: %d \n", XIdx, YIdx, NbrIdx);
-                }
             }
         }
     }
