@@ -59,7 +59,7 @@ of the impl just send one thread per edge.
 //@param Ncol       = Number of Col in Nbr matrix
 //============================================================================
 
-__global__ void print_float(float *f) { printf("%f \n", f); }
+__global__ void print_float(float f) { printf("%f \n", f); }
 
 __global__ void print_matrix(float *M, int n)
 {
