@@ -158,6 +158,15 @@ void cusk_second_stage(
         ));
         printf("pcorr[2, 1, 0]: %f\n", pcorr_single_float);
         fflush(stdout);
+        HANDLE_ERROR(cudaMemcpy(
+            &pcorr_single_float,
+            &pcorr_cuda[(0 * n + 0) * PCORR_MAX_DEGREE + 0],
+            1 * sizeof(float),
+            cudaMemcpyDeviceToHost
+        ));
+        printf("pcorr[0, 0, 0]: %f\n", pcorr_single_float);
+        fflush(stdout);
+
         if (*l == 0)
         {
             printf("Starting lvl 0\n");
