@@ -152,7 +152,7 @@ void cusk_second_stage(
         float pcorr_single_float;
         HANDLE_ERROR(cudaMemcpy(
             &pcorr_single_float,
-            *pcorr_cuda[(2 * n + 1) * PCORR_MAX_DEGREE + 0],
+            &pcorr_cuda[(2 * n + 1) * PCORR_MAX_DEGREE + 0],
             1 * sizeof(float),
             cudaMemcpyDeviceToHost
         ));
