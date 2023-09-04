@@ -688,7 +688,7 @@ __global__ void check_sepsets_l2(
                     NbrIdx[pos] = SepSet[(XIdx * n + YIdx) * ML + pos];
                 }
 
-                if (is_in_arr(NbrIdx[pos_of_new_sepset_elem], NbdrIdx, pos_of_new_sepset_elem))
+                if (is_in_arr(NbrIdx[pos_of_new_sepset_elem], NbrIdx, pos_of_new_sepset_elem))
                 {
                     continue;
                 }
@@ -796,7 +796,7 @@ __global__ void check_sepsets_l3(
                     NbrIdx[pos] = SepSet[(XIdx * n + YIdx) * ML + pos];
                 }
 
-                if (is_in_arr(NbrIdx[pos_of_new_sepset_elem], NbdrIdx, pos_of_new_sepset_elem))
+                if (is_in_arr(NbrIdx[pos_of_new_sepset_elem], NbrIdx, pos_of_new_sepset_elem))
                 {
                     continue;
                 }
@@ -928,7 +928,7 @@ __global__ void check_sepsets_l4(
                     NbrIdx[pos] = SepSet[(XIdx * n + YIdx) * ML + pos];
                 }
 
-                if (is_in_arr(NbrIdx[pos_of_new_sepset_elem], NbdrIdx, pos_of_new_sepset_elem))
+                if (is_in_arr(NbrIdx[pos_of_new_sepset_elem], NbrIdx, pos_of_new_sepset_elem))
                 {
                     continue;
                 }
@@ -1071,7 +1071,7 @@ __global__ void check_sepsets_l5(
                     NbrIdx[pos] = SepSet[(XIdx * n + YIdx) * ML + pos];
                 }
 
-                if (is_in_arr(NbrIdx[pos_of_new_sepset_elem], NbdrIdx, pos_of_new_sepset_elem))
+                if (is_in_arr(NbrIdx[pos_of_new_sepset_elem], NbrIdx, pos_of_new_sepset_elem))
                 {
                     continue;
                 }
@@ -1227,7 +1227,7 @@ __global__ void check_sepsets_l6(
                     NbrIdx[pos] = SepSet[(XIdx * n + YIdx) * ML + pos];
                 }
 
-                if (is_in_arr(NbrIdx[pos_of_new_sepset_elem], NbdrIdx, pos_of_new_sepset_elem))
+                if (is_in_arr(NbrIdx[pos_of_new_sepset_elem], NbrIdx, pos_of_new_sepset_elem))
                 {
                     continue;
                 }
@@ -1397,7 +1397,7 @@ __global__ void check_sepsets_l7(
                     NbrIdx[pos] = SepSet[(XIdx * n + YIdx) * ML + pos];
                 }
 
-                if (is_in_arr(NbrIdx[pos_of_new_sepset_elem], NbdrIdx, pos_of_new_sepset_elem))
+                if (is_in_arr(NbrIdx[pos_of_new_sepset_elem], NbrIdx, pos_of_new_sepset_elem))
                 {
                     continue;
                 }
@@ -1583,7 +1583,7 @@ __global__ void check_sepsets_l8(
                     NbrIdx[pos] = SepSet[(XIdx * n + YIdx) * ML + pos];
                 }
 
-                if (is_in_arr(NbrIdx[pos_of_new_sepset_elem], NbdrIdx, pos_of_new_sepset_elem))
+                if (is_in_arr(NbrIdx[pos_of_new_sepset_elem], NbrIdx, pos_of_new_sepset_elem))
                 {
                     continue;
                 }
@@ -1785,7 +1785,7 @@ __global__ void check_sepsets_l9(
                     NbrIdx[pos] = SepSet[(XIdx * n + YIdx) * ML + pos];
                 }
 
-                if (is_in_arr(NbrIdx[pos_of_new_sepset_elem], NbdrIdx, pos_of_new_sepset_elem))
+                if (is_in_arr(NbrIdx[pos_of_new_sepset_elem], NbrIdx, pos_of_new_sepset_elem))
                 {
                     continue;
                 }
@@ -1928,7 +1928,7 @@ __global__ void check_sepsets_l10(
                     NbrIdx[pos] = SepSet[(XIdx * n + YIdx) * ML + pos];
                 }
 
-                if (is_in_arr(NbrIdx[pos_of_new_sepset_elem], NbdrIdx, pos_of_new_sepset_elem))
+                if (is_in_arr(NbrIdx[pos_of_new_sepset_elem], NbrIdx, pos_of_new_sepset_elem))
                 {
                     continue;
                 }
@@ -2071,7 +2071,7 @@ __global__ void check_sepsets_l11(
                     NbrIdx[pos] = SepSet[(XIdx * n + YIdx) * ML + pos];
                 }
 
-                if (is_in_arr(NbrIdx[pos_of_new_sepset_elem], NbdrIdx, pos_of_new_sepset_elem))
+                if (is_in_arr(NbrIdx[pos_of_new_sepset_elem], NbrIdx, pos_of_new_sepset_elem))
                 {
                     continue;
                 }
@@ -2215,7 +2215,7 @@ __global__ void check_sepsets_l12(
                     NbrIdx[pos] = SepSet[(XIdx * n + YIdx) * ML + pos];
                 }
 
-                if (is_in_arr(NbrIdx[pos_of_new_sepset_elem], NbdrIdx, pos_of_new_sepset_elem))
+                if (is_in_arr(NbrIdx[pos_of_new_sepset_elem], NbrIdx, pos_of_new_sepset_elem))
                 {
                     continue;
                 }
@@ -2359,7 +2359,7 @@ __global__ void check_sepsets_l13(
                     NbrIdx[pos] = SepSet[(XIdx * n + YIdx) * ML + pos];
                 }
 
-                if (is_in_arr(NbrIdx[pos_of_new_sepset_elem], NbdrIdx, pos_of_new_sepset_elem))
+                if (is_in_arr(NbrIdx[pos_of_new_sepset_elem], NbrIdx, pos_of_new_sepset_elem))
                 {
                     continue;
                 }
@@ -2503,7 +2503,7 @@ __global__ void check_sepsets_l14(
                     NbrIdx[pos] = SepSet[(XIdx * n + YIdx) * ML + pos];
                 }
 
-                if (is_in_arr(NbrIdx[pos_of_new_sepset_elem], NbdrIdx, pos_of_new_sepset_elem))
+                if (is_in_arr(NbrIdx[pos_of_new_sepset_elem], NbrIdx, pos_of_new_sepset_elem))
                 {
                     continue;
                 }
