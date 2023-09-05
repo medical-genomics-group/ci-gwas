@@ -213,13 +213,13 @@ void cusk_second_stage(
             // print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(pMax_cuda, n);
             // cudaDeviceSynchronize();
 
-            printf("G_cuda: \n");
-            print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(G_cuda, n);
-            cudaDeviceSynchronize();
+            // printf("G_cuda: \n");
+            // print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(G_cuda, n);
+            // cudaDeviceSynchronize();
 
-            printf("GPrime_cuda: \n");
-            print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(GPrime_cuda, n);
-            cudaDeviceSynchronize();
+            // printf("GPrime_cuda: \n");
+            // print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(GPrime_cuda, n);
+            // cudaDeviceSynchronize();
 
             // Check if the max degree is too large
             if (nprime > PCORR_MAX_DEGREE)
