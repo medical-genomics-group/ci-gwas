@@ -499,6 +499,7 @@ void cusk_second_stage(int argc, char *argv[])
     std::cout << "Loading input files" << std::endl;
     std::cout << "Loading corrs" << std::endl;
     std::vector<float> sq_corrs = read_floats_from_binary(corr_path);
+    std::cout << "Loading skeleton" << std::endl;
     std::vector<int> G = read_ints_from_binary(adj_path);
 
     // make n2 matrix to please cuPC
