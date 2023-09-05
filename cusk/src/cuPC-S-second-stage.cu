@@ -114,6 +114,29 @@ __global__ void pcorr_initialize(float *pcorr, int n)
     pcorr[(bx * n + by) * PCORR_MAX_DEGREE + tx] = 1.0;
 }
 
+__global__ void select_non_colliders(
+    int *G, int *GPrime, int *Sepset, float *pMax, float *pcorrs, float th, int l, int n
+)
+{
+    int XIdx = bx;
+    int YIdx = by;
+    bool new_min = false;
+    int SizeOfArr = GPrime[XIdx * n + n - 1];
+    // set to previous pMax (the marginal correlation)
+    float marginal_corr = pMax[XIdx * n + YIdx];
+    int sepset_pos = 0;
+
+    for (int NbrIdxPointer = 0; NbrIdxPointer < SizeOfArr; NbrIdxPointer++)
+    {
+        float cond_corr = pcorrs[(XIdx * n + YIdx) * PCORR_MAX_DEGREE + NbrIdxPointer];
+        if (cond_corr < marginal_corr)
+        {
+            Sepset[(XIdx * n + YIdx) * ML + sepset_pos] = GPrime[XIdx * n + NbrIdxPointer];
+            sepset_pos++;
+        }
+    }
+}
+
 void cusk_second_stage(
     float *C, int *P, int *G, float *Th, int *l, const int *maxlevel, float *pMax, int *SepSet
 )
@@ -313,81 +336,6 @@ void cusk_second_stage(
     HANDLE_ERROR(cudaFree(unfinished_prime_cuda));
     HANDLE_ERROR(cudaFree(pcorr_cuda));
 }  // Skeleton
-
-__global__ void select_non_colliders(
-    int *G, int *GPrime, int *Sepset, float *pMax, float *pcorrs, float th, int l, int n
-)
-{
-    int XIdx = bx;
-    int YIdx = by;
-    bool new_min = false;
-    int SizeOfArr = GPrime[XIdx * n + n - 1];
-    // set to previous pMax (the marginal correlation)
-    float marginal_corr = pMax[XIdx * n + YIdx];
-    int sepset_pos = 0;
-
-    for (int NbrIdxPointer = 0; NbrIdxPointer < SizeOfArr; NbrIdxPointer++)
-    {
-        float cond_corr = pcorrs[(XIdx * n + YIdx) * PCORR_MAX_DEGREE + NbrIdxPointer];
-        if (cond_corr < marginal_corr)
-        {
-            Sepset[(XIdx * n + YIdx) * ML + sepset_pos] = GPrime[XIdx * n + NbrIdxPointer];
-            sepset_pos++;
-        }
-    }
-}
-
-__global__ void find_min_pcorr(
-    int *G,
-    int *GPrime,
-    int *Sepset,
-    float *pMax,
-    float *pcorrs,
-    int *unfinished,
-    float th,
-    int l,
-    int n
-)
-{
-    int min_nbr_idx;
-    int XIdx = bx;
-    int YIdx = by;
-    if (unfinished[XIdx * n + YIdx] == 0)
-    {
-        return;
-    }
-    bool new_min = false;
-    int SizeOfArr = GPrime[XIdx * n + n - 1];
-    // set to previous pMax
-    float min_z = pMax[XIdx * n + YIdx];
-
-    for (int NbrIdxPointer = 0; NbrIdxPointer < SizeOfArr; NbrIdxPointer++)
-    {
-        float curr_z = pcorrs[(XIdx * n + YIdx) * PCORR_MAX_DEGREE + NbrIdxPointer];
-        if (curr_z < min_z)
-        {
-            new_min = true;
-            min_z = curr_z;
-            min_nbr_idx = GPrime[XIdx * n + NbrIdxPointer];
-        }
-    }
-
-    if (new_min)
-    {
-        Sepset[(XIdx * n + YIdx) * ML + (l - 1)] = min_nbr_idx;
-        pMax[XIdx * n + YIdx] = min_z;
-        if (min_z < th)
-        {
-            G[XIdx * n + YIdx] = 0;
-            G[YIdx * n + XIdx] = 0;
-        }
-    }
-    else
-    {
-        // mark as finished
-        unfinished[XIdx * n + YIdx] = 0;
-    }
-}
 
 /*
 Like cal_Indepl0, but without addition of edges for marginally-dependent pairs.
