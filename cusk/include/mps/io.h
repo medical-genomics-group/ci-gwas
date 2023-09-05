@@ -122,6 +122,8 @@ void read_n_bytes_from_binary(
 
 std::vector<float> read_floats_from_binary(const std::string path);
 
+std::vector<int> read_ints_from_binary(const std::string path);
+
 void write_ints_to_binary(const int *data, const size_t nvals, const std::string path);
 
 void write_floats_to_binary(const float *data, const size_t nvals, const std::string path);

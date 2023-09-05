@@ -213,6 +213,17 @@ std::vector<float> read_correlations_from_mtx(const std::string path)
     return corrs;
 }
 
+std::vector<int> read_ints_from_binary(const std::string path)
+{
+    float f;
+    std::ifstream fin(path, std::ios::binary);
+    std::vector<int> res = {};
+
+    while (fin.read(reinterpret_cast<char *>(&f), sizeof(int))) res.push_back(f);
+
+    return res;
+}
+
 std::vector<float> read_floats_from_binary(const std::string path)
 {
     float f;
