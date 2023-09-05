@@ -129,6 +129,7 @@ __device__ void pseudoinversel13(
 __device__ void pseudoinversel14(
     float M2[][14], float M2Inv[][14], float v[][14], float *rv1, float *w, float res1[][14]
 );
+__global__ void marginal_pMax(float *C, int *G, float th, float *pMax, int n);
 __global__ void check_sepsets_l1(
     float *C, int *G, int *GPrime, float *pcorrs, int *unfinished_prime, int n
 );

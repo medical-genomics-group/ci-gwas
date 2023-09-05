@@ -151,6 +151,8 @@ void cusk_second_stage(
     HANDLE_ERROR(cudaMalloc((void **)&C_cuda, n * n * sizeof(float)));
     HANDLE_ERROR(cudaMalloc((void **)&G_cuda, n * n * sizeof(int)));
     HANDLE_ERROR(cudaMalloc((void **)&pMax_cuda, n * n * sizeof(float)));
+    // copy skeleton from CPU to GPU
+    HANDLE_ERROR(cudaMemcpy(G_cuda, G, n * n * sizeof(int), cudaMemcpyHostToDevice));
     // copy correlation matrix from CPU to GPU
     HANDLE_ERROR(cudaMemcpy(C_cuda, C, n * n * sizeof(float), cudaMemcpyHostToDevice));
     // initialize a 0 matrix
@@ -161,25 +163,6 @@ void cusk_second_stage(
     for (*l = 0; *l <= ML && !FinishFlag && *l <= *maxlevel; *l = *l + 1)
     {
         CudaCheckError();
-
-        // float pcorr_single_float;
-        // HANDLE_ERROR(cudaMemcpy(
-        //     &pcorr_single_float,
-        //     &pcorr_cuda[(2 * n + 1) * PCORR_MAX_DEGREE + 0],
-        //     1 * sizeof(float),
-        //     cudaMemcpyDeviceToHost
-        // ));
-        // printf("pcorr[2, 1, 0]: %f\n", pcorr_single_float);
-        // fflush(stdout);
-        // HANDLE_ERROR(cudaMemcpy(
-        //     &pcorr_single_float,
-        //     &pcorr_cuda[(0 * n + 0) * PCORR_MAX_DEGREE + 0],
-        //     1 * sizeof(float),
-        //     cudaMemcpyDeviceToHost
-        // ));
-        // printf("pcorr[0, 0, 0]: %f\n", pcorr_single_float);
-        // fflush(stdout);
-
         if (*l == 0)
         {
             printf("Starting lvl 0\n");
@@ -189,7 +172,7 @@ void cusk_second_stage(
             {
                 BLOCKS_PER_GRID = dim3(1, 1, 1);
                 THREADS_PER_BLOCK = dim3(32, 32, 1);
-                cal_Indepl0<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
+                marginal_pMax<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
                     C_cuda, G_cuda, Th[0], pMax_cuda, n
                 );
                 CudaCheckError();
@@ -198,7 +181,7 @@ void cusk_second_stage(
             {
                 BLOCKS_PER_GRID = dim3(ceil(((float)(n)) / 32.0), ceil(((float)(n)) / 32.0), 1);
                 THREADS_PER_BLOCK = dim3(32, 32, 1);
-                cal_Indepl0<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
+                marginal_pMax<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
                     C_cuda, G_cuda, Th[0], pMax_cuda, n
                 );
                 CudaCheckError();
@@ -535,6 +518,32 @@ __global__ void find_min_pcorr(
     {
         // mark as finished
         unfinished[XIdx * n + YIdx] = 0;
+    }
+}
+
+/*
+Like cal_Indepl0, but without addition of edges for marginally-dependent pairs.
+*/
+__global__ void marginal_pMax(float *C, int *G, float th, float *pMax, int n)
+{
+    int row = blockDim.x * bx + tx;
+    int col = blockDim.y * by + ty;
+    if (row < col && col < n)
+    {
+        float res = C[row * n + col];
+        res = abs(0.5 * log(abs((1 + res) / (1 - res))));
+        if (res < th)
+        {
+            pMax[row * n + col] = res;
+            pMax[col * n + row] = res;
+            G[row * n + col] = 0;
+            G[col * n + row] = 0;
+        }
+    }
+    if (row == col && col < n)
+    {
+        G[row * n + col] = 0;
+        G[col * n + row] = 0;
     }
 }
 
