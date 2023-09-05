@@ -215,7 +215,7 @@ std::vector<float> read_correlations_from_mtx(const std::string path)
 
 std::vector<int> read_ints_from_binary(const std::string path)
 {
-    float f;
+    int f;
     std::ifstream fin(path, std::ios::binary);
     std::vector<int> res = {};
 
