@@ -470,6 +470,7 @@ usage: mps cusk2 <corr> <alpha> <max-level> <num-samples> <outdir>
 
 arguments:
     corr            correlation matrix as returned by first cusk stage
+    skeleton        skeleton (adjacency matrix) as returned by first cusk stage
     num-var         number of variables
     alpha           significance level
     max-level       maximal size of seperation sets in cuPC ( <= 14)
@@ -484,11 +485,12 @@ void cusk_second_stage(int argc, char *argv[])
     check_nargs(argc, CUSK_SECOND_STAGE_NARGS, CUSK_SECOND_STAGE_USAGE);
 
     std::string corr_path = argv[2];
-    int num_var = std::stoi(argv[3]);
-    float alpha = std::stof(argv[4]);
-    int max_level = std::stoi(argv[5]);
-    int num_individuals = std::stoi(argv[6]);
-    std::string outdir = (std::string)argv[7];
+    std::string adj_path = argv[3];
+    int num_var = std::stoi(argv[4]);
+    float alpha = std::stof(argv[5]);
+    int max_level = std::stoi(argv[6]);
+    int num_individuals = std::stoi(argv[7]);
+    std::string outdir = (std::string)argv[8];
 
     check_path(corr_path);
     check_path(outdir);
@@ -497,6 +499,7 @@ void cusk_second_stage(int argc, char *argv[])
     std::cout << "Loading input files" << std::endl;
     std::cout << "Loading corrs" << std::endl;
     std::vector<float> sq_corrs = read_floats_from_binary(corr_path);
+    std::vector<int> G = read_ints_from_binary(adj_path);
 
     // make n2 matrix to please cuPC
     size_t num_markers = 0;
@@ -507,9 +510,7 @@ void cusk_second_stage(int argc, char *argv[])
     // call cuPC
     int p = num_var;
     const size_t sepset_size = p * p * ML;
-    const size_t g_size = num_var * num_var;
-    std::vector<float> pmax(g_size, 0.0);
-    std::vector<int> G(g_size, 1);
+    std::vector<float> pmax(num_var * num_var, 0.0);
     std::vector<int> sepset(sepset_size, 0);
     int l = 0;
     cusk_second_stage(
