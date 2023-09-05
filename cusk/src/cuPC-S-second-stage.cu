@@ -238,7 +238,7 @@ void cusk_second_stage(
     {
         printf("max degree exceeds allowed value\n");
         fflush(stdout);
-        break;
+        return;
     }
 
     printf("Compacting lists of unfinished sepsets\n");
