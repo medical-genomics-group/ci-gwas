@@ -120,7 +120,6 @@ __global__ void select_non_colliders(
 {
     int XIdx = bx;
     int YIdx = by;
-    bool new_min = false;
     int SizeOfArr = GPrime[XIdx * n + n - 1];
     // set to previous pMax (the marginal correlation)
     float marginal_corr = pMax[XIdx * n + YIdx];
