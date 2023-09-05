@@ -115,7 +115,7 @@ __global__ void pcorr_initialize(float *pcorr, int n)
 }
 
 __global__ void select_non_colliders(
-    int *G, int *GPrime, int *Sepset, float *pMax, float *pcorrs, float th, int l, int n
+    int *G, int *GPrime, int *Sepset, float *pMax, float *pcorrs, int n
 )
 {
     int XIdx = bx;
@@ -182,121 +182,104 @@ void cusk_second_stage(
     pMax_initialize<<<dim3(n, n, 1), dim3(1, 1, 1)>>>(pMax_cuda, n);
     CudaCheckError();
     //----------------------------------------------------------
-    for (*l = 0; *l <= ML && !FinishFlag && *l <= *maxlevel; *l = *l + 1)
+
+    printf("Starting lvl 0\n");
+    fflush(stdout);
+
+    if ((n * n) < 1024)
     {
+        BLOCKS_PER_GRID = dim3(1, 1, 1);
+        THREADS_PER_BLOCK = dim3(32, 32, 1);
+        marginal_pMax<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(C_cuda, G_cuda, Th[0], pMax_cuda, n);
         CudaCheckError();
-        if (*l == 0)
-        {
-            printf("Starting lvl 0\n");
-            fflush(stdout);
+    }
+    else
+    {
+        BLOCKS_PER_GRID = dim3(ceil(((float)(n)) / 32.0), ceil(((float)(n)) / 32.0), 1);
+        THREADS_PER_BLOCK = dim3(32, 32, 1);
+        marginal_pMax<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(C_cuda, G_cuda, Th[0], pMax_cuda, n);
+        CudaCheckError();
+    }
+    BLOCKS_PER_GRID = dim3(n * n, 1, 1);
+    THREADS_PER_BLOCK = dim3(ML, 1, 1);
+    SepSet_initialize<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(SepSet_cuda, n);
+    CudaCheckError();
+    pcorr_initialize<<<dim3(n, n, 1), dim3(PCORR_MAX_DEGREE, 1, 1)>>>(pcorr_cuda, n);
+    CudaCheckError();
+    unfinished_initialize<<<dim3(n, n, 1), dim3(1, 1, 1)>>>(unfinished_cuda, n);
+    CudaCheckError();
 
-            if ((n * n) < 1024)
-            {
-                BLOCKS_PER_GRID = dim3(1, 1, 1);
-                THREADS_PER_BLOCK = dim3(32, 32, 1);
-                marginal_pMax<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
-                    C_cuda, G_cuda, Th[0], pMax_cuda, n
-                );
-                CudaCheckError();
-            }
-            else
-            {
-                BLOCKS_PER_GRID = dim3(ceil(((float)(n)) / 32.0), ceil(((float)(n)) / 32.0), 1);
-                THREADS_PER_BLOCK = dim3(32, 32, 1);
-                marginal_pMax<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
-                    C_cuda, G_cuda, Th[0], pMax_cuda, n
-                );
-                CudaCheckError();
-            }
-            BLOCKS_PER_GRID = dim3(n * n, 1, 1);
-            THREADS_PER_BLOCK = dim3(ML, 1, 1);
-            SepSet_initialize<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(SepSet_cuda, n);
-            CudaCheckError();
-            pcorr_initialize<<<dim3(n, n, 1), dim3(PCORR_MAX_DEGREE, 1, 1)>>>(pcorr_cuda, n);
-            CudaCheckError();
-            unfinished_initialize<<<dim3(n, n, 1), dim3(1, 1, 1)>>>(unfinished_cuda, n);
-            CudaCheckError();
-        }
-        else
-        {
-            //================================> Start Scan Process <===============================
-            printf("Compacting adjacencies\n");
-            fflush(stdout);
-            HANDLE_ERROR(cudaMemset(nprime_cuda, 0, 1 * sizeof(int)));
-            BLOCKS_PER_GRID = dim3(1, n, 1);
-            THREADS_PER_BLOCK = dim3(1024, 1, 1);
-            scan_compact<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, n * sizeof(int)>>>(
-                GPrime_cuda, G_cuda, n, nprime_cuda
-            );
-            CudaCheckError();
-            HANDLE_ERROR(cudaMemcpy(&nprime, nprime_cuda, 1 * sizeof(int), cudaMemcpyDeviceToHost));
+    //================================> Start Scan Process <===============================
+    printf("Compacting adjacencies\n");
+    fflush(stdout);
+    HANDLE_ERROR(cudaMemset(nprime_cuda, 0, 1 * sizeof(int)));
+    BLOCKS_PER_GRID = dim3(1, n, 1);
+    THREADS_PER_BLOCK = dim3(1024, 1, 1);
+    scan_compact<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, n * sizeof(int)>>>(
+        GPrime_cuda, G_cuda, n, nprime_cuda
+    );
+    CudaCheckError();
+    HANDLE_ERROR(cudaMemcpy(&nprime, nprime_cuda, 1 * sizeof(int), cudaMemcpyDeviceToHost));
 
-            // printf("pMax_cuda: \n");
-            // print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(pMax_cuda, n);
-            // cudaDeviceSynchronize();
+    // printf("pMax_cuda: \n");
+    // print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(pMax_cuda, n);
+    // cudaDeviceSynchronize();
 
-            // printf("G_cuda: \n");
-            // print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(G_cuda, n);
-            // cudaDeviceSynchronize();
+    // printf("G_cuda: \n");
+    // print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(G_cuda, n);
+    // cudaDeviceSynchronize();
 
-            // printf("GPrime_cuda: \n");
-            // print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(GPrime_cuda, n);
-            // cudaDeviceSynchronize();
+    // printf("GPrime_cuda: \n");
+    // print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(GPrime_cuda, n);
+    // cudaDeviceSynchronize();
 
-            // Check if the max degree is too large
-            if (nprime > PCORR_MAX_DEGREE)
-            {
-                printf("max degree exceeds allowed value\n");
-                fflush(stdout);
-                break;
-            }
+    // Check if the max degree is too large
+    if (nprime > PCORR_MAX_DEGREE)
+    {
+        printf("max degree exceeds allowed value\n");
+        fflush(stdout);
+        break;
+    }
 
-            printf("Compacting lists of unfinished sepsets\n");
-            fflush(stdout);
-            // compact the list of adjacencies for which sepsets should be updated
-            scan_compact<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, n * sizeof(int)>>>(
-                unfinished_prime_cuda, unfinished_cuda, n, nprime_cuda
-            );
-            CudaCheckError();
+    printf("Compacting lists of unfinished sepsets\n");
+    fflush(stdout);
+    // compact the list of adjacencies for which sepsets should be updated
+    scan_compact<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, n * sizeof(int)>>>(
+        unfinished_prime_cuda, unfinished_cuda, n, nprime_cuda
+    );
+    CudaCheckError();
 
-            // printf("unfinished_prime_cuda: \n");
-            // print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(unfinished_prime_cuda, n);
-            // cudaDeviceSynchronize();
+    // printf("unfinished_prime_cuda: \n");
+    // print_matrix<<<dim3(1, 1, 1), dim3(1, 1, 1)>>>(unfinished_prime_cuda, n);
+    // cudaDeviceSynchronize();
 
-            //================================> Begin The Gaussian CI Test
-            //<==============================
-            // CHeck whether a CI test is possible
-            if (nprime - 1 < *l)
-            {  // if not:
-                *l = *l - 1;
-                FinishFlag = true;
-                break;
-            }
+    //================================> Begin The Gaussian CI Test
+    //<==============================
+    // CHeck whether a CI test is possible
+    if (nprime - 1 < *l)
+    {  // if not:
+        *l = *l - 1;
+        FinishFlag = true;
+        break;
+    }
 
-            if (*l == 1)
-            {
-                printf("Calculating l1\n");
-                fflush(stdout);
-                BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL1, n, 1);
-                THREADS_PER_BLOCK = dim3(ParGivenL1, 1, 1);
-                check_sepsets_l1<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, pcorr_cuda, unfinished_prime_cuda, n
-                );
-                CudaCheckError();
-            }
+    printf("Calculating l1\n");
+    fflush(stdout);
+    BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL1, n, 1);
+    THREADS_PER_BLOCK = dim3(ParGivenL1, 1, 1);
+    check_sepsets_l1<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
+        C_cuda, G_cuda, GPrime_cuda, pcorr_cuda, unfinished_prime_cuda, n
+    );
+    CudaCheckError();
 
-            // find best sepset candidate, remove edges with sepsets that
-            // yield Z below threshold
-            printf("Selecting likely non-colliders\n");
-            fflush(stdout);
-            BLOCKS_PER_GRID = dim3(n, n, 1);
-            THREADS_PER_BLOCK = dim3(1, 1, 1);
-            select_non_colliders<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
-                G_cuda, GPrime_cuda, SepSet_cuda, pMax_cuda, pcorr_cuda, Th[*l], *l, n
-            );
-            CudaCheckError();
-        }
-    }  // if l > 0
+    printf("Selecting likely non-colliders\n");
+    fflush(stdout);
+    BLOCKS_PER_GRID = dim3(n, n, 1);
+    THREADS_PER_BLOCK = dim3(1, 1, 1);
+    select_non_colliders<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
+        G_cuda, GPrime_cuda, SepSet_cuda, pMax_cuda, pcorr_cuda, n
+    );
+    CudaCheckError();
 
     // Copy Graph G from GPU to CPU
     HANDLE_ERROR(cudaMemcpy(G, G_cuda, n * n * sizeof(int), cudaMemcpyDeviceToHost));
