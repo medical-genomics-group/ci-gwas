@@ -156,8 +156,6 @@ void cusk_second_stage(
     dim3 BLOCKS_PER_GRID;
     dim3 THREADS_PER_BLOCK;
 
-    bool FinishFlag = false;
-
     *l = 0;
 
     // initialize sepset element selection matrix
