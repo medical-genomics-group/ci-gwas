@@ -1,10 +1,12 @@
 file(GLOB HEADER_LIST CONFIGURE_DEPENDS "${MPS_SOURCE_DIR}/include/mps/*.h")
 
 # set(HEADER_LIST "${MPS_SOURCE_DIR}/include/mps/*.h")
-add_library(cuPC STATIC cuPC-S.cu cuPC_call_prep.cpp ${HEADER_LIST})
+add_library(cuPC STATIC cuPC-S.cu cuPC-S-second-stage.cu cuPC_call_prep.cpp ${HEADER_LIST})
+set_target_properties(cuPC PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 target_include_directories(cuPC PUBLIC ../include)
 target_compile_features(cuPC PUBLIC cxx_std_20)
 target_compile_options(cuPC PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
+    -dc
     -O3
     -lineinfo
     --use_fast_math

@@ -1,8 +1,9 @@
-#include <mps/cuPC-S-sparse.h>
 #include <mps/cu_test_helpers.h>
 #include <mps/gpuerrors.h>
 
-void test_cal_Indepl0(const float *C, const int *M, const int *P, const int *W, int *G, const float *Th)
+void test_cal_Indepl0(
+    const float *C, const int *M, const int *P, const int *W, int *G, const float *Th
+)
 {
     float *C_cuda;
     int *G_cuda;
@@ -37,16 +38,18 @@ void test_cal_Indepl0(const float *C, const int *M, const int *P, const int *W, 
     {
         BLOCKS_PER_GRID = dim3(1, 1, 1);
         THREADS_PER_BLOCK = dim3(nr, nc, 1);
-        cal_Indepl0<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(C_cuda, G_cuda, Th[0],
-                                                            pMax_cuda, m, p, w);
+        cal_Indepl0<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
+            C_cuda, G_cuda, Th[0], pMax_cuda, m, p, w
+        );
         CudaCheckError();
     }
     else
     {
         BLOCKS_PER_GRID = dim3(ceil(((float)nr) / 32.0), ceil(((float)nc) / 32.0), 1);
         THREADS_PER_BLOCK = dim3(32, 32, 1);
-        cal_Indepl0<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(C_cuda, G_cuda, Th[0],
-                                                            pMax_cuda, m, p, w);
+        cal_Indepl0<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
+            C_cuda, G_cuda, Th[0], pMax_cuda, m, p, w
+        );
         CudaCheckError();
     }
 
@@ -58,7 +61,8 @@ void test_cal_Indepl0(const float *C, const int *M, const int *P, const int *W, 
     CudaCheckError();
 }
 
-// void test_cal_scan_compact(int *G_compact, const int *G, int *nprime, const int *M, const int *P, const int *W)
+// void test_cal_scan_compact(int *G_compact, const int *G, int *nprime, const int *M, const int *P,
+// const int *W)
 // {
 //     int *G_cuda;
 //     int *G_compact_cuda;
@@ -93,6 +97,6 @@ void test_cal_Indepl0(const float *C, const int *M, const int *P, const int *W, 
 
 //     // Copy results back
 //     HANDLE_ERROR(cudaMemcpy(nprime, nprime_cuda, 1 * sizeof(int), cudaMemcpyDeviceToHost));
-//     HandleError(cudaMemcpy(G_compact, G_compact_cuda, compact_adj_mat_size * sizeof(int), cudaMemcpyDeviceToHost));
-//     CudaCheckError();
+//     HandleError(cudaMemcpy(G_compact, G_compact_cuda, compact_adj_mat_size * sizeof(int),
+//     cudaMemcpyDeviceToHost)); CudaCheckError();
 // }

@@ -1393,6 +1393,45 @@ simulation_edge_types = EdgeEncoding(
     ),
 )
 
+
+seven_edge_types = EdgeEncoding(
+    [
+        r"$y_1 \; \; \; y_2$",
+        r"$y_1$ <-> $y_2$",
+        r"$y_1$ -> $y_2$",
+        r"$y_1$ <- $y_2$",
+        r"$y_1$ <-o $y_2$",
+        r"$y_1$ o-> $y_2$",
+        r"$y_1$ - $y_2$",
+        r"$y_1$ o-o $y_2$",
+    ],
+    {
+        (0, 0): 0,
+        (2, 2): 1,
+        (2, 3): 2,
+        (3, 2): 3,
+        (1, 2): 4,
+        (2, 1): 5,
+        (3, 3): 6,
+        (1, 1): 7,
+    },
+    mpl.colors.ListedColormap(
+        np.array(
+            [
+                "#ffffff",  # white
+                "#b2df8a",  # green
+                "#fcc006",  # marigold
+                # "#a6cee3", # light blue
+                "#1f78b4",  # darker blue
+                "#510ac9",  # violet blue
+                "#fd411e",  # orange red
+                "#41fdfe",  # bright cyan
+                "#d8dcd6",  # light grey
+            ]
+        )
+    ),
+)
+
 six_edge_types = EdgeEncoding(
     [
         r"$y_1 \; \; \; y_2$",
@@ -2161,10 +2200,10 @@ def pag_x_to_y_edge_types(pag_path: str, pheno_path: str) -> dict[tuple[int, int
 
 
 def combine_all_pheno_and_plot():
-    outdir = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/bdpc_d1_l6_a1e8/"
-    blockfile = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/ukb22828_UKB_EST_v3_ldp08.blocks"
+    outdir = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/bdpc_d1_l6_a1e8/"
+    blockfile = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/ukb22828_UKB_EST_v3_ldp08.blocks"
     p_names = get_pheno_codes(
-        "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/input.phen"
+        "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/input.phen"
     )
     num_phen = len(p_names)
 
@@ -2261,7 +2300,7 @@ def combine_all_pheno_and_plot():
         cbar_kws={"label": "# parent markers"},
     )
 
-    pag_path = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/bdpc_d1_l6_a1e8/all_merged_pag.mtx"
+    pag_path = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/bdpc_d1_l6_a1e8/all_merged_pag.mtx"
 
     pag_coo = mmread(pag_path)
 
@@ -2329,7 +2368,6 @@ class Performance:
     var_tp: float
     fdr: float
     tpr: float
-    correct_orientation: float
 
 
 @dataclass
@@ -2429,6 +2467,39 @@ def path_in_sem(adj: np.array):
     return causal_paths
 
 
+def calculate_pxp_orientation_performance_mr(
+        true_adj_matrix: np.array,
+        inferred_edges: np.array,
+):
+    num_phen = true_adj_matrix.shape[0]
+    tp_links = 0
+    correct_tp_links = 0
+    for i in range(num_phen):
+        for j in range(i, num_phen):
+            if true_adj_matrix[i, j] and (inferred_edges[i, j] or inferred_edges[j, i]):
+                tp_links += 1
+                if inferred_edges[i, j] and not inferred_edges[j, i]:
+                    correct_tp_links += 1
+    return 0 if tp_links == 0 else correct_tp_links / tp_links
+
+
+def calculate_pxp_orientation_performance_ci_gwas(
+        true_adj_matrix: np.array,
+        inferred_pag: np.array,
+):
+    num_phen = true_adj_matrix.shape[0]
+    tp_links = 0
+    correct_tp_links = 0
+    for i in range(num_phen):
+        for j in range(i, num_phen):
+            inferred_edge = (inferred_pag[i, j], inferred_pag[j, i])
+            if true_adj_matrix[i, j] and inferred_edge != (0, 0):
+                tp_links += 1
+                if inferred_edge == (2, 3):
+                    correct_tp_links += 1
+    return 0 if tp_links == 0 else correct_tp_links / tp_links
+
+
 def calulate_performance_metrics(
     true_adj: np.array,
     true_eff: np.array,
@@ -2445,17 +2516,6 @@ def calulate_performance_metrics(
     # no need to subset here. for MR, we do it before
     sig_eff = est_eff
     tp_mat = (true_adj_masked != 0) & (est_adj_masked != 0)
-
-    exp_link_types = make_link_type_dict(true_adj)
-    obs_link_types = make_link_type_dict(est_adj)
-    tp_links = 0
-    correct_tp_links = 0
-    for link, link_type in exp_link_types.items():
-        if link in obs_link_types:
-            tp_links += 1
-            if link_type == obs_link_types[link]:
-                correct_tp_links += 1
-    correct_orientation = 0 if tp_links == 0 else correct_tp_links / tp_links
 
     p = np.sum(true_adj_masked != 0)
     # f = np.sum(true_adj_masked == 0)
@@ -2480,12 +2540,12 @@ def calulate_performance_metrics(
     if np.ma.is_masked(bias_tp):
         bias_tp = np.nan
     return Performance(
-        mse, bias, var, mse_tp, bias_tp, var_tp, fdr, tpr, correct_orientation
+        mse, bias, var, mse_tp, bias_tp, var_tp, fdr, tpr
     )
 
 
 def load_simulation_results() -> pd.DataFrame:
-    pdir = f"/nfs/scistore13/robingrp/human_data/causality/bias_as_fn_of_alpha/sim_small_effects/"
+    pdir = f"/nfs/scistore17/robingrp/human_data/causality/bias_as_fn_of_alpha/sim_small_effects/"
 
     d = 1
     l = 6
@@ -2639,20 +2699,20 @@ def load_simulation_results() -> pd.DataFrame:
 
 
 def load_n16k_m1600_simulation_results(
-    mr_skeleton=False, mr_git_thr=False
+    mr_skeleton=False, mr_git_thr=False, mr_fixed_marker_thr=False,
 ) -> pd.DataFrame:
-    pdir = f"/nfs/scistore13/robingrp/human_data/causality/bias_as_fn_of_alpha/sim_small_effects/"
-    mr_skeleton_pdir = "/nfs/scistore13/robingrp/smahmoud/Example1/mr_res_skeleton/"
-    mr_git_thr_pdir = "/nfs/scistore13/robingrp/smahmoud/Example1/mr_res_git_thr/"
+    pdir = f"/nfs/scistore17/robingrp/human_data/causality/bias_as_fn_of_alpha/sim_small_effects/"
+    mr_skeleton_pdir = "/nfs/scistore17/robingrp/smahmoud/Example1/mr_res_skeleton/"
+    mr_git_thr_pdir = "/nfs/scistore17/robingrp/smahmoud/Example1/mr_res_git_thr/"
 
     d = 1
     l = 6
     n_arr = [16000]
     m_arr = [1600]
     # m_arr = [200, 400, 1600]
-    e_arr = list(range(1, 9))
+    e_arr = list(range(2, 9))
     alpha_str_arr = [
-        "0.1",
+        # "0.1",
         "0.01",
         "0.001",
         "1e-04",
@@ -2728,7 +2788,7 @@ def load_n16k_m1600_simulation_results(
                             {
                                 # "marker-trait fdr": mxp_fdr,
                                 # "marker-trait tpr": mxp_tpr,
-                                "edge orientation": perf.correct_orientation,
+                                "edge orientation": calculate_pxp_orientation_performance_mr(pdag != 0, adj),
                                 "mse": perf.mse,
                                 "var": perf.var,
                                 "bias": perf.bias,
@@ -2835,43 +2895,44 @@ def load_n16k_m1600_simulation_results(
                         )
 
         # mr standalone
-        for mr in mr_cn:
-            mr_results = pd.read_csv(
-                pdir + f"mr_res_{mr.method}_n{n}_SNP_{m}_it_{rep}.csv"
-            )
-            mr_results["i"] = mr_results[mr.exposure].apply(
-                lambda x: int(x.split("Y")[1]) - 1
-            )
-            mr_results["j"] = mr_results[mr.outcome].apply(
-                lambda x: int(x.split("Y")[1]) - 1
-            )
-            pvals = np.ones(shape=(num_phen, num_phen))
-            pvals[mr_results["i"], mr_results["j"]] = mr_results[mr.p]
-            effects = np.zeros(shape=(num_phen, num_phen))
-            effects[mr_results["i"], mr_results["j"]] = mr_results[mr.estimate]
-            for e in e_arr:
-                adj = pvals < float(a_str)
-                eff_copy = np.copy(effects)
-                eff_copy[~adj] = 0
-                perf = calulate_performance_metrics(pdag, peff, adj, eff_copy)
-                rows.append(
-                    {
-                        "edge orientation": perf.correct_orientation,
-                        "mse": perf.mse,
-                        "var": perf.var,
-                        "bias": perf.bias,
-                        "mse_tp": perf.mse_tp,
-                        "var_tp": perf.var_tp,
-                        "bias_tp": perf.bias_tp,
-                        "fdr": perf.fdr,
-                        "tpr": perf.tpr,
-                        "n": n,
-                        "m": m,
-                        "rep": rep,
-                        "alpha": 10 ** (-e),
-                        "method": rf"{mr.method}, $\alpha_{{IV}} = 10^{{-3}}$",
-                    }
+        if mr_fixed_marker_thr:
+            for mr in mr_cn:
+                mr_results = pd.read_csv(
+                    pdir + f"mr_res_{mr.method}_n{n}_SNP_{m}_it_{rep}.csv"
                 )
+                mr_results["i"] = mr_results[mr.exposure].apply(
+                    lambda x: int(x.split("Y")[1]) - 1
+                )
+                mr_results["j"] = mr_results[mr.outcome].apply(
+                    lambda x: int(x.split("Y")[1]) - 1
+                )
+                pvals = np.ones(shape=(num_phen, num_phen))
+                pvals[mr_results["i"], mr_results["j"]] = mr_results[mr.p]
+                effects = np.zeros(shape=(num_phen, num_phen))
+                effects[mr_results["i"], mr_results["j"]] = mr_results[mr.estimate]
+                for e in e_arr:
+                    adj = pvals < float(a_str)
+                    eff_copy = np.copy(effects)
+                    eff_copy[~adj] = 0
+                    perf = calulate_performance_metrics(pdag, peff, adj, eff_copy)
+                    rows.append(
+                        {
+                            "edge orientation": perf.correct_orientation,
+                            "mse": perf.mse,
+                            "var": perf.var,
+                            "bias": perf.bias,
+                            "mse_tp": perf.mse_tp,
+                            "var_tp": perf.var_tp,
+                            "bias_tp": perf.bias_tp,
+                            "fdr": perf.fdr,
+                            "tpr": perf.tpr,
+                            "n": n,
+                            "m": m,
+                            "rep": rep,
+                            "alpha": 10 ** (-e),
+                            "method": rf"{mr.method}, $\alpha_{{IV}} = 10^{{-3}}$",
+                        }
+                    )
 
         for e in e_arr:
             indir = pdir + f"simpc_d{d}_l{l}_e{e}_i{rep}_n{n}_m{m}/"
@@ -2887,7 +2948,7 @@ def load_n16k_m1600_simulation_results(
             padj = adj[-(num_phen):,-(num_phen):]
 
             # load pag
-            pag_path = indir + "estimated_pag_mpu.mtx"
+            pag_path = indir + "max_sep_min_pc_estimated_pag_std.mtx"
             est_pag = mmread(pag_path).tocsr()[-(num_phen):, -(num_phen):].toarray()
             est_dag = pag_to_dag_directed(est_pag)
 
@@ -2941,7 +3002,7 @@ def load_n16k_m1600_simulation_results(
                 {
                     "x -> y fdr": mxp_fdr,
                     "x -> y tpr": mxp_tpr,
-                    "edge orientation": perf.correct_orientation,
+                    "edge orientation": calculate_pxp_orientation_performance_ci_gwas(pdag != 0, est_pag),
                     "mse": perf.mse,
                     "var": perf.var,
                     "bias": perf.bias,
@@ -3047,7 +3108,7 @@ def plot_simulation_results_figure_2():
     n_arr = [2000, 4000, 8000, 16000]
     m_arr = [200, 400, 800, 1600]
     # m_arr = [200, 400, 1600]
-    e_arr = list(range(1, 9))
+    e_arr = list(range(2, 9))
     rep_arr = list(range(1, 21))
     num_phen = 10
 
@@ -3126,21 +3187,22 @@ def plot_simulation_results_figure_2():
         # ax.set_yscale("symlog")
         return handles
 
-    fig = plt.figure(layout="tight", figsize=(10, 10))
+    fig = plt.figure(layout="tight", figsize=(15, 10))
     ax_dict = fig.subplot_mosaic(
         """
-        i
-        a
-        b
-        c
-        d
-        e
+        XiX
+        abc
+        ddd
+        eee
+        fff
         """,
         empty_sentinel="X",
-        sharex=True,
+        sharex=False,
         # set the height ratios between the rows
-        height_ratios=[0.2, 0.6, 0.6, 0.6, 0.6, 1],
+        height_ratios=[0.2, 0.6, 0.6, 0.6, 1],
     )
+
+    ax_dict['f'].set_xlabel(r'$\alpha$')
 
     plot_ci_gwas_bars(
         alphas, "x -> y fdr", means, stds, ax_dict["a"], "a)", axhline=True
@@ -3148,7 +3210,8 @@ def plot_simulation_results_figure_2():
     plot_ci_gwas_bars(alphas, "x -> y tpr", means, stds, ax_dict["b"], "b)")
     plot_ci_gwas_bars(alphas, "fdr", means, stds, ax_dict["c"], "c)", axhline=True)
     plot_bars(alphas, "tpr", means, stds, ax_dict["d"], "d)")
-    h = plot_bars(alphas, "mse", means, stds, ax_dict["e"], "e)")
+    plot_bars(alphas, "edge orientation", means, stds, ax_dict["e"], "e)")
+    h = plot_bars(alphas, "mse", means, stds, ax_dict["f"], "f)")
     # plot_bars(alphas, "bias", means, stds, ax_dict["g"], "g)")
     # h = plot_bars(alphas, "var", means, stds, ax_dict["h"], "h)")
     ax_dict["i"].legend(
@@ -3161,6 +3224,9 @@ def plot_simulation_results_figure_2():
         # title="method",
     )
     ax_dict["i"].axis("off")
+    _ = [ax_dict[i].tick_params(labelbottom=False) for i in "de"]
+    _ = [ax_dict[i].sharex(ax_dict['f']) for i in 'de']
+    
 
 
 def plot_simulation_results_sup_tp_with_orientation():
@@ -3449,7 +3515,7 @@ def plot_simulation_results_sup(alpha=10 ** (-8)):
 def plot_block_size_experiment_results():
     num_phen = 17
     block_sizes = np.arange(1, 13) * 10**3
-    basepath = "/nfs/scistore13/robingrp/human_data/causality/block_size_effect/"
+    basepath = "/nfs/scistore17/robingrp/human_data/causality/block_size_effect/"
     bim_path = basepath + "ukb22828_UKB_EST_v3_ldp08.bim"
     bim = pd.read_csv(bim_path, sep="\t", header=None)
 
@@ -3515,12 +3581,12 @@ def plot_alpha_effect_on_davs_results():
     l = 6
     es = [2, 3, 4, 5, 6, 7, 8]
     nrows = len(es) - 1
-    pheno_path = f"/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/production/input.phen"
+    pheno_path = f"/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/production/input.phen"
 
     ace = {}
 
     for i, e in enumerate(es):
-        bdpc_ace_path_sk = f"/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/production/bdpc_d{d}_l{l}_a1e{e}/all_merged_ACE_sk_mk3.mtx"
+        bdpc_ace_path_sk = f"/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/production/bdpc_d{d}_l{l}_a1e{e}/all_merged_ACE_sk_mk3.mtx"
 
         ace[e] = load_ace(bdpc_ace_path_sk, pheno_path).flatten()
 
@@ -3563,15 +3629,15 @@ def plot_compare_max_k_effect_on_ace():
     es = [5, 6, 7, 8]
     nrows = len(es)
     pheno_path = (
-        f"/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/input.phen"
+        f"/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/input.phen"
     )
 
     ace_mk = {}
     ace = {}
 
     for i, e in enumerate(es):
-        bdpc_ace_path_sk_mk = f"/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/production/bdpc_d{d}_l{l}_a1e{e}/all_merged_ACE_sk_mk3.mtx"
-        bdpc_ace_path_sk = f"/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/production/bdpc_d{d}_l{l}_a1e{e}/all_merged_ACE_sk.mtx"
+        bdpc_ace_path_sk_mk = f"/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/production/bdpc_d{d}_l{l}_a1e{e}/all_merged_ACE_sk_mk3.mtx"
+        bdpc_ace_path_sk = f"/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/production/bdpc_d{d}_l{l}_a1e{e}/all_merged_ACE_sk.mtx"
         ace_mk[e] = load_ace(bdpc_ace_path_sk_mk, pheno_path).flatten()
         ace[e] = load_ace(bdpc_ace_path_sk, pheno_path).flatten()
 
@@ -4112,9 +4178,9 @@ def merge_parallel_davs_csvs(
 def plot_inf_depth_pleio(e=4):
     d = 10000
     l = 6
-    outdir = f"/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/production/bdpc_d{d}_l{l}_a1e{e}/"
-    blockfile = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/ukb22828_UKB_EST_v3_ldp08.blocks"
-    pheno_path = f"/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/production/input.phen"
+    outdir = f"/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/production/bdpc_d{d}_l{l}_a1e{e}/"
+    blockfile = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/ukb22828_UKB_EST_v3_ldp08.blocks"
+    pheno_path = f"/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/production/input.phen"
 
     z1 = get_skeleton_pleiotropy_mat(outdir, blockfile, pheno_path, max_depth=1)
     z2 = get_skeleton_pleiotropy_mat(outdir, blockfile, pheno_path, max_depth=2)
@@ -4194,7 +4260,7 @@ def plot_inf_depth_pleio(e=4):
 
 
 def plot_est_ukb_corr():
-    basepath = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/estonian_comparison/bdpc_d1_l6_a1e2/pheno_sk"
+    basepath = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/estonian_comparison/bdpc_d1_l6_a1e2/pheno_sk"
     num_m = 0
     num_p = 9
     marker_offset = 0
@@ -4211,7 +4277,7 @@ def plot_est_ukb_corr():
 
     estonia_pnames = ["AT", "BMI", "CAD", "DBP", "HT", "SBP", "SMK", "ST", "T2D"]
     estonia_corr_path = (
-        "/nfs/scistore13/robingrp/human_data/cigwas_estonia/trait-trait.txt"
+        "/nfs/scistore17/robingrp/human_data/cigwas_estonia/trait-trait.txt"
     )
 
     p_corrs_ukb = load_corr_sparse(basepath, num_m, num_p, marker_offset)
@@ -4324,11 +4390,11 @@ def plot_ukb_age_sex_causal_path_aces():
         "f_first_q": rf"$f, T_{1}$",
     }
 
-    pheno_path = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/age_sex/f_first_q.phen"
+    pheno_path = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/age_sex/f_first_q.phen"
 
     for subset, ax_name in zip(subsets, ["a", "b", "c", "d", "e", "f"]):
         pset = "age_sex"
-        outdir = f"/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/{pset}/bdpc_{subset}_d{d}_l{l}_a1e{e}/"
+        outdir = f"/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/{pset}/bdpc_{subset}_d{d}_l{l}_a1e{e}/"
         pag_path = outdir + "all_merged_pag_mpu.mtx"
         ace_path = outdir + "all_merged_ACE_mpu.mtx"
         # im = plot_ace_rf_to_d(ace_path, pag_path, pheno_path, title=subset_print[subset], ax=ax_dict[ax_name], cbar=False, norm=mpl.colors.SymLogNorm(vmin=-2.0, vmax=2.0, linthresh=0.01), )
@@ -4393,13 +4459,13 @@ def plot_ukb_age_sex_marker_positions():
         "f_first_q": rf"$f, T_{1}$",
     }
 
-    pheno_path = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/age_sex/f_first_q.phen"
-    bim_path = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/ukb22828_UKB_EST_v3_ldp08.bim"
+    pheno_path = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/age_sex/f_first_q.phen"
+    bim_path = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/ukb22828_UKB_EST_v3_ldp08.bim"
 
     traits_with_parents = set()
     for row, subset in enumerate(subsets):
         pset = "age_sex"
-        outdir = f"/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/{pset}/bdpc_{subset}_d{d}_l{l}_a1e{e}/"
+        outdir = f"/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/{pset}/bdpc_{subset}_d{d}_l{l}_a1e{e}/"
         traits_with_parents.update(
             set(
                 pd.read_csv(
@@ -4422,7 +4488,7 @@ def plot_ukb_age_sex_marker_positions():
 
     for row, subset in enumerate(subsets):
         pset = "age_sex"
-        outdir = f"/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/{pset}/bdpc_{subset}_d{d}_l{l}_a1e{e}/"
+        outdir = f"/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/{pset}/bdpc_{subset}_d{d}_l{l}_a1e{e}/"
         df = pd.read_csv(outdir + "marker_phen_assoc.csv", sep="\t")
         for trait_ix, trait in enumerate(traits_with_parents):
             sub_df = df[df["phenotype"] == trait]
@@ -4505,11 +4571,11 @@ def plot_age_sex_composite_figure():
         "f_first_q": rf"$f, T_{1}$",
     }
 
-    pheno_path = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/age_sex/f_first_q.phen"
+    pheno_path = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/age_sex/f_first_q.phen"
 
     for subset, ax_name in zip(subsets, ["a", "b", "c", "d", "e", "f"]):
         pset = "age_sex"
-        outdir = f"/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/{pset}/bdpc_{subset}_d{d}_l{l}_a1e{e}/"
+        outdir = f"/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/{pset}/bdpc_{subset}_d{d}_l{l}_a1e{e}/"
         pag_path = outdir + "all_merged_pag_mk3_ns_lut_correct_n.mtx"
         ace_path = outdir + "all_merged_ACE_ns_lut_no_direction_forced_correct_n.mtx"
         # im = plot_ace_rf_to_d(ace_path, pag_path, pheno_path, title=subset_print[subset], ax=ax_dict[ax_name], cbar=False, norm=mpl.colors.SymLogNorm(vmin=-2.0, vmax=2.0, linthresh=0.01), )
@@ -4551,13 +4617,13 @@ def plot_age_sex_composite_figure():
         "f_first_q",
     ]
 
-    pheno_path = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/age_sex/f_first_q.phen"
-    bim_path = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/ukb22828_UKB_EST_v3_ldp08.bim"
+    pheno_path = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/age_sex/f_first_q.phen"
+    bim_path = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/ukb22828_UKB_EST_v3_ldp08.bim"
 
     traits_with_parents = set()
     for row, subset in enumerate(subsets):
         pset = "age_sex"
-        outdir = f"/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/{pset}/bdpc_{subset}_d{d}_l{l}_a1e{e}/"
+        outdir = f"/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/{pset}/bdpc_{subset}_d{d}_l{l}_a1e{e}/"
         traits_with_parents.update(
             set(
                 pd.read_csv(
@@ -4580,7 +4646,7 @@ def plot_age_sex_composite_figure():
 
     for row, subset in enumerate(subsets):
         pset = "age_sex"
-        outdir = f"/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/{pset}/bdpc_{subset}_d{d}_l{l}_a1e{e}/"
+        outdir = f"/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/{pset}/bdpc_{subset}_d{d}_l{l}_a1e{e}/"
         df = pd.read_csv(outdir + "marker_phen_assoc.csv", sep="\t")
         for trait_ix, trait in enumerate(traits_with_parents):
             sub_df = df[df["phenotype"] == trait]
@@ -4673,9 +4739,9 @@ def plot_est_ukb_marker_positions():
 
     row_height = 10
 
-    blockfile = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/estonian_comparison/ukb22828_UKB_EST_v3_ldp08_estonia_intersect_m11000.blocks"
-    bim_path = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/estonian_comparison/ukb22828_UKB_EST_v3_ldp08_estonia_intersect_a1_forced.bim"
-    common_out_path = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/estonian_comparison/age_sex_split/"
+    blockfile = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/estonian_comparison/ukb22828_UKB_EST_v3_ldp08_estonia_intersect_m11000.blocks"
+    bim_path = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/estonian_comparison/ukb22828_UKB_EST_v3_ldp08_estonia_intersect_a1_forced.bim"
+    common_out_path = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/estonian_comparison/age_sex_split/"
 
     ukb_assoc = {
         subset: marker_pheno_associations_with_pnames(
@@ -4814,12 +4880,12 @@ def plot_ukb_age_sex_marker_positions_ss_vs_no_ss():
 
     row_height = 10
 
-    blockfile = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/estonian_comparison/ukb22828_UKB_EST_v3_ldp08_estonia_intersect_m11000.blocks"
-    blockfile2 = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/ukb22828_UKB_EST_v3_ldp08.blocks"
-    bim_path = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/estonian_comparison/ukb22828_UKB_EST_v3_ldp08_estonia_intersect_a1_forced.bim"
-    common_out_path = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/estonian_comparison/age_sex_split/"
+    blockfile = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/estonian_comparison/ukb22828_UKB_EST_v3_ldp08_estonia_intersect_m11000.blocks"
+    blockfile2 = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/ukb22828_UKB_EST_v3_ldp08.blocks"
+    bim_path = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/estonian_comparison/ukb22828_UKB_EST_v3_ldp08_estonia_intersect_a1_forced.bim"
+    common_out_path = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/estonian_comparison/age_sex_split/"
     cusk_out_path = (
-        "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/age_sex/"
+        "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/age_sex/"
     )
 
     cusk_ss_assoc = {
@@ -4832,7 +4898,7 @@ def plot_ukb_age_sex_marker_positions_ss_vs_no_ss():
         for subset in subsets
     }
 
-    pheno_path = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/age_sex/f_first_q.phen"
+    pheno_path = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/age_sex/f_first_q.phen"
     cusk_assoc = {
         subset: marker_pheno_associations(
             blockfile2,
@@ -4942,9 +5008,9 @@ def plot_est_ukb_full_db_marker_positions():
 
     row_height = 10
 
-    blockfile = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/estonian_comparison/ukb22828_UKB_EST_v3_ldp08_estonia_intersect_m11000.blocks"
-    bim_path = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/estonian_comparison/ukb22828_UKB_EST_v3_ldp08_estonia_intersect_a1_forced.bim"
-    common_out_path = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/estonian_comparison/"
+    blockfile = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/estonian_comparison/ukb22828_UKB_EST_v3_ldp08_estonia_intersect_m11000.blocks"
+    bim_path = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/estonian_comparison/ukb22828_UKB_EST_v3_ldp08_estonia_intersect_a1_forced.bim"
+    common_out_path = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/estonian_comparison/"
 
     est_assoc = marker_pheno_associations_with_pnames(
         blockfile, common_out_path + f"est/bdpc_d{d}_l{l}_a1e{e}_wo_bp_bmi/", p_names, bim_path
@@ -5040,11 +5106,11 @@ def plot_ukb_full_db_marker_positions_ss_vs_data():
 
     row_height = 10
 
-    ss_blocks = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/estonian_comparison/ukb22828_UKB_EST_v3_ldp08_estonia_intersect_m11000.blocks"
-    data_blocks = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection//ukb22828_UKB_EST_v3_ldp08.blocks"
-    ss_bim = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/ukb22828_UKB_EST_v3_ldp08.bim"
-    data_bim = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/estonian_comparison/ukb22828_UKB_EST_v3_ldp08_estonia_intersect_a1_forced.bim"
-    pss_path = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/"
+    ss_blocks = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/estonian_comparison/ukb22828_UKB_EST_v3_ldp08_estonia_intersect_m11000.blocks"
+    data_blocks = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection//ukb22828_UKB_EST_v3_ldp08.blocks"
+    ss_bim = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/ukb22828_UKB_EST_v3_ldp08.bim"
+    data_bim = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/estonian_comparison/ukb22828_UKB_EST_v3_ldp08_estonia_intersect_a1_forced.bim"
+    pss_path = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/"
 
     data_assoc = marker_pheno_associations_with_pnames(
         data_blocks, pss_path + f"production/cusk_d{d}_l{l}_a1e{e}_est_intersect_wo_bp_bmi/", p_names, data_bim
@@ -5157,11 +5223,11 @@ def plot_ukb_full_db_marker_positions_6_vs_17():
 
     row_height = 10
 
-    small_set_pheno = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/production/est_intersect_wo_bp_bmi.phen"
-    full_set_pheno = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/production/input.phen"
-    blocks = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection//ukb22828_UKB_EST_v3_ldp08.blocks"
-    bim = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/ukb22828_UKB_EST_v3_ldp08.bim"
-    pss_path = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/"
+    small_set_pheno = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/production/est_intersect_wo_bp_bmi.phen"
+    full_set_pheno = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/production/input.phen"
+    blocks = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection//ukb22828_UKB_EST_v3_ldp08.blocks"
+    bim = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/ukb22828_UKB_EST_v3_ldp08.bim"
+    pss_path = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/"
 
     small_set_assoc = marker_pheno_associations(
         blocks, pss_path + f"production/cusk_d{d}_l{l}_a1e{e}_est_intersect_wo_bp_bmi/", small_set_pheno, bim
@@ -5231,7 +5297,7 @@ def plot_ukb_full_db_marker_positions_6_vs_17():
 
 
 def average_corrs():
-    wdir = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/production/bdpc_d1_l6_a1e4/"
+    wdir = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/production/bdpc_d1_l6_a1e4/"
 
     with open(wdir + "all_merged.mdim", 'r') as fin:
         line = next(fin)
@@ -5257,8 +5323,8 @@ def average_corrs():
 
 
 def plot_compare_correlations_matrices():
-    sumstat_corrs = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/estonian_comparison/ukb/bdpc_d1_l6_a1e4_wo_bp_bmi/3_0_3967.all_corrs"
-    rawdata_corrs = "/nfs/scistore13/robingrp/human_data/causality/parent_set_selection/estonian_comparison/bdpc_d1_l6_a1e4/3_0_3967.all_corrs"
+    sumstat_corrs = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/estonian_comparison/ukb/bdpc_d1_l6_a1e4_wo_bp_bmi/3_0_3967.all_corrs"
+    rawdata_corrs = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/estonian_comparison/bdpc_d1_l6_a1e4/3_0_3967.all_corrs"
 
     ssm = np.fromfile(sumstat_corrs, dtype=np.float32).reshape(3974, 3974)
     rdm = np.fromfile(rawdata_corrs, dtype=np.float32).reshape(3974, 3974)

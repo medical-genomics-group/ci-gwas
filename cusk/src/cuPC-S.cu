@@ -443,6 +443,7 @@ __global__ void cal_Indepl0(float *C, int *G, float th, float *pMax, int n)
         if (res < th)
         {
             pMax[row * n + col] = res;
+            pMax[col * n + row] = res;
             G[row * n + col] = 0;
             G[col * n + row] = 0;
         }

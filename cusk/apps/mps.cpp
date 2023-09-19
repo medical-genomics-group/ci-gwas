@@ -463,6 +463,71 @@ void marker_pheno_corr_dist(int argc, char *argv[])
     }
 }
 
+const std::string CUSK_SECOND_STAGE_USAGE = R"(
+Run the second stage of cuda-skeleton.
+
+usage: mps cusk2 <corr> <alpha> <max-level> <num-samples> <outdir>
+
+arguments:
+    corr            correlation matrix as returned by first cusk stage
+    skeleton        skeleton (adjacency matrix) as returned by first cusk stage
+    num-var         number of variables
+    alpha           significance level
+    max-level       maximal size of seperation sets in cuPC ( <= 14)
+    num-samples     number of samples used for computing correlations
+    outdir          outdir
+)";
+
+const int CUSK_SECOND_STAGE_NARGS = 8;
+
+void cusk_second_stage(int argc, char *argv[])
+{
+    check_nargs(argc, CUSK_SECOND_STAGE_NARGS, CUSK_SECOND_STAGE_USAGE);
+
+    std::string corr_path = argv[2];
+    std::string adj_path = argv[3];
+    int num_var = std::stoi(argv[4]);
+    float alpha = std::stof(argv[5]);
+    int max_level = std::stoi(argv[6]);
+    int num_individuals = std::stoi(argv[7]);
+    std::string outdir = (std::string)argv[8];
+
+    check_path(corr_path);
+    check_path(outdir);
+
+    // load everything
+    std::cout << "Loading input files" << std::endl;
+    std::cout << "Loading corrs" << std::endl;
+    std::vector<float> sq_corrs = read_floats_from_binary(corr_path);
+    std::cout << "Loading skeleton" << std::endl;
+    std::vector<int> G = read_ints_from_binary(adj_path);
+
+    // make n2 matrix to please cuPC
+    size_t num_markers = 0;
+    size_t num_phen = num_var;
+
+    std::vector<float> Th = threshold_array(num_individuals, alpha);
+
+    // call cuPC
+    int p = num_var;
+    const size_t sepset_size = p * p * ML;
+    std::vector<float> pmax(num_var * num_var, 0.0);
+    std::vector<int> sepset(sepset_size, 0);
+    int l = 0;
+    cusk_second_stage(
+        sq_corrs.data(), &p, G.data(), Th.data(), &l, &max_level, pmax.data(), sepset.data()
+    );
+
+    std::unordered_set<int> parents = {};
+    for (size_t i = 0; i < num_phen; i++)
+    {
+        parents.insert(i);
+    }
+
+    ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, parents, p, num_phen, max_level);
+    gcs.to_file(make_path(outdir, "cusk_stage2", ""));
+}
+
 const std::string CUSKSS_TRAIT_ONLY_USAGE = R"(
 Run cuda-skeleton on precomputed trait-trait correlations.
 
@@ -653,8 +718,13 @@ void cuda_skeleton_summary_stats(int argc, char *argv[])
         }
     }
 
-    if (WRITE_FULL_CORRMATS) {
-        write_floats_to_binary( sq_corrs.data(), sq_corrs.size(), make_path(outdir, block.to_file_string(), ".all_corrs"));
+    if (WRITE_FULL_CORRMATS)
+    {
+        write_floats_to_binary(
+            sq_corrs.data(),
+            sq_corrs.size(),
+            make_path(outdir, block.to_file_string(), ".all_corrs")
+        );
     }
 
     std::vector<float> Th = threshold_array(num_individuals, alpha);
@@ -1218,8 +1288,13 @@ void block_diagonal_pc_single(int argc, char *argv[])
         }
     }
 
-    if (WRITE_FULL_CORRMATS) {
-        write_floats_to_binary( sq_corrs.data(), sq_corrs.size(), make_path(outdir, block.to_file_string(), ".all_corrs"));
+    if (WRITE_FULL_CORRMATS)
+    {
+        write_floats_to_binary(
+            sq_corrs.data(),
+            sq_corrs.size(),
+            make_path(outdir, block.to_file_string(), ".all_corrs")
+        );
     }
 
     std::cout << "Running cuPC" << std::endl;
@@ -1974,6 +2049,7 @@ commands:
     cuskss-trait-only       Run cuda-skeleton on a set of pre-computed trait-trait correlations.
     cusk-sim                Run cuda-skeleton on single simulated block
     cusk-phen               Run cuda-skeleton on phenotypes only
+    cusk-second-stage       ...
 
 contact:
     nick.machnik@gmail.com
@@ -2024,6 +2100,10 @@ auto main(int argc, char *argv[]) -> int
     else if (cmd == "cusk-sim")
     {
         sim_pc(argc, argv);
+    }
+    else if (cmd == "cusk-second-stage")
+    {
+        cusk_second_stage(argc, argv);
     }
     else
     {
