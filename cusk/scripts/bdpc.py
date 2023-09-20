@@ -1622,7 +1622,7 @@ def get_possibly_causal_paths(pag_path: str, pheno_path: str, pheno_names=None):
     return causal_paths
 
 
-def get_causal_paths(pag_path: str, pheno_path: str, pheno_names=None):
+def get_causal_paths(pag_path: str, pheno_path: str, pheno_names=None, max_path_len=np.inf):
     if pheno_names is None:
         p_names = get_pheno_codes(pheno_path)
         num_phen = len(p_names)
@@ -1636,15 +1636,20 @@ def get_causal_paths(pag_path: str, pheno_path: str, pheno_names=None):
         q = queue.Queue()
         q.put(start_node)
         descendants = set()
-        while not q.empty():
-            current_node = q.get()
-            for neighbor in range(num_phen):
-                if neighbor not in descendants and (
-                    pag[current_node, neighbor],
-                    pag[neighbor, current_node],
-                ) == (2, 3):
-                    descendants.add(neighbor)
-                    q.put(neighbor)
+        path_len = 0
+        while path_len < max_path_len:
+            next_q = queue.Queue()            
+            while not q.empty():
+                current_node = q.get()
+                for neighbor in range(num_phen):
+                    if neighbor not in descendants and (
+                        pag[current_node, neighbor],
+                        pag[neighbor, current_node],
+                    ) == (2, 3):
+                        descendants.add(neighbor)
+                        next_q.put(neighbor)
+            path_len += 1
+            q = next_q
         for j in descendants:
             causal_paths[start_node, j] = 1
 
@@ -1855,6 +1860,7 @@ def plot_direct_link_cause_comparison_wide(
     title=None,
     title_kw=dict(),
     ax=None,
+    max_path_len=np.inf
 ):
     if ax is None:
         plt.figure(figsize=(3, 10))
@@ -1864,8 +1870,8 @@ def plot_direct_link_cause_comparison_wide(
 
     p_names = get_pheno_codes(pheno_path)
     num_phen = len(p_names)
-
-    causal_paths = get_causal_paths(pag_path, pheno_path)
+    
+    causal_paths = get_causal_paths(pag_path, pheno_path, max_path_len=max_path_len)
 
     ci_gwas_links = {}
     cause_links = {}
@@ -2952,7 +2958,7 @@ def load_n16k_m1600_simulation_results(
             padj = adj[-(num_phen):,-(num_phen):]
 
             # load pag
-            pag_path = indir + "max_sep_min_pc_estimated_pag_std.mtx"
+            pag_path = indir + "max_sep_min_pc_estimated_pag_cusk2.mtx"
             est_pag = mmread(pag_path).tocsr()[-(num_phen):, -(num_phen):].toarray()
             est_dag = pag_to_dag_directed(est_pag)
 
@@ -3676,7 +3682,7 @@ def plot_compare_max_k_effect_on_ace():
 
 
 def plot_ace_results_comp_cause_production(
-    pag_path: str, ace_path: str, pheno_path: str, ace_norm=None, p_thr=0.05
+    pag_path: str, ace_path: str, pheno_path: str, ace_norm=None, p_thr=0.05, max_path_len=np.inf
 ):
     """
     AT = Asthma
@@ -3752,6 +3758,7 @@ def plot_ace_results_comp_cause_production(
         title="e)",
         title_kw=title_kw,
         ax=ax_dict["e"],
+        max_path_len=max_path_len
     )
 
 
