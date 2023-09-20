@@ -11,6 +11,9 @@ import seaborn as sns
 import queue
 from scipy.io import mmread
 import scipy
+# import scienceplots
+# plt.style.use('nature')
+
 
 from adjustText import adjust_text
 
@@ -2471,16 +2474,17 @@ def calculate_pxp_orientation_performance_mr(
         true_adj_matrix: np.array,
         inferred_edges: np.array,
 ):
+    causal_paths = path_in_sem(true_adj_matrix)
     num_phen = true_adj_matrix.shape[0]
-    tp_links = 0
-    correct_tp_links = 0
+    total_inferred_links = 0
+    correctly_inferred_directions = 0
     for i in range(num_phen):
         for j in range(i, num_phen):
-            if true_adj_matrix[i, j] and (inferred_edges[i, j] or inferred_edges[j, i]):
-                tp_links += 1
-                if inferred_edges[i, j] and not inferred_edges[j, i]:
-                    correct_tp_links += 1
-    return 0 if tp_links == 0 else correct_tp_links / tp_links
+            if (inferred_edges[i, j] or inferred_edges[j, i]):
+                total_inferred_links += 1
+                if causal_paths[i, j] and inferred_edges[i, j] and not inferred_edges[j, i]:
+                    correctly_inferred_directions += 1
+    return 0 if total_inferred_links == 0 else correctly_inferred_directions / total_inferred_links
 
 
 def calculate_pxp_orientation_performance_ci_gwas(
@@ -2488,16 +2492,16 @@ def calculate_pxp_orientation_performance_ci_gwas(
         inferred_pag: np.array,
 ):
     num_phen = true_adj_matrix.shape[0]
-    tp_links = 0
-    correct_tp_links = 0
+    total_inferred_links = 0
+    correctly_inferred_directions = 0
     for i in range(num_phen):
         for j in range(i, num_phen):
             inferred_edge = (inferred_pag[i, j], inferred_pag[j, i])
-            if true_adj_matrix[i, j] and inferred_edge != (0, 0):
-                tp_links += 1
-                if inferred_edge == (2, 3):
-                    correct_tp_links += 1
-    return 0 if tp_links == 0 else correct_tp_links / tp_links
+            if inferred_edge != (0, 0):
+                total_inferred_links += 1
+                if true_adj_matrix[i, j] and inferred_edge == (2, 3):
+                    correctly_inferred_directions += 1
+    return 0 if total_inferred_links == 0 else correctly_inferred_directions / total_inferred_links
 
 
 def calulate_performance_metrics(
@@ -2699,7 +2703,7 @@ def load_simulation_results() -> pd.DataFrame:
 
 
 def load_n16k_m1600_simulation_results(
-    mr_skeleton=False, mr_git_thr=False, mr_fixed_marker_thr=False,
+    mr_skeleton=False, mr_git_thr=False, mr_fixed_marker_thr=False, e_arr=list(range(2, 9))
 ) -> pd.DataFrame:
     pdir = f"/nfs/scistore17/robingrp/human_data/causality/bias_as_fn_of_alpha/sim_small_effects/"
     mr_skeleton_pdir = "/nfs/scistore17/robingrp/smahmoud/Example1/mr_res_skeleton/"
@@ -2710,17 +2714,17 @@ def load_n16k_m1600_simulation_results(
     n_arr = [16000]
     m_arr = [1600]
     # m_arr = [200, 400, 1600]
-    e_arr = list(range(2, 9))
-    alpha_str_arr = [
-        # "0.1",
-        "0.01",
-        "0.001",
-        "1e-04",
-        "1e-05",
-        "1e-06",
-        "1e-07",
-        "1e-08",
-    ]
+    alpha_str_d = {
+        1: "0.1",
+        2: "0.01",
+        3: "0.001",
+        4: "1e-04",
+        5: "1e-05",
+        6: "1e-06",
+        7: "1e-07",
+        8: "1e-08",
+    }
+    alpha_str_arr = [alpha_str_d[e] for e in e_arr]
     rep_arr = list(range(1, 21))
     num_phen = 10
 
@@ -2796,7 +2800,7 @@ def load_n16k_m1600_simulation_results(
                                 "var_tp": perf.var_tp,
                                 "bias_tp": perf.bias_tp,
                                 # "fdr": np.nan,
-                                "tpr": perf.tpr,
+                                "y -> y tpr": perf.tpr,
                                 "n": n,
                                 "m": m,
                                 "rep": rep,
@@ -3009,8 +3013,8 @@ def load_n16k_m1600_simulation_results(
                     "mse_tp": perf.mse_tp,
                     "var_tp": perf.var_tp,
                     "bias_tp": perf.bias_tp,
-                    "fdr": perf.fdr,
-                    "tpr": perf.tpr,
+                    "y -> y fdr": perf.fdr,
+                    "y -> y tpr": perf.tpr,
                     "n": n,
                     "m": m,
                     "rep": rep,
@@ -3108,11 +3112,12 @@ def plot_simulation_results_figure_2():
     n_arr = [2000, 4000, 8000, 16000]
     m_arr = [200, 400, 800, 1600]
     # m_arr = [200, 400, 1600]
-    e_arr = list(range(2, 9))
+    # e_arr = list(range(2, 9))
+    e_arr = [2, 4, 6, 8]
     rep_arr = list(range(1, 21))
     num_phen = 10
 
-    df = load_n16k_m1600_simulation_results(mr_git_thr=True)
+    df = load_n16k_m1600_simulation_results(mr_git_thr=True, e_arr=e_arr)
     dfs = df.loc[(df["n"] == 16000) & (df["m"] == 1600)]
     gr = dfs.groupby(["method", "alpha"])
     means = gr.mean()
@@ -3126,7 +3131,7 @@ def plot_simulation_results_figure_2():
     def plot_ci_gwas_bars(x_vals, metric, means, stds, ax, title, axhline=False):
         ax.set_title(title, **title_kw)
         x = np.arange(len(x_vals))  # the label locations
-        width = 0.5  # the width of the bars
+        width = 0.8  # the width of the bars
         multiplier = 0
 
         handles = []
@@ -3159,7 +3164,7 @@ def plot_simulation_results_figure_2():
     def plot_bars(x_vals, metric, means, stds, ax, title):
         ax.set_title(title, **title_kw)
         x = np.arange(len(x_vals))  # the label locations
-        width = 0.15  # the width of the bars
+        width = 0.18  # the width of the bars
         multiplier = 0
 
         handles = []
@@ -3187,7 +3192,7 @@ def plot_simulation_results_figure_2():
         # ax.set_yscale("symlog")
         return handles
 
-    fig = plt.figure(layout="tight", figsize=(15, 10))
+    fig = plt.figure(layout="tight", figsize=(12, 12))
     ax_dict = fig.subplot_mosaic(
         """
         XiX
@@ -3199,7 +3204,7 @@ def plot_simulation_results_figure_2():
         empty_sentinel="X",
         sharex=False,
         # set the height ratios between the rows
-        height_ratios=[0.2, 0.6, 0.6, 0.6, 1],
+        height_ratios=[0.2, 0.6, 0.6, 0.8, 0.8],
     )
 
     ax_dict['f'].set_xlabel(r'$\alpha$')
@@ -3207,11 +3212,16 @@ def plot_simulation_results_figure_2():
     plot_ci_gwas_bars(
         alphas, "x -> y fdr", means, stds, ax_dict["a"], "a)", axhline=True
     )
+    ax_dict["a"].set_ylabel(r"x$\rightarrow$y FDR")
     plot_ci_gwas_bars(alphas, "x -> y tpr", means, stds, ax_dict["b"], "b)")
-    plot_ci_gwas_bars(alphas, "fdr", means, stds, ax_dict["c"], "c)", axhline=True)
-    plot_bars(alphas, "tpr", means, stds, ax_dict["d"], "d)")
+    ax_dict["b"].set_ylabel(r"x$\rightarrow$y TPR")
+    plot_ci_gwas_bars(alphas, "y -> y fdr", means, stds, ax_dict["c"], "c)", axhline=True)
+    ax_dict["c"].set_ylabel(r"y$\rightarrow$y FDR")
+    plot_bars(alphas, "y -> y tpr", means, stds, ax_dict["d"], "d)")
+    ax_dict["d"].set_ylabel(r"y$\rightarrow$y TPR")
     plot_bars(alphas, "edge orientation", means, stds, ax_dict["e"], "e)")
     h = plot_bars(alphas, "mse", means, stds, ax_dict["f"], "f)")
+    ax_dict["f"].set_ylabel("MSE")
     # plot_bars(alphas, "bias", means, stds, ax_dict["g"], "g)")
     # h = plot_bars(alphas, "var", means, stds, ax_dict["h"], "h)")
     ax_dict["i"].legend(
