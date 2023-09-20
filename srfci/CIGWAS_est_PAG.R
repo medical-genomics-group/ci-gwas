@@ -23,35 +23,26 @@ if (srfci_mode == "mpu") {
     unsh_triple_pheno_only = TRUE
     force_marker_to_trait_before_R1 = FALSE
     force_marker_to_trait_in_the_end = TRUE
+    external_ambiguous_triples = FALSE
 } else if (srfci_mode == "mpd") {
     unsh_triple_pheno_only = TRUE
     force_marker_to_trait_before_R1 = TRUE
     force_marker_to_trait_in_the_end = FALSE
+    external_ambiguous_triples = FALSE
 } else if (srfci_mode == "std") {
     unsh_triple_pheno_only = FALSE
     force_marker_to_trait_before_R1 = FALSE
     force_marker_to_trait_in_the_end = FALSE
+    external_ambiguous_triples = FALSE
+} else if (srfci_mode == "cusk2") {
+    unsh_triple_pheno_only = FALSE
+    force_marker_to_trait_before_R1 = FALSE
+    force_marker_to_trait_in_the_end = TRUE
+    external_ambiguous_triples = TRUE
+} else if (srfci_mode == "cusk2") {
 } else {
-    print("mode has to be one of [mpu, mpd, std]")
+    print("mode has to be one of [mpu, mpd, std, cusk2]")
     exit()
-}
-
-form_sepset <- function(seps, nvar, max_level){
-  res <- rep(list(rep(list(NULL), times=nvar)), nvar)
-  lapply(1:nvar, function(i)
-    lapply(1:nvar, function(j) 
-      lapply(1:max_level, function(k) {
-        val <- seps[ (((i - 1) * nvar + j) - 1) * max_level + k ]
-        if (val != -1) {
-          if (is.null(res[[i]][[j]])) {
-            res[[i]][[j]] <<- c(val + 1)
-          } else {
-            res[[i]][[j]] <<- c(res[[i]][[j]], val + 1)
-          }
-        }
-      })))
-  
-  return(res)
 }
 
 loadSparseSepSetIntoNestedList = function(filepath, nvar) {
@@ -74,19 +65,24 @@ loadSparseSepSetIntoNestedList = function(filepath, nvar) {
 mdim_path <- paste0(input_filestem, ".mdim")
 # separation set
 sep_path <- paste0(input_filestem, ".ssm")
+atr_path <- paste0(input_filestem, ".atr")
 
 x <- read.csv(mdim_path, sep="\t", header=FALSE)
 num_var <- as.numeric(x[1])
 num_phen <- as.numeric(x[2])
 max_level <- as.numeric(x[3])
+num_atr <- as.numeric(x[4])
 sepset = loadSparseSepSetIntoNestedList(sep_path, num_var)
 
 adjmat <- readMM(paste0(input_filestem, "_sam.mtx"))
 cormat <- readMM(paste0(input_filestem, "_scm.mtx"))
+atr_file <- file(atr_path, "rb")
+atr <- readBin(atr_file, integer(), size=4, n=num_atr*3)
+atrmat <- matrix(atr, ncol=3, byrow=TRUE)
 
 suffStat <- list(C=cormat, n=num_individuals)
 indepTest = gaussCItest
-conservative = TRUE 
+conservative = FALSE
 maj.rule = FALSE
 
 print("Searching for unshielded triples")
@@ -111,9 +107,23 @@ r.v. <- rfci.vStruc(suffStat=suffStat,
 A <- r.v.$amat
 sepset <- r.v.$sepset
 if (force_marker_to_trait_before_R1) {
-    A[1:num_phen,(num_phen+1):num_var][A[1:num_phen,(num_phen+1):num_var]==1]<-3
-    A[(num_phen+1):num_var,1:num_phen][A[(num_phen+1):num_var,1:num_phen]==1]<-2
+    A[1:num_phen, (num_phen+1):num_var][A[1:num_phen, (num_phen+1):num_var] != 0]<-3
+    A[(num_phen+1):num_var, 1:num_phen][A[(num_phen+1):num_var, 1:num_phen] != 0]<-2
 }
+
+# optionally mark unshielded triples a-b-c as unfaithful / ambiguous,
+# if b is in maximal sepset, but not in minimal sepset.
+if (external_ambiguous_triples) {
+    p <- num_var
+    for (i in 1:nrow(atrmat)) {
+        # increment because of one based indexing
+        x = atrmat[i, 1] + 1
+        y = atrmat[i, 2] + 1
+        z = atrmat[i, 3] + 1
+        r.v.$unfTripl <- c(r.v.$unfTripl, triple2numb(p, x, y, z))
+    }
+}
+
 
 print("Applying R1-R10")
 estimate_pag_with_traits_only = FALSE
@@ -129,8 +139,8 @@ Amat <- res$graph
 MMfile3 <- file.path(output_file)
 
 if (force_marker_to_trait_in_the_end) {
-    Amat[1:num_phen,(num_phen+1):num_var][Amat[1:num_phen,(num_phen+1):num_var]==1]<-3
-    Amat[(num_phen+1):num_var,1:num_phen][Amat[(num_phen+1):num_var,1:num_phen]==1]<-2
+    Amat[1:num_phen, (num_phen+1):num_var][Amat[1:num_phen, (num_phen+1):num_var] != 0]<-3
+    Amat[(num_phen+1):num_var, 1:num_phen][Amat[(num_phen+1):num_var, 1:num_phen] != 0]<-2
 }
 
 writeMM(Amat, file=MMfile3)

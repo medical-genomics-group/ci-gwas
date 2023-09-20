@@ -52,6 +52,7 @@ x <- read.csv(mdim_path, sep="\t", header=FALSE)
 num_var <- as.numeric(x[1])
 num_phen <- as.numeric(x[2])
 max_level <- as.numeric(x[3])
+num_atr <- as.numeric(x[4])
 
 form_sepset <- function(seps, nvar) {
     res <- rep(list(rep(list(NULL), times=nvar)), nvar)
@@ -86,7 +87,7 @@ sepset <- form_sepset(seps, num_var)
 
 atr_file <- file(atr_path, "rb")
 # there is a chance that num_var*num_var is too small
-atr <- readBin(atr_file, integer(), size=4, n=num_var*num_var*3)
+atr <- readBin(atr_file, integer(), size=4, n=num_atr*3)
 atrmat <- matrix(atr, ncol=3, byrow=TRUE)
 
 conservative = FALSE 
