@@ -1,22 +1,23 @@
 library("pcalg");
+#library("fastmatch")
+#library("Matrix")
 
-source("/nfs/scistore13/robingrp/nmachnik/dev/ci-gwas/srfci/RFCI_functions_final.R")
+source("/nfs/scistore17/robingrp/nmachnik/dev/ci-gwas/srfci/RFCI_functions_final.R")
 
 myargs = commandArgs(trailingOnly=TRUE)
 print(myargs)
 input_filestem = myargs[1]
-num_individuals = as.numeric(myargs[2])
-output_file = myargs[3]
+alpha = as.numeric(myargs[2])
+num_individuals = as.numeric(myargs[3])
 srfci_mode = myargs[4] # one of [mpu, mpd, std]
 # sRFCI can be run in three different modes:
 # mpu: limit unshielded triples to traits, leave marker-trait links undirected, run all subsequent steps as in original RFCI, orient marker-trait edges in the end as marker -> trait
 # mpd: limit unshielded triples to traits, then direct marker-trait links as marker -> trait, then orient v-structures and run all subsequent steps
 # std: run standard RFCI on the whole graph, without any modifications.
-alpha = as.numeric(myargs[5])
 
 print(paste0("input_filestem: ", input_filestem))
 print(paste0("num_individuals: ", num_individuals))
-print(paste0("output_file: ", output_file))
+print(paste0("alpha: ", alpha))
 print(paste0("mode: ", srfci_mode))
 
 if (srfci_mode == "mpu") {
@@ -136,12 +137,12 @@ if (estimate_pag_with_traits_only) {
 }
 
 Amat <- res$graph
-MMfile3 <- file.path(output_file)
 
 if (force_marker_to_trait_in_the_end) {
     Amat[1:num_phen, (num_phen+1):num_var][Amat[1:num_phen, (num_phen+1):num_var] != 0]<-3
     Amat[(num_phen+1):num_var, 1:num_phen][Amat[(num_phen+1):num_var, 1:num_phen] != 0]<-2
 }
 
-writeMM(Amat, file=MMfile3)
+writeMM(Amat, file=paste0(input_filestem, sprintf("_estimated_pag_%s.mtx", srfci_mode))
+)
 print("Done")
