@@ -2,21 +2,21 @@ library("Matrix")
 library("pcalg")
 library("fastmatch")
 
-source("/nfs/scistore13/robingrp/nmachnik/dev/ci-gwas/sdavs/DAVS_functions_final.R")
+source("/nfs/scistore17/robingrp/nmachnik/dev/ci-gwas/sdavs/DAVS_functions_final.R")
 
 myargs = commandArgs(trailingOnly=TRUE)
 exposure = as.numeric(myargs[1])
 outcome = as.numeric(myargs[2])
 num_individuals = as.numeric(myargs[3])
-pag_path = myargs[4]
-skeleton_results_filestem = myargs[5]
-output_file = myargs[6]
+alpha = as.numeric(myargs[4])
+pag_path = myargs[5]
+skeleton_results_filestem = myargs[6]
+output_file = myargs[7]
 
-if (is.na(exposure) || is.na(outcome) || is.na(num_individuals) || is.na(pag_path) || is.na(skeleton_results_filestem) || is.na(output_file)) {
+if (is.na(exposure) || is.na(outcome) || is.na(num_individuals) || is.na(pag_path) || is.na(skeleton_results_filestem) || is.na(output_file) || is.na(alpha)) {
     stop("Received NA input argument, or argument is missing")
 }
 
-alpha = 0.05
 max_k = 3
 max_depth = 2
 
