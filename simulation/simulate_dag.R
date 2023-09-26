@@ -84,7 +84,8 @@ gen_rand_dag <- function(
             wa <- x[, anc, drop = FALSE]
             wa <- model.matrix(as.formula(paste("~0+", paste(names(wa), collapse="+"))), data.frame(wa))
             b <- AA[anc, i]
-            x[, i] <- (wa %*% b) + rnorm(n, 0, sqrt((1 - (t(b) %*% b))))
+            g <- (wa %*% b)
+            x[, i] <- g + rnorm(n, 0, sqrt(1 - var(g)))
         }
     }
 
@@ -112,6 +113,7 @@ lo_mp = 0.001
 hi_mp = 0.05
 lo_pp = 0.01
 hi_pp = 0.2
+pq = SNP + Tr + nL
 
 dag <- gen_rand_dag(n, SNP, Tr, nL, deg, prob_pleio, lo_mp, hi_mp, lo_pp, hi_pp)
 dag_data <- dag$x[,-c((SNP + 1):(SNP + nL))]
