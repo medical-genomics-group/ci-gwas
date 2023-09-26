@@ -113,6 +113,7 @@ lo_mp = 0.001
 hi_mp = 0.05
 lo_pp = 0.01
 hi_pp = 0.2
+pq = SNP + Tr + nL
 
 dag <- gen_rand_dag(n, SNP, Tr, nL, deg, prob_pleio, lo_mp, hi_mp, lo_pp, hi_pp)
 dag_data <- dag$x[,-c((SNP + 1):(SNP + nL))]
