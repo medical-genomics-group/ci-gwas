@@ -84,7 +84,8 @@ gen_rand_dag <- function(
             wa <- x[, anc, drop = FALSE]
             wa <- model.matrix(as.formula(paste("~0+", paste(names(wa), collapse="+"))), data.frame(wa))
             b <- AA[anc, i]
-            x[, i] <- (wa %*% b) + rnorm(n, 0, sqrt((1 - (t(b) %*% b))))
+            g <- (wa %*% b)
+            x[, i] <- g + rnorm(n, 0, sqrt(1 - var(g)))
         }
     }
 
