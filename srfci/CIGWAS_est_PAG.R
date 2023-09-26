@@ -1,8 +1,8 @@
 library("pcalg");
-#library("fastmatch")
-#library("Matrix")
+library("fastmatch")
+library("Matrix")
 
-source("/nfs/scistore17/robingrp/nmachnik/dev/ci-gwas/srfci/RFCI_functions_final.R")
+#source("/nfs/scistore17/robingrp/nmachnik/dev/ci-gwas/srfci/RFCI_functions_final.R")
 
 myargs = commandArgs(trailingOnly=TRUE)
 print(myargs)
@@ -75,8 +75,11 @@ max_level <- as.numeric(x[3])
 num_atr <- as.numeric(x[4])
 sepset = loadSparseSepSetIntoNestedList(sep_path, num_var)
 
-adjmat <- readMM(paste0(input_filestem, "_sam.mtx"))
-cormat <- readMM(paste0(input_filestem, "_scm.mtx"))
+#adjmat <- readMM(paste0(input_filestem, "_sam.mtx"))
+#cormat <- readMM(paste0(input_filestem, "_scm.mtx"))
+adjmat <- as.matrix(readMM(paste0(input_filestem, "_sam.mtx")))
+cormat <- as.matrix(readMM(paste0(input_filestem, "_scm.mtx")))
+
 atr_file <- file(atr_path, "rb")
 atr <- readBin(atr_file, integer(), size=4, n=num_atr*3)
 atrmat <- matrix(atr, ncol=3, byrow=TRUE)
@@ -143,6 +146,7 @@ if (force_marker_to_trait_in_the_end) {
     Amat[(num_phen+1):num_var, 1:num_phen][Amat[(num_phen+1):num_var, 1:num_phen] != 0]<-2
 }
 
-writeMM(Amat, file=paste0(input_filestem, sprintf("_estimated_pag_%s.mtx", srfci_mode))
-)
+
+#writeMM(Amat, file=paste0(input_filestem, sprintf("_estimated_pag_%s.mtx", srfci_mode)))
+writeMM(as(Amat, "sparseMatrix"), file=paste0(input_filestem, sprintf("_estimated_pag_%s.mtx", srfci_mode)))
 print("Done")
