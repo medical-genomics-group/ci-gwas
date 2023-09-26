@@ -111,7 +111,7 @@ deg = 3
 prob_pleio = 0.2
 lo_mp = 0.001
 hi_mp = 0.05
-lo_pp = 0.01
+lo_pp = 0.001
 hi_pp = 0.2
 pq = SNP + Tr + nL
 
