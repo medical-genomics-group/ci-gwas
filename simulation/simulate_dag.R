@@ -117,6 +117,8 @@ pq = SNP + Tr + nL
 
 dag <- gen_rand_dag(n, SNP, Tr, nL, deg, prob_pleio, lo_mp, hi_mp, lo_pp, hi_pp)
 dag_data <- dag$x[,-c((SNP + 1):(SNP + nL))]
+saveRDS(dag_data, file=file.path(outdir, paste("dag_data_n",  toString(n), "_SNP_", toString(SNP),"_it_",toString(id),".rds", sep = "")))
+
 dag_data_mat <- data.matrix(dag_data)
 writeMM(dag$A, file=file.path(outdir, paste("true_adj_mat_n",  toString(n), "_SNP_", toString(SNP),"_it_",toString(id),".mtx", sep = "")))
 
