@@ -1,8 +1,3 @@
-
-
-cd /nfs/scistore17/robingrp/mrobinso/cigwas/ukb/sim/sim_1
-
-
 library("Matrix")
 library("BEDMatrix")
 
@@ -147,10 +142,9 @@ cc <- 1
 prob_pleio <- 0.2
 deg = 3
 prob2 <- deg / (Tr)
-#outdir = paste0("/nfs/scistore17/robingrp/mrobinso/cigwas/ukb/sim/sim_1/")
-blockfile = paste0("/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/estonian_comparison/ukb22828_UKB_EST_v3_ldp08_estonia_intersect_m11000.blocks")
-plinkfile = paste0("/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/estonian_comparison/ukb22828_UKB_EST_v3_ldp08_estonia_intersect_a1_forced")
-plinkexe = paste0("/nfs/scistore17/robingrp/mrobinso/software/plink2")
+blockfile = paste0("")
+plinkfile = paste0("")
+plinkexe = paste0("")
 
 dag <- gen_rand_dag_obs_snp(Tr, nL, deg, prob_pleio, 
 	lo_mp, hi_mp, lo_pp, hi_pp, 
