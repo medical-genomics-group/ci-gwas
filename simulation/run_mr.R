@@ -15,28 +15,11 @@ library("ff", quietly = TRUE)
 library("ivreg");library("mclust")
 library("tictoc")
 
-
-
-
-
-
-
-
 source("./MRfunctions.R")
 
-
-
-
-
 myargs = commandArgs(trailingOnly=TRUE)
-#n= as.numeric(myargs[1])
-#SNP= as.numeric(myargs[2])
-alpha_e= as.numeric(myargs[1])
-id= as.numeric(myargs[2])
-
-#print(id)
-#print(nei)
-#print(pleio)
+alpha_e = as.numeric(myargs[1])
+id = as.numeric(myargs[2])
 
 set.seed(id)
 n=16000
@@ -45,15 +28,12 @@ SNP=1600
 
 load(file=paste( "./sim_small_effects/test_n", toString(n), "_SNP_", toString(SNP),"_Rep_",toString(id) , ".RData", sep = "" ))
 
-
 Tr=10
 #y_pa=5
 nL=2
 deg=3
 prob_pleio=0.2
 pq=SNP+Tr+nL
-
-
 
 Bg=myDAG3$G[(SNP+nL+1):pq,(SNP+nL+1):pq]
 Bg=t(Bg)
@@ -64,31 +44,33 @@ B_distances = igraph_directed_distances(Bg)
 
 Y=myDAG3$x[,(SNP+nL+1):pq]
 ###################################################################################
-  # Create the input for MR
-  all_mr_res = list()
-  df = dat
-  ivs = colnames(df)[grepl("X",colnames(df))]
-  phenos = colnames(df)[grepl("Y",colnames(df))]
-  num_ivs = length(ivs)
-  p = length(phenos)
-  # Get all IV-phenotype associations
-  GWAS_Ps = matrix(1,num_ivs,p,dimnames = list(ivs,phenos))
-  GWAS_effects = matrix(0,num_ivs,p,dimnames = list(ivs,phenos))
-  GWAS_ses = matrix(0,num_ivs,p,dimnames = list(ivs,phenos))
-  GWAS_Zs = matrix(0,num_ivs,p,dimnames = list(ivs,phenos))
-  for(pheno in phenos){
+# Create the input for MR
+all_mr_res = list()
+df = dat
+ivs = colnames(df)[grepl("X",colnames(df))]
+phenos = colnames(df)[grepl("Y",colnames(df))]
+num_ivs = length(ivs)
+p = length(phenos)
+# Get all IV-phenotype associations
+GWAS_Ps = matrix(1,num_ivs,p, dimnames = list(ivs,phenos))
+GWAS_effects = matrix(0,num_ivs, p, dimnames = list(ivs,phenos))
+GWAS_ses = matrix(0,num_ivs, p, dimnames = list(ivs,phenos))
+GWAS_Zs = matrix(0,num_ivs, p, dimnames = list(ivs,phenos))
+
+for (pheno in phenos) {
     print(pheno)
     gwas_res = sapply(ivs,run_lm,x=pheno,z=NULL,df = df)
     GWAS_Ps[,pheno] = gwas_res[4,]
     GWAS_effects[,pheno] = gwas_res[1,]
     GWAS_ses[,pheno] = gwas_res[2,]
     GWAS_Zs[,pheno] = gwas_res[3,]
-  }
-  print(alpha_e)
-  G_it = GWAS_Ps < alpha_e
-  res_path="./mr_res_git_thr"
-  MMfile_git <- file.path(res_path, paste("git_n", toString(n), "_SNP_", toString(SNP),  "_alpha_", toString(alpha_e), "_it_", toString(id), ".csv", sep = ""))##
-   print(MMfile_git)
+}
+
+print(alpha_e)
+G_it = GWAS_Ps < alpha_e
+res_path="./mr_res_git_thr"
+MMfile_git <- file.path(res_path, paste("git_n", toString(n), "_SNP_", toString(SNP),  "_alpha_", toString(alpha_e), "_it_", toString(id), ".csv", sep = ""))
+print(MMfile_git)
    print(G_it)
   write.csv(G_it, file=MMfile_git,row.names = FALSE)
   # Run MR
@@ -163,25 +145,16 @@ write.csv(all_mr_res[2], file = MMfile2, row.names = FALSE)
    cause_res_all_df = data.frame(cause_res_all,stringsAsFactors = F)
   for(j in 3:ncol(cause_res_all_df)){
      cause_res_all_df[[j]] = as.numeric(as.character(cause_res_all_df[[j]]))
-   }
+}
  
 
 
   
   
   
-  all_mr_res[["CAUSE"]] = rbind(all_mr_res[["CAUSE"]],cause_res_all_df)
-  #all_mr_res[["CI_GWAS"]] = rbind(all_mr_res[["CI_GWAS"]],CI_GWAS_res_all_df)
+all_mr_res[["CAUSE"]] = rbind(all_mr_res[["CAUSE"]],cause_res_all_df)
 
-
-
-
-
-#all_without_cause=all_mr_res[-4]
-#only_cause=all_mr_res[4]
-#save(TrueCE_Y,dat,cor_cupc,file = paste( "/nfs/scistore13/robingrp/smahmoud/Example1/testpart1/test_deg", toString(deg), "_pleio_", toString(dyna),"_Rep_",toString(id) , ".RData", sep = "" ))
 save(all_mr_res, file=paste( "./mr_res_git_thr/all_mr_res_n", toString(n), "_SNP_", toString(SNP),"_alpha_", toString(alpha_e),"_Rep_",toString(id) , ".RData", sep = "")) 
-
 
 res_path="./mr_res_git_thr"
 MMfile4 <- file.path(res_path, paste("mr_skeleton_cause_n", toString(n), "_SNP_", toString(SNP),"_alpha_", toString(alpha_e),"_it_",toString(id) , ".csv", sep = ""))##
