@@ -1,4 +1,4 @@
-# do we really need all these packages?
+# NM: do we really need all these packages?
 
 library("igraph");library("bnlearn")
 library("MRPRESSO");library("mixtools")
@@ -67,9 +67,9 @@ run_cause_on_tr <- function(
         p1 = pnorm(m$elpd[2,5])
         p2 = pnorm(m$elpd[3,5]) 
         m_s = summary(m)
-        # @MR, if you could double check this, most importantly that m_s$p is the p-value
-        # for the causal model being better than the shared model..
-        # the tutorial is here: https://jean997.github.io/cause/ldl_cad.html
+        # NM: @MR, if you could double check this, most importantly that m_s$p is the p-value
+        # NM: for the causal model being better than the shared model..
+        # NM: the tutorial is here: https://jean997.github.io/cause/ldl_cad.html
         v = c(tr1, tr2, m_s$quants[[2]][1,1], m_s$p)
         cause_res = rbind(cause_res, v)
   }
@@ -110,26 +110,37 @@ print(alpha_e)
 G_it = GWAS_Ps < alpha_e
 res_path="./mr_res_git_thr"
 
-# this is needed only for tpr / fpr for the 
-# marker-trait links, but we don't do that anymore
+# NM: this is needed only for tpr / fpr for the 
+# NM: marker-trait links, but we don't do that anymore
 # MMfile_git <- file.path(res_path, paste("git_n", toString(n), "_SNP_", toString(SNP),  "_alpha_", toString(alpha_e), "_it_", toString(id), ".csv", sep = ""))
 # print(MMfile_git)
 # print(G_it)
 # write.csv(G_it, file=MMfile_git,row.names = FALSE)
 
+# NM: why is pleio size 100 a standard MR analysis?
 # Run MR
 # pleio size is set to 100 - no filtering of variants (a standard MR analysis)
-  mr_results = list(
-    "Egger" = run_pairwise_mr_analyses(G_it,GWAS_effects,GWAS_ses,
-                                       pleio_size=100,pruned_lists=NULL,func=mr_egger,robust=T),
-    "IVW" = run_pairwise_mr_analyses(G_it,GWAS_effects,GWAS_ses,
-                                     pleio_size=100,pruned_lists=NULL,func=mr_ivw,robust=T)
+mr_results = list(
+    "Egger"=run_pairwise_mr_analyses(
+        G_it,
+        GWAS_effects,
+        GWAS_ses,
+        pleio_size=100,
+        pruned_lists=NULL,
+        func=mr_egger,
+        robust=T),
+    "IVW"=run_pairwise_mr_analyses(
+        G_it,
+        GWAS_effects,
+        GWAS_ses,
+        pleio_size=100,
+        pruned_lists=NULL,
+        func=mr_ivw,
+        robust=T)
   )
-  print(mr_results)
 
-
-  all_mr_res[["egger"]] = rbind(all_mr_res[["egger"]],mr_results$Egger)
-  all_mr_res[["ivw"]] = rbind(all_mr_res[["ivw"]],mr_results$IVW)
+all_mr_res[["egger"]] = rbind(all_mr_res[["egger"]], mr_results$Egger)
+all_mr_res[["ivw"]] = rbind(all_mr_res[["ivw"]], mr_results$IVW)
   
 MMfile1 <- file.path(res_path, paste("mr_skeleton_egger_n", toString(n), "_SNP_", toString(SNP),"_alpha_", toString(alpha_e),"_it_",toString(id) , ".csv", sep = ""))##
 MMfile2 <- file.path(res_path, paste("mr_skeleton_ivw_n", toString(n), "_SNP_", toString(SNP),"_alpha_", toString(alpha_e),"_it_",toString(id) , ".csv", sep = ""))##
