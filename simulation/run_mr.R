@@ -184,7 +184,7 @@ G_it = GWAS_Ps < alpha
 
 # NM: this is needed only for tpr / fpr for the 
 # NM: marker-trait links, but we don't do that anymore
-# MMfile_git <- file.path(outdir, paste("git_n", toString(n), "_SNP_", toString(SNP),  "_alpha_", toString(alpha_e), "_it_", toString(id), ".csv", sep = ""))
+# MMfile_git <- file.path(outdir, paste("git_n", toString(n), "_SNP_", toString(SNP),  "_alpha_", toString(alpha), "_it_", toString(id), ".csv", sep = ""))
 # print(MMfile_git)
 # print(G_it)
 # write.csv(G_it, file=MMfile_git,row.names = FALSE)
@@ -205,7 +205,7 @@ egger_res <- run_pairwise_mr_analyses(
 
 write.csv(
     egger_res,
-    file=file.path(outdir, paste("mr_egger_n", toString(n), "_SNP_", toString(SNP),"_alpha_", toString(alpha_e),"_it_",toString(id) , ".csv", sep = "")),
+    file=file.path(outdir, paste("mr_egger_n", toString(n), "_SNP_", toString(SNP),"_alpha_", toString(alpha),"_it_",toString(id) , ".csv", sep = "")),
     row.names=FALSE)
 
 print("Running ivw")
@@ -220,7 +220,7 @@ ivw_res <- run_pairwise_mr_analyses(
 
 write.csv(
     ivw_res,
-    file=file.path(outdir, paste("mr_ivw_n", toString(n), "_SNP_", toString(SNP),"_alpha_", toString(alpha_e),"_it_",toString(id) , ".csv", sep = "")),
+    file=file.path(outdir, paste("mr_ivw_n", toString(n), "_SNP_", toString(SNP),"_alpha_", toString(alpha),"_it_",toString(id) , ".csv", sep = "")),
     row.names=FALSE)
 
 print("Running mrpresso")
@@ -269,7 +269,7 @@ try({
 
 write.csv(
     mrpresso_res
-    file=file.path(outdir, paste("mr_mrpresso_n", toString(n), "_SNP_", toString(SNP),"_alpha_", toString(alpha_e),"_it_",toString(id) , ".csv", sep = ""))),
+    file=file.path(outdir, paste("mr_mrpresso_n", toString(n), "_SNP_", toString(SNP),"_alpha_", toString(alpha),"_it_",toString(id) , ".csv", sep = ""))),
     row.names=FALSE)
 
 print("Running cause")
@@ -298,5 +298,5 @@ for(j in 3:ncol(cause_res_all_df)) {
  
 write.csv(
     cause_res_all_df,
-    file=file.path(outdir, paste("mr_cause_n", toString(n), "_SNP_", toString(SNP),"_alpha_", toString(alpha_e),"_it_",toString(id) , ".csv", sep = "")),
+    file=file.path(outdir, paste("mr_cause_n", toString(n), "_SNP_", toString(SNP),"_alpha_", toString(alpha),"_it_",toString(id) , ".csv", sep = "")),
     row.names=FALSE)
