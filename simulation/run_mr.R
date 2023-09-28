@@ -159,7 +159,7 @@ n=16000
 SNP=1600
 dag_data = readRDS(file.path(indir, paste("dag_data_n",  toString(n), "_SNP_", toString(SNP),"_it_", toString(id),".rds", sep = "")))
 
-df = dat
+df = dag_data
 ivs = colnames(df)[grepl("X", colnames(df))]
 phenos = colnames(df)[grepl("Y", colnames(df))]
 num_ivs = length(ivs)
