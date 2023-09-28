@@ -16,6 +16,78 @@ library("ff", quietly = TRUE)
 library("ivreg");library("mclust")
 library("tictoc")
 
+run_single_mr_analysis <- function(
+    snpset,
+    tr1,
+    tr2,
+    X,
+    Y,
+    func=mr_egger,...
+){
+    mr_in = mr_input(X[snpset,tr1],Y[snpset,tr1],X[snpset,tr2],Y[snpset,tr2])
+    xx = func(mr_in,...)
+    p = 1
+    if (is.element("Pvalue.Est", set=slotNames(xx))) {
+        p=xx@Pvalue.Est
+    }
+    if (is.element("Pvalue", set=slotNames(xx))){
+        p=xx@Pvalue
+    }
+    p_het = 1
+    Q=0
+    I2=100
+    if(is.element("Heter.Stat",set=slotNames(xx))) {
+        p_het = xx@Heter.Stat[2]
+        Q = xx@Heter.Stat[1]
+    }
+    est = 0
+    if(is.element("Estimate", set=slotNames(xx))) {
+        est = xx@Estimate
+    }
+    return(c(p,p_het,est,Q))
+}
+
+run_pairwise_mr_analyses <- function(
+    G_VT,
+    sum_stats,
+    sum_stats_se,
+    pleio_size=1,
+    minIVs = 3,
+    pruned_lists=NULL,...
+) {
+    trait_pairs_analysis = c()
+    traits = colnames(G_VT)
+    num_tests = 0
+    iv2num_traits = rowSums(G_VT)
+    for (tr1 in traits) {
+        iv2num_traits = rowSums(G_VT,na.rm=T)
+        ivs = G_VT[,tr1] == 1 & iv2num_traits <= pleio_size
+        ivs[is.na(ivs)] = F
+        ivs = rownames(G_VT)[ivs]
+        if (!is.null(pruned_lists)) {
+            ivs = intersect(ivs,pruned_lists[[tr1]])
+        }
+        if (length(ivs) < minIVs) {
+            next
+        }
+        for (tr2 in traits) {
+            if(tr1==tr2){next}
+            try({ # required as some MR methods may fail
+                curr_mr_res = run_single_mr_analysis(ivs,tr1,tr2,sum_stats,sum_stats_se,...);
+                trait_pairs_analysis = rbind(trait_pairs_analysis,c(tr1,tr2,curr_mr_res,length(ivs)))
+            })
+        }
+    }
+    if (!is.null(dim(trait_pairs_analysis))) {
+        colnames(trait_pairs_analysis) = c("Exposure","Outcome","p","p_het","est","Q","NumIVs")
+        trait_pairs_analysis = as.data.frame(trait_pairs_analysis)
+        for (j in 3:ncol(trait_pairs_analysis)) {
+            trait_pairs_analysis[[j]] = as.numeric(as.character(trait_pairs_analysis[[j]]))
+        }
+    }
+  return(trait_pairs_analysis)
+}
+
 run_lm <- function(
     x,
     y,
@@ -85,7 +157,6 @@ n=16000
 SNP=1600
 dag_data = readRDS(file.path(indir, paste("dag_data_n",  toString(n), "_SNP_", toString(SNP),"_it_", toString(id),".rds", sep = "")))
 
-all_mr_res = list()
 df = dat
 ivs = colnames(df)[grepl("X", colnames(df))]
 phenos = colnames(df)[grepl("Y", colnames(df))]
