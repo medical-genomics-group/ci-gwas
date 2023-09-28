@@ -121,8 +121,9 @@ gen_rand_dag_obs_snp <- function(
         g <- (wa %*% b)
         x[, (SNP + i)] <- g + rnorm(n, 0, sqrt(1 - var(g)))
     }
-    xout <- x[,(SNP + i):num]
-    return(list(x=xout, A=AA))
+    xout <- x[,(SNP + 1):ncol(x)]
+    Gnames = rownames(G)
+    return(list(x=xout, A=AA, Gn=Gnames))
 }
 
 args = commandArgs(trailingOnly=TRUE)
@@ -151,8 +152,17 @@ dag <- gen_rand_dag_obs_snp(Tr, nL, deg, prob_pleio,
 	cc, outdir, blockfile, plinkfile, plinkexe)
 
 # output causal effects
-writeMM(dag$A, file=file.path(paste0(outdir,"true_causaleffects_seed",id,"_pp",prob_pleio,".mtx")))
+write.table(dag$A, file=file.path(paste0(outdir,"true_causaleffects_seed",id,"_pp",prob_pleio,".txt")), row.names=FALSE, col.names=FALSE, quote=FALSE)
 
-dag_data_mat <- data.matrix(dag$x)
-corrs <- cor(dag_data_mat)
-writeMM(as(corrs, "sparseMatrix"), file=file.path(outdir, paste("corr_n", toString(n), "_SNP_", toString(SNP),"_it_",toString(id) ,".mtx", sep = "" )))
+# output phenotypic values
+phen_out <- data.frame("FID" = dag$Gn,
+						"IID" = dag$Gn)
+phen_out <- cbind(phen_out,dag$x[,3:12])
+write.table(phen_out, paste0(outdir,"pheno_seed",id,"_pp",prob_pleio,".txt"), row.names=F, col.names=FALSE, quote=FALSE)
+write.table(dag$x, paste0(outdir,"phenotypic_values_seed",id,"_pp",prob_pleio,".txt"), row.names=F, col.names=FALSE, quote=FALSE)
+
+# output phenotypic correlations
+pp <- dag$x[,3:12]
+dat <- cor(pp, use = "pairwise.complete.obs")
+dat[lower.tri(dat, diag=T)] <- 0
+write.table(dat,paste0(outdir,"triat_trait_corr_seed",id,"_pp",prob_pleio,".txt"), row.names=T, col.names=T, quote=F)
