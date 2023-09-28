@@ -1,20 +1,81 @@
-# do we really need all these packages?
-
-library("igraph");library("bnlearn")
-library("MRPRESSO");library("mixtools")
-library("optparse");library("limma")
+library("MRPRESSO");
 library("MendelianRandomization")
-library("Matching");library("rmatio")
-library("Zelig");library("Metrics")
-library("CBPS");library("pcalg")
-library("MatchIt");library("cobalt")
-library("fastmatch");library("stdReg")
-library("Matrix");library("readr")
-library("dplyr");library("cause")
-library("parallel");library("ParallelPC")
-library("ff", quietly = TRUE)
-library("ivreg");library("mclust")
-library("tictoc")
+library("Matrix");
+library("cause")
+library("parallel");
+library("ivreg");
+
+run_single_mr_analysis <- function(
+    snpset,
+    tr1,
+    tr2,
+    X,
+    Y,
+    func=mr_egger,...
+){
+    mr_in = mr_input(X[snpset,tr1],Y[snpset,tr1],X[snpset,tr2],Y[snpset,tr2])
+    xx = func(mr_in,...)
+    p = 1
+    if (is.element("Pvalue.Est", set=slotNames(xx))) {
+        p=xx@Pvalue.Est
+    }
+    if (is.element("Pvalue", set=slotNames(xx))){
+        p=xx@Pvalue
+    }
+    p_het = 1
+    Q=0
+    I2=100
+    if(is.element("Heter.Stat",set=slotNames(xx))) {
+        p_het = xx@Heter.Stat[2]
+        Q = xx@Heter.Stat[1]
+    }
+    est = 0
+    if(is.element("Estimate", set=slotNames(xx))) {
+        est = xx@Estimate
+    }
+    return(c(p,p_het,est,Q))
+}
+
+run_pairwise_mr_analyses <- function(
+    G_VT,
+    sum_stats,
+    sum_stats_se,
+    pleio_size=1,
+    minIVs = 3,
+    pruned_lists=NULL,...
+) {
+    trait_pairs_analysis = c()
+    traits = colnames(G_VT)
+    num_tests = 0
+    iv2num_traits = rowSums(G_VT)
+    for (tr1 in traits) {
+        iv2num_traits = rowSums(G_VT,na.rm=T)
+        ivs = G_VT[,tr1] == 1 & iv2num_traits <= pleio_size
+        ivs[is.na(ivs)] = F
+        ivs = rownames(G_VT)[ivs]
+        if (!is.null(pruned_lists)) {
+            ivs = intersect(ivs,pruned_lists[[tr1]])
+        }
+        if (length(ivs) < minIVs) {
+            next
+        }
+        for (tr2 in traits) {
+            if(tr1==tr2){next}
+            try({ # required as some MR methods may fail
+                curr_mr_res = run_single_mr_analysis(ivs,tr1,tr2,sum_stats,sum_stats_se,...);
+                trait_pairs_analysis = rbind(trait_pairs_analysis,c(tr1,tr2,curr_mr_res,length(ivs)))
+            })
+        }
+    }
+    if (!is.null(dim(trait_pairs_analysis))) {
+        colnames(trait_pairs_analysis) = c("Exposure","Outcome","p","p_het","est","Q","NumIVs")
+        trait_pairs_analysis = as.data.frame(trait_pairs_analysis)
+        for (j in 3:ncol(trait_pairs_analysis)) {
+            trait_pairs_analysis[[j]] = as.numeric(as.character(trait_pairs_analysis[[j]]))
+        }
+    }
+  return(trait_pairs_analysis)
+}
 
 run_lm <- function(
     x,
@@ -67,9 +128,9 @@ run_cause_on_tr <- function(
         p1 = pnorm(m$elpd[2,5])
         p2 = pnorm(m$elpd[3,5]) 
         m_s = summary(m)
-        # @MR, if you could double check this, most importantly that m_s$p is the p-value
-        # for the causal model being better than the shared model..
-        # the tutorial is here: https://jean997.github.io/cause/ldl_cad.html
+        # NM: @MR, if you could double check this, most importantly that m_s$p is the p-value
+        # NM: for the causal model being better than the shared model..
+        # NM: the tutorial is here: https://jean997.github.io/cause/ldl_cad.html
         v = c(tr1, tr2, m_s$quants[[2]][1,1], m_s$p)
         cause_res = rbind(cause_res, v)
   }
@@ -80,13 +141,14 @@ run_cause_on_tr <- function(
 
 args = commandArgs(trailingOnly=TRUE)
 indir = args[1]
-id = as.numeric(args[2])
+outdir = args[2]
+id = as.numeric(args[3])
+alpha = as.numeric(args[4])
 n=16000
 SNP=1600
 dag_data = readRDS(file.path(indir, paste("dag_data_n",  toString(n), "_SNP_", toString(SNP),"_it_", toString(id),".rds", sep = "")))
 
-all_mr_res = list()
-df = dat
+df = dag_data
 ivs = colnames(df)[grepl("X", colnames(df))]
 phenos = colnames(df)[grepl("Y", colnames(df))]
 num_ivs = length(ivs)
@@ -97,6 +159,7 @@ GWAS_effects = matrix(0, num_ivs, p, dimnames = list(ivs,phenos))
 GWAS_ses = matrix(0, num_ivs, p, dimnames = list(ivs,phenos))
 GWAS_Zs = matrix(0, num_ivs, p, dimnames = list(ivs,phenos))
 
+print("Selecting IVs")
 for (pheno in phenos) {
     print(pheno)
     gwas_res = sapply(ivs, run_lm, x=pheno, z=NULL, df=df)
@@ -106,77 +169,99 @@ for (pheno in phenos) {
     GWAS_Zs[,pheno] = gwas_res[3,]
 }
 
-print(alpha_e)
-G_it = GWAS_Ps < alpha_e
-res_path="./mr_res_git_thr"
+G_it = GWAS_Ps < alpha
 
-# this is needed only for tpr / fpr for the 
-# marker-trait links, but we don't do that anymore
-# MMfile_git <- file.path(res_path, paste("git_n", toString(n), "_SNP_", toString(SNP),  "_alpha_", toString(alpha_e), "_it_", toString(id), ".csv", sep = ""))
+# NM: this is needed only for tpr / fpr for the 
+# NM: marker-trait links, but we don't do that anymore
+# MMfile_git <- file.path(outdir, paste("git_n", toString(n), "_SNP_", toString(SNP),  "_alpha_", toString(alpha), "_it_", toString(id), ".csv", sep = ""))
 # print(MMfile_git)
 # print(G_it)
 # write.csv(G_it, file=MMfile_git,row.names = FALSE)
 
+# NM: why is pleio size 100 a standard MR analysis?
 # Run MR
 # pleio size is set to 100 - no filtering of variants (a standard MR analysis)
-  mr_results = list(
-    "Egger" = run_pairwise_mr_analyses(G_it,GWAS_effects,GWAS_ses,
-                                       pleio_size=100,pruned_lists=NULL,func=mr_egger,robust=T),
-    "IVW" = run_pairwise_mr_analyses(G_it,GWAS_effects,GWAS_ses,
-                                     pleio_size=100,pruned_lists=NULL,func=mr_ivw,robust=T)
-  )
-  print(mr_results)
 
+print("Running egger")
+egger_res <- run_pairwise_mr_analyses(
+    G_it,
+    GWAS_effects,
+    GWAS_ses,
+    pleio_size=100,
+    pruned_lists=NULL,
+    func=mr_egger,
+    robust=T)
 
-  all_mr_res[["egger"]] = rbind(all_mr_res[["egger"]],mr_results$Egger)
-  all_mr_res[["ivw"]] = rbind(all_mr_res[["ivw"]],mr_results$IVW)
-  
-MMfile1 <- file.path(res_path, paste("mr_skeleton_egger_n", toString(n), "_SNP_", toString(SNP),"_alpha_", toString(alpha_e),"_it_",toString(id) , ".csv", sep = ""))##
-MMfile2 <- file.path(res_path, paste("mr_skeleton_ivw_n", toString(n), "_SNP_", toString(SNP),"_alpha_", toString(alpha_e),"_it_",toString(id) , ".csv", sep = ""))##
-write.csv(all_mr_res[1], file = MMfile1, row.names = FALSE)
-write.csv(all_mr_res[2], file = MMfile2, row.names = FALSE)
-  # Add MRPRESSO
-  mrpresso_res = c()
-  #cgauge_mrpresso_res = c()
-  try({
-    for(tr1 in phenos){
-      currivs = rownames(GWAS_Ps)[G_it[,tr1]]
-      for(tr2 in phenos){
-        if(tr1==tr2){next}
-        X = data.frame(E1b=GWAS_effects[currivs,tr1],O1b=GWAS_effects[currivs,tr2],
-                       E1sd=GWAS_ses[currivs,tr1],O1sd=GWAS_ses[currivs,tr2])
-        try({
-          res = mr_presso(BetaOutcome = "O1b", BetaExposure = "E1b", 
-                          SdOutcome = "O1sd", SdExposure = "E1sd",data=X,
-                          OUTLIERtest=T,
-                          DISTORTIONtest = T,
-                          NbDistribution = 1000,SignifThreshold = 0.1)
-          if(is.na(res$`Main MR results`[2,"P-value"])){
-            v = c(tr1,tr2,unlist(res$`Main MR results`[1,]))
-          }
-          else{
-            v = c(tr1,tr2,unlist(res$`Main MR results`[2,]))
-          }
-          v["GlobalTestP"] = res$`MR-PRESSO results`$`Global Test`$Pvalue
-          mrpresso_res = rbind(mrpresso_res,v)
-        })
-      }
+write.csv(
+    egger_res,
+    file=file.path(outdir, paste("mr_egger_n", toString(n), "_SNP_", toString(SNP),"_alpha_", toString(alpha),"_it_",toString(id) , ".csv", sep = "")),
+    row.names=FALSE)
+
+print("Running ivw")
+ivw_res <- run_pairwise_mr_analyses(
+    G_it,
+    GWAS_effects,
+    GWAS_ses,
+    pleio_size=100,
+    pruned_lists=NULL,
+    func=mr_ivw,
+    robust=T) 
+
+write.csv(
+    ivw_res,
+    file=file.path(outdir, paste("mr_ivw_n", toString(n), "_SNP_", toString(SNP),"_alpha_", toString(alpha),"_it_",toString(id) , ".csv", sep = "")),
+    row.names=FALSE)
+
+print("Running mrpresso")
+mrpresso_res = c()
+# I don't know why these try blocks are here
+try({
+    for (tr1 in phenos) {
+        currivs = rownames(GWAS_Ps)[G_it[,tr1]]
+        for (tr2 in phenos) {
+            if (tr1 == tr2) {
+                next
+            }
+            X = data.frame(
+                    E1b=GWAS_effects[currivs,tr1],
+                    O1b=GWAS_effects[currivs,tr2],
+                    E1sd=GWAS_ses[currivs,tr1],
+                    O1sd=GWAS_ses[currivs,tr2])
+            try({
+                res = mr_presso(
+                    BetaOutcome="O1b",
+                    BetaExposure="E1b", 
+                    SdOutcome="O1sd",
+                    SdExposure="E1sd",
+                    data=X,
+                    OUTLIERtest=T,
+                    DISTORTIONtest=T,
+                    NbDistribution=1000,
+                    SignifThreshold=0.1)
+                if (is.na(res$`Main MR results`[2,"P-value"])) {
+                    v = c(tr1, tr2, unlist(res$`Main MR results`[1,]))
+                } else {
+                    v = c(tr1, tr2, unlist(res$`Main MR results`[2,]))
+                }
+                v["GlobalTestP"] = res$`MR-PRESSO results`$`Global Test`$Pvalue
+                mrpresso_res = rbind(mrpresso_res,v)
+            })
+        }
     }
-    if(!is.null(dim(mrpresso_res))){
-      mrpresso_res = as.data.frame(mrpresso_res)
-      for(j in 3:ncol(mrpresso_res)){
-        mrpresso_res[[j]] = as.numeric(as.character(mrpresso_res[[j]]))
-      }  
+    if (!is.null(dim(mrpresso_res))) {
+        mrpresso_res = as.data.frame(mrpresso_res)
+        for (j in 3:ncol(mrpresso_res)) {
+            mrpresso_res[[j]] = as.numeric(as.character(mrpresso_res[[j]]))
+        }
     }
-  })
-  print( mrpresso_res )
+})
 
-  all_mr_res[["mrpresso"]] = rbind(all_mr_res[["mrpresso"]],mrpresso_res)
-  MMfile3 <- file.path(res_path, paste("mr_skeleton_mrpresso_n", toString(n), "_SNP_", toString(SNP),"_alpha_", toString(alpha_e),"_it_",toString(id) , ".csv", sep = ""))##
-  write.csv(all_mr_res[3], file = MMfile3, row.names = FALSE)
+write.csv(
+    mrpresso_res,
+    file=file.path(outdir, paste("mr_mrpresso_n", toString(n), "_SNP_", toString(SNP),"_alpha_", toString(alpha),"_it_",toString(id) , ".csv", sep = "")),
+    row.names=FALSE)
 
-
-# CAUSE
+print("Running cause")
 cause_res = mclapply(
     phenos,
     run_cause_on_tr,
@@ -184,34 +269,23 @@ cause_res = mclapply(
     G_it=G_it,
     GWAS_effects=GWAS_effects,
     GWAS_ses=GWAS_ses,
-    B_distances=B_distances,
-    mc.cores = 4)
+    mc.cores=4)
 
 cause_res_all = c()
-for(tr in cause_res) {
-    if(length(tr)==1){
+for (tr in cause_res) {
+    if (length(tr) == 1) {
         next
     }
-    cause_res_all= rbind(cause_res_all, tr)
+    cause_res_all = rbind(cause_res_all, tr)
 }
 
-cause_res_all_df = data.frame(cause_res_all,stringsAsFactors = F)
+cause_res_all_df = data.frame(cause_res_all, stringsAsFactors=F)
 
 for(j in 3:ncol(cause_res_all_df)) {
     cause_res_all_df[[j]] = as.numeric(as.character(cause_res_all_df[[j]]))
 }
  
-
-
-  
-  
-  
-all_mr_res[["CAUSE"]] = rbind(all_mr_res[["CAUSE"]],cause_res_all_df)
-
-save(all_mr_res, file=paste( "./mr_res_git_thr/all_mr_res_n", toString(n), "_SNP_", toString(SNP),"_alpha_", toString(alpha_e),"_Rep_",toString(id) , ".RData", sep = "")) 
-
-res_path="./mr_res_git_thr"
-MMfile4 <- file.path(res_path, paste("mr_skeleton_cause_n", toString(n), "_SNP_", toString(SNP),"_alpha_", toString(alpha_e),"_it_",toString(id) , ".csv", sep = ""))##
-#merged_all_mr <- bind_rows(all_mr_res [1], all_mr_res[2],all_mr_res[3],all_mr_res[4])
-
-write.csv(all_mr_res[4], file = MMfile4, row.names = FALSE)
+write.csv(
+    cause_res_all_df,
+    file=file.path(outdir, paste("mr_cause_n", toString(n), "_SNP_", toString(SNP),"_alpha_", toString(alpha),"_it_",toString(id) , ".csv", sep = "")),
+    row.names=FALSE)
