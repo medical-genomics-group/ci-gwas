@@ -35,6 +35,7 @@ plt.rc("figure", titlesize=BIGGER_SIZE)  # fontsize of the figure title
 rng = np.random.default_rng()
 
 BASE_INDEX = 1
+XLABEL_ROTATION=60
 
 chr_lengths = {
     1: 248956422,
@@ -960,6 +961,8 @@ def heatmap(
     title=None,
     bad_color=None,
     title_kw=dict(),
+    cbarlabel_rotation=0,
+    label_interspacing=False,
     **kwargs,
 ):
     """
@@ -1007,6 +1010,16 @@ def heatmap(
         # Create colorbar
         cbar = ax.figure.colorbar(im, ax=ax, **cbar_kw)
         cbar.ax.set_ylabel(cbarlabel, rotation=-90, va="bottom")
+        if cbarlabel_rotation != 0:
+            labels = cbar.ax.set_yticklabels(
+                cbar.ax.get_yticklabels(),
+                rotation=cbarlabel_rotation,
+                rotation_mode='anchor',
+                ha='left'
+                )
+        if label_interspacing:
+            for i, label in enumerate(labels):
+                label.set_x(label.get_position()[0] + 0.3 + (i % 2) * 1.3)
     else:
         cbar = None
 
@@ -1018,7 +1031,7 @@ def heatmap(
     ax.tick_params(top=False, bottom=True, labeltop=False, labelbottom=True)
 
     # Rotate the tick labels and set their alignment.
-    plt.setp(ax.get_xticklabels(), rotation=50, ha="right", rotation_mode="anchor")
+    plt.setp(ax.get_xticklabels(), rotation=XLABEL_ROTATION, ha="right", rotation_mode="anchor")
 
     # Turn spines off and create white grid.
     ax.spines[:].set_visible(False)
@@ -1589,6 +1602,8 @@ def plot_pag(
         title_kw=title_kw,
         ax=ax,
         cbar=cbar,
+        cbarlabel_rotation=-50,
+        label_interspacing=False
     )
 
     return im
@@ -1862,7 +1877,7 @@ def plot_ci_gwas_cause_ace_comparison_tri(
     title_kw=dict(),
     ax=None,
     cbar_kw=None,
-    cbarlabel=r"$ACE \: (y_1 \rightarrow y_2) / CAUSE \gamma$",
+    cbarlabel=r"$ACE \: (y_1 \rightarrow y_2), \ CAUSE \ \gamma$",
 ):
     if ax is None:
         plt.figure(figsize=(3, 8))
@@ -2009,7 +2024,7 @@ def plot_ci_gwas_cause_ace_comparison_tri(
     ax.tick_params(top=False, bottom=True, labeltop=False, labelbottom=True)
 
     # Rotate the tick labels and set their alignment.
-    plt.setp(ax.get_xticklabels(), rotation=50, ha="right", rotation_mode="anchor")
+    plt.setp(ax.get_xticklabels(), rotation=XLABEL_ROTATION, ha="right", rotation_mode="anchor")
 
     # Turn spines off and create white grid.
     ax.spines[:].set_visible(False)
@@ -2132,7 +2147,7 @@ def plot_direct_link_cause_comparison_wide(
     ax.tick_params(top=False, bottom=True, labeltop=False, labelbottom=True)
 
     # Rotate the tick labels and set their alignment.
-    plt.setp(ax.get_xticklabels(), rotation=50, ha="right", rotation_mode="anchor")
+    plt.setp(ax.get_xticklabels(), rotation=XLABEL_ROTATION, ha="right", rotation_mode="anchor")
 
     # Turn spines off and create white grid.
     ax.spines[:].set_visible(False)
@@ -2255,7 +2270,7 @@ def plot_direct_link_cause_comparison(
     ax.tick_params(top=False, bottom=True, labeltop=False, labelbottom=True)
 
     # Rotate the tick labels and set their alignment.
-    plt.setp(ax.get_xticklabels(), rotation=50, ha="right", rotation_mode="anchor")
+    plt.setp(ax.get_xticklabels(), rotation=XLABEL_ROTATION, ha="right", rotation_mode="anchor")
 
     # Turn spines off and create white grid.
     ax.spines[:].set_visible(False)
@@ -2610,16 +2625,16 @@ class MR:
 
 
 mr_cn = [
-    MR("ivw", "ivw.Exposure", "ivw.Outcome", "ivw.p", "ivw.est"),
-    MR("egger", "egger.Exposure", "egger.Outcome", "egger.p", "egger.est"),
+    MR("ivw", "Exposure", "Outcome", "p", "est"),
+    MR("egger", "Exposure", "Outcome", "p", "est"),
     MR(
         "mrpresso",
-        "mrpresso.V1",
-        "mrpresso.V2",
-        "mrpresso.P.value",
-        "mrpresso.Causal.Estimate",
+        "V1",
+        "V2",
+        "P-value",
+        "Causal Estimate",
     ),
-    MR("cause", "CAUSE.V1", "CAUSE.V2", "CAUSE.V4", "CAUSE.gamma"),
+    MR("cause", "V1", "V2", "V4", "gamma"),
 ]
 
 
@@ -2930,14 +2945,14 @@ def load_simulation_results() -> pd.DataFrame:
 
 
 def load_n16k_m1600_simulation_results(
-    mr_skeleton=False, mr_git_thr=False, mr_fixed_marker_thr=False, e_arr=list(range(2, 9))
+    mr=True, e_arr=list(range(2, 9))
 ) -> pd.DataFrame:
-    pdir = f"/nfs/scistore17/robingrp/human_data/causality/bias_as_fn_of_alpha/sim_small_effects/"
-    mr_skeleton_pdir = "/nfs/scistore17/robingrp/smahmoud/Example1/mr_res_skeleton/"
-    mr_git_thr_pdir = "/nfs/scistore17/robingrp/smahmoud/Example1/mr_res_git_thr/"
+    data_dir = "/nfs/scistore17/robingrp/nmachnik/mnt_home/projects/ci-gwas/simulations/data/"
+    cusk_dir = "/nfs/scistore17/robingrp/nmachnik/mnt_home/projects/ci-gwas/simulations/cusk/"
+    mr_git_thr_pdir = "/nfs/scistore17/robingrp/nmachnik/mnt_home/projects/ci-gwas/simulations/mr_results/"
 
     d = 1
-    l = 6
+    l = 14
     n_arr = [16000]
     m_arr = [1600]
     # m_arr = [200, 400, 1600]
@@ -2959,12 +2974,12 @@ def load_n16k_m1600_simulation_results(
 
     for n, m, rep in itertools.product(n_arr, m_arr, rep_arr):
         # load true dag
-        dag_path = pdir + f"./true_adj_mat_n{n}_SNP_{m}_it_{rep}.mtx"
+        dag_path = data_dir + f"./true_adj_mat_n{n}_SNP_{m}_it_{rep}.mtx"
         dag = mmread(dag_path).tocsr()
         pdag = dag[-(num_phen):, -(num_phen):].toarray()
 
         # load true causal effects
-        eff_path = pdir + f"./True_causaleffect_n{n}_SNP_{m}_it_{rep}.mtx"
+        eff_path = data_dir + f"./true_trait_causaleffects_n{n}_SNP_{m}_it_{rep}.mtx"
         eff = mmread(eff_path).tocsr()
         peff = eff[-(num_phen):, -(num_phen):].toarray()
         peff = np.triu(peff, k=1)
@@ -2973,13 +2988,13 @@ def load_n16k_m1600_simulation_results(
         # load true dag
         dag_mxp = dag.toarray()[:m, -num_phen:]
 
-        if mr_git_thr:
+        if mr:
             for mr in mr_cn:
                 for a_str in alpha_str_arr:
                     try:
                         mr_file = (
                             mr_git_thr_pdir
-                            + f"mr_skeleton_{mr.method}_n{n}_SNP_{m}_alpha_{a_str}_it_{rep}.csv"
+                            + f"mr_{mr.method}_n{n}_SNP_{m}_alpha_{a_str}_it_{rep}.csv"
                         )
                         mr_results = pd.read_csv(mr_file)
                         try:
@@ -2994,20 +3009,26 @@ def load_n16k_m1600_simulation_results(
                             print(error)
                             continue
 
-                        git_path = (
-                            mr_git_thr_pdir
-                            + f"git_n{n}_SNP_{m}_alpha_{a_str}_it_{rep}.csv"
-                        )
-                        git_mxp = pd.read_csv(git_path).to_numpy()
+                        # git_path = (
+                        #     mr_git_thr_pdir
+                        #     + f"git_n{n}_SNP_{m}_alpha_{a_str}_it_{rep}.csv"
+                        # )
+                        # git_mxp = pd.read_csv(git_path).to_numpy()
 
-                        mxp_p = np.sum(dag_mxp != 0)
-                        mxp_tp = np.sum((dag_mxp != 0) & (git_mxp))
-                        mxp_fp = np.sum((dag_mxp == 0) & (git_mxp != 0))
-                        mxp_fdr = mxp_fp / (mxp_fp + mxp_tp)
-                        mxp_tpr = mxp_tp / mxp_p
+                        # mxp_p = np.sum(dag_mxp != 0)
+                        # mxp_tp = np.sum((dag_mxp != 0) & (git_mxp))
+                        # mxp_fp = np.sum((dag_mxp == 0) & (git_mxp != 0))
+                        # mxp_fdr = mxp_fp / (mxp_fp + mxp_tp)
+                        # mxp_tpr = mxp_tp / mxp_p
 
                         pvals = np.ones(shape=(num_phen, num_phen))
-                        pvals[mr_results["i"], mr_results["j"]] = mr_results[mr.p]
+                        try:
+                            pvals[mr_results["i"], mr_results["j"]] = mr_results[mr.p]
+                        except KeyError as err:
+                            print(err)
+                            print(mr_results)
+                            print(mr_file)
+                            exit()
                         effects = np.zeros(shape=(num_phen, num_phen))
                         effects[mr_results["i"], mr_results["j"]] = mr_results[
                             mr.estimate
@@ -3056,117 +3077,8 @@ def load_n16k_m1600_simulation_results(
                             }
                         )
 
-        if mr_skeleton:
-            # mr with skeleton input
-            for mr in mr_cn:
-                for e in e_arr:
-                    try:
-                        mr_file = (
-                            mr_skeleton_pdir
-                            + f"mr_e{e}/mr_skeleton_{mr.method}_n{n}_SNP_{m}_it_{rep}.csv"
-                        )
-                        mr_results = pd.read_csv(mr_file)
-                        try:
-                            mr_results["i"] = mr_results[mr.exposure].apply(
-                                lambda x: int(x.split("Y")[1]) - 1
-                            )
-                            mr_results["j"] = mr_results[mr.outcome].apply(
-                                lambda x: int(x.split("Y")[1]) - 1
-                            )
-                        except KeyError as error:
-                            print(f"failed in mr file: {mr_file}")
-                            print(error)
-                            continue
-                        pvals = np.ones(shape=(num_phen, num_phen))
-                        pvals[mr_results["i"], mr_results["j"]] = mr_results[mr.p]
-                        effects = np.zeros(shape=(num_phen, num_phen))
-                        effects[mr_results["i"], mr_results["j"]] = mr_results[
-                            mr.estimate
-                        ]
-                        adj = pvals < float(a_str)
-                        effects[~adj] = 0
-                        perf = calulate_performance_metrics(pdag, peff, adj, effects)
-                        rows.append(
-                            {
-                                "edge orientation": perf.correct_orientation,
-                                "mse": perf.mse,
-                                "var": perf.var,
-                                "bias": perf.bias,
-                                "mse_tp": perf.mse_tp,
-                                "var_tp": perf.var_tp,
-                                "bias_tp": perf.bias_tp,
-                                "fdr": perf.fdr,
-                                "tpr": perf.tpr,
-                                "n": n,
-                                "m": m,
-                                "rep": rep,
-                                "alpha": 10 ** (-e),
-                                "method": f"{mr.method} + cuda-skeleton",
-                            }
-                        )
-                    except FileNotFoundError as error:
-                        print(error)
-                        rows.append(
-                            {
-                                "edge orientation": np.nan,
-                                "mse": np.nan,
-                                "var": np.nan,
-                                "bias": np.nan,
-                                "mse_tp": np.nan,
-                                "var_tp": np.nan,
-                                "bias_tp": np.nan,
-                                "fdr": np.nan,
-                                "tpr": np.nan,
-                                "n": n,
-                                "m": m,
-                                "rep": rep,
-                                "alpha": 10 ** (-e),
-                                "method": f"{mr.method} + cuda-skeleton",
-                            }
-                        )
-
-        # mr standalone
-        if mr_fixed_marker_thr:
-            for mr in mr_cn:
-                mr_results = pd.read_csv(
-                    pdir + f"mr_res_{mr.method}_n{n}_SNP_{m}_it_{rep}.csv"
-                )
-                mr_results["i"] = mr_results[mr.exposure].apply(
-                    lambda x: int(x.split("Y")[1]) - 1
-                )
-                mr_results["j"] = mr_results[mr.outcome].apply(
-                    lambda x: int(x.split("Y")[1]) - 1
-                )
-                pvals = np.ones(shape=(num_phen, num_phen))
-                pvals[mr_results["i"], mr_results["j"]] = mr_results[mr.p]
-                effects = np.zeros(shape=(num_phen, num_phen))
-                effects[mr_results["i"], mr_results["j"]] = mr_results[mr.estimate]
-                for e in e_arr:
-                    adj = pvals < float(a_str)
-                    eff_copy = np.copy(effects)
-                    eff_copy[~adj] = 0
-                    perf = calulate_performance_metrics(pdag, peff, adj, eff_copy)
-                    rows.append(
-                        {
-                            "edge orientation": perf.correct_orientation,
-                            "mse": perf.mse,
-                            "var": perf.var,
-                            "bias": perf.bias,
-                            "mse_tp": perf.mse_tp,
-                            "var_tp": perf.var_tp,
-                            "bias_tp": perf.bias_tp,
-                            "fdr": perf.fdr,
-                            "tpr": perf.tpr,
-                            "n": n,
-                            "m": m,
-                            "rep": rep,
-                            "alpha": 10 ** (-e),
-                            "method": rf"{mr.method}, $\alpha_{{IV}} = 10^{{-3}}$",
-                        }
-                    )
-
         for e in e_arr:
-            indir = pdir + f"simpc_d{d}_l{l}_e{e}_i{rep}_n{n}_m{m}/"
+            indir = cusk_dir + f"simpc_d{d}_l{l}_e{e}_i{rep}_n{n}_m{m}/"
 
             mdim_path = indir + "skeleton.mdim"
             with open(mdim_path, "r") as fin:
@@ -3180,7 +3092,12 @@ def load_n16k_m1600_simulation_results(
 
             # load pag
             pag_path = indir + "max_sep_min_pc_estimated_pag_cusk2.mtx"
-            est_pag = mmread(pag_path).tocsr()[-(num_phen):, -(num_phen):].toarray()
+            try:
+                est_pag = mmread(pag_path).tocsr()[-(num_phen):, -(num_phen):].toarray()
+            except FileNotFoundError as err:
+                print(err)
+                continue
+            
             est_dag = pag_to_dag_directed(est_pag)
 
             # load var indices
@@ -3201,14 +3118,14 @@ def load_n16k_m1600_simulation_results(
                                 pace[i - 1, j - 1] = 0.0
                             else:
                                 pace[i - 1, j - 1] = eval(sym)
-                    except FileNotFoundError as e:
+                    except FileNotFoundError as err:
                         missing.append((i, j))
 
             ixs_path = indir + "skeleton.ixs"
             var_ixs = np.fromfile(ixs_path, dtype=np.int32)
 
             # load true dag
-            dag_path = pdir + f"./true_adj_mat_n{n}_SNP_{m}_it_{rep}.mtx"
+            dag_path = data_dir + f"./true_adj_mat_n{n}_SNP_{m}_it_{rep}.mtx"
             full_dag = mmread(dag_path).tocsr()
 
             # load pag
@@ -3300,7 +3217,7 @@ def plot_simulation_results():
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
         ax.set_xticks(x + width, x_vals)
-        plt.setp(ax.get_xticklabels(), rotation=50, ha="right", rotation_mode="anchor")
+        plt.setp(ax.get_xticklabels(), rotation=XLABEL_ROTATION, ha="right", rotation_mode="anchor")
         # ax.legend(loc='upper left', ncols=3)
         # ax.set_yscale("symlog")
         return handles
@@ -3344,7 +3261,7 @@ def plot_simulation_results_figure_2():
     rep_arr = list(range(1, 21))
     num_phen = 10
 
-    df = load_n16k_m1600_simulation_results(mr_git_thr=True, e_arr=e_arr)
+    df = load_n16k_m1600_simulation_results(mr=True, e_arr=e_arr)
     dfs = df.loc[(df["n"] == 16000) & (df["m"] == 1600)]
     gr = dfs.groupby(["method", "alpha"])
     means = gr.mean()
@@ -3381,7 +3298,7 @@ def plot_simulation_results_figure_2():
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
         ax.set_xticks(x, x_vals)
-        plt.setp(ax.get_xticklabels(), rotation=50, ha="right", rotation_mode="anchor")
+        plt.setp(ax.get_xticklabels(), rotation=XLABEL_ROTATION, ha="right", rotation_mode="anchor")
         if axhline:
             ax.axhline(0.05, linestyle="dotted", color="gray")
         # ax.legend(loc='upper left', ncols=3)
@@ -3414,7 +3331,7 @@ def plot_simulation_results_figure_2():
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
         ax.set_xticks(x + width, x_vals)
-        plt.setp(ax.get_xticklabels(), rotation=50, ha="right", rotation_mode="anchor")
+        plt.setp(ax.get_xticklabels(), rotation=XLABEL_ROTATION, ha="right", rotation_mode="anchor")
         # ax.legend(loc='upper left', ncols=3)
         # ax.set_yscale("symlog")
         return handles
@@ -3513,7 +3430,7 @@ def plot_simulation_results_sup_tp_with_orientation():
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
         ax.set_xticks(x + width, x_vals)
-        plt.setp(ax.get_xticklabels(), rotation=50, ha="right", rotation_mode="anchor")
+        plt.setp(ax.get_xticklabels(), rotation=XLABEL_ROTATION, ha="right", rotation_mode="anchor")
         # ax.legend(loc='upper left', ncols=3)
         # ax.set_yscale("symlog")
         return handles
@@ -3597,7 +3514,7 @@ def plot_simulation_results_sup_tp():
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
         ax.set_xticks(x + width, x_vals)
-        plt.setp(ax.get_xticklabels(), rotation=50, ha="right", rotation_mode="anchor")
+        plt.setp(ax.get_xticklabels(), rotation=XLABEL_ROTATION, ha="right", rotation_mode="anchor")
         # ax.legend(loc='upper left', ncols=3)
         # ax.set_yscale("symlog")
         return handles
@@ -3673,7 +3590,7 @@ def plot_simulation_results_sup(alpha=10 ** (-8)):
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
         ax.set_xticks(x, x_vals)
-        plt.setp(ax.get_xticklabels(), rotation=50, ha="right", rotation_mode="anchor")
+        plt.setp(ax.get_xticklabels(), rotation=XLABEL_ROTATION, ha="right", rotation_mode="anchor")
         if axhline:
             ax.axhline(0.05, linestyle="dashed", color="k")
         # ax.legend(loc='upper left', ncols=3)
@@ -3706,7 +3623,7 @@ def plot_simulation_results_sup(alpha=10 ** (-8)):
         ax.spines["right"].set_visible(False)
         # ax.set_title('Penguin attributes by species')
         ax.set_xticks(x + width, x_tup)
-        plt.setp(ax.get_xticklabels(), rotation=50, ha="right", rotation_mode="anchor")
+        plt.setp(ax.get_xticklabels(), rotation=XLABEL_ROTATION, ha="right", rotation_mode="anchor")
         # ax.legend(loc='upper left', ncols=3)
         return handles
 
@@ -3920,7 +3837,10 @@ def plot_full_ukb_results_figure_3(
     z2 = get_skeleton_pleiotropy_mat(outdir, blockfile, pheno_path, max_depth=2)
     # zinf = get_skeleton_pleiotropy_mat(outdir, blockfile, pheno_path, mat_type="union")
 
-    fig = plt.figure(layout="tight", figsize=(20, 10))
+    fig = plt.figure(
+        # layout="tight",
+        figsize=(17, 8.5)
+    )
     ax_dict = fig.subplot_mosaic(
         """
         abe
@@ -4003,6 +3923,7 @@ def plot_full_ukb_results_figure_3(
 
     _ = [ax_dict[k].set_box_aspect(1) for k in 'acd']
     ax_dict['b'].set_box_aspect(1)
+    fig.subplots_adjust(wspace=0.1, hspace=0.4)
 
 
 def plot_ace_results_comp_cause_production(
@@ -4247,7 +4168,7 @@ def plot_non_pleio_barplot(
     ax.bar(range(len(bd)), bd, color="gray")
     ax.set_ylabel("# non-pleiotropic parent markers")
     ax.set_xticks(np.arange(len(bd)), labels=p_names)
-    plt.setp(ax.get_xticklabels(), rotation=50, ha="right", rotation_mode="anchor")
+    plt.setp(ax.get_xticklabels(), rotation=XLABEL_ROTATION, ha="right", rotation_mode="anchor")
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
     ax.grid(linestyle=":", axis="y")
@@ -4857,7 +4778,7 @@ def plot_ukb_age_sex_marker_positions():
         [f"Chr {c}" for c in range(1, 23)],
     )
 
-    plt.setp(ax.get_xticklabels(), rotation=50, ha="right", rotation_mode="anchor")
+    plt.setp(ax.get_xticklabels(), rotation=XLABEL_ROTATION, ha="right", rotation_mode="anchor")
 
     ax.legend(
         handles=handles,
@@ -5015,7 +4936,7 @@ def plot_age_sex_composite_figure():
         [f"Chr {c}" for c in range(1, 23)],
     )
 
-    plt.setp(ax.get_xticklabels(), rotation=50, ha="right", rotation_mode="anchor")
+    plt.setp(ax.get_xticklabels(), rotation=XLABEL_ROTATION, ha="right", rotation_mode="anchor")
 
     ax.legend(
         handles=handles,
@@ -5157,7 +5078,7 @@ def plot_est_ukb_marker_positions():
         [f"Chr {c}" for c in range(1, 23)],
     )
 
-    plt.setp(ax.get_xticklabels(), rotation=50, ha="right", rotation_mode="anchor")
+    plt.setp(ax.get_xticklabels(), rotation=XLABEL_ROTATION, ha="right", rotation_mode="anchor")
 
     ax.legend(
         handles=handles,
@@ -5303,7 +5224,7 @@ def plot_ukb_age_sex_marker_positions_ss_vs_no_ss():
         [f"Chr {c}" for c in range(1, 23)],
     )
 
-    plt.setp(ax.get_xticklabels(), rotation=50, ha="right", rotation_mode="anchor")
+    plt.setp(ax.get_xticklabels(), rotation=XLABEL_ROTATION, ha="right", rotation_mode="anchor")
 
     ax.legend(
         handles=handles,
@@ -5400,7 +5321,7 @@ def plot_est_ukb_full_db_marker_positions():
         [f"Chr {c}" for c in range(1, 23)],
     )
 
-    plt.setp(ax.get_xticklabels(), rotation=50, ha="right", rotation_mode="anchor")
+    plt.setp(ax.get_xticklabels(), rotation=XLABEL_ROTATION, ha="right", rotation_mode="anchor")
 
     ax.legend(
         handles=handles,
@@ -5500,7 +5421,7 @@ def plot_ukb_full_db_marker_positions_ss_vs_data():
         [f"Chr {c}" for c in range(1, 23)],
     )
 
-    plt.setp(ax.get_xticklabels(), rotation=50, ha="right", rotation_mode="anchor")
+    plt.setp(ax.get_xticklabels(), rotation=XLABEL_ROTATION, ha="right", rotation_mode="anchor")
 
     ax.legend(
         handles=handles,
@@ -5618,7 +5539,7 @@ def plot_ukb_full_db_marker_positions_6_vs_17():
         [f"Chr {c}" for c in range(1, 23)],
     )
 
-    plt.setp(ax.get_xticklabels(), rotation=50, ha="right", rotation_mode="anchor")
+    plt.setp(ax.get_xticklabels(), rotation=XLABEL_ROTATION, ha="right", rotation_mode="anchor")
 
     ax.legend(
         handles=handles,
