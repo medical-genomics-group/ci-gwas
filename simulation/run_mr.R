@@ -152,8 +152,9 @@ run_cause_on_tr <- function(
 
 args = commandArgs(trailingOnly=TRUE)
 indir = args[1]
-id = as.numeric(args[2])
-alpha = as.numeric(args[3])
+outdir = args[2]
+id = as.numeric(args[3])
+alpha = as.numeric(args[4])
 n=16000
 SNP=1600
 dag_data = readRDS(file.path(indir, paste("dag_data_n",  toString(n), "_SNP_", toString(SNP),"_it_", toString(id),".rds", sep = "")))
@@ -179,11 +180,10 @@ for (pheno in phenos) {
 }
 
 G_it = GWAS_Ps < alpha
-res_path="./mr_res_git_thr"
 
 # NM: this is needed only for tpr / fpr for the 
 # NM: marker-trait links, but we don't do that anymore
-# MMfile_git <- file.path(res_path, paste("git_n", toString(n), "_SNP_", toString(SNP),  "_alpha_", toString(alpha_e), "_it_", toString(id), ".csv", sep = ""))
+# MMfile_git <- file.path(outdir, paste("git_n", toString(n), "_SNP_", toString(SNP),  "_alpha_", toString(alpha_e), "_it_", toString(id), ".csv", sep = ""))
 # print(MMfile_git)
 # print(G_it)
 # write.csv(G_it, file=MMfile_git,row.names = FALSE)
@@ -203,7 +203,7 @@ egger_res <- run_pairwise_mr_analyses(
 
 write.csv(
     egger_res,
-    file=file.path(res_path, paste("mr_egger_n", toString(n), "_SNP_", toString(SNP),"_alpha_", toString(alpha_e),"_it_",toString(id) , ".csv", sep = "")),
+    file=file.path(outdir, paste("mr_egger_n", toString(n), "_SNP_", toString(SNP),"_alpha_", toString(alpha_e),"_it_",toString(id) , ".csv", sep = "")),
     row.names=FALSE)
 
 ivw_res <- run_pairwise_mr_analyses(
@@ -217,7 +217,7 @@ ivw_res <- run_pairwise_mr_analyses(
 
 write.csv(
     ivw_res,
-    file=file.path(res_path, paste("mr_ivw_n", toString(n), "_SNP_", toString(SNP),"_alpha_", toString(alpha_e),"_it_",toString(id) , ".csv", sep = "")),
+    file=file.path(outdir, paste("mr_ivw_n", toString(n), "_SNP_", toString(SNP),"_alpha_", toString(alpha_e),"_it_",toString(id) , ".csv", sep = "")),
     row.names=FALSE)
 
 mrpresso_res = c()
@@ -265,7 +265,7 @@ try({
 
 write.csv(
     mrpresso_res
-    file=file.path(res_path, paste("mr_mrpresso_n", toString(n), "_SNP_", toString(SNP),"_alpha_", toString(alpha_e),"_it_",toString(id) , ".csv", sep = ""))),
+    file=file.path(outdir, paste("mr_mrpresso_n", toString(n), "_SNP_", toString(SNP),"_alpha_", toString(alpha_e),"_it_",toString(id) , ".csv", sep = ""))),
     row.names=FALSE)
 
 cause_res = mclapply(
@@ -293,5 +293,5 @@ for(j in 3:ncol(cause_res_all_df)) {
  
 write.csv(
     cause_res_all_df,
-    file=file.path(res_path, paste("mr_cause_n", toString(n), "_SNP_", toString(SNP),"_alpha_", toString(alpha_e),"_it_",toString(id) , ".csv", sep = "")),
+    file=file.path(outdir, paste("mr_cause_n", toString(n), "_SNP_", toString(SNP),"_alpha_", toString(alpha_e),"_it_",toString(id) , ".csv", sep = "")),
     row.names=FALSE)
