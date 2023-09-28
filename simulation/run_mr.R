@@ -1,20 +1,32 @@
 # NM: do we really need all these packages?
 
-library("igraph");library("bnlearn")
-library("MRPRESSO");library("mixtools")
-library("optparse");library("limma")
+# library("igraph");
+# library("bnlearn")
+library("MRPRESSO");
+# library("mixtools")
+# library("optparse");
+# library("limma")
 library("MendelianRandomization")
-library("Matching");library("rmatio")
-library("Zelig");library("Metrics")
-library("CBPS");library("pcalg")
-library("MatchIt");library("cobalt")
-library("fastmatch");library("stdReg")
-library("Matrix");library("readr")
-library("dplyr");library("cause")
-library("parallel");library("ParallelPC")
-library("ff", quietly = TRUE)
-library("ivreg");library("mclust")
-library("tictoc")
+# library("Matching");
+# library("rmatio")
+# library("Zelig");
+# library("Metrics")
+# library("CBPS");
+# library("pcalg")
+# library("MatchIt");
+# library("cobalt")
+# library("fastmatch");
+# library("stdReg")
+library("Matrix");
+# library("readr")
+# library("dplyr");
+library("cause")
+# library("parallel");
+# library("ParallelPC")
+# library("ff", quietly = TRUE)
+library("ivreg");
+# library("mclust")
+# library("tictoc")
 
 run_single_mr_analysis <- function(
     snpset,
