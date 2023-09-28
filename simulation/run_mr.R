@@ -268,7 +268,7 @@ try({
 })
 
 write.csv(
-    mrpresso_res
+    mrpresso_res,
     file=file.path(outdir, paste("mr_mrpresso_n", toString(n), "_SNP_", toString(SNP),"_alpha_", toString(alpha),"_it_",toString(id) , ".csv", sep = ""))),
     row.names=FALSE)
 
