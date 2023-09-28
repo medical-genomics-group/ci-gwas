@@ -153,6 +153,7 @@ run_cause_on_tr <- function(
 args = commandArgs(trailingOnly=TRUE)
 indir = args[1]
 id = as.numeric(args[2])
+alpha = as.numeric(args[3])
 n=16000
 SNP=1600
 dag_data = readRDS(file.path(indir, paste("dag_data_n",  toString(n), "_SNP_", toString(SNP),"_it_", toString(id),".rds", sep = "")))
@@ -177,8 +178,7 @@ for (pheno in phenos) {
     GWAS_Zs[,pheno] = gwas_res[3,]
 }
 
-print(alpha_e)
-G_it = GWAS_Ps < alpha_e
+G_it = GWAS_Ps < alpha
 res_path="./mr_res_git_thr"
 
 # NM: this is needed only for tpr / fpr for the 
