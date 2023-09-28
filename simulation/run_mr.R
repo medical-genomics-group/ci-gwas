@@ -170,6 +170,7 @@ GWAS_effects = matrix(0, num_ivs, p, dimnames = list(ivs,phenos))
 GWAS_ses = matrix(0, num_ivs, p, dimnames = list(ivs,phenos))
 GWAS_Zs = matrix(0, num_ivs, p, dimnames = list(ivs,phenos))
 
+print("Selecting IVs")
 for (pheno in phenos) {
     print(pheno)
     gwas_res = sapply(ivs, run_lm, x=pheno, z=NULL, df=df)
@@ -192,6 +193,7 @@ G_it = GWAS_Ps < alpha
 # Run MR
 # pleio size is set to 100 - no filtering of variants (a standard MR analysis)
 
+print("Running egger")
 egger_res <- run_pairwise_mr_analyses(
     G_it,
     GWAS_effects,
@@ -206,6 +208,7 @@ write.csv(
     file=file.path(outdir, paste("mr_egger_n", toString(n), "_SNP_", toString(SNP),"_alpha_", toString(alpha_e),"_it_",toString(id) , ".csv", sep = "")),
     row.names=FALSE)
 
+print("Running ivw")
 ivw_res <- run_pairwise_mr_analyses(
     G_it,
     GWAS_effects,
@@ -220,6 +223,7 @@ write.csv(
     file=file.path(outdir, paste("mr_ivw_n", toString(n), "_SNP_", toString(SNP),"_alpha_", toString(alpha_e),"_it_",toString(id) , ".csv", sep = "")),
     row.names=FALSE)
 
+print("Running mrpresso")
 mrpresso_res = c()
 # I don't know why these try blocks are here
 try({
@@ -268,6 +272,7 @@ write.csv(
     file=file.path(outdir, paste("mr_mrpresso_n", toString(n), "_SNP_", toString(SNP),"_alpha_", toString(alpha_e),"_it_",toString(id) , ".csv", sep = ""))),
     row.names=FALSE)
 
+print("Running cause")
 cause_res = mclapply(
     phenos,
     run_cause_on_tr,
