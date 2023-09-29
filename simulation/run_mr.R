@@ -262,14 +262,13 @@ write.csv(
     row.names=FALSE)
 
 print("Running cause")
-cause_res = mclapply(
+cause_res = lapply(
     phenos,
     run_cause_on_tr,
     phenos=phenos,
     G_it=G_it,
     GWAS_effects=GWAS_effects,
-    GWAS_ses=GWAS_ses,
-    mc.cores=4)
+    GWAS_ses=GWAS_ses)
 
 cause_res_all = c()
 for (tr in cause_res) {
