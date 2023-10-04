@@ -32,7 +32,7 @@ gen_rand_dag_obs_snp <- function(
     # 5 per trait, per block
     # create adjacency matrix
     CVs <- c()
-    for(i in 1:20){
+    for(i in 1:10){
 		x1 = chr$V2[i] + 1
 		x2 = chr$V3[i] + 1
 		d1 <- as.character(b2$V2[x1])
