@@ -2729,26 +2729,35 @@ class OrientationPerformance:
     bidirected: float
 
 def calculate_pxp_orientation_performance_mr(
-        true_adj_matrix: np.array,
-        inferred_edges: np.array,
+    true_directed: np.array,
+    true_bidirected: np.array,
+    inferred_links: np.array,
 ):
-    causal_paths = path_in_sem(true_adj_matrix)
-    num_phen = true_adj_matrix.shape[0]
-    total_inferred_links = 0
-    correctly_inferred_directions = 0
+    causal_paths = path_in_sem(true_directed)
+    num_phen = true_directed.shape[0]
+    inferred_uni = 0
+    inferred_bi = 0
+    correct_uni = 0
+    correct_bi = 0    
     for i in range(num_phen):
         for j in range(i, num_phen):
-            if (inferred_edges[i, j] or inferred_edges[j, i]):
-                total_inferred_links += 1
-                if causal_paths[i, j] and inferred_edges[i, j] and not inferred_edges[j, i]:
-                    correctly_inferred_directions += 1
-    return 0 if total_inferred_links == 0 else correctly_inferred_directions / total_inferred_links
+            inferred_edge = (inferred_links[i, j], inferred_links[j, i])
+            if inferred_edge == (True, True):
+                inferred_bi += 1
+                correct_bi += true_bidirected[i, j]
+            elif inferred_edge != (False, False):
+                inferred_uni += 1
+                if inferred_edge == (True, False) and causal_paths[i, j]:
+                    correct_uni += 1
+    return OrientationPerformance(
+        correct_uni / inferred_uni if inferred_uni > 0 else np.nan,
+        correct_bi / inferred_bi if inferred_bi > 0 else np.nan)
 
 
 def calculate_pxp_orientation_performance_ci_gwas(
-        true_directed: np.array,
-        true_bidirected: np.array,
-        inferred_pag: np.array,
+    true_directed: np.array,
+    true_bidirected: np.array,
+    inferred_pag: np.array,
 ) -> OrientationPerformance:
     num_phen = true_directed.shape[0]
     inferred_uni = 0
@@ -2767,9 +2776,7 @@ def calculate_pxp_orientation_performance_ci_gwas(
                     correct_uni += 1
     return OrientationPerformance(
         correct_uni / inferred_uni if inferred_uni > 0 else np.nan,
-        correct_bi / inferred_bi if inferred_bi > 0 else np.nan,
-    )
-                    
+        correct_bi / inferred_bi if inferred_bi > 0 else np.nan)
 
 
 def calulate_performance_metrics(
@@ -2971,7 +2978,7 @@ def load_simulation_results() -> pd.DataFrame:
 
 
 def load_real_data_simulation_results(
-        e_arr=[2, 4, 6, 8],
+        e_arr=[3, 4, 6, 8],
         rep_arr=list(range(1, 41)),
         num_p=10,
 ) -> pd.DataFrame:
@@ -3034,6 +3041,7 @@ def load_real_data_simulation_results(
                     true_bidirected[i - 2, j - 2] = 1
         
         for alpha_e in e_arr:
+            # -------------------- CI-GWAS -----------------------------
             est_dir = f"/nfs/scistore17/robingrp/mrobinso/cigwas/ukb/sim/real_marker_sim/cusk/sim{rep}_e{alpha_e}/"
             pag_path = est_dir + "max_sep_min_pc_estimated_pag_cusk2.mtx"
             try:
@@ -3115,6 +3123,58 @@ def load_real_data_simulation_results(
                     "method": "ci-gwas",
                 }
             )
+
+            # -------------------- MR -----------------------------
+            for mr_str in ["cause", "presso", "mvpresso", "ivw", "mvivw"]:
+                mr_p = np.ones((num_p, num_p))
+                mr_est = np.zeros((num_p, num_p))
+                for outcome in range(0, num_p):
+                    try:
+                        fpaths = glob(est_dir + f"mr_{mr_str}_alpha*_sim{rep}_outcome_y{outcome + 1}_seed1000")
+                        if len(fpaths) == 0:
+                            continue
+                        fpath = fpaths[0]
+                        mr_res_df = pd.read_csv(fpath)
+                        exposures = [int(s[1:]) - 1 for s in mr_res_df["Exposure"]]
+                        mr_p[exposures, outcome] = mr_res_df["p"].values
+                        mr_est[exposures, outcome] = mr_res_df["est"].values
+                    except FileNotFoundError:
+                        continue
+                mr_links = mr_p <= (10.0 ** -alpha_e)
+                mr_adj = make_adj_symmetric(mr_links)
+                # are we doing this?
+                mr_est[~mr_links] = 0.0
+
+                m = (true_bidirected != 0) | (true_dag_pxp != 0)
+                p = np.sum(m)
+                tp = np.sum(m & (mr_adj != 0))
+                pxp_tpr = tp / p
+
+                mse = np.mean((mr_est - true_eff) ** 2)
+                tp_m = ((true_eff != 0) & (mr_est != 0))
+                if np.sum(tp_m) == 0:
+                    correct_sign = np.nan
+                else:
+                    correct_sign = np.mean(np.sign(true_eff[tp_m]) == np.sign(mr_est[tp_m]))
+
+                orientation_perf = calculate_pxp_orientation_performance_mr(
+                    true_dag_pxp != 0,
+                    true_bidirected != 0,
+                    mr_links)
+
+                rows.append(
+                    {
+                        "-> orientation": orientation_perf.directed,
+                        "<-> orientation": orientation_perf.bidirected,
+                        "mse": mse,
+                        "sign": correct_sign,
+                        "y -> y tpr": pxp_tpr,
+                        "rep": rep,
+                        "alpha": 10 ** (-alpha_e),
+                        "method": mr_str,
+                    }
+                )
+
     return pd.DataFrame(rows)
 
         
@@ -3440,9 +3500,9 @@ def plot_real_data_simulation_results(
     rep_arr=list(range(1, 41))
 ):
     bar_xlabel_rotation = 45
-    e_arr = [2, 4, 6, 8]
+    e_arr = [3, 4, 6, 8]
 
-    df = load_real_data_simulation_results(rep_arr=rep_arr)
+    df = load_real_data_simulation_results(e_arr=e_arr, rep_arr=rep_arr)
     gr = df.groupby(["method", "alpha"])
     means = gr.mean()
     stds = gr.std()
@@ -3450,8 +3510,10 @@ def plot_real_data_simulation_results(
     alphas = 10.0 ** -np.array(e_arr[::-1])
     # methods = ['ci-gwas', 'cause', 'mrpresso', 'egger', 'ivw']
     # methods = ["ci-gwas", "cause", "mrpresso", "ivw"]
-    methods = ["ci-gwas"]
-    mse_methods = ["ci-gwas"]
+    methods = ["ci-gwas", "cause", "presso", "mvpresso", "ivw", "mvivw"]
+    # methods = ["ci-gwas"]
+    mse_methods = ["ci-gwas", "cause", "presso", "mvpresso", "ivw", "mvivw"]
+    # mse_methods = ["ci-gwas"]
     # mse_methods = ["ci-gwas", "cause", "mrpresso", "ivw", "0-const"]
     title_kw = {"loc": "left", "pad": 15, "size": 20}
 
@@ -3494,7 +3556,7 @@ def plot_real_data_simulation_results(
         ax.set_title(title, **title_kw)
         x_sorted = sorted(list(x_vals))
         x = np.arange(len(x_vals))  # the label locations
-        width = 0.14  # the width of the bars
+        width = 0.10  # the width of the bars
         multiplier = 0
 
         handles = []
@@ -3559,7 +3621,8 @@ def plot_real_data_simulation_results(
     # h = plot_bars(alphas, "var", means, stds, ax_dict["h"], "h)")
     ax_dict["i"].legend(
         handles=h,
-        labels=["CI-GWAS", "CAUSE", "MR-PRESSO", "IVW Regression"],
+        labels=["CI-GWAS", "CAUSE", "MR-PRESSO", "MR-PRESSO (MV)", "IVW", "IVW (MV)"],
+        # labels=["CI-GWAS", "CAUSE", "MR-PRESSO", "IVW Regression"],
         loc="center",
         fancybox=False,
         shadow=False,
@@ -3596,12 +3659,13 @@ def plot_real_data_simulation_results(
     ax_dict["a"].set_ylabel("TDR(->)")
     plot_bars(alphas, "<-> orientation", means, stds, ax_dict["b"], "b)", methods=methods)
     ax_dict["b"].set_ylabel("TDR(<->)")
-    plot_bars(alphas, "mse", means, stds, ax_dict["c"], "c)", methods=mse_methods)
+    h = plot_bars(alphas, "mse", means, stds, ax_dict["c"], "c)", methods=mse_methods)
     ax_dict["c"].set_ylabel("MSE")
-    h = plot_bars(alphas, "sign", means, stds, ax_dict["d"], "d)", methods=mse_methods)
+    plot_bars(alphas, "sign", means, stds, ax_dict["d"], "d)", methods=mse_methods)
     ax_dict["i"].legend(
         handles=h,
-        labels=["CI-GWAS", "CAUSE", "MR-PRESSO", "IVW Regression"],
+        labels=["CI-GWAS", "CAUSE", "MR-PRESSO", "MR-PRESSO (MV)", "IVW", "IVW (MV)"],
+        # labels=["CI-GWAS", "CAUSE", "MR-PRESSO", "IVW Regression"],
         loc="center",
         fancybox=False,
         shadow=False,
