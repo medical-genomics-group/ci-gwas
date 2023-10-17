@@ -11,6 +11,7 @@ import seaborn as sns
 import queue
 from scipy.io import mmread
 import scipy
+from glob import glob
 # import scienceplots
 # plt.style.use('nature')
 
@@ -526,19 +527,29 @@ def add_ssm(a, b):
 def merge_block_outputs(blockfile: str, outdir: str):
     basepaths = [outdir + s for s in get_block_out_stems(blockfile)]
 
-    bo = BlockOutput(basepaths[0])
-    marker_offset = bo.num_markers()
-    global_marker_offset = bo.block_size()
-
-    sam = bo.sam()
-    scm = bo.scm()
-    ssm = bo.ssm()
-    gmi = bo.gmi()
-
+    try:
+        bo = BlockOutput(basepaths[0])
+        marker_offset = bo.num_markers()
+        global_marker_offset = bo.block_size()
+        sam = bo.sam()
+        scm = bo.scm()
+        ssm = bo.ssm()
+        gmi = bo.gmi()
+    except FileNotFoundError:
+        path = basepaths[0]
+        print(f"Missing: {path}")
+        global_marker_offset = block_size(path)
+        marker_offset = 0
+        sam = {}
+        scm = {}
+        ssm = {}
+        gmi = {}
+    
     for path in basepaths[1:]:
         try:
             bo = BlockOutput(path, marker_offset, global_marker_offset)
         except FileNotFoundError:
+            print(f"Missing: {path}")
             global_marker_offset += block_size(path)
             continue
         add_sam(sam, bo.sam(), bo.num_phen())
@@ -547,16 +558,6 @@ def merge_block_outputs(blockfile: str, outdir: str):
         add_gmi(gmi, bo.gmi())
         marker_offset += bo.num_markers()
         global_marker_offset += bo.block_size()
-
-    try:
-        phenopc_out = outdir + "pheno_sk"
-        bo = BlockOutput(phenopc_out)
-        add_sam(sam, bo.sam(), bo.num_phen())
-        add_scm(scm, bo.scm())
-        add_ssm(ssm, bo.ssm())
-        add_gmi(gmi, bo.gmi())
-    except FileNotFoundError as e:
-        print(e)
 
     return GlobalBdpcResult(
         sam, scm, ssm, gmi, marker_offset + bo.num_phen(), bo.num_phen(), bo.max_level()
@@ -925,7 +926,8 @@ class GlobalBdpcResult:
         # only sam and scm at the moment
         with open(basepath + "_sam" + ".mtx", "w") as fout:
             L = len(self.sam)
-            N = M = len(set([t[0] for t in self.sam.keys()]))
+            N = M = max(t[0] for t in self.sam.keys())
+            # N = M = len(set([t[0] for t in self.sam.keys()]))
             fout.write("%%MatrixMarket matrix coordinate integer general\n")
             fout.write(f"{N}\t{M}\t{L}\n")
             for (t1, t2), v in self.sam.items():
@@ -933,7 +935,8 @@ class GlobalBdpcResult:
 
         with open(basepath + "_scm" + ".mtx", "w") as fout:
             L = len(self.scm)
-            N = M = len(set([t[0] for t in self.scm.keys()]))
+            N = M = max(t[0] for t in self.sam.keys())
+            # N = M = len(set([t[0] for t in self.scm.keys()]))
             fout.write("%%MatrixMarket matrix coordinate real general\n")
             fout.write(f"{N}\t{M}\t{L}\n")
             for (t1, t2), v in self.scm.items():
@@ -1878,6 +1881,7 @@ def plot_ci_gwas_cause_ace_comparison_tri(
     ax=None,
     cbar_kw=None,
     cbarlabel=r"$ACE \: (y_1 \rightarrow y_2), \ CAUSE \ \gamma$",
+    max_path_len=np.inf,
 ):
     if ax is None:
         plt.figure(figsize=(3, 8))
@@ -1891,7 +1895,7 @@ def plot_ci_gwas_cause_ace_comparison_tri(
     p_names = get_pheno_codes(pheno_path)
     num_phen = len(p_names)
     
-    causal_paths = get_causal_paths(pag_path, pheno_path, max_path_len=1)
+    causal_paths = get_causal_paths(pag_path, pheno_path, max_path_len=max_path_len)
     ci_gwas_links = {}
 
     for i in range(num_phen):
@@ -2335,19 +2339,27 @@ def marker_pheno_associations_with_pnames(
 def marker_pheno_associations(
     blockfile: str,
     outdir: str,
-    pheno_path: str,
     bim_path: str,
     corr_path: str,
     adj_path: str,
+    num_phen=None,
+    pheno_path=None,
 ):
+    if num_phen is None and pheno_path is None:
+        raise RuntimeError("Either num_phen or pheno_path have to specified")
+
+    if pheno_path is None:
+        p_names = list(range(1, num_phen + 1))
+    else:
+        p_names = get_pheno_codes(pheno_path)
+        num_phen = len(p_names)
+
     bim_df = pd.read_csv(bim_path, sep="\t", header=None)
 
     rs_ids = bim_df[1].values
     chrs = bim_df[0].values
     on_chr_positions = bim_df[3].values
 
-    p_names = get_pheno_codes(pheno_path)
-    num_phen = len(p_names)
     assoc_markers = []
 
     adj = mmread(adj_path).toarray()
@@ -2711,6 +2723,10 @@ def path_in_sem(adj: np.array):
             causal_paths[start_node, j] = 1
     return causal_paths
 
+@dataclass
+class OrientationPerformance:
+    directed: float
+    bidirected: float
 
 def calculate_pxp_orientation_performance_mr(
         true_adj_matrix: np.array,
@@ -2730,20 +2746,30 @@ def calculate_pxp_orientation_performance_mr(
 
 
 def calculate_pxp_orientation_performance_ci_gwas(
-        true_adj_matrix: np.array,
+        true_directed: np.array,
+        true_bidirected: np.array,
         inferred_pag: np.array,
-):
-    num_phen = true_adj_matrix.shape[0]
-    total_inferred_links = 0
-    correctly_inferred_directions = 0
+) -> OrientationPerformance:
+    num_phen = true_directed.shape[0]
+    inferred_uni = 0
+    inferred_bi = 0
+    correct_uni = 0
+    correct_bi = 0
     for i in range(num_phen):
         for j in range(i, num_phen):
             inferred_edge = (inferred_pag[i, j], inferred_pag[j, i])
-            if inferred_edge != (0, 0):
-                total_inferred_links += 1
-                if true_adj_matrix[i, j] and inferred_edge == (2, 3):
-                    correctly_inferred_directions += 1
-    return 0 if total_inferred_links == 0 else correctly_inferred_directions / total_inferred_links
+            if inferred_edge == (2, 2):
+                inferred_bi += 1
+                correct_bi += true_bidirected[i, j]
+            elif inferred_edge != (0, 0):
+                inferred_uni += 1
+                if inferred_edge in [(2, 3), (2, 1)] and true_directed[i, j]:
+                    correct_uni += 1
+    return OrientationPerformance(
+        correct_uni / inferred_uni if inferred_uni > 0 else np.nan,
+        correct_bi / inferred_bi if inferred_bi > 0 else np.nan,
+    )
+                    
 
 
 def calulate_performance_metrics(
@@ -2944,6 +2970,155 @@ def load_simulation_results() -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def load_real_data_simulation_results(
+        e_arr=[2, 4, 6, 8],
+        rep_arr=list(range(1, 41)),
+        num_p=10,
+) -> pd.DataFrame:
+    alpha_str_d = {
+        1: "0.1",
+        2: "0.01",
+        3: "0.001",
+        4: "1e-04",
+        5: "1e-05",
+        6: "1e-06",
+        7: "1e-07",
+        8: "1e-08",
+    }
+    num_m = 600
+    alpha_str_arr = [alpha_str_d[e] for e in e_arr]
+    rows = []
+    wdir = "/nfs/scistore17/robingrp/mrobinso/cigwas/ukb/sim/real_marker_sim/"
+    blockfile = wdir + "ukb22828_UKB_EST_v3_ldp08_estonia_intersect_m11000_chr1.blocks"
+    bim_path = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/estonian_comparison/ukb22828_UKB_EST_v3_ldp08_estonia_intersect_a1_forced.bim"
+    rs_ids = pd.read_csv(bim_path, sep="\t", header=None)[1].values
+    for rep in rep_arr:
+        simdir = f"/nfs/scistore17/robingrp/mrobinso/cigwas/ukb/sim/real_marker_sim/sim/sim_{rep}/"
+        true_snp_ids = []
+        with open(simdir + "CV_snp_ids.txt", 'r') as fin:
+            for line in fin:
+                true_snp_ids.append(line.strip())
+        true_eff_file = glob(simdir + "true_causaleffects*")[0]
+        true_eff_lines = []
+        true_eff_lines_all = []
+        with open(true_eff_file, 'r') as fin:
+            for line in fin:
+                # we skip the latent vars here
+                true_eff_lines.append(
+                    {   k + 1: v for (k, v) in 
+                        enumerate(line.strip().split()[2:])
+                    }
+                )
+                true_eff_lines_all.append(
+                    {   k: v for (k, v) in 
+                        enumerate(line.strip().split())
+                    }
+                )
+        true_dag_mxp = pd.DataFrame(true_eff_lines[:num_m], index=true_snp_ids, dtype=float)
+        true_dag_pxp = np.triu(
+            np.array(
+                pd.DataFrame(true_eff_lines[-num_p:], index=list(range(1, num_p + 1)), dtype=float)),
+            1
+        )
+        true_dag_lpxlp = np.triu(
+            np.array(
+                pd.DataFrame(true_eff_lines_all[num_m:], dtype=float)),
+            1
+        )
+        # mark true 2-2 edges
+        m = (true_dag_lpxlp != 0)
+        true_bidirected = np.zeros(shape=(num_p, num_p))
+        for i in range(2, num_p + 2):
+            for j in range(i + 1, num_p + 2):
+                if not m[i, j] and ((m[0, i] and m[0, j]) or (m[1, i] and m[1, j])):
+                    true_bidirected[i - 2, j - 2] = 1
+        
+        for alpha_e in e_arr:
+            est_dir = f"/nfs/scistore17/robingrp/mrobinso/cigwas/ukb/sim/real_marker_sim/cusk/sim{rep}_e{alpha_e}/"
+            pag_path = est_dir + "max_sep_min_pc_estimated_pag_cusk2.mtx"
+            try:
+                full_pag = mmread(pag_path).tocsr()
+            except:
+                continue
+            outdir = wdir + f"cusk/sim{rep}_e{alpha_e}/"
+
+            gr = merge_block_outputs(blockfile, outdir)
+            glob_ixs = np.array(sorted(list(gr.gmi.values())))
+            est_dag_mxp = pd.DataFrame(
+                full_pag[num_p:, :num_p].toarray(),
+                columns=list(range(1, num_p + 1)),
+                index=rs_ids[glob_ixs],
+                dtype=int)
+            est_dag_pxp = full_pag[:num_p, :num_p].toarray()
+            est_dag_pxp_triu = np.triu(est_dag_pxp, 1)
+            
+            p = (true_dag_mxp != 0).sum().sum()
+            td_mxp_matched = true_dag_mxp.reindex_like(est_dag_mxp)
+            tp = ((est_dag_mxp != 0) & (td_mxp_matched != 0)).sum().sum()
+            fp = ((est_dag_mxp != 0) & (td_mxp_matched == 0)).sum().sum()
+            mxp_tpr = tp / p
+            mxp_fdr = fp / (tp + fp)
+
+            m = (true_bidirected != 0) | (true_dag_pxp != 0)
+            p = np.sum(m)
+            tp = np.sum(m & (est_dag_pxp_triu != 0))
+            fp = np.sum(~m & (est_dag_pxp_triu != 0))
+            pxp_tpr = tp / p
+            pxp_fdr = fp / (tp + fp)
+
+            orientation_perf = calculate_pxp_orientation_performance_ci_gwas(
+                true_dag_pxp != 0,
+                true_bidirected != 0,
+                est_dag_pxp)
+
+            # load aces
+            pace = np.zeros(shape=(num_p, num_p))
+            missing = []
+            for i in range(1, num_p + 1):
+                for j in range(1, num_p + 1):
+                    if i == j:
+                        continue
+                    file = est_dir + f"ACE_i{i}_j{j}.csv"
+                    try:
+                        with open(file) as fin:
+                            next(fin)
+                            sym = fin.readline().strip()
+                            if sym == "NA":
+                                pace[i - 1, j - 1] = 0.0
+                            else:
+                                pace[i - 1, j - 1] = eval(sym)
+                    except FileNotFoundError as err:
+                        # print(err)
+                        missing.append((i, j))
+
+            m = true_dag_pxp
+            m = np.linalg.inv(np.eye(m.shape[0]) - m.T)
+            true_eff = np.triu(m @ m.T, 1)
+
+            mse = np.mean((pace - true_eff) ** 2)
+
+            tp_m = ((true_eff != 0) & (pace != 0))
+            correct_sign = np.mean(np.sign(true_eff[tp_m]) == np.sign(pace[tp_m]))
+
+            rows.append(
+                {
+                    "x -> y fdr": mxp_fdr,
+                    "x -> y tpr": mxp_tpr,
+                    "-> orientation": orientation_perf.directed,
+                    "<-> orientation": orientation_perf.bidirected,
+                    "mse": mse,
+                    "sign": correct_sign,
+                    "y -> y fdr": pxp_fdr,
+                    "y -> y tpr": pxp_tpr,
+                    "rep": rep,
+                    "alpha": 10 ** (-alpha_e),
+                    "method": "ci-gwas",
+                }
+            )
+    return pd.DataFrame(rows)
+
+        
+
 def load_n16k_m1600_simulation_results(
     mr=True, e_arr=list(range(2, 9))
 ) -> pd.DataFrame:
@@ -2987,6 +3162,17 @@ def load_n16k_m1600_simulation_results(
 
         # load true dag
         dag_mxp = dag.toarray()[:m, -num_phen:]
+
+        for a_str in alpha_str_arr:
+            rows.append(
+            {
+                "mse": np.sum(peff ** 2),
+                "n": n,
+                "m": m,
+                "rep": rep,
+                "alpha": float(a_str),
+                "method": "0-const",
+            })
 
         if mr:
             for mr in mr_cn:
@@ -3250,7 +3436,186 @@ def plot_simulation_results():
     ax_dict["f"].axis("off")
 
 
+def plot_real_data_simulation_results(
+    rep_arr=list(range(1, 41))
+):
+    bar_xlabel_rotation = 45
+    e_arr = [2, 4, 6, 8]
+
+    df = load_real_data_simulation_results(rep_arr=rep_arr)
+    gr = df.groupby(["method", "alpha"])
+    means = gr.mean()
+    stds = gr.std()
+
+    alphas = 10.0 ** -np.array(e_arr[::-1])
+    # methods = ['ci-gwas', 'cause', 'mrpresso', 'egger', 'ivw']
+    # methods = ["ci-gwas", "cause", "mrpresso", "ivw"]
+    methods = ["ci-gwas"]
+    mse_methods = ["ci-gwas"]
+    # mse_methods = ["ci-gwas", "cause", "mrpresso", "ivw", "0-const"]
+    title_kw = {"loc": "left", "pad": 15, "size": 20}
+
+    def plot_ci_gwas_bars(x_vals, metric, means, stds, ax, title, axhline=False):
+        ax.set_title(title, **title_kw)
+        x_sorted = sorted(list(x_vals))
+        x = np.arange(len(x_vals))  # the label locations
+        width = 0.5  # the width of the bars
+        multiplier = 0
+
+        handles = []
+        for method in ["ci-gwas"]:
+            mu = means.loc[method][metric]
+            sig = stds.loc[method][metric]
+            loc_x = np.array([x_sorted.index(e) for e in means.loc[method].index.values])
+            offset = width * multiplier
+            try:
+                bars = ax.bar(
+                    loc_x + offset, mu, width, yerr=sig, capsize=1.5, label=method
+                )
+                handles.append(bars)
+            except StopIteration:
+                pass
+            multiplier += 1
+
+        ax.set_ylabel(metric)
+        if title == "e)" or title == "d)":
+            ax.set_xlabel(r"$\alpha$")
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.set_xticks(x, x_vals)
+        plt.setp(ax.get_xticklabels(), rotation=bar_xlabel_rotation, ha="right", rotation_mode="anchor")
+        if axhline:
+            ax.axhline(0.05, linestyle="dotted", color="gray")
+        # ax.legend(loc='upper left', ncols=3)
+        # ax.set_yscale("symlog")
+        return handles
+
+    def plot_bars(x_vals, metric, means, stds, ax, title, methods):
+        ax.set_title(title, **title_kw)
+        x_sorted = sorted(list(x_vals))
+        x = np.arange(len(x_vals))  # the label locations
+        width = 0.14  # the width of the bars
+        multiplier = 0
+
+        handles = []
+        for method in methods:
+            mu = means.loc[method][metric]
+            sig = stds.loc[method][metric]
+            loc_x = np.array([x_sorted.index(e) for e in means.loc[method].index.values])
+            offset = width * multiplier
+            try:
+                bars = ax.bar(
+                    loc_x + offset, mu, width, yerr=sig, capsize=1.5, label=method
+                )
+                handles.append(bars)
+            except StopIteration:
+                pass
+            multiplier += 1
+
+        ax.set_ylabel(metric)
+        if title == "g)" or title == "h)":
+            ax.set_xlabel(r"$\alpha$")
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.set_xticks(x + width, x_vals)
+        plt.setp(ax.get_xticklabels(), rotation=bar_xlabel_rotation, ha="right", rotation_mode="anchor")
+        # ax.legend(loc='upper left', ncols=3)
+        # ax.set_yscale("symlog")
+        return handles
+
+    # ---------- adjacency performance
+
+    fig = plt.figure(
+        # layout="tight",
+        figsize=(9, 6))
+    ax_dict = fig.subplot_mosaic(
+        """
+        XiX
+        abc
+        ddd
+        """,
+        empty_sentinel="X",
+        sharex=False,
+        # set the height ratios between the rows
+        height_ratios=[0.1, 0.4, 0.5],
+    )
+
+    ax_dict['d'].set_xlabel(r'$\alpha$')
+
+    plot_ci_gwas_bars(
+        alphas, "x -> y fdr", means, stds, ax_dict["a"], "a)", axhline=True
+    )
+    ax_dict["a"].set_ylabel(r"x$\rightarrow$y FDR")
+    plot_ci_gwas_bars(alphas, "x -> y tpr", means, stds, ax_dict["b"], "b)")
+    ax_dict["b"].set_ylabel(r"x$\rightarrow$y TPR")
+    plot_ci_gwas_bars(alphas, "y -> y fdr", means, stds, ax_dict["c"], "c)", axhline=True)
+    ax_dict["c"].set_ylabel(r"y$\rightarrow$y FDR")
+    h = plot_bars(alphas, "y -> y tpr", means, stds, ax_dict["d"], "d)", methods=methods)
+    ax_dict["d"].set_ylabel(r"y$\rightarrow$y TPR")
+    # plot_bars(alphas, "edge orientation", means, stds, ax_dict["e"], "e)", methods=methods)
+    # h = plot_bars(alphas, "mse", means, stds, ax_dict["f"], "f)", methods=mse_methods)
+    # ax_dict["f"].set_ylabel("MSE")
+    # plot_bars(alphas, "bias", means, stds, ax_dict["g"], "g)")
+    # h = plot_bars(alphas, "var", means, stds, ax_dict["h"], "h)")
+    ax_dict["i"].legend(
+        handles=h,
+        labels=["CI-GWAS", "CAUSE", "MR-PRESSO", "IVW Regression"],
+        loc="center",
+        fancybox=False,
+        shadow=False,
+        ncol=4,
+        # title="method",
+    )
+    ax_dict["i"].axis("off")
+    # _ = [ax_dict[i].tick_params(labelbottom=False) for i in "de"]
+    # _ = [ax_dict[i].sharex(ax_dict['f']) for i in 'de']
+    fig.subplots_adjust(wspace=0.7, hspace=1.3)
+
+    # ---------- orientation and ace performance
+
+    fig = plt.figure(
+        # layout="tight",
+        figsize=(9, 6))
+    ax_dict = fig.subplot_mosaic(
+        """
+        XiX
+        aaa
+        bbb
+        ccc
+        ddd
+        """,
+        empty_sentinel="X",
+        sharex=False,
+        # set the height ratios between the rows
+        height_ratios=[0.1, 0.3, 0.3, 0.3, 0.3],
+    )
+
+    ax_dict['d'].set_xlabel(r'$\alpha$')
+
+    plot_bars(alphas, "-> orientation", means, stds, ax_dict["a"], "a)", methods=methods)
+    ax_dict["a"].set_ylabel("TDR(->)")
+    plot_bars(alphas, "<-> orientation", means, stds, ax_dict["b"], "b)", methods=methods)
+    ax_dict["b"].set_ylabel("TDR(<->)")
+    plot_bars(alphas, "mse", means, stds, ax_dict["c"], "c)", methods=mse_methods)
+    ax_dict["c"].set_ylabel("MSE")
+    h = plot_bars(alphas, "sign", means, stds, ax_dict["d"], "d)", methods=mse_methods)
+    ax_dict["i"].legend(
+        handles=h,
+        labels=["CI-GWAS", "CAUSE", "MR-PRESSO", "IVW Regression"],
+        loc="center",
+        fancybox=False,
+        shadow=False,
+        ncol=4,
+        # title="method",
+    )
+    ax_dict["i"].axis("off")
+    _ = [ax_dict[i].tick_params(labelbottom=False) for i in "abc"]
+    _ = [ax_dict[i].sharex(ax_dict['d']) for i in 'abc']
+    fig.subplots_adjust(wspace=0.7, hspace=1.3)
+
+
 def plot_simulation_results_figure_2():
+    bar_xlabel_rotation = 45
     d = 1
     l = 6
     n_arr = [2000, 4000, 8000, 16000]
@@ -3270,12 +3635,13 @@ def plot_simulation_results_figure_2():
     alphas = 10.0 ** -np.array(e_arr[::-1])
     # methods = ['ci-gwas', 'cause', 'mrpresso', 'egger', 'ivw']
     methods = ["ci-gwas", "cause", "mrpresso", "ivw"]
+    mse_methods = ["ci-gwas", "cause", "mrpresso", "ivw", "0-const"]
     title_kw = {"loc": "left", "pad": 15, "size": 20}
 
     def plot_ci_gwas_bars(x_vals, metric, means, stds, ax, title, axhline=False):
         ax.set_title(title, **title_kw)
         x = np.arange(len(x_vals))  # the label locations
-        width = 0.8  # the width of the bars
+        width = 0.5  # the width of the bars
         multiplier = 0
 
         handles = []
@@ -3298,17 +3664,17 @@ def plot_simulation_results_figure_2():
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
         ax.set_xticks(x, x_vals)
-        plt.setp(ax.get_xticklabels(), rotation=XLABEL_ROTATION, ha="right", rotation_mode="anchor")
+        plt.setp(ax.get_xticklabels(), rotation=bar_xlabel_rotation, ha="right", rotation_mode="anchor")
         if axhline:
             ax.axhline(0.05, linestyle="dotted", color="gray")
         # ax.legend(loc='upper left', ncols=3)
         # ax.set_yscale("symlog")
         return handles
 
-    def plot_bars(x_vals, metric, means, stds, ax, title):
+    def plot_bars(x_vals, metric, means, stds, ax, title, methods):
         ax.set_title(title, **title_kw)
         x = np.arange(len(x_vals))  # the label locations
-        width = 0.18  # the width of the bars
+        width = 0.14  # the width of the bars
         multiplier = 0
 
         handles = []
@@ -3331,12 +3697,14 @@ def plot_simulation_results_figure_2():
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
         ax.set_xticks(x + width, x_vals)
-        plt.setp(ax.get_xticklabels(), rotation=XLABEL_ROTATION, ha="right", rotation_mode="anchor")
+        plt.setp(ax.get_xticklabels(), rotation=bar_xlabel_rotation, ha="right", rotation_mode="anchor")
         # ax.legend(loc='upper left', ncols=3)
         # ax.set_yscale("symlog")
         return handles
 
-    fig = plt.figure(layout="tight", figsize=(12, 12))
+    fig = plt.figure(
+        # layout="tight",
+        figsize=(9, 10))
     ax_dict = fig.subplot_mosaic(
         """
         XiX
@@ -3348,7 +3716,7 @@ def plot_simulation_results_figure_2():
         empty_sentinel="X",
         sharex=False,
         # set the height ratios between the rows
-        height_ratios=[0.2, 0.6, 0.6, 0.8, 0.8],
+        height_ratios=[0.1, 0.4, 0.5, 0.5, 0.5],
     )
 
     ax_dict['f'].set_xlabel(r'$\alpha$')
@@ -3361,25 +3729,26 @@ def plot_simulation_results_figure_2():
     ax_dict["b"].set_ylabel(r"x$\rightarrow$y TPR")
     plot_ci_gwas_bars(alphas, "y -> y fdr", means, stds, ax_dict["c"], "c)", axhline=True)
     ax_dict["c"].set_ylabel(r"y$\rightarrow$y FDR")
-    plot_bars(alphas, "y -> y tpr", means, stds, ax_dict["d"], "d)")
+    plot_bars(alphas, "y -> y tpr", means, stds, ax_dict["d"], "d)", methods=methods)
     ax_dict["d"].set_ylabel(r"y$\rightarrow$y TPR")
-    plot_bars(alphas, "edge orientation", means, stds, ax_dict["e"], "e)")
-    h = plot_bars(alphas, "mse", means, stds, ax_dict["f"], "f)")
+    plot_bars(alphas, "edge orientation", means, stds, ax_dict["e"], "e)", methods=methods)
+    h = plot_bars(alphas, "mse", means, stds, ax_dict["f"], "f)", methods=mse_methods)
     ax_dict["f"].set_ylabel("MSE")
     # plot_bars(alphas, "bias", means, stds, ax_dict["g"], "g)")
     # h = plot_bars(alphas, "var", means, stds, ax_dict["h"], "h)")
     ax_dict["i"].legend(
         handles=h,
-        labels=["CI-GWAS", "CAUSE", "MR-PRESSO", "IVW Regression"],
+        labels=["CI-GWAS", "CAUSE", "MR-PRESSO", "IVW Regression", "0-const"],
         loc="center",
         fancybox=False,
         shadow=False,
-        ncol=4,
+        ncol=5,
         # title="method",
     )
     ax_dict["i"].axis("off")
     _ = [ax_dict[i].tick_params(labelbottom=False) for i in "de"]
     _ = [ax_dict[i].sharex(ax_dict['f']) for i in 'de']
+    fig.subplots_adjust(wspace=0.4, hspace=1.1)
     
 
 
@@ -3919,6 +4288,7 @@ def plot_full_ukb_results_figure_3(
         title="e)",
         title_kw=title_kw,
         cbar_kw=cbar_kw,
+        max_path_len=max_path_len,
     )
 
     _ = [ax_dict[k].set_box_aspect(1) for k in 'acd']
