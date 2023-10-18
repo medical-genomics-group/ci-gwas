@@ -3497,7 +3497,9 @@ def plot_simulation_results():
 
 
 def plot_real_data_simulation_results(
-    rep_arr=list(range(1, 41))
+    rep_arr=list(range(1, 41)),
+    fig1_path=None,
+    fig2_path=None,
 ):
     bar_xlabel_rotation = 45
     e_arr = [3, 4, 6, 8]
@@ -3633,6 +3635,8 @@ def plot_real_data_simulation_results(
     # _ = [ax_dict[i].tick_params(labelbottom=False) for i in "de"]
     # _ = [ax_dict[i].sharex(ax_dict['f']) for i in 'de']
     fig.subplots_adjust(wspace=0.7, hspace=1.3)
+    if fig1_path is not None:
+        plt.savefig(fig1_path, bbox_inches="tight")
 
     # ---------- orientation and ace performance
 
@@ -3676,6 +3680,8 @@ def plot_real_data_simulation_results(
     _ = [ax_dict[i].tick_params(labelbottom=False) for i in "abc"]
     _ = [ax_dict[i].sharex(ax_dict['d']) for i in 'abc']
     fig.subplots_adjust(wspace=0.7, hspace=1.3)
+    if fig2_path is not None:
+        plt.savefig(fig2_path, bbox_inches="tight")
 
 
 def plot_simulation_results_figure_2():
