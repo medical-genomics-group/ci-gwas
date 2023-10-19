@@ -3614,7 +3614,6 @@ def plot_real_data_simulation_results(
     fig2_path=None,
 ):
     bar_xlabel_rotation = 45
-    e_arr = [3, 4, 6, 8]
 
     df = load_real_data_simulation_results(e_arr=e_arr, rep_arr=rep_arr)
     gr = df.groupby(["method", "alpha"])
