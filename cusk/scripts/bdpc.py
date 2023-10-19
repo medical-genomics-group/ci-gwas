@@ -12,6 +12,7 @@ import queue
 from scipy.io import mmread
 import scipy
 from glob import glob
+
 # import scienceplots
 # plt.style.use('nature')
 
@@ -36,7 +37,7 @@ plt.rc("figure", titlesize=BIGGER_SIZE)  # fontsize of the figure title
 rng = np.random.default_rng()
 
 BASE_INDEX = 1
-XLABEL_ROTATION=60
+XLABEL_ROTATION = 60
 
 chr_lengths = {
     1: 248956422,
@@ -544,7 +545,7 @@ def merge_block_outputs(blockfile: str, outdir: str):
         scm = {}
         ssm = {}
         gmi = {}
-    
+
     for path in basepaths[1:]:
         try:
             bo = BlockOutput(path, marker_offset, global_marker_offset)
@@ -1017,9 +1018,9 @@ def heatmap(
             labels = cbar.ax.set_yticklabels(
                 cbar.ax.get_yticklabels(),
                 rotation=cbarlabel_rotation,
-                rotation_mode='anchor',
-                ha='left'
-                )
+                rotation_mode="anchor",
+                ha="left",
+            )
         if label_interspacing:
             for i, label in enumerate(labels):
                 label.set_x(label.get_position()[0] + 0.3 + (i % 2) * 1.3)
@@ -1034,7 +1035,12 @@ def heatmap(
     ax.tick_params(top=False, bottom=True, labeltop=False, labelbottom=True)
 
     # Rotate the tick labels and set their alignment.
-    plt.setp(ax.get_xticklabels(), rotation=XLABEL_ROTATION, ha="right", rotation_mode="anchor")
+    plt.setp(
+        ax.get_xticklabels(),
+        rotation=XLABEL_ROTATION,
+        ha="right",
+        rotation_mode="anchor",
+    )
 
     # Turn spines off and create white grid.
     ax.spines[:].set_visible(False)
@@ -1406,7 +1412,7 @@ simulation_edge_types = EdgeEncoding(
                 "#fcc006",  # marigold
                 # "#a6cee3", # light blue
                 "#1f78b4",  # darker blue
-                "#10a674", # blueish green
+                "#10a674",  # blueish green
             ]
         )
     ),
@@ -1606,7 +1612,7 @@ def plot_pag(
         ax=ax,
         cbar=cbar,
         cbarlabel_rotation=-50,
-        label_interspacing=False
+        label_interspacing=False,
     )
 
     return im
@@ -1640,7 +1646,9 @@ def get_possibly_causal_paths(pag_path: str, pheno_path: str, pheno_names=None):
     return causal_paths
 
 
-def get_causal_paths(pag_path: str, pheno_path: str, pheno_names=None, max_path_len=np.inf):
+def get_causal_paths(
+    pag_path: str, pheno_path: str, pheno_names=None, max_path_len=np.inf
+):
     if pheno_names is None:
         p_names = get_pheno_codes(pheno_path)
         num_phen = len(p_names)
@@ -1656,7 +1664,7 @@ def get_causal_paths(pag_path: str, pheno_path: str, pheno_names=None, max_path_
         descendants = set()
         path_len = 0
         while path_len < max_path_len:
-            next_q = queue.Queue()            
+            next_q = queue.Queue()
             while not q.empty():
                 current_node = q.get()
                 for neighbor in range(num_phen):
@@ -1894,7 +1902,7 @@ def plot_ci_gwas_cause_ace_comparison_tri(
 
     p_names = get_pheno_codes(pheno_path)
     num_phen = len(p_names)
-    
+
     causal_paths = get_causal_paths(pag_path, pheno_path, max_path_len=max_path_len)
     ci_gwas_links = {}
 
@@ -1932,13 +1940,15 @@ def plot_ci_gwas_cause_ace_comparison_tri(
             glob_ds = p_names.index(ds)
             ci_gwas_ace_mat[i][j] = ace[glob_rf, glob_ds]
             cg = cause_gamma[
-                (cause_gamma["y1"] == rf) & (cause_gamma["y2"] == ds)].gamma.values
+                (cause_gamma["y1"] == rf) & (cause_gamma["y2"] == ds)
+            ].gamma.values
             cp = cause_gamma[
-                (cause_gamma["y1"] == rf) & (cause_gamma["y2"] == ds)].p_value.values
+                (cause_gamma["y1"] == rf) & (cause_gamma["y2"] == ds)
+            ].p_value.values
             if len(cg) == 1:
                 cause_ace_mat[i][j] = cg[0]
                 if cp[0] <= p_thr:
-                    cause_sig_arr[i * len(diseases) + j] = True    
+                    cause_sig_arr[i * len(diseases) + j] = True
             if (rf, ds) in ci_gwas_links:
                 ci_gwas_links_arr[i * len(diseases) + j] = True
 
@@ -1963,17 +1973,27 @@ def plot_ci_gwas_cause_ace_comparison_tri(
     ]
     tri_ci_gwas_link_mask = np.array([1] * len(triangles1))
     tri_ci_gwas_link_mask[np.where(ci_gwas_links_arr)] = False
-    tri_ci_gwas_link = Triangulation(xs.ravel() - 0.5, ys.ravel() - 0.5, triangles=np.array(triangles1), mask=tri_ci_gwas_link_mask)
-    
+    tri_ci_gwas_link = Triangulation(
+        xs.ravel() - 0.5,
+        ys.ravel() - 0.5,
+        triangles=np.array(triangles1),
+        mask=tri_ci_gwas_link_mask,
+    )
+
     tri_cause_sig_mask = np.array([1] * len(triangles1))
     tri_cause_sig_mask[np.where(cause_sig_arr)] = False
-    tri_cause_sig = Triangulation(xs.ravel() - 0.5, ys.ravel() - 0.5, triangles=np.array(triangles2), mask=tri_cause_sig_mask)
-    
+    tri_cause_sig = Triangulation(
+        xs.ravel() - 0.5,
+        ys.ravel() - 0.5,
+        triangles=np.array(triangles2),
+        mask=tri_cause_sig_mask,
+    )
+
     triang1 = Triangulation(xs.ravel() - 0.5, ys.ravel() - 0.5, triangles1)
     triang2 = Triangulation(xs.ravel() - 0.5, ys.ravel() - 0.5, triangles2)
-    
+
     tri_color = "#1f0954"
-    
+
     img1 = ax.tripcolor(
         triang1,
         np.array(ci_gwas_ace_mat).ravel(),
@@ -1996,7 +2016,7 @@ def plot_ci_gwas_cause_ace_comparison_tri(
         cmap="RdBu",
         # vmin=-vm,
         # vmax=vm,
-        edgecolor="#df4ec8", # purpleish pink
+        edgecolor="#df4ec8",  # purpleish pink
         linewidth=4,
         norm=mpl.colors.SymLogNorm(vmin=-1.0, vmax=1.0, linthresh=0.01),
     )
@@ -2007,7 +2027,7 @@ def plot_ci_gwas_cause_ace_comparison_tri(
         cmap="RdBu",
         # vmin=-vm,
         # vmax=vm,
-        edgecolor="#019529", #irish green
+        edgecolor="#019529",  # irish green
         linewidth=4,
         linestyle=":",
         norm=mpl.colors.SymLogNorm(vmin=-1.0, vmax=1.0, linthresh=0.01),
@@ -2028,7 +2048,12 @@ def plot_ci_gwas_cause_ace_comparison_tri(
     ax.tick_params(top=False, bottom=True, labeltop=False, labelbottom=True)
 
     # Rotate the tick labels and set their alignment.
-    plt.setp(ax.get_xticklabels(), rotation=XLABEL_ROTATION, ha="right", rotation_mode="anchor")
+    plt.setp(
+        ax.get_xticklabels(),
+        rotation=XLABEL_ROTATION,
+        ha="right",
+        rotation_mode="anchor",
+    )
 
     # Turn spines off and create white grid.
     ax.spines[:].set_visible(False)
@@ -2051,6 +2076,7 @@ def plot_ci_gwas_cause_ace_comparison_tri(
 
     return img1, img2
 
+
 def plot_direct_link_cause_comparison_wide(
     pag_path: str,
     pheno_path: str,
@@ -2058,7 +2084,7 @@ def plot_direct_link_cause_comparison_wide(
     title=None,
     title_kw=dict(),
     ax=None,
-    max_path_len=np.inf
+    max_path_len=np.inf,
 ):
     if ax is None:
         plt.figure(figsize=(3, 10))
@@ -2068,7 +2094,7 @@ def plot_direct_link_cause_comparison_wide(
 
     p_names = get_pheno_codes(pheno_path)
     num_phen = len(p_names)
-    
+
     causal_paths = get_causal_paths(pag_path, pheno_path, max_path_len=max_path_len)
 
     ci_gwas_links = {}
@@ -2151,7 +2177,12 @@ def plot_direct_link_cause_comparison_wide(
     ax.tick_params(top=False, bottom=True, labeltop=False, labelbottom=True)
 
     # Rotate the tick labels and set their alignment.
-    plt.setp(ax.get_xticklabels(), rotation=XLABEL_ROTATION, ha="right", rotation_mode="anchor")
+    plt.setp(
+        ax.get_xticklabels(),
+        rotation=XLABEL_ROTATION,
+        ha="right",
+        rotation_mode="anchor",
+    )
 
     # Turn spines off and create white grid.
     ax.spines[:].set_visible(False)
@@ -2274,7 +2305,12 @@ def plot_direct_link_cause_comparison(
     ax.tick_params(top=False, bottom=True, labeltop=False, labelbottom=True)
 
     # Rotate the tick labels and set their alignment.
-    plt.setp(ax.get_xticklabels(), rotation=XLABEL_ROTATION, ha="right", rotation_mode="anchor")
+    plt.setp(
+        ax.get_xticklabels(),
+        rotation=XLABEL_ROTATION,
+        ha="right",
+        rotation_mode="anchor",
+    )
 
     # Turn spines off and create white grid.
     ax.spines[:].set_visible(False)
@@ -2382,7 +2418,7 @@ def marker_pheno_associations(
                     "corr": c,
                 }
             )
-    
+
     return pd.DataFrame(assoc_markers)
 
 
@@ -2723,10 +2759,12 @@ def path_in_sem(adj: np.array):
             causal_paths[start_node, j] = 1
     return causal_paths
 
+
 @dataclass
 class OrientationPerformance:
     directed: float
     bidirected: float
+
 
 def calculate_pxp_orientation_performance_mr(
     true_directed: np.array,
@@ -2738,7 +2776,7 @@ def calculate_pxp_orientation_performance_mr(
     inferred_uni = 0
     inferred_bi = 0
     correct_uni = 0
-    correct_bi = 0    
+    correct_bi = 0
     for i in range(num_phen):
         for j in range(i, num_phen):
             inferred_edge = (inferred_links[i, j], inferred_links[j, i])
@@ -2751,7 +2789,8 @@ def calculate_pxp_orientation_performance_mr(
                     correct_uni += 1
     return OrientationPerformance(
         correct_uni / inferred_uni if inferred_uni > 0 else np.nan,
-        correct_bi / inferred_bi if inferred_bi > 0 else np.nan)
+        correct_bi / inferred_bi if inferred_bi > 0 else np.nan,
+    )
 
 
 def calculate_pxp_orientation_performance_ci_gwas(
@@ -2776,14 +2815,12 @@ def calculate_pxp_orientation_performance_ci_gwas(
                     correct_uni += 1
     return OrientationPerformance(
         correct_uni / inferred_uni if inferred_uni > 0 else np.nan,
-        correct_bi / inferred_bi if inferred_bi > 0 else np.nan)
+        correct_bi / inferred_bi if inferred_bi > 0 else np.nan,
+    )
 
 
 def calulate_performance_metrics(
-    true_adj: np.array,
-    true_eff: np.array,
-    est_adj: np.array,
-    est_eff: np.array
+    true_adj: np.array, true_eff: np.array, est_adj: np.array, est_eff: np.array
 ):
     sym_est_adj = make_adj_symmetric(est_adj)
     true_adj_masked = np.ma.array(true_adj, mask=np.tri(true_adj.shape[0], k=0))
@@ -2791,7 +2828,7 @@ def calulate_performance_metrics(
     sym_est_adj_masked = np.ma.array(sym_est_adj, mask=np.tri(true_adj.shape[0], k=0))
     est_eff_masked = np.ma.array(est_eff, mask=np.tri(true_adj.shape[0], k=0))
     true_eff_masked = np.ma.array(true_eff, mask=np.tri(true_adj.shape[0], k=0))
-    
+
     # no need to subset here. for MR, we do it before
     sig_eff = est_eff
     tp_mat = (true_adj_masked != 0) & (est_adj_masked != 0)
@@ -2818,9 +2855,7 @@ def calulate_performance_metrics(
         var_tp = np.nan
     if np.ma.is_masked(bias_tp):
         bias_tp = np.nan
-    return Performance(
-        mse, bias, var, mse_tp, bias_tp, var_tp, fdr, tpr
-    )
+    return Performance(mse, bias, var, mse_tp, bias_tp, var_tp, fdr, tpr)
 
 
 def load_simulation_results() -> pd.DataFrame:
@@ -2898,8 +2933,10 @@ def load_simulation_results() -> pd.DataFrame:
                 ]
 
             # load skeleton
-            adj = np.fromfile(indir + "skeleton.adj", dtype=np.int32).reshape(num_var, num_var)
-            padj = adj[-(num_phen):,-(num_phen):]
+            adj = np.fromfile(indir + "skeleton.adj", dtype=np.int32).reshape(
+                num_var, num_var
+            )
+            padj = adj[-(num_phen):, -(num_phen):]
 
             # load pag
             pag_path = indir + "estimated_pag_mpu.mtx"
@@ -2978,9 +3015,9 @@ def load_simulation_results() -> pd.DataFrame:
 
 
 def load_real_data_simulation_results(
-        e_arr=[3, 4, 6, 8],
-        rep_arr=list(range(1, 41)),
-        num_p=10,
+    e_arr=[3, 4, 6, 8],
+    rep_arr=list(range(1, 41)),
+    num_p=10,
 ) -> pd.DataFrame:
     alpha_str_d = {
         1: "0.1",
@@ -3002,44 +3039,45 @@ def load_real_data_simulation_results(
     for rep in rep_arr:
         simdir = f"/nfs/scistore17/robingrp/mrobinso/cigwas/ukb/sim/real_marker_sim/sim/sim_{rep}/"
         true_snp_ids = []
-        with open(simdir + "CV_snp_ids.txt", 'r') as fin:
+        with open(simdir + "CV_snp_ids.txt", "r") as fin:
             for line in fin:
                 true_snp_ids.append(line.strip())
         true_eff_file = glob(simdir + "true_causaleffects*")[0]
         true_eff_lines = []
         true_eff_lines_all = []
-        with open(true_eff_file, 'r') as fin:
+        with open(true_eff_file, "r") as fin:
             for line in fin:
                 # we skip the latent vars here
                 true_eff_lines.append(
-                    {   k + 1: v for (k, v) in 
-                        enumerate(line.strip().split()[2:])
-                    }
+                    {k + 1: v for (k, v) in enumerate(line.strip().split()[2:])}
                 )
                 true_eff_lines_all.append(
-                    {   k: v for (k, v) in 
-                        enumerate(line.strip().split())
-                    }
+                    {k: v for (k, v) in enumerate(line.strip().split())}
                 )
-        true_dag_mxp = pd.DataFrame(true_eff_lines[:num_m], index=true_snp_ids, dtype=float)
+        true_dag_mxp = pd.DataFrame(
+            true_eff_lines[:num_m], index=true_snp_ids, dtype=float
+        )
         true_dag_pxp = np.triu(
             np.array(
-                pd.DataFrame(true_eff_lines[-num_p:], index=list(range(1, num_p + 1)), dtype=float)),
-            1
+                pd.DataFrame(
+                    true_eff_lines[-num_p:],
+                    index=list(range(1, num_p + 1)),
+                    dtype=float,
+                )
+            ),
+            1,
         )
         true_dag_lpxlp = np.triu(
-            np.array(
-                pd.DataFrame(true_eff_lines_all[num_m:], dtype=float)),
-            1
+            np.array(pd.DataFrame(true_eff_lines_all[num_m:], dtype=float)), 1
         )
         # mark true 2-2 edges
-        m = (true_dag_lpxlp != 0)
+        m = true_dag_lpxlp != 0
         true_bidirected = np.zeros(shape=(num_p, num_p))
         for i in range(2, num_p + 2):
             for j in range(i + 1, num_p + 2):
                 if not m[i, j] and ((m[0, i] and m[0, j]) or (m[1, i] and m[1, j])):
                     true_bidirected[i - 2, j - 2] = 1
-        
+
         for alpha_e in e_arr:
             # -------------------- CI-GWAS -----------------------------
             est_dir = f"/nfs/scistore17/robingrp/mrobinso/cigwas/ukb/sim/real_marker_sim/cusk/sim{rep}_e{alpha_e}/"
@@ -3056,10 +3094,11 @@ def load_real_data_simulation_results(
                 full_pag[num_p:, :num_p].toarray(),
                 columns=list(range(1, num_p + 1)),
                 index=rs_ids[glob_ixs],
-                dtype=int)
+                dtype=int,
+            )
             est_dag_pxp = full_pag[:num_p, :num_p].toarray()
             est_dag_pxp_triu = np.triu(est_dag_pxp, 1)
-            
+
             p = (true_dag_mxp != 0).sum().sum()
             td_mxp_matched = true_dag_mxp.reindex_like(est_dag_mxp)
             tp = ((est_dag_mxp != 0) & (td_mxp_matched != 0)).sum().sum()
@@ -3075,9 +3114,8 @@ def load_real_data_simulation_results(
             pxp_fdr = fp / (tp + fp)
 
             orientation_perf = calculate_pxp_orientation_performance_ci_gwas(
-                true_dag_pxp != 0,
-                true_bidirected != 0,
-                est_dag_pxp)
+                true_dag_pxp != 0, true_bidirected != 0, est_dag_pxp
+            )
 
             # load aces
             pace = np.zeros(shape=(num_p, num_p))
@@ -3105,7 +3143,7 @@ def load_real_data_simulation_results(
 
             mse = np.mean((pace - true_eff) ** 2)
 
-            tp_m = ((true_eff != 0) & (pace != 0))
+            tp_m = (true_eff != 0) & (pace != 0)
             correct_sign = np.mean(np.sign(true_eff[tp_m]) == np.sign(pace[tp_m]))
 
             rows.append(
@@ -3130,7 +3168,10 @@ def load_real_data_simulation_results(
                 mr_est = np.zeros((num_p, num_p))
                 for outcome in range(0, num_p):
                     try:
-                        fpaths = glob(est_dir + f"mr_{mr_str}_alpha*_sim{rep}_outcome_y{outcome + 1}_seed1000")
+                        fpaths = glob(
+                            est_dir
+                            + f"mr_{mr_str}_alpha*_sim{rep}_outcome_y{outcome + 1}_seed1000"
+                        )
                         if len(fpaths) == 0:
                             continue
                         fpath = fpaths[0]
@@ -3140,7 +3181,7 @@ def load_real_data_simulation_results(
                         mr_est[exposures, outcome] = mr_res_df["est"].values
                     except FileNotFoundError:
                         continue
-                mr_links = mr_p <= (10.0 ** -alpha_e)
+                mr_links = mr_p <= (10.0**-alpha_e)
                 mr_adj = make_adj_symmetric(mr_links)
                 # are we doing this?
                 mr_est[~mr_links] = 0.0
@@ -3151,16 +3192,17 @@ def load_real_data_simulation_results(
                 pxp_tpr = tp / p
 
                 mse = np.mean((mr_est - true_eff) ** 2)
-                tp_m = ((true_eff != 0) & (mr_est != 0))
+                tp_m = (true_eff != 0) & (mr_est != 0)
                 if np.sum(tp_m) == 0:
                     correct_sign = np.nan
                 else:
-                    correct_sign = np.mean(np.sign(true_eff[tp_m]) == np.sign(mr_est[tp_m]))
+                    correct_sign = np.mean(
+                        np.sign(true_eff[tp_m]) == np.sign(mr_est[tp_m])
+                    )
 
                 orientation_perf = calculate_pxp_orientation_performance_mr(
-                    true_dag_pxp != 0,
-                    true_bidirected != 0,
-                    mr_links)
+                    true_dag_pxp != 0, true_bidirected != 0, mr_links
+                )
 
                 rows.append(
                     {
@@ -3177,13 +3219,16 @@ def load_real_data_simulation_results(
 
     return pd.DataFrame(rows)
 
-        
 
 def load_n16k_m1600_simulation_results(
     mr=True, e_arr=list(range(2, 9))
 ) -> pd.DataFrame:
-    data_dir = "/nfs/scistore17/robingrp/nmachnik/mnt_home/projects/ci-gwas/simulations/data/"
-    cusk_dir = "/nfs/scistore17/robingrp/nmachnik/mnt_home/projects/ci-gwas/simulations/cusk/"
+    data_dir = (
+        "/nfs/scistore17/robingrp/nmachnik/mnt_home/projects/ci-gwas/simulations/data/"
+    )
+    cusk_dir = (
+        "/nfs/scistore17/robingrp/nmachnik/mnt_home/projects/ci-gwas/simulations/cusk/"
+    )
     mr_git_thr_pdir = "/nfs/scistore17/robingrp/nmachnik/mnt_home/projects/ci-gwas/simulations/mr_results/"
 
     d = 1
@@ -3225,14 +3270,15 @@ def load_n16k_m1600_simulation_results(
 
         for a_str in alpha_str_arr:
             rows.append(
-            {
-                "mse": np.sum(peff ** 2),
-                "n": n,
-                "m": m,
-                "rep": rep,
-                "alpha": float(a_str),
-                "method": "0-const",
-            })
+                {
+                    "mse": np.sum(peff**2),
+                    "n": n,
+                    "m": m,
+                    "rep": rep,
+                    "alpha": float(a_str),
+                    "method": "0-const",
+                }
+            )
 
         if mr:
             for mr in mr_cn:
@@ -3286,7 +3332,9 @@ def load_n16k_m1600_simulation_results(
                             {
                                 # "marker-trait fdr": mxp_fdr,
                                 # "marker-trait tpr": mxp_tpr,
-                                "edge orientation": calculate_pxp_orientation_performance_mr(pdag != 0, adj),
+                                "edge orientation": calculate_pxp_orientation_performance_mr(
+                                    pdag != 0, adj
+                                ),
                                 "mse": perf.mse,
                                 "var": perf.var,
                                 "bias": perf.bias,
@@ -3333,8 +3381,10 @@ def load_n16k_m1600_simulation_results(
                 ]
 
             # load skeleton
-            adj = np.fromfile(indir + "skeleton.adj", dtype=np.int32).reshape(num_var, num_var)
-            padj = adj[-(num_phen):,-(num_phen):]
+            adj = np.fromfile(indir + "skeleton.adj", dtype=np.int32).reshape(
+                num_var, num_var
+            )
+            padj = adj[-(num_phen):, -(num_phen):]
 
             # load pag
             pag_path = indir + "max_sep_min_pc_estimated_pag_cusk2.mtx"
@@ -3343,7 +3393,7 @@ def load_n16k_m1600_simulation_results(
             except FileNotFoundError as err:
                 print(err)
                 continue
-            
+
             est_dag = pag_to_dag_directed(est_pag)
 
             # load var indices
@@ -3396,7 +3446,9 @@ def load_n16k_m1600_simulation_results(
                 {
                     "x -> y fdr": mxp_fdr,
                     "x -> y tpr": mxp_tpr,
-                    "edge orientation": calculate_pxp_orientation_performance_ci_gwas(pdag != 0, est_pag),
+                    "edge orientation": calculate_pxp_orientation_performance_ci_gwas(
+                        pdag != 0, est_pag
+                    ),
                     "mse": perf.mse,
                     "var": perf.var,
                     "bias": perf.bias,
@@ -3463,7 +3515,12 @@ def plot_simulation_results():
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
         ax.set_xticks(x + width, x_vals)
-        plt.setp(ax.get_xticklabels(), rotation=XLABEL_ROTATION, ha="right", rotation_mode="anchor")
+        plt.setp(
+            ax.get_xticklabels(),
+            rotation=XLABEL_ROTATION,
+            ha="right",
+            rotation_mode="anchor",
+        )
         # ax.legend(loc='upper left', ncols=3)
         # ax.set_yscale("symlog")
         return handles
@@ -3498,6 +3555,7 @@ def plot_simulation_results():
 
 def plot_real_data_simulation_results(
     rep_arr=list(range(1, 41)),
+    e_arr=[3, 4, 6, 8],
     fig1_path=None,
     fig2_path=None,
 ):
@@ -3530,7 +3588,9 @@ def plot_real_data_simulation_results(
         for method in ["ci-gwas"]:
             mu = means.loc[method][metric]
             sig = stds.loc[method][metric]
-            loc_x = np.array([x_sorted.index(e) for e in means.loc[method].index.values])
+            loc_x = np.array(
+                [x_sorted.index(e) for e in means.loc[method].index.values]
+            )
             offset = width * multiplier
             try:
                 bars = ax.bar(
@@ -3547,7 +3607,12 @@ def plot_real_data_simulation_results(
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
         ax.set_xticks(x, x_vals)
-        plt.setp(ax.get_xticklabels(), rotation=bar_xlabel_rotation, ha="right", rotation_mode="anchor")
+        plt.setp(
+            ax.get_xticklabels(),
+            rotation=bar_xlabel_rotation,
+            ha="right",
+            rotation_mode="anchor",
+        )
         if axhline:
             ax.axhline(0.05, linestyle="dotted", color="gray")
         # ax.legend(loc='upper left', ncols=3)
@@ -3565,7 +3630,9 @@ def plot_real_data_simulation_results(
         for method in methods:
             mu = means.loc[method][metric]
             sig = stds.loc[method][metric]
-            loc_x = np.array([x_sorted.index(e) for e in means.loc[method].index.values])
+            loc_x = np.array(
+                [x_sorted.index(e) for e in means.loc[method].index.values]
+            )
             offset = width * multiplier
             try:
                 bars = ax.bar(
@@ -3582,7 +3649,12 @@ def plot_real_data_simulation_results(
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
         ax.set_xticks(x + width, x_vals)
-        plt.setp(ax.get_xticklabels(), rotation=bar_xlabel_rotation, ha="right", rotation_mode="anchor")
+        plt.setp(
+            ax.get_xticklabels(),
+            rotation=bar_xlabel_rotation,
+            ha="right",
+            rotation_mode="anchor",
+        )
         # ax.legend(loc='upper left', ncols=3)
         # ax.set_yscale("symlog")
         return handles
@@ -3591,7 +3663,8 @@ def plot_real_data_simulation_results(
 
     fig = plt.figure(
         # layout="tight",
-        figsize=(9, 6))
+        figsize=(9, 6)
+    )
     ax_dict = fig.subplot_mosaic(
         """
         XiX
@@ -3604,7 +3677,7 @@ def plot_real_data_simulation_results(
         height_ratios=[0.1, 0.4, 0.5],
     )
 
-    ax_dict['d'].set_xlabel(r'$\alpha$')
+    ax_dict["d"].set_xlabel(r"$\alpha$")
 
     plot_ci_gwas_bars(
         alphas, "x -> y fdr", means, stds, ax_dict["a"], "a)", axhline=True
@@ -3612,9 +3685,13 @@ def plot_real_data_simulation_results(
     ax_dict["a"].set_ylabel(r"x$\rightarrow$y FDR")
     plot_ci_gwas_bars(alphas, "x -> y tpr", means, stds, ax_dict["b"], "b)")
     ax_dict["b"].set_ylabel(r"x$\rightarrow$y TPR")
-    plot_ci_gwas_bars(alphas, "y -> y fdr", means, stds, ax_dict["c"], "c)", axhline=True)
+    plot_ci_gwas_bars(
+        alphas, "y -> y fdr", means, stds, ax_dict["c"], "c)", axhline=True
+    )
     ax_dict["c"].set_ylabel(r"y$\rightarrow$y FDR")
-    h = plot_bars(alphas, "y -> y tpr", means, stds, ax_dict["d"], "d)", methods=methods)
+    h = plot_bars(
+        alphas, "y -> y tpr", means, stds, ax_dict["d"], "d)", methods=methods
+    )
     ax_dict["d"].set_ylabel(r"y$\rightarrow$y TPR")
     # plot_bars(alphas, "edge orientation", means, stds, ax_dict["e"], "e)", methods=methods)
     # h = plot_bars(alphas, "mse", means, stds, ax_dict["f"], "f)", methods=mse_methods)
@@ -3642,7 +3719,8 @@ def plot_real_data_simulation_results(
 
     fig = plt.figure(
         # layout="tight",
-        figsize=(9, 6))
+        figsize=(9, 6)
+    )
     ax_dict = fig.subplot_mosaic(
         """
         XiX
@@ -3657,11 +3735,15 @@ def plot_real_data_simulation_results(
         height_ratios=[0.1, 0.3, 0.3, 0.3, 0.3],
     )
 
-    ax_dict['d'].set_xlabel(r'$\alpha$')
+    ax_dict["d"].set_xlabel(r"$\alpha$")
 
-    plot_bars(alphas, "-> orientation", means, stds, ax_dict["a"], "a)", methods=methods)
+    plot_bars(
+        alphas, "-> orientation", means, stds, ax_dict["a"], "a)", methods=methods
+    )
     ax_dict["a"].set_ylabel("TDR(->)")
-    plot_bars(alphas, "<-> orientation", means, stds, ax_dict["b"], "b)", methods=methods)
+    plot_bars(
+        alphas, "<-> orientation", means, stds, ax_dict["b"], "b)", methods=methods
+    )
     ax_dict["b"].set_ylabel("TDR(<->)")
     h = plot_bars(alphas, "mse", means, stds, ax_dict["c"], "c)", methods=mse_methods)
     ax_dict["c"].set_ylabel("MSE")
@@ -3678,7 +3760,7 @@ def plot_real_data_simulation_results(
     )
     ax_dict["i"].axis("off")
     _ = [ax_dict[i].tick_params(labelbottom=False) for i in "abc"]
-    _ = [ax_dict[i].sharex(ax_dict['d']) for i in 'abc']
+    _ = [ax_dict[i].sharex(ax_dict["d"]) for i in "abc"]
     fig.subplots_adjust(wspace=0.7, hspace=1.3)
     if fig2_path is not None:
         plt.savefig(fig2_path, bbox_inches="tight")
@@ -3734,7 +3816,12 @@ def plot_simulation_results_figure_2():
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
         ax.set_xticks(x, x_vals)
-        plt.setp(ax.get_xticklabels(), rotation=bar_xlabel_rotation, ha="right", rotation_mode="anchor")
+        plt.setp(
+            ax.get_xticklabels(),
+            rotation=bar_xlabel_rotation,
+            ha="right",
+            rotation_mode="anchor",
+        )
         if axhline:
             ax.axhline(0.05, linestyle="dotted", color="gray")
         # ax.legend(loc='upper left', ncols=3)
@@ -3767,14 +3854,20 @@ def plot_simulation_results_figure_2():
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
         ax.set_xticks(x + width, x_vals)
-        plt.setp(ax.get_xticklabels(), rotation=bar_xlabel_rotation, ha="right", rotation_mode="anchor")
+        plt.setp(
+            ax.get_xticklabels(),
+            rotation=bar_xlabel_rotation,
+            ha="right",
+            rotation_mode="anchor",
+        )
         # ax.legend(loc='upper left', ncols=3)
         # ax.set_yscale("symlog")
         return handles
 
     fig = plt.figure(
         # layout="tight",
-        figsize=(9, 10))
+        figsize=(9, 10)
+    )
     ax_dict = fig.subplot_mosaic(
         """
         XiX
@@ -3789,7 +3882,7 @@ def plot_simulation_results_figure_2():
         height_ratios=[0.1, 0.4, 0.5, 0.5, 0.5],
     )
 
-    ax_dict['f'].set_xlabel(r'$\alpha$')
+    ax_dict["f"].set_xlabel(r"$\alpha$")
 
     plot_ci_gwas_bars(
         alphas, "x -> y fdr", means, stds, ax_dict["a"], "a)", axhline=True
@@ -3797,11 +3890,15 @@ def plot_simulation_results_figure_2():
     ax_dict["a"].set_ylabel(r"x$\rightarrow$y FDR")
     plot_ci_gwas_bars(alphas, "x -> y tpr", means, stds, ax_dict["b"], "b)")
     ax_dict["b"].set_ylabel(r"x$\rightarrow$y TPR")
-    plot_ci_gwas_bars(alphas, "y -> y fdr", means, stds, ax_dict["c"], "c)", axhline=True)
+    plot_ci_gwas_bars(
+        alphas, "y -> y fdr", means, stds, ax_dict["c"], "c)", axhline=True
+    )
     ax_dict["c"].set_ylabel(r"y$\rightarrow$y FDR")
     plot_bars(alphas, "y -> y tpr", means, stds, ax_dict["d"], "d)", methods=methods)
     ax_dict["d"].set_ylabel(r"y$\rightarrow$y TPR")
-    plot_bars(alphas, "edge orientation", means, stds, ax_dict["e"], "e)", methods=methods)
+    plot_bars(
+        alphas, "edge orientation", means, stds, ax_dict["e"], "e)", methods=methods
+    )
     h = plot_bars(alphas, "mse", means, stds, ax_dict["f"], "f)", methods=mse_methods)
     ax_dict["f"].set_ylabel("MSE")
     # plot_bars(alphas, "bias", means, stds, ax_dict["g"], "g)")
@@ -3817,9 +3914,8 @@ def plot_simulation_results_figure_2():
     )
     ax_dict["i"].axis("off")
     _ = [ax_dict[i].tick_params(labelbottom=False) for i in "de"]
-    _ = [ax_dict[i].sharex(ax_dict['f']) for i in 'de']
+    _ = [ax_dict[i].sharex(ax_dict["f"]) for i in "de"]
     fig.subplots_adjust(wspace=0.4, hspace=1.1)
-    
 
 
 def plot_simulation_results_sup_tp_with_orientation():
@@ -3869,7 +3965,12 @@ def plot_simulation_results_sup_tp_with_orientation():
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
         ax.set_xticks(x + width, x_vals)
-        plt.setp(ax.get_xticklabels(), rotation=XLABEL_ROTATION, ha="right", rotation_mode="anchor")
+        plt.setp(
+            ax.get_xticklabels(),
+            rotation=XLABEL_ROTATION,
+            ha="right",
+            rotation_mode="anchor",
+        )
         # ax.legend(loc='upper left', ncols=3)
         # ax.set_yscale("symlog")
         return handles
@@ -3953,7 +4054,12 @@ def plot_simulation_results_sup_tp():
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
         ax.set_xticks(x + width, x_vals)
-        plt.setp(ax.get_xticklabels(), rotation=XLABEL_ROTATION, ha="right", rotation_mode="anchor")
+        plt.setp(
+            ax.get_xticklabels(),
+            rotation=XLABEL_ROTATION,
+            ha="right",
+            rotation_mode="anchor",
+        )
         # ax.legend(loc='upper left', ncols=3)
         # ax.set_yscale("symlog")
         return handles
@@ -4029,7 +4135,12 @@ def plot_simulation_results_sup(alpha=10 ** (-8)):
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
         ax.set_xticks(x, x_vals)
-        plt.setp(ax.get_xticklabels(), rotation=XLABEL_ROTATION, ha="right", rotation_mode="anchor")
+        plt.setp(
+            ax.get_xticklabels(),
+            rotation=XLABEL_ROTATION,
+            ha="right",
+            rotation_mode="anchor",
+        )
         if axhline:
             ax.axhline(0.05, linestyle="dashed", color="k")
         # ax.legend(loc='upper left', ncols=3)
@@ -4062,7 +4173,12 @@ def plot_simulation_results_sup(alpha=10 ** (-8)):
         ax.spines["right"].set_visible(False)
         # ax.set_title('Penguin attributes by species')
         ax.set_xticks(x + width, x_tup)
-        plt.setp(ax.get_xticklabels(), rotation=XLABEL_ROTATION, ha="right", rotation_mode="anchor")
+        plt.setp(
+            ax.get_xticklabels(),
+            rotation=XLABEL_ROTATION,
+            ha="right",
+            rotation_mode="anchor",
+        )
         # ax.legend(loc='upper left', ncols=3)
         return handles
 
@@ -4257,13 +4373,14 @@ def plot_compare_max_k_effect_on_ace():
     axes[0].set_ylabel("$ACE_{k \leq 3}$")
     plt.tight_layout()
 
+
 def plot_full_ukb_results_figure_3(
     pag_path: str,
     ace_path: str,
     pheno_path: str,
     ace_norm=None,
     p_thr=0.05,
-    max_path_len=np.inf
+    max_path_len=np.inf,
 ):
     e = 4
     d = 10000
@@ -4286,7 +4403,7 @@ def plot_full_ukb_results_figure_3(
         cde
         """,
         empty_sentinel="X",
-        width_ratios=[1, 1, 0.45]
+        width_ratios=[1, 1, 0.45],
     )
 
     cbar_kw = {"fraction": 0.046, "pad": 0.04}
@@ -4301,7 +4418,7 @@ def plot_full_ukb_results_figure_3(
         title_kw=title_kw,
         cmap="RdBu",
         norm=ace_norm,
-        cbar=False
+        cbar=False,
     )
 
     plot_pag(
@@ -4348,7 +4465,7 @@ def plot_full_ukb_results_figure_3(
     #     cbar=True,
     #     # aspect="auto",
     # )
-    
+
     plot_ci_gwas_cause_ace_comparison_tri(
         pag_path,
         ace_path,
@@ -4361,13 +4478,18 @@ def plot_full_ukb_results_figure_3(
         max_path_len=max_path_len,
     )
 
-    _ = [ax_dict[k].set_box_aspect(1) for k in 'acd']
-    ax_dict['b'].set_box_aspect(1)
+    _ = [ax_dict[k].set_box_aspect(1) for k in "acd"]
+    ax_dict["b"].set_box_aspect(1)
     fig.subplots_adjust(wspace=0.1, hspace=0.4)
 
 
 def plot_ace_results_comp_cause_production(
-    pag_path: str, ace_path: str, pheno_path: str, ace_norm=None, p_thr=0.05, max_path_len=np.inf
+    pag_path: str,
+    ace_path: str,
+    pheno_path: str,
+    ace_norm=None,
+    p_thr=0.05,
+    max_path_len=np.inf,
 ):
     """
     AT = Asthma
@@ -4443,7 +4565,7 @@ def plot_ace_results_comp_cause_production(
         title="e)",
         title_kw=title_kw,
         ax=ax_dict["e"],
-        max_path_len=max_path_len
+        max_path_len=max_path_len,
     )
 
 
@@ -4586,7 +4708,7 @@ def plot_cause_ci_gwas_ace_comparison(
         txt = rf"{exposures[i]}$\rightarrow${outcomes[i]}"
         texts.append(ax.annotate(txt, (mr[i], ace_flat[i])))
 
-    adjust_text(texts, arrowprops=dict(arrowstyle='->', color='black'))
+    adjust_text(texts, arrowprops=dict(arrowstyle="->", color="black"))
 
     ax.grid(linestyle=":")
     ax.spines["top"].set_visible(False)
@@ -4608,7 +4730,12 @@ def plot_non_pleio_barplot(
     ax.bar(range(len(bd)), bd, color="gray")
     ax.set_ylabel("# non-pleiotropic parent markers")
     ax.set_xticks(np.arange(len(bd)), labels=p_names)
-    plt.setp(ax.get_xticklabels(), rotation=XLABEL_ROTATION, ha="right", rotation_mode="anchor")
+    plt.setp(
+        ax.get_xticklabels(),
+        rotation=XLABEL_ROTATION,
+        ha="right",
+        rotation_mode="anchor",
+    )
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
     ax.grid(linestyle=":", axis="y")
@@ -4644,14 +4771,9 @@ def plot_all_alpha_production_pags_and_ace(
 
     for pos, (ace_panel, a) in enumerate(zip(ace_panels, alphas)):
         try:
-            ace_path = (
-                basepath
-                + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_ACE_mpu.mtx"
-            )
+            ace_path = basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_ACE_mpu.mtx"
             # ace_path = basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_ACE_mpu_q_pheno.mtx"
-            pag_path = (
-                basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_pag_mpu.mtx"
-            )
+            pag_path = basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_pag_mpu.mtx"
 
             ima = plot_ace(
                 ace_path,
@@ -4674,14 +4796,9 @@ def plot_all_alpha_production_pags_and_ace(
 
     for pos, (pag_panel, a) in enumerate(zip(pag_panels, alphas)):
         try:
-            ace_path = (
-                basepath
-                + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_ACE_mpu.mtx"
-            )
+            ace_path = basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_ACE_mpu.mtx"
             # ace_path = basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_ACE_mpu_q_pheno.mtx"
-            pag_path = (
-                basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_pag_mpu.mtx"
-            )
+            pag_path = basepath + f"/bdpc_d{d}_l{l}_a1e{a}/all_merged_pag_mpu.mtx"
 
             imp = plot_pag(
                 pag_path,
@@ -4874,7 +4991,7 @@ def merge_parallel_davs_csvs(
     res[np.isnan(res)] = 0
 
     scipy.io.mmwrite(outfile, scipy.sparse.coo_matrix(res))
-    
+
     return missing
 
 
@@ -5218,7 +5335,12 @@ def plot_ukb_age_sex_marker_positions():
         [f"Chr {c}" for c in range(1, 23)],
     )
 
-    plt.setp(ax.get_xticklabels(), rotation=XLABEL_ROTATION, ha="right", rotation_mode="anchor")
+    plt.setp(
+        ax.get_xticklabels(),
+        rotation=XLABEL_ROTATION,
+        ha="right",
+        rotation_mode="anchor",
+    )
 
     ax.legend(
         handles=handles,
@@ -5376,7 +5498,12 @@ def plot_age_sex_composite_figure():
         [f"Chr {c}" for c in range(1, 23)],
     )
 
-    plt.setp(ax.get_xticklabels(), rotation=XLABEL_ROTATION, ha="right", rotation_mode="anchor")
+    plt.setp(
+        ax.get_xticklabels(),
+        rotation=XLABEL_ROTATION,
+        ha="right",
+        rotation_mode="anchor",
+    )
 
     ax.legend(
         handles=handles,
@@ -5518,7 +5645,12 @@ def plot_est_ukb_marker_positions():
         [f"Chr {c}" for c in range(1, 23)],
     )
 
-    plt.setp(ax.get_xticklabels(), rotation=XLABEL_ROTATION, ha="right", rotation_mode="anchor")
+    plt.setp(
+        ax.get_xticklabels(),
+        rotation=XLABEL_ROTATION,
+        ha="right",
+        rotation_mode="anchor",
+    )
 
     ax.legend(
         handles=handles,
@@ -5664,7 +5796,12 @@ def plot_ukb_age_sex_marker_positions_ss_vs_no_ss():
         [f"Chr {c}" for c in range(1, 23)],
     )
 
-    plt.setp(ax.get_xticklabels(), rotation=XLABEL_ROTATION, ha="right", rotation_mode="anchor")
+    plt.setp(
+        ax.get_xticklabels(),
+        rotation=XLABEL_ROTATION,
+        ha="right",
+        rotation_mode="anchor",
+    )
 
     ax.legend(
         handles=handles,
@@ -5716,10 +5853,16 @@ def plot_est_ukb_full_db_marker_positions():
     common_out_path = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/estonian_comparison/"
 
     est_assoc = marker_pheno_associations_with_pnames(
-        blockfile, common_out_path + f"est/bdpc_d{d}_l{l}_a1e{e}_wo_bp_bmi/", p_names, bim_path
+        blockfile,
+        common_out_path + f"est/bdpc_d{d}_l{l}_a1e{e}_wo_bp_bmi/",
+        p_names,
+        bim_path,
     )
     ukb_assoc = marker_pheno_associations_with_pnames(
-        blockfile, common_out_path + f"ukb/bdpc_d{d}_l{l}_a1e{e}_wo_bp_bmi/", p_names, bim_path
+        blockfile,
+        common_out_path + f"ukb/bdpc_d{d}_l{l}_a1e{e}_wo_bp_bmi/",
+        p_names,
+        bim_path,
     )
 
     trait_slot_height = row_height / (len(p_names) + 1)
@@ -5761,7 +5904,12 @@ def plot_est_ukb_full_db_marker_positions():
         [f"Chr {c}" for c in range(1, 23)],
     )
 
-    plt.setp(ax.get_xticklabels(), rotation=XLABEL_ROTATION, ha="right", rotation_mode="anchor")
+    plt.setp(
+        ax.get_xticklabels(),
+        rotation=XLABEL_ROTATION,
+        ha="right",
+        rotation_mode="anchor",
+    )
 
     ax.legend(
         handles=handles,
@@ -5779,7 +5927,6 @@ def plot_est_ukb_full_db_marker_positions():
         ax.axhline(row * row_height, color="gray", linestyle=":")
 
     ax_dict["y"].set_title("a)", **title_kw)
-
 
 
 def plot_ukb_full_db_marker_positions_ss_vs_data():
@@ -5816,10 +5963,16 @@ def plot_ukb_full_db_marker_positions_ss_vs_data():
     pss_path = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/"
 
     data_assoc = marker_pheno_associations_with_pnames(
-        data_blocks, pss_path + f"production/cusk_d{d}_l{l}_a1e{e}_est_intersect_wo_bp_bmi/", p_names, data_bim
+        data_blocks,
+        pss_path + f"production/cusk_d{d}_l{l}_a1e{e}_est_intersect_wo_bp_bmi/",
+        p_names,
+        data_bim,
     )
     ss_assoc = marker_pheno_associations_with_pnames(
-        ss_blocks, pss_path + f"estonian_comparison/ukb/bdpc_d{d}_l{l}_a1e{e}_wo_bp_bmi/", p_names, ss_bim
+        ss_blocks,
+        pss_path + f"estonian_comparison/ukb/bdpc_d{d}_l{l}_a1e{e}_wo_bp_bmi/",
+        p_names,
+        ss_bim,
     )
 
     trait_slot_height = row_height / (len(p_names) + 1)
@@ -5861,7 +6014,12 @@ def plot_ukb_full_db_marker_positions_ss_vs_data():
         [f"Chr {c}" for c in range(1, 23)],
     )
 
-    plt.setp(ax.get_xticklabels(), rotation=XLABEL_ROTATION, ha="right", rotation_mode="anchor")
+    plt.setp(
+        ax.get_xticklabels(),
+        rotation=XLABEL_ROTATION,
+        ha="right",
+        rotation_mode="anchor",
+    )
 
     ax.legend(
         handles=handles,
@@ -5933,12 +6091,17 @@ def plot_ukb_full_db_marker_positions_6_vs_17():
     pss_path = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/"
 
     small_set_assoc = marker_pheno_associations(
-        blocks, pss_path + f"production/cusk_d{d}_l{l}_a1e{e}_est_intersect_wo_bp_bmi/", small_set_pheno, bim
+        blocks,
+        pss_path + f"production/cusk_d{d}_l{l}_a1e{e}_est_intersect_wo_bp_bmi/",
+        small_set_pheno,
+        bim,
     )
     full_set_assoc = marker_pheno_associations(
         blocks, pss_path + f"production/bdpc_d{d}_l{l}_a1e{e}/", full_set_pheno, bim
     )
-    p_names = list(set(full_set_assoc.phenotype.unique()) | set(small_set_assoc.phenotype.unique()))
+    p_names = list(
+        set(full_set_assoc.phenotype.unique()) | set(small_set_assoc.phenotype.unique())
+    )
 
     trait_slot_height = row_height / (len(p_names) + 1)
 
@@ -5979,7 +6142,12 @@ def plot_ukb_full_db_marker_positions_6_vs_17():
         [f"Chr {c}" for c in range(1, 23)],
     )
 
-    plt.setp(ax.get_xticklabels(), rotation=XLABEL_ROTATION, ha="right", rotation_mode="anchor")
+    plt.setp(
+        ax.get_xticklabels(),
+        rotation=XLABEL_ROTATION,
+        ha="right",
+        rotation_mode="anchor",
+    )
 
     ax.legend(
         handles=handles,
@@ -6002,7 +6170,7 @@ def plot_ukb_full_db_marker_positions_6_vs_17():
 def average_corrs():
     wdir = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/production/bdpc_d1_l6_a1e4/"
 
-    with open(wdir + "all_merged.mdim", 'r') as fin:
+    with open(wdir + "all_merged.mdim", "r") as fin:
         line = next(fin)
         fields = line.split()
         num_var = int(fields[0])
@@ -6021,8 +6189,16 @@ def average_corrs():
     mxm_corr = corr[num_phen:, num_phen:]
     mxm_adj = adj[num_phen:, num_phen:]
 
-    print("pxp corr mean, var: ", np.mean(np.abs(pxp_corr[pxp_adj == 1])), np.var(np.abs(pxp_corr[pxp_adj == 1])))
-    print("mxp corr mean, var: ", np.mean(np.abs(mxp_corr[mxp_adj == 1])), np.var(np.abs(mxp_corr[mxp_adj == 1])))
+    print(
+        "pxp corr mean, var: ",
+        np.mean(np.abs(pxp_corr[pxp_adj == 1])),
+        np.var(np.abs(pxp_corr[pxp_adj == 1])),
+    )
+    print(
+        "mxp corr mean, var: ",
+        np.mean(np.abs(mxp_corr[mxp_adj == 1])),
+        np.var(np.abs(mxp_corr[mxp_adj == 1])),
+    )
 
 
 def plot_compare_correlations_matrices():
@@ -6050,35 +6226,47 @@ def plot_compare_correlations_matrices():
         """
     )
 
-    ax = ax_dict['a']
-    diag = np.linspace(np.min([ssm_mxm.min(), rdm_mxm.min()]), np.max([ssm_mxm.max(), rdm_mxm.max()]), 10)
+    ax = ax_dict["a"]
+    diag = np.linspace(
+        np.min([ssm_mxm.min(), rdm_mxm.min()]),
+        np.max([ssm_mxm.max(), rdm_mxm.max()]),
+        10,
+    )
     ax.plot(diag, diag, ":", color="gray")
-    ax.plot(ssm_mxm.flatten(), rdm_mxm.flatten(), '.', rasterized=True)
+    ax.plot(ssm_mxm.flatten(), rdm_mxm.flatten(), ".", rasterized=True)
     ax.set_title("MxM")
-    ax.set_ylabel('sumstat')
-    ax.set_xlabel('rawdata')
+    ax.set_ylabel("sumstat")
+    ax.set_xlabel("rawdata")
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
     ax.set_box_aspect(1)
 
-    ax = ax_dict['b']
-    diag = np.linspace(np.min([ssm_mxp.min(), rdm_mxp.min()]), np.max([ssm_mxp.max(), rdm_mxp.max()]), 10)
+    ax = ax_dict["b"]
+    diag = np.linspace(
+        np.min([ssm_mxp.min(), rdm_mxp.min()]),
+        np.max([ssm_mxp.max(), rdm_mxp.max()]),
+        10,
+    )
     ax.plot(diag, diag, ":", color="gray")
-    ax.plot(ssm_mxp.flatten(), rdm_mxp.flatten(), '.', rasterized=True)
+    ax.plot(ssm_mxp.flatten(), rdm_mxp.flatten(), ".", rasterized=True)
     ax.set_title("MxP")
-    ax.set_ylabel('sumstat')
-    ax.set_xlabel('rawdata')
+    ax.set_ylabel("sumstat")
+    ax.set_xlabel("rawdata")
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
     ax.set_box_aspect(1)
 
-    ax = ax_dict['c']
-    diag = np.linspace(np.min([ssm_pxp.min(), rdm_pxp.min()]), np.max([ssm_pxp.max(), rdm_pxp.max()]), 10)
+    ax = ax_dict["c"]
+    diag = np.linspace(
+        np.min([ssm_pxp.min(), rdm_pxp.min()]),
+        np.max([ssm_pxp.max(), rdm_pxp.max()]),
+        10,
+    )
     ax.plot(diag, diag, ":", color="gray")
-    ax.plot(ssm_pxp.flatten(), rdm_pxp.flatten(), '.', rasterized=True)
+    ax.plot(ssm_pxp.flatten(), rdm_pxp.flatten(), ".", rasterized=True)
     ax.set_title("PxP")
-    ax.set_ylabel('sumstat')
-    ax.set_xlabel('rawdata')
+    ax.set_ylabel("sumstat")
+    ax.set_xlabel("rawdata")
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
     ax.set_box_aspect(1)
