@@ -2761,6 +2761,51 @@ def path_in_sem(adj: np.array):
 
 
 @dataclass
+class CiGwasRelativeOrientationPerformance:
+    mr_pos_tpr: float
+    mr_neg_tdr: float
+
+
+def compare_ci_gwas_orientation_performance_to_mr(
+    true_directed: np.array,
+    true_bidirected: np.array,
+    mr_links: np.array,
+    cig_pag: np.array,
+) -> CiGwasRelativeOrientationPerformance:
+    """Compute fraction of shared correctly directed links between ci-gwas and mr
+
+    Args:
+        true_directed (np.array): true DAG
+        true_bidirected (np.array): edges that should be bidirected in the true MAG
+        mr_links (np.array): directed adjacencies from MR run
+        cig_pag (np.array): PAG from ci-gwas run
+    """
+    sum_mr = 0
+    sum_shared = 0
+    sum_cig_only = 0
+    sum_cig_only_correct = 0
+    num_phen = true_directed.shape[0]
+    for i in range(num_phen):
+        for j in range(i, num_phen):
+            mr_edge = (mr_links[i, j], mr_links[j, i])
+            cig_edge = (cig_pag[i, j], cig_pag[j, i])
+            mr_true = (mr_edge == (True, False) and true_directed[i, j]) or (
+                mr_edge == (True, True) and true_bidirected[i, j]
+            )
+            cig_true = (cig_edge in [(2, 3), (2, 1)] and true_directed[i, j]) or (
+                cig_edge == (2, 2) and true_bidirected[i, j]
+            )
+            sum_mr += mr_true
+            sum_shared += mr_true and cig_true
+            sum_cig_only += cig_edge != (0, 0) and not mr_true
+            sum_cig_only_correct += cig_true and not mr_true
+
+    return CiGwasRelativeOrientationPerformance(
+        sum_shared / sum_mr, sum_cig_only_correct / sum_cig_only
+    )
+
+
+@dataclass
 class OrientationPerformance:
     directed: float
     bidirected: float
