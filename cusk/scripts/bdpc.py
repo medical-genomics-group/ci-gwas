@@ -3630,7 +3630,7 @@ def plot_real_data_simulation_results(
     methods = ["ci-gwas", "cause", "presso", "mvpresso", "ivw", "mvivw"]
     # methods = ["ci-gwas"]
     mse_methods = ["ci-gwas", "cause", "presso", "mvpresso", "ivw", "mvivw"]
-    rel_mr_methods = ["cause", "presso", "mvpresso", "ivw", "mvivw"]
+    rel_mr_methods = ["ci-gwas", "cause", "presso", "mvpresso", "ivw", "mvivw"]
     # mse_methods = ["ci-gwas"]
     # mse_methods = ["ci-gwas", "cause", "mrpresso", "ivw", "0-const"]
     title_kw = {"loc": "left", "pad": 15, "size": 20}
@@ -3740,17 +3740,17 @@ def plot_real_data_simulation_results(
     plot_ci_gwas_bars(
         alphas, "x -> y fdr", means, stds, ax_dict["a"], "a)", axhline=True
     )
-    ax_dict["a"].set_ylabel(r"x$\rightarrow$y FDR")
+    ax_dict["a"].set_ylabel(r"$x - y \ FDR$")
     plot_ci_gwas_bars(alphas, "x -> y tpr", means, stds, ax_dict["b"], "b)")
-    ax_dict["b"].set_ylabel(r"x$\rightarrow$y TPR")
+    ax_dict["b"].set_ylabel(r"$x - y \ TPR$")
     plot_ci_gwas_bars(
         alphas, "y -> y fdr", means, stds, ax_dict["c"], "c)", axhline=True
     )
-    ax_dict["c"].set_ylabel(r"y$\rightarrow$y FDR")
+    ax_dict["c"].set_ylabel(r"$y - y \ FDR$")
     h = plot_bars(
         alphas, "y -> y tpr", means, stds, ax_dict["d"], "d)", methods=methods
     )
-    ax_dict["d"].set_ylabel(r"y$\rightarrow$y TPR")
+    ax_dict["d"].set_ylabel(r"$y - y \ TPR$")
     # plot_bars(alphas, "edge orientation", means, stds, ax_dict["e"], "e)", methods=methods)
     # h = plot_bars(alphas, "mse", means, stds, ax_dict["f"], "f)", methods=mse_methods)
     # ax_dict["f"].set_ylabel("MSE")
@@ -3798,11 +3798,11 @@ def plot_real_data_simulation_results(
     plot_bars(
         alphas, "mr_pos_tpr", means, stds, ax_dict["a"], "a)", methods=rel_mr_methods
     )
-    ax_dict["a"].set_ylabel(r"$CI-GWAS ORIENT TPR_{MR+}$")
+    ax_dict["a"].set_ylabel(r"$\rightarrow TPR_{MR+}$")
     plot_bars(
         alphas, "mr_neg_tdr", means, stds, ax_dict["b"], "b)", methods=rel_mr_methods
     )
-    ax_dict["b"].set_ylabel(r"$CI-GWAS ORIENT TDR_{MR-}$")
+    ax_dict["b"].set_ylabel(r"$\rightarrow TDR_{MR-}$")
     h = plot_bars(alphas, "mse", means, stds, ax_dict["c"], "c)", methods=mse_methods)
     ax_dict["c"].set_ylabel("MSE")
     plot_bars(alphas, "sign", means, stds, ax_dict["d"], "d)", methods=mse_methods)
