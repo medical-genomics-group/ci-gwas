@@ -3822,7 +3822,7 @@ def plot_real_data_simulation_results(
         # title="method",
     )
     ax_dict["i"].axis("off")
-    _ = [ax_dict[i].tick_params(labelbottom=False) for i in "abc"]
+    _ = [ax_dict[i].tick_params(labelbottom=False) for i in "ab"]
     _ = [ax_dict[i].sharex(ax_dict["c"]) for i in "ab"]
     fig.subplots_adjust(wspace=0.7, hspace=1.3)
     if fig2_path is not None:
