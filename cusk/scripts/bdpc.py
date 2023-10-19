@@ -3792,7 +3792,7 @@ def plot_real_data_simulation_results(
         height_ratios=[0.1, 0.3, 0.3, 0.3],
     )
 
-    ax_dict["d"].set_xlabel(r"$\alpha$")
+    ax_dict["c"].set_xlabel(r"$\alpha$")
 
     plot_bars(
         alphas, "mr_pos_tpr", means, stds, ax_dict["a"], "a)", methods=rel_mr_methods
@@ -3817,7 +3817,7 @@ def plot_real_data_simulation_results(
     )
     ax_dict["i"].axis("off")
     _ = [ax_dict[i].tick_params(labelbottom=False) for i in "abc"]
-    _ = [ax_dict[i].sharex(ax_dict["d"]) for i in "abc"]
+    _ = [ax_dict[i].sharex(ax_dict["c"]) for i in "ab"]
     fig.subplots_adjust(wspace=0.7, hspace=1.3)
     if fig2_path is not None:
         plt.savefig(fig2_path, bbox_inches="tight")
