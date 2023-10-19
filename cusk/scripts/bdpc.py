@@ -2795,10 +2795,14 @@ def compare_ci_gwas_orientation_performance_to_mr(
             cig_true = (cig_edge in [(2, 3), (2, 1)] and true_directed[i, j]) or (
                 cig_edge == (2, 2) and true_bidirected[i, j]
             )
-            sum_mr += mr_true
-            sum_shared += mr_true and cig_true
-            sum_cig_only += cig_edge != (0, 0) and not mr_true
-            sum_cig_only_correct += cig_true and not mr_true
+            if mr_true:
+                sum_mr += 1
+                if cig_true:
+                    sum_shared += 1
+            if cig_edge != (0, 0) and not mr_true:
+                sum_cig_only += 1
+                if cig_true:
+                    sum_cig_only_correct += 1
 
     return CiGwasRelativeOrientationPerformance(
         sum_shared / sum_mr if sum_mr > 0 else np.nan,
