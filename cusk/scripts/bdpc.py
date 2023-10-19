@@ -3792,11 +3792,11 @@ def plot_real_data_simulation_results(
     ax_dict["d"].set_xlabel(r"$\alpha$")
 
     plot_bars(
-        alphas, "mr_rel_tpr", means, stds, ax_dict["a"], "a)", methods=rel_mr_methods
+        alphas, "mr_pos_tpr", means, stds, ax_dict["a"], "a)", methods=rel_mr_methods
     )
     ax_dict["a"].set_ylabel(r"$CI-GWAS ORIENT TPR_{MR+}$")
     plot_bars(
-        alphas, "mr_rel_tdr", means, stds, ax_dict["b"], "b)", methods=rel_mr_methods
+        alphas, "mr_neg_tdr", means, stds, ax_dict["b"], "b)", methods=rel_mr_methods
     )
     ax_dict["b"].set_ylabel(r"$CI-GWAS ORIENT TDR_{MR-}$")
     h = plot_bars(alphas, "mse", means, stds, ax_dict["c"], "c)", methods=mse_methods)
