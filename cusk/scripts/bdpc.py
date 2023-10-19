@@ -3626,6 +3626,7 @@ def plot_real_data_simulation_results(
     methods = ["ci-gwas", "cause", "presso", "mvpresso", "ivw", "mvivw"]
     # methods = ["ci-gwas"]
     mse_methods = ["ci-gwas", "cause", "presso", "mvpresso", "ivw", "mvivw"]
+    rel_mr_methods = ["cause", "presso", "mvpresso", "ivw", "mvivw"]
     # mse_methods = ["ci-gwas"]
     # mse_methods = ["ci-gwas", "cause", "mrpresso", "ivw", "0-const"]
     title_kw = {"loc": "left", "pad": 15, "size": 20}
@@ -3791,13 +3792,13 @@ def plot_real_data_simulation_results(
     ax_dict["d"].set_xlabel(r"$\alpha$")
 
     plot_bars(
-        alphas, "-> orientation", means, stds, ax_dict["a"], "a)", methods=methods
+        alphas, "mr_rel_tpr", means, stds, ax_dict["a"], "a)", methods=rel_mr_methods
     )
-    ax_dict["a"].set_ylabel("TDR(->)")
+    ax_dict["a"].set_ylabel(r"$CI-GWAS ORIENT TPR_{MR+}$")
     plot_bars(
-        alphas, "<-> orientation", means, stds, ax_dict["b"], "b)", methods=methods
+        alphas, "mr_rel_tdr", means, stds, ax_dict["b"], "b)", methods=rel_mr_methods
     )
-    ax_dict["b"].set_ylabel("TDR(<->)")
+    ax_dict["b"].set_ylabel(r"$CI-GWAS ORIENT TDR_{MR-}$")
     h = plot_bars(alphas, "mse", means, stds, ax_dict["c"], "c)", methods=mse_methods)
     ax_dict["c"].set_ylabel("MSE")
     plot_bars(alphas, "sign", means, stds, ax_dict["d"], "d)", methods=mse_methods)
