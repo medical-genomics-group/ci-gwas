@@ -3799,9 +3799,15 @@ def plot_real_data_simulation_results(
     )
     ax_dict["a"].set_ylabel(r"$\rightarrow TPR_{MR+}$")
     plot_bars(
-        alphas, "mr_neg_tdr", means, stds, ax_dict["b"], "b)", methods=rel_mr_methods
+        alphas,
+        "-> orientation",
+        means,
+        stds,
+        ax_dict["b"],
+        "b)",
+        methods=rel_mr_methods,
     )
-    ax_dict["b"].set_ylabel(r"$\rightarrow TDR_{MR-}$")
+    ax_dict["b"].set_ylabel(r"$\rightarrow TDR$")
     h = plot_bars(alphas, "mse", means, stds, ax_dict["c"], "c)", methods=mse_methods)
     ax_dict["c"].set_ylabel("MSE")
 
