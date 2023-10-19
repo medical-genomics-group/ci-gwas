@@ -3763,7 +3763,7 @@ def plot_real_data_simulation_results(
         loc="center",
         fancybox=False,
         shadow=False,
-        ncol=4,
+        ncol=3,
         # title="method",
     )
     ax_dict["i"].axis("off")
@@ -3818,7 +3818,7 @@ def plot_real_data_simulation_results(
         loc="center",
         fancybox=False,
         shadow=False,
-        ncol=4,
+        ncol=3,
         # title="method",
     )
     ax_dict["i"].axis("off")
