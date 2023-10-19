@@ -3777,7 +3777,7 @@ def plot_real_data_simulation_results(
 
     fig = plt.figure(
         # layout="tight",
-        figsize=(9, 6)
+        figsize=(9, 5)
     )
     ax_dict = fig.subplot_mosaic(
         """
@@ -3785,12 +3785,11 @@ def plot_real_data_simulation_results(
         aaa
         bbb
         ccc
-        ddd
         """,
         empty_sentinel="X",
         sharex=False,
         # set the height ratios between the rows
-        height_ratios=[0.1, 0.3, 0.3, 0.3, 0.3],
+        height_ratios=[0.1, 0.3, 0.3, 0.3],
     )
 
     ax_dict["d"].set_xlabel(r"$\alpha$")
@@ -3805,7 +3804,7 @@ def plot_real_data_simulation_results(
     ax_dict["b"].set_ylabel(r"$\rightarrow TDR_{MR-}$")
     h = plot_bars(alphas, "mse", means, stds, ax_dict["c"], "c)", methods=mse_methods)
     ax_dict["c"].set_ylabel("MSE")
-    plot_bars(alphas, "sign", means, stds, ax_dict["d"], "d)", methods=mse_methods)
+
     ax_dict["i"].legend(
         handles=h,
         labels=["CI-GWAS", "CAUSE", "MR-PRESSO", "MR-PRESSO (MV)", "IVW", "IVW (MV)"],
