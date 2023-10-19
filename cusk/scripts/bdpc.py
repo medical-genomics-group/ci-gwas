@@ -2801,7 +2801,8 @@ def compare_ci_gwas_orientation_performance_to_mr(
             sum_cig_only_correct += cig_true and not mr_true
 
     return CiGwasRelativeOrientationPerformance(
-        sum_shared / sum_mr, sum_cig_only_correct / sum_cig_only
+        sum_shared / sum_mr if sum_mr > 0 else np.nan,
+        sum_cig_only_correct / sum_cig_only if sum_cig_only > 0 else np.nan,
     )
 
 
