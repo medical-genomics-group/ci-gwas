@@ -3141,8 +3141,8 @@ def load_real_data_simulation_results(
                 index=rs_ids[glob_ixs],
                 dtype=int,
             )
-            est_dag_pxp = full_pag[:num_p, :num_p].toarray()
-            est_dag_pxp_triu = np.triu(est_dag_pxp, 1)
+            est_pag_pxp = full_pag[:num_p, :num_p].toarray()
+            est_pag_pxp_triu = np.triu(est_pag_pxp, 1)
 
             p = (true_dag_mxp != 0).sum().sum()
             td_mxp_matched = true_dag_mxp.reindex_like(est_dag_mxp)
@@ -3153,13 +3153,13 @@ def load_real_data_simulation_results(
 
             m = (true_bidirected != 0) | (true_dag_pxp != 0)
             p = np.sum(m)
-            tp = np.sum(m & (est_dag_pxp_triu != 0))
-            fp = np.sum(~m & (est_dag_pxp_triu != 0))
+            tp = np.sum(m & (est_pag_pxp_triu != 0))
+            fp = np.sum(~m & (est_pag_pxp_triu != 0))
             pxp_tpr = tp / p
             pxp_fdr = fp / (tp + fp)
 
             orientation_perf = calculate_pxp_orientation_performance_ci_gwas(
-                true_dag_pxp != 0, true_bidirected != 0, est_dag_pxp
+                true_dag_pxp != 0, true_bidirected != 0, est_pag_pxp
             )
 
             # load aces
@@ -3249,8 +3249,16 @@ def load_real_data_simulation_results(
                     true_dag_pxp != 0, true_bidirected != 0, mr_links
                 )
 
+                orientation_perf_rel_to_mr = (
+                    compare_ci_gwas_orientation_performance_to_mr(
+                        true_dag_pxp, true_bidirected, mr_links, est_pag_pxp
+                    )
+                )
+
                 rows.append(
                     {
+                        "mr_pos_tpr": orientation_perf_rel_to_mr.mr_pos_tpr,
+                        "mr_neg_tdr": orientation_perf_rel_to_mr.mr_neg_tdr,
                         "-> orientation": orientation_perf.directed,
                         "<-> orientation": orientation_perf.bidirected,
                         "mse": mse,
