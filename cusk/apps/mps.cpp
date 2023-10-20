@@ -62,7 +62,7 @@ ReducedGCS reduced_gcs_cusk(ReducedGCS gcs, std::vector<float> &thresholds, int 
         sepset.data()
     );
     std::unordered_set<int> variable_subset = subset_variables(
-        gcs.G, gcs.num_var, gcs.num_markers(), max_depth, gcs.new_to_old_indices()
+        gcs.G, gcs.num_var, gcs.num_markers(), max_depth, gcs.new_to_old_indices
     );
     return reduce_gcs(gcs.G, gcs.C, sepset, variable_subset, gcs.num_var, gcs.num_phen, ML);
 }
