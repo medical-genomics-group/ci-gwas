@@ -61,10 +61,11 @@ ReducedGCS reduced_gcs_cusk(ReducedGCS gcs, std::vector<float> &thresholds, int 
         pmax.data(),
         sepset.data()
     );
-    std::unordered_set<int> variable_subset = subset_variables(
-        gcs.G, gcs.num_var, gcs.num_markers(), max_depth, gcs.new_to_old_indices
+    std::unordered_set<int> variable_subset =
+        subset_variables(gcs.G, gcs.num_var, gcs.num_markers(), max_depth);
+    return reduce_gcs(
+        gcs.G, gcs.C, sepset, variable_subset, gcs.num_var, gcs.num_phen, ML, gcs.new_to_old_indices
     );
-    return reduce_gcs(gcs.G, gcs.C, sepset, variable_subset, gcs.num_var, gcs.num_phen, ML);
 }
 
 const std::string MCORRKB_CHR_USAGE = R"(

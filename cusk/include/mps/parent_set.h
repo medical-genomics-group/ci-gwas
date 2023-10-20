@@ -23,25 +23,6 @@ std::unordered_set<int> subset_variables(
     const std::vector<int> &G, const size_t num_var, const size_t num_markers, const int max_depth
 );
 
-/**
- * @brief Make subset of index_map[indices] of phenotypes and markers that are ancestral at depth <=
- * max_depth.
- *
- * @param G
- * @param num_var
- * @param num_markers
- * @param max_depth
- * @param index_map
- * @return std::unordered_set<int>
- */
-std::unordered_set<int> subset_variables(
-    const std::vector<int> &G,
-    const size_t num_var,
-    const size_t num_markers,
-    const int max_depth,
-    const std::vector<int> &index_map
-);
-
 std::vector<int> set_to_vec(const std::unordered_set<int>);
 
 void direct_x_to_y(std::vector<int> &G, const size_t num_var, const size_t num_markers);
@@ -83,13 +64,24 @@ struct ReducedGCS
  * @param max_level max size of a separation set
  */
 ReducedGCS reduce_gcs(
-    const std::vector<int> &G,
-    const std::vector<float> &C,
-    const std::vector<int> &S,
-    const std::unordered_set<int> &P,
-    const size_t num_var,
-    const size_t num_phen,
-    const size_t max_level
+    std::vector<int> &G,
+    std::vector<float> &C,
+    std::vector<int> &S,
+    std::unordered_set<int> &P,
+    size_t num_var,
+    size_t num_phen,
+    size_t max_level
+);
+
+ReducedGCS reduce_gcs(
+    std::vector<int> &G,
+    std::vector<float> &C,
+    std::vector<int> &S,
+    std::unordered_set<int> &P,
+    size_t num_var,
+    size_t num_phen,
+    size_t max_level,
+    std::vector<int> &index_map
 );
 
 class VariableSubsetIndices
@@ -104,6 +96,17 @@ class VariableSubsetIndices
         new_to_old = set_to_vec(p);
         for (int i = 0; i < new_to_old.size(); i++)
         {
+            old_to_new[new_to_old[i]] = i;
+        }
+    }
+
+    VariableSubsetIndices(const std::unordered_set<int> &p, const std::vector<int> &index_map)
+    {
+        std::vector<int> new_to_old_tmp = set_to_vec(p);
+        new_to_old = std::vector<int>(new_to_old_tmp.size());
+        for (int i = 0; i < new_to_old.size(); i++)
+        {
+            new_to_old[i] = index_map[new_to_old[i]];
             old_to_new[new_to_old[i]] = i;
         }
     }
