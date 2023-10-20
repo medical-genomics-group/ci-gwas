@@ -73,7 +73,7 @@ void Skeleton(
 
     CudaCheckError();
     //----------------------------------------------------------
-    for (*l = 0; *l <= ML && !FinishFlag && *l <= *maxlevel; *l = *l + 1)
+    for (*l = *l; *l <= ML && !FinishFlag && *l <= *maxlevel; *l = *l + 1)
     {
         CudaCheckError();
         if (*l == 0)
