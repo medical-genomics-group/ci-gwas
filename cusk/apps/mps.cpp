@@ -50,11 +50,11 @@ ReducedGCS reduced_gcs_cusk(ReducedGCS gcs, std::vector<float> &thresholds, int 
     std::vector<float> pmax(g_size, 0.0);
     Skeleton(
         gcs.C.data(),
-        &gcs.num_var,
+        (int)gcs.num_var,
         gcs.G.data(),
         thresholds.data(),
-        &gcs.max_level,
-        &ML,
+        (int)gcs.max_level,
+        ML,
         pmax.data(),
         sepset.data()
     );
@@ -763,7 +763,7 @@ void cuda_skeleton_summary_stats(int argc, char *argv[])
     std::unordered_set<int> variable_subset = subset_variables(G, num_var, num_markers, depth);
     ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, variable_subset, num_var, num_phen, max_level);
     std::cout << "Starting second cusk stage" << std::endl;
-    gcs = reduced_gcs_cusk(gcs, &Th, depth);
+    gcs = reduced_gcs_cusk(gcs, Th, depth);
     std::cout << "Retained " << gcs.num_markers() << " markers" << std::endl;
     gcs.to_file(make_path(outdir, block.to_file_string(), ""));
 }
@@ -1017,7 +1017,7 @@ void cusk(int argc, char *argv[])
         ReducedGCS gcs =
             reduce_gcs(G, sq_corrs, sepset, variable_subset, num_var, num_phen, max_level);
         std::cout << "Starting second cusk stage" << std::endl;
-        gcs = reduced_gcs_cusk(gcs, &Th, depth);
+        gcs = reduced_gcs_cusk(gcs, Th, depth);
         std::cout << "Retained " << gcs.num_markers() << " markers" << std::endl;
         gcs.to_file(make_path(outdir, block.to_file_string(), ""));
     }
@@ -1282,7 +1282,7 @@ void cusk_single(int argc, char *argv[])
     std::unordered_set<int> variable_subset = subset_variables(G, num_var, num_markers, depth);
     ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, variable_subset, num_var, num_phen, max_level);
     std::cout << "Starting second cusk stage" << std::endl;
-    gcs = reduced_gcs_cusk(gcs, &Th, depth);
+    gcs = reduced_gcs_cusk(gcs, Th, depth);
     std::cout << "Retained " << gcs.num_markers() << " markers" << std::endl;
     gcs.to_file(make_path(outdir, block.to_file_string(), ""));
 }
