@@ -5,7 +5,7 @@
 #include <unordered_set>
 #include <vector>
 
-std::unordered_set<int> parent_set(
+std::unordered_set<int> subset_variables(
     const std::vector<int> &G, const size_t num_var, const size_t num_markers, const int max_depth
 )
 {
@@ -91,7 +91,7 @@ ReducedGCS reduce_gcs(
     const size_t max_level
 )
 {
-    ParentSetIndices pix(P);
+    VariableSubsetIndices pix(P);
     ReducedGCS res;
     res.num_var = P.size();
     res.num_phen = num_phen;

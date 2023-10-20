@@ -307,7 +307,7 @@ void sim_pc(int argc, char *argv[])
 
     std::cout << "Reducing data to phenotype parent sets" << std::endl;
 
-    std::unordered_set<int> parents = parent_set(G, num_var, num_markers, depth);
+    std::unordered_set<int> parents = subset_variables(G, num_var, num_markers, depth);
 
     ReducedGCS gcs = reduce_gcs(G, corrs, sepset, parents, num_var, num_phen, max_level);
 
@@ -741,7 +741,7 @@ void cuda_skeleton_summary_stats(int argc, char *argv[])
 
     std::cout << "Reducing data to phenotype parent sets" << std::endl;
 
-    std::unordered_set<int> parents = parent_set(G, num_var, num_markers, depth);
+    std::unordered_set<int> parents = subset_variables(G, num_var, num_markers, depth);
 
     ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, parents, num_var, num_phen, max_level);
 
@@ -1042,7 +1042,7 @@ void cusk(int argc, char *argv[])
 
         std::cout << "Reducing data to phenotype parent sets" << std::endl;
 
-        std::unordered_set<int> parents = parent_set(G, num_var, num_markers, depth);
+        std::unordered_set<int> parents = subset_variables(G, num_var, num_markers, depth);
 
         ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, parents, num_var, num_phen, max_level);
 
@@ -1311,7 +1311,7 @@ void cusk_single(int argc, char *argv[])
 
     std::cout << "Reducing data to phenotype parent sets" << std::endl;
 
-    std::unordered_set<int> parents = parent_set(G, num_var, num_markers, depth);
+    std::unordered_set<int> parents = subset_variables(G, num_var, num_markers, depth);
 
     ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, parents, num_var, num_phen, max_level);
 
@@ -1339,7 +1339,7 @@ ReducedGCS reduced_gcs_cusk(ReducedGCS gcs, std::vector<float> &thresholds, int 
         gcs.S.data()
     );
     std::unordered_set<int> parents =
-        parent_set(gcs.G, gcs.num_var, gcs.num_markers - gcs.num_phen, max_depth);
+        subset_variables(gcs.G, gcs.num_var, gcs.num_markers - gcs.num_phen, max_depth);
     return reduce_gcs(gcs.G, gcs.C, gcs.S, parents, gcs.num_var, gcs.num_phen, gcs.max_level);
 }
 

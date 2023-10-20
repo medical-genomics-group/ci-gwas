@@ -9,7 +9,7 @@
 #include <unordered_set>
 #include <vector>
 
-std::unordered_set<int> parent_set(
+std::unordered_set<int> subset_variables(
     const std::vector<int> &G, const size_t num_var, const size_t num_markers, const int max_depth
 );
 
@@ -61,14 +61,14 @@ ReducedGCS reduce_gcs(
     const size_t max_level
 );
 
-class ParentSetIndices
+class VariableSubsetIndices
 {
    private:
     std::vector<int> new_to_old;
     std::unordered_map<int, int> old_to_new;
 
    public:
-    ParentSetIndices(const std::unordered_set<int> &p)
+    VariableSubsetIndices(const std::unordered_set<int> &p)
     {
         new_to_old = set_to_vec(p);
         for (int i = 0; i < new_to_old.size(); i++)
