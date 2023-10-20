@@ -9,8 +9,37 @@
 #include <unordered_set>
 #include <vector>
 
+/**
+ * @brief Make subset of indices of phenotypes and markers that are ancestral at depth <=
+ * max_depth.
+ *
+ * @param G
+ * @param num_var
+ * @param num_markers
+ * @param max_depth
+ * @return std::unordered_set<int>
+ */
 std::unordered_set<int> subset_variables(
     const std::vector<int> &G, const size_t num_var, const size_t num_markers, const int max_depth
+);
+
+/**
+ * @brief Make subset of index_map[indices] of phenotypes and markers that are ancestral at depth <=
+ * max_depth.
+ *
+ * @param G
+ * @param num_var
+ * @param num_markers
+ * @param max_depth
+ * @param index_map
+ * @return std::unordered_set<int>
+ */
+std::unordered_set<int> subset_variables(
+    const std::vector<int> &G,
+    const size_t num_var,
+    const size_t num_markers,
+    const int max_depth,
+    const std::vector<int> &index_map
 );
 
 std::vector<int> set_to_vec(const std::unordered_set<int>);
