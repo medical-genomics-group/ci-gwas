@@ -64,24 +64,24 @@ struct ReducedGCS
  * @param max_level max size of a separation set
  */
 ReducedGCS reduce_gcs(
-    std::vector<int> &G,
-    std::vector<float> &C,
-    std::vector<int> &S,
-    std::unordered_set<int> &P,
-    size_t num_var,
-    size_t num_phen,
-    size_t max_level
+    const std::vector<int> &G,
+    const std::vector<float> &C,
+    const std::vector<int> &S,
+    const std::unordered_set<int> &P,
+    const size_t num_var,
+    const size_t num_phen,
+    const size_t max_level
 );
 
 ReducedGCS reduce_gcs(
-    std::vector<int> &G,
-    std::vector<float> &C,
-    std::vector<int> &S,
-    std::unordered_set<int> &P,
-    size_t num_var,
-    size_t num_phen,
-    size_t max_level,
-    std::vector<int> &index_map
+    const std::vector<int> &G,
+    const std::vector<float> &C,
+    const std::vector<int> &S,
+    const std::unordered_set<int> &P,
+    const size_t num_var,
+    const size_t num_phen,
+    const size_t max_level,
+    const std::vector<int> &index_map
 );
 
 class VariableSubsetIndices
