@@ -27,6 +27,8 @@ struct ReducedGCS
     std::vector<float> C;
     std::vector<int> S;
 
+    size_t num_markers() { return num_var - num_phen; }
+
     void to_file(std::string base)
     {
         std::ofstream fout;

@@ -42,6 +42,27 @@ void check_nargs(const int argc, const int nargs, const std::string usage)
     }
 }
 
+ReducedGCS reduced_gcs_cusk(ReducedGCS gcs, std::vector<float> &thresholds, int max_depth)
+{
+    const size_t sepset_size = gcs.num_var * gcs.num_var * ML;
+    std::vector<int> sepset(sepset_size, 0);
+    const size_t g_size = gcs.num_var * gcs.num_var;
+    std::vector<float> pmax(g_size, 0.0);
+    Skeleton(
+        gcs.C.data(),
+        &gcs.num_var,
+        gcs.G.data(),
+        thresholds.data(),
+        &gcs.max_level,
+        &ML,
+        pmax.data(),
+        sepset.data()
+    );
+    std::unordered_set<int> variable_subset =
+        subset_variables(gcs.G, gcs.num_var, gcs.num_markers(), max_depth);
+    return reduce_gcs(gcs.G, gcs.C, sepset, variable_subset, gcs.num_var, gcs.num_phen, ML);
+}
+
 const std::string MCORRKB_CHR_USAGE = R"(
 Compute the banded Kendall correlation matrix for a given chromosome
 
@@ -743,7 +764,7 @@ void cuda_skeleton_summary_stats(int argc, char *argv[])
     ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, variable_subset, num_var, num_phen, max_level);
     std::cout << "Starting second cusk stage" << std::endl;
     gcs = reduced_gcs_cusk(gcs, &Th, depth);
-    std::cout << "Retained " << gcs.num_markers << " markers" << std::endl;
+    std::cout << "Retained " << gcs.num_markers() << " markers" << std::endl;
     gcs.to_file(make_path(outdir, block.to_file_string(), ""));
 }
 
@@ -997,7 +1018,7 @@ void cusk(int argc, char *argv[])
             reduce_gcs(G, sq_corrs, sepset, variable_subset, num_var, num_phen, max_level);
         std::cout << "Starting second cusk stage" << std::endl;
         gcs = reduced_gcs_cusk(gcs, &Th, depth);
-        std::cout << "Retained " << gcs.num_markers << " markers" << std::endl;
+        std::cout << "Retained " << gcs.num_markers() << " markers" << std::endl;
         gcs.to_file(make_path(outdir, block.to_file_string(), ""));
     }
 }
@@ -1262,30 +1283,8 @@ void cusk_single(int argc, char *argv[])
     ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, variable_subset, num_var, num_phen, max_level);
     std::cout << "Starting second cusk stage" << std::endl;
     gcs = reduced_gcs_cusk(gcs, &Th, depth);
-    std::cout << "Retained " << gcs.num_markers << " markers" << std::endl;
+    std::cout << "Retained " << gcs.num_markers() << " markers" << std::endl;
     gcs.to_file(make_path(outdir, block.to_file_string(), ""));
-}
-
-ReducedGCS reduced_gcs_cusk(ReducedGCS gcs, std::vector<float> &thresholds, int max_depth)
-{
-    const size_t sepset_size = gcs.num_var * gcs.num_var * ML;
-    const size_t g_size = gcs.num_var * gcs.num_var;
-    std::vector<float> pmax(g_size, 0.0);
-    Skeleton(
-        gcs.C.data(),
-        &gcs.num_var,
-        gcs.G.data(),
-        thresholds.data(),
-        &gcs.max_level,
-        &ML,
-        pmax.data(),
-        gcs.S.data()
-    );
-    std::unordered_set<int> variable_subset =
-        subset_variables(gcs.G, gcs.num_var, gcs.num_markers - gcs.num_phen, max_depth);
-    return reduce_gcs(
-        gcs.G, gcs.C, gcs.S, variable_subset, gcs.num_var, gcs.num_phen, gcs.max_level
-    );
 }
 
 const std::string ANTIDIAGSUMS_USAGE = R"(
