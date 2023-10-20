@@ -235,13 +235,13 @@ void phenotype_pc(int argc, char *argv[])
     int l = 0;
     Skeleton(sq_corrs.data(), &p, G.data(), Th.data(), &l, &max_level, pmax.data(), sepset.data());
 
-    std::unordered_set<int> parents = {};
+    std::unordered_set<int> variable_subset = {};
     for (size_t i = 0; i < num_phen; i++)
     {
-        parents.insert(i);
+        variable_subset.insert(i);
     }
 
-    ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, parents, p, num_phen, max_level);
+    ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, variable_subset, p, num_phen, max_level);
     gcs.to_file(make_path(outdir, "pheno_sk", ""));
 }
 
@@ -307,12 +307,12 @@ void sim_pc(int argc, char *argv[])
 
     std::cout << "Reducing data to phenotype parent sets" << std::endl;
 
-    std::unordered_set<int> parents = subset_variables(G, num_var, num_markers, depth);
+    std::unordered_set<int> variable_subset = subset_variables(G, num_var, num_markers, depth);
 
-    ReducedGCS gcs = reduce_gcs(G, corrs, sepset, parents, num_var, num_phen, max_level);
+    ReducedGCS gcs = reduce_gcs(G, corrs, sepset, variable_subset, num_var, num_phen, max_level);
 
-    std::cout << "Retained " << (parents.size() - num_phen) << " / " << num_markers << " markers"
-              << std::endl;
+    std::cout << "Retained " << (variable_subset.size() - num_phen) << " / " << num_markers
+              << " markers" << std::endl;
 
     gcs.to_file(make_path(outdir, "skeleton", ""));
 }
@@ -518,13 +518,13 @@ void cusk_second_stage(int argc, char *argv[])
         sq_corrs.data(), &p, G.data(), Th.data(), &l, &max_level, pmax.data(), sepset.data()
     );
 
-    std::unordered_set<int> parents = {};
+    std::unordered_set<int> variable_subset = {};
     for (size_t i = 0; i < num_phen; i++)
     {
-        parents.insert(i);
+        variable_subset.insert(i);
     }
 
-    ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, parents, p, num_phen, max_level);
+    ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, variable_subset, p, num_phen, max_level);
     gcs.to_file(make_path(outdir, "cusk_stage2", ""));
 }
 
@@ -579,13 +579,13 @@ void cuskss_trait_only(int argc, char *argv[])
     int l = 0;
     Skeleton(sq_corrs.data(), &p, G.data(), Th.data(), &l, &max_level, pmax.data(), sepset.data());
 
-    std::unordered_set<int> parents = {};
+    std::unordered_set<int> variable_subset = {};
     for (size_t i = 0; i < num_phen; i++)
     {
-        parents.insert(i);
+        variable_subset.insert(i);
     }
 
-    ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, parents, p, num_phen, max_level);
+    ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, variable_subset, p, num_phen, max_level);
     gcs.to_file(make_path(outdir, "pheno_sk", ""));
 }
 
@@ -741,12 +741,12 @@ void cuda_skeleton_summary_stats(int argc, char *argv[])
 
     std::cout << "Reducing data to phenotype parent sets" << std::endl;
 
-    std::unordered_set<int> parents = subset_variables(G, num_var, num_markers, depth);
+    std::unordered_set<int> variable_subset = subset_variables(G, num_var, num_markers, depth);
 
-    ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, parents, num_var, num_phen, max_level);
+    ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, variable_subset, num_var, num_phen, max_level);
 
-    std::cout << "Retained " << (parents.size() - num_phen) << " / " << num_markers << " markers"
-              << std::endl;
+    std::cout << "Retained " << (variable_subset.size() - num_phen) << " / " << num_markers
+              << " markers" << std::endl;
 
     gcs.to_file(make_path(outdir, block.to_file_string(), ""));
 }
@@ -1042,11 +1042,12 @@ void cusk(int argc, char *argv[])
 
         std::cout << "Reducing data to phenotype parent sets" << std::endl;
 
-        std::unordered_set<int> parents = subset_variables(G, num_var, num_markers, depth);
+        std::unordered_set<int> variable_subset = subset_variables(G, num_var, num_markers, depth);
 
-        ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, parents, num_var, num_phen, max_level);
+        ReducedGCS gcs =
+            reduce_gcs(G, sq_corrs, sepset, variable_subset, num_var, num_phen, max_level);
 
-        std::cout << "Retained " << (parents.size() - num_phen) << " / " << num_markers
+        std::cout << "Retained " << (variable_subset.size() - num_phen) << " / " << num_markers
                   << " markers" << std::endl;
 
         gcs.to_file(make_path(outdir, block.to_file_string(), ""));
@@ -1311,12 +1312,12 @@ void cusk_single(int argc, char *argv[])
 
     std::cout << "Reducing data to phenotype parent sets" << std::endl;
 
-    std::unordered_set<int> parents = subset_variables(G, num_var, num_markers, depth);
+    std::unordered_set<int> variable_subset = subset_variables(G, num_var, num_markers, depth);
 
-    ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, parents, num_var, num_phen, max_level);
+    ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, variable_subset, num_var, num_phen, max_level);
 
-    std::cout << "Retained " << (parents.size() - num_phen) << " / " << num_markers << " markers"
-              << std::endl;
+    std::cout << "Retained " << (variable_subset.size() - num_phen) << " / " << num_markers
+              << " markers" << std::endl;
 
     gcs.to_file(make_path(outdir, block.to_file_string(), ""));
 }
@@ -1326,8 +1327,6 @@ ReducedGCS reduced_gcs_cusk(ReducedGCS gcs, std::vector<float> &thresholds, int 
     const size_t sepset_size = gcs.num_var * gcs.num_var * ML;
     const size_t g_size = gcs.num_var * gcs.num_var;
     std::vector<float> pmax(g_size, 0.0);
-    // std::vector<int> G(g_size, 1);
-    // std::vector<int> sepset(sepset_size, 0);
     Skeleton(
         gcs.C.data(),
         &gcs.num_var,
@@ -1338,9 +1337,11 @@ ReducedGCS reduced_gcs_cusk(ReducedGCS gcs, std::vector<float> &thresholds, int 
         pmax.data(),
         gcs.S.data()
     );
-    std::unordered_set<int> parents =
+    std::unordered_set<int> variable_subset =
         subset_variables(gcs.G, gcs.num_var, gcs.num_markers - gcs.num_phen, max_depth);
-    return reduce_gcs(gcs.G, gcs.C, gcs.S, parents, gcs.num_var, gcs.num_phen, gcs.max_level);
+    return reduce_gcs(
+        gcs.G, gcs.C, gcs.S, variable_subset, gcs.num_var, gcs.num_phen, gcs.max_level
+    );
 }
 
 const std::string ANTIDIAGSUMS_USAGE = R"(
