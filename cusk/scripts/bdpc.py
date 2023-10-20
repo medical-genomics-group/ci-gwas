@@ -3777,7 +3777,7 @@ def plot_real_data_simulation_results(
 
     fig = plt.figure(
         # layout="tight",
-        figsize=(9, 5)
+        figsize=(9, 6)
     )
     ax_dict = fig.subplot_mosaic(
         """
