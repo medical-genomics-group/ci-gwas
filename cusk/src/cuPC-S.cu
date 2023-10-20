@@ -57,7 +57,7 @@ void Skeleton(
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
     float milliseconds = 0;
-    *l = 0;
+    // *l = 0;
 
     HANDLE_ERROR(cudaMalloc((void **)&mutex_cuda, n * n * sizeof(int)));
     HANDLE_ERROR(cudaMalloc((void **)&nprime_cuda, 1 * sizeof(int)));
