@@ -160,7 +160,7 @@ void make_blocks(int argc, char *argv[])
 const std::string PHENOPC_USAGE = R"(
 Run cuPC on phenotypes only.
 
-usage: mps bdpc <.phen> <alpha> <max-level> <outdir>
+usage: mps phenpc <.phen> <alpha> <max-level> <outdir>
 
 arguments:
     .phen           path to standardized phenotype tsv
@@ -751,10 +751,10 @@ void cuda_skeleton_summary_stats(int argc, char *argv[])
     gcs.to_file(make_path(outdir, block.to_file_string(), ""));
 }
 
-const std::string BDPC_USAGE = R"(
+const std::string CUSK_USAGE = R"(
 Run cuPC on block diagonal genomic covariance matrix.
 
-usage: mps bdpc <.phen> <bfiles> <.blocks> <alpha> <max-level> <depth> <outdir> <first-block>
+usage: mps cusk <.phen> <bfiles> <.blocks> <alpha> <max-level> <depth> <outdir> <first-block>
 
 arguments:
     .phen           path to standardized phenotype tsv
@@ -764,14 +764,14 @@ arguments:
     max-level       maximal size of seperation sets in cuPC ( <= 14)
     depth           max depth at which marker variables are kept as ancestors
     outdir          outdir
-    first-block     0-based index first block to start bdpc from. Meant for resuming interrupted jobs.
+    first-block     0-based index first block to start cusk from. Meant for resuming interrupted jobs.
 )";
 
-const int BDPC_NARGS = 10;
+const int CUSK_NARGS = 10;
 
-void block_diagonal_pc(int argc, char *argv[])
+void cusk(int argc, char *argv[])
 {
-    check_nargs(argc, BDPC_NARGS, BDPC_USAGE);
+    check_nargs(argc, CUSK_NARGS, CUSK_USAGE);
 
     std::string phen_path = argv[2];
     std::string bed_base_path = argv[3];
@@ -1053,10 +1053,10 @@ void block_diagonal_pc(int argc, char *argv[])
     }
 }
 
-const std::string BDPC_SINGLE_USAGE = R"(
+const std::string CUSK_SINGLE_USAGE = R"(
 Run cuPC on a single block of a block diagonal genomic covariance matrix.
 
-usage: mps bdpc-single <.phen> <bfiles> <.blocks> <alpha> <max-level> <depth> <outdir> <first-block>
+usage: mps cusk-single <.phen> <bfiles> <.blocks> <alpha> <max-level> <depth> <outdir> <first-block>
 
 arguments:
     .phen           path to standardized phenotype tsv
@@ -1069,11 +1069,11 @@ arguments:
     block-index     0-based index of the block to run cupc for
 )";
 
-const int BDPC_SINGLE_NARGS = 10;
+const int CUSK_SINGLE_NARGS = 10;
 
-void block_diagonal_pc_single(int argc, char *argv[])
+void cusk_single(int argc, char *argv[])
 {
-    check_nargs(argc, BDPC_SINGLE_NARGS, BDPC_SINGLE_USAGE);
+    check_nargs(argc, CUSK_SINGLE_NARGS, CUSK_SINGLE_USAGE);
 
     std::cout << "Got args: " << std::endl;
     std::string phen_path = argv[2];
@@ -2049,7 +2049,6 @@ commands:
     cuskss-trait-only       Run cuda-skeleton on a set of pre-computed trait-trait correlations.
     cusk-sim                Run cuda-skeleton on single simulated block
     cusk-phen               Run cuda-skeleton on phenotypes only
-    cusk-second-stage       ...
 
 contact:
     nick.machnik@gmail.com
@@ -2083,11 +2082,11 @@ auto main(int argc, char *argv[]) -> int
     }
     else if (cmd == "cusk")
     {
-        block_diagonal_pc(argc, argv);
+        cusk(argc, argv);
     }
     else if (cmd == "cusk-single")
     {
-        block_diagonal_pc_single(argc, argv);
+        cusk_single(argc, argv);
     }
     else if (cmd == "block")
     {
@@ -2100,10 +2099,6 @@ auto main(int argc, char *argv[]) -> int
     else if (cmd == "cusk-sim")
     {
         sim_pc(argc, argv);
-    }
-    else if (cmd == "cusk-second-stage")
-    {
-        cusk_second_stage(argc, argv);
     }
     else
     {
