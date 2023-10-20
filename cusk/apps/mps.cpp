@@ -45,16 +45,18 @@ void check_nargs(const int argc, const int nargs, const std::string usage)
 ReducedGCS reduced_gcs_cusk(ReducedGCS gcs, std::vector<float> &thresholds, int max_depth)
 {
     int max_level = ML;
+    int num_var = gcs.num_var;
+    int start_level = gcs.max_level;
     const size_t sepset_size = gcs.num_var * gcs.num_var * ML;
     std::vector<int> sepset(sepset_size, 0);
     const size_t g_size = gcs.num_var * gcs.num_var;
     std::vector<float> pmax(g_size, 0.0);
     Skeleton(
         gcs.C.data(),
-        &(int)gcs.num_var,
+        &num_var,
         gcs.G.data(),
         thresholds.data(),
-        &(int)gcs.max_level,
+        &start_level,
         &max_level,
         pmax.data(),
         sepset.data()
