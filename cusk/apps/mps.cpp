@@ -1309,10 +1309,6 @@ void cusk_single(int argc, char *argv[])
     int l = 0;
     Skeleton(sq_corrs.data(), &p, G.data(), Th.data(), &l, &max_level, pmax.data(), sepset.data());
 
-    // TODO:
-    // separate the following steps into new commands, instead here:
-    // save corrs, graph, sepsets to disc
-
     std::cout << "Reducing data to phenotype parent sets" << std::endl;
 
     std::unordered_set<int> parents = parent_set(G, num_var, num_markers, depth);
@@ -1323,6 +1319,28 @@ void cusk_single(int argc, char *argv[])
               << std::endl;
 
     gcs.to_file(make_path(outdir, block.to_file_string(), ""));
+}
+
+ReducedGCS reduced_gcs_cusk(ReducedGCS gcs, std::vector<float> &thresholds, int max_depth)
+{
+    const size_t sepset_size = gcs.num_var * gcs.num_var * ML;
+    const size_t g_size = gcs.num_var * gcs.num_var;
+    std::vector<float> pmax(g_size, 0.0);
+    // std::vector<int> G(g_size, 1);
+    // std::vector<int> sepset(sepset_size, 0);
+    Skeleton(
+        gcs.C.data(),
+        &gcs.num_var,
+        gcs.G.data(),
+        thresholds.data(),
+        &gcs.max_level,
+        &ML,
+        pmax.data(),
+        gcs.S.data()
+    );
+    std::unordered_set<int> parents =
+        parent_set(gcs.G, gcs.num_var, gcs.num_markers - gcs.num_phen, max_depth);
+    return reduce_gcs(gcs.G, gcs.C, gcs.S, parents, gcs.num_var, gcs.num_phen, gcs.max_level);
 }
 
 const std::string ANTIDIAGSUMS_USAGE = R"(
