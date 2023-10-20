@@ -57,7 +57,6 @@ void Skeleton(
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
     float milliseconds = 0;
-    // *l = 0;
 
     HANDLE_ERROR(cudaMalloc((void **)&mutex_cuda, n * n * sizeof(int)));
     HANDLE_ERROR(cudaMalloc((void **)&nprime_cuda, 1 * sizeof(int)));
@@ -73,7 +72,7 @@ void Skeleton(
 
     CudaCheckError();
     //----------------------------------------------------------
-    for (*l = *l; *l <= ML && !FinishFlag && *l <= *maxlevel; *l = *l + 1)
+    for (*l = 0; *l <= ML && !FinishFlag && *l <= *maxlevel; *l = *l + 1)
     {
         CudaCheckError();
         if (*l == 0)

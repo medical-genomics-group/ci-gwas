@@ -46,7 +46,7 @@ ReducedGCS reduced_gcs_cusk(ReducedGCS gcs, std::vector<float> &thresholds, int 
 {
     int max_level = ML;
     int num_var = gcs.num_var;
-    int start_level = gcs.max_level;
+    int start_level = 0;
     const size_t sepset_size = gcs.num_var * gcs.num_var * ML;
     std::vector<int> sepset(sepset_size, 0);
     const size_t g_size = gcs.num_var * gcs.num_var;
