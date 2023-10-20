@@ -739,15 +739,11 @@ void cuda_skeleton_summary_stats(int argc, char *argv[])
     int l = 0;
     Skeleton(sq_corrs.data(), &p, G.data(), Th.data(), &l, &max_level, pmax.data(), sepset.data());
 
-    std::cout << "Reducing data to phenotype parent sets" << std::endl;
-
     std::unordered_set<int> variable_subset = subset_variables(G, num_var, num_markers, depth);
-
     ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, variable_subset, num_var, num_phen, max_level);
-
-    std::cout << "Retained " << (variable_subset.size() - num_phen) << " / " << num_markers
-              << " markers" << std::endl;
-
+    std::cout << "Starting second cusk stage" << std::endl;
+    gcs = reduced_gcs_cusk(gcs, &Th, depth);
+    std::cout << "Retained " << gcs.num_markers << " markers" << std::endl;
     gcs.to_file(make_path(outdir, block.to_file_string(), ""));
 }
 
@@ -872,22 +868,6 @@ void cusk(int argc, char *argv[])
             exit(1);
         }
 
-        // printf("means: [");
-        // for (auto f : means)
-        // {
-        //     printf("%f, ", f);
-        // }
-        // printf("]\n");
-        // fflush(stdout);
-
-        // printf("stds: [");
-        // for (auto f : stds)
-        // {
-        //     printf("%f, ", f);
-        // }
-        // printf("]\n");
-        // fflush(stdout);
-
         // allocate correlation result arrays
         size_t marker_corr_mat_size = num_markers * (num_markers - 1) / 2;
         std::vector<float> marker_corr(marker_corr_mat_size, 0.0);
@@ -940,30 +920,6 @@ void cusk(int argc, char *argv[])
             marker_phen_corr.data(),
             phen_corr.data()
         );
-
-        // printf("m x m: [");
-        // for (auto f : marker_corr)
-        // {
-        //     printf("%f, ", f);
-        // }
-        // printf("]\n");
-        // fflush(stdout);
-
-        // printf("m x p: [");
-        // for (auto f : marker_phen_corr)
-        // {
-        //     printf("%f, ", f);
-        // }
-        // printf("]\n");
-        // fflush(stdout);
-
-        // printf("p x p: [");
-        // for (auto f : phen_corr)
-        // {
-        //     printf("%f, ", f);
-        // }
-        // printf("]\n");
-        // fflush(stdout);
 
         std::cout << "Reformating corrs to n2 format" << std::endl;
 
@@ -1036,20 +992,12 @@ void cusk(int argc, char *argv[])
             sq_corrs.data(), &p, G.data(), Th.data(), &l, &max_level, pmax.data(), sepset.data()
         );
 
-        // TODO:
-        // separate the following steps into new commands, instead here:
-        // save corrs, graph, sepsets to disc
-
-        std::cout << "Reducing data to phenotype parent sets" << std::endl;
-
         std::unordered_set<int> variable_subset = subset_variables(G, num_var, num_markers, depth);
-
         ReducedGCS gcs =
             reduce_gcs(G, sq_corrs, sepset, variable_subset, num_var, num_phen, max_level);
-
-        std::cout << "Retained " << (variable_subset.size() - num_phen) << " / " << num_markers
-                  << " markers" << std::endl;
-
+        std::cout << "Starting second cusk stage" << std::endl;
+        gcs = reduced_gcs_cusk(gcs, &Th, depth);
+        std::cout << "Retained " << gcs.num_markers << " markers" << std::endl;
         gcs.to_file(make_path(outdir, block.to_file_string(), ""));
     }
 }
@@ -1310,15 +1258,11 @@ void cusk_single(int argc, char *argv[])
     int l = 0;
     Skeleton(sq_corrs.data(), &p, G.data(), Th.data(), &l, &max_level, pmax.data(), sepset.data());
 
-    std::cout << "Reducing data to phenotype parent sets" << std::endl;
-
     std::unordered_set<int> variable_subset = subset_variables(G, num_var, num_markers, depth);
-
     ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, variable_subset, num_var, num_phen, max_level);
-
-    std::cout << "Retained " << (variable_subset.size() - num_phen) << " / " << num_markers
-              << " markers" << std::endl;
-
+    std::cout << "Starting second cusk stage" << std::endl;
+    gcs = reduced_gcs_cusk(gcs, &Th, depth);
+    std::cout << "Retained " << gcs.num_markers << " markers" << std::endl;
     gcs.to_file(make_path(outdir, block.to_file_string(), ""));
 }
 
