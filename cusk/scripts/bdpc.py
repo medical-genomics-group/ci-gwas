@@ -3137,7 +3137,7 @@ def load_real_data_simulation_adj_performance(
         truth = load_real_data_simulation_truth(rep)
         for alpha_e in e_arr:
             # -------------------- CI-GWAS -----------------------------
-            est_dir = wdir + f"cusk/sim{rep}_e{alpha_e}_l{max_level}_2stsk/"
+            est_dir = wdir + f"cusk/sim{rep}_e{alpha_e}_l{max_level}_2stepsk/"
             adj_path = est_dir + "all_merged_sam.mtx"
             try:
                 est_adj = mmread(adj_path).tocsr()
