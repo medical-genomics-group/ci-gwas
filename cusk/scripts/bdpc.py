@@ -3064,6 +3064,120 @@ def load_simulation_results() -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+@dataclass
+class SimulationTruth:
+    dag_mxp: pd.DataFrame
+    dag_pxp: np.array
+    bidirected: np.array
+
+
+def load_real_data_simulation_truth(
+    rep: int,
+    num_p=10,
+    num_m=600,
+    wdir="/nfs/scistore17/robingrp/mrobinso/cigwas/ukb/sim/real_marker_sim/sim/",
+):
+    simdir = wdir + f"sim_{rep}/"
+    true_snp_ids = []
+    with open(simdir + "CV_snp_ids.txt", "r") as fin:
+        for line in fin:
+            true_snp_ids.append(line.strip())
+    true_eff_file = glob(simdir + "true_causaleffects*")[0]
+    true_eff_lines = []
+    true_eff_lines_all = []
+    with open(true_eff_file, "r") as fin:
+        for line in fin:
+            # we skip the latent vars here
+            true_eff_lines.append(
+                {k + 1: v for (k, v) in enumerate(line.strip().split()[2:])}
+            )
+            true_eff_lines_all.append(
+                {k: v for (k, v) in enumerate(line.strip().split())}
+            )
+    true_dag_mxp = pd.DataFrame(true_eff_lines[:num_m], index=true_snp_ids, dtype=float)
+    true_dag_pxp = np.triu(
+        np.array(
+            pd.DataFrame(
+                true_eff_lines[-num_p:],
+                index=list(range(1, num_p + 1)),
+                dtype=float,
+            )
+        ),
+        1,
+    )
+    true_dag_lpxlp = np.triu(
+        np.array(pd.DataFrame(true_eff_lines_all[num_m:], dtype=float)), 1
+    )
+    # mark true 2-2 edges
+    m = true_dag_lpxlp != 0
+    true_bidirected = np.zeros(shape=(num_p, num_p))
+    for i in range(2, num_p + 2):
+        for j in range(i + 1, num_p + 2):
+            if not m[i, j] and ((m[0, i] and m[0, j]) or (m[1, i] and m[1, j])):
+                true_bidirected[i - 2, j - 2] = 1
+
+    return SimulationTruth(true_dag_mxp, true_dag_pxp, true_bidirected)
+
+
+def load_real_data_simulation_adj_performance(
+    e_arr=[2, 4, 6, 8], rep_arr=list(range(1, 41)), num_p=10, max_level=3
+) -> pd.DataFrame:
+    """Load simulation results for ci-gwas and mr methods, calculate fdr, tpr for adjacencies."""
+    rows = []
+    wdir = "/nfs/scistore17/robingrp/mrobinso/cigwas/ukb/sim/real_marker_sim/"
+    blockfile = wdir + "ukb22828_UKB_EST_v3_ldp08_estonia_intersect_m11000_chr1.blocks"
+    bim_path = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/estonian_comparison/ukb22828_UKB_EST_v3_ldp08_estonia_intersect_a1_forced.bim"
+    rs_ids = pd.read_csv(bim_path, sep="\t", header=None)[1].values
+    for rep in rep_arr:
+        truth = load_real_data_simulation_truth(rep)
+        for alpha_e in e_arr:
+            # -------------------- CI-GWAS -----------------------------
+            est_dir = wdir + f"cusk/sim{rep}_e{alpha_e}_l{max_level}_2stsk/"
+            adj_path = est_dir + "all_merged_sam.mtx"
+            try:
+                est_adj = mmread(adj_path).tocsr()
+            except FileNotFoundError as err:
+                print(err)
+                continue
+
+            gr = merge_block_outputs(blockfile, est_dir)
+            glob_ixs = np.array(sorted(list(gr.gmi.values())))
+            est_adj_mxp = pd.DataFrame(
+                est_adj[num_p:, :num_p].toarray(),
+                columns=list(range(1, num_p + 1)),
+                index=rs_ids[glob_ixs],
+                dtype=int,
+            )
+            est_adj_pxp = est_adj[:num_p, :num_p].toarray()
+            est_adj_pxp_triu = np.triu(est_adj_pxp, 1)
+
+            p = (truth.dag_mxp != 0).sum().sum()
+            td_mxp_matched = truth.dag_mxp.reindex_like(est_adj_mxp)
+            tp = ((est_adj_mxp != 0) & (td_mxp_matched != 0)).sum().sum()
+            fp = ((est_adj_mxp != 0) & (td_mxp_matched == 0)).sum().sum()
+            mxp_tpr = tp / p
+            mxp_fdr = fp / (tp + fp)
+
+            m = (truth.bidirected != 0) | (truth.dag_pxp != 0)
+            p = np.sum(m)
+            tp = np.sum(m & (est_adj_pxp_triu != 0))
+            fp = np.sum(~m & (est_adj_pxp_triu != 0))
+            pxp_tpr = tp / p
+            pxp_fdr = fp / (tp + fp)
+
+            rows.append(
+                {
+                    "x -> y fdr": mxp_fdr,
+                    "x -> y tpr": mxp_tpr,
+                    "y -> y fdr": pxp_fdr,
+                    "y -> y tpr": pxp_tpr,
+                    "rep": rep,
+                    "alpha": 10 ** (-alpha_e),
+                    "method": "ci-gwas",
+                }
+            )
+
+
 def load_real_data_simulation_results(
     e_arr=[3, 4, 6, 8],
     rep_arr=list(range(1, 41)),
