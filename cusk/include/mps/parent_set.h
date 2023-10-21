@@ -106,7 +106,7 @@ class VariableSubsetIndices
         new_to_old = std::vector<int>(new_to_old_tmp.size());
         for (int i = 0; i < new_to_old.size(); i++)
         {
-            new_to_old[i] = index_map[new_to_old[i]];
+            new_to_old[i] = index_map[new_to_old_tmp[i]];
             old_to_new[new_to_old[i]] = i;
         }
     }
