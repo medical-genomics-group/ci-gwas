@@ -3220,6 +3220,152 @@ def load_real_data_simulation_adj_performance(
     return pd.DataFrame(rows)
 
 
+def plot_real_data_simulation_adj_performance(
+    e_arr=[2, 4, 6, 8], rep_arr=list(range(1, 41)), num_p=10, max_level=3, fig_path=None
+):
+    bar_xlabel_rotation = 45
+
+    df = load_real_data_simulation_adj_performance(e_arr, rep_arr, num_p, max_level)
+    gr = df.groupby(["method", "alpha"])
+    means = gr.mean()
+    stds = gr.std()
+
+    alphas = 10.0 ** -np.array(e_arr[::-1])
+    methods = ["ci-gwas", "cause", "presso", "mvpresso", "ivw", "mvivw"]
+    title_kw = {"loc": "left", "pad": 15, "size": 20}
+
+    def plot_ci_gwas_bars(x_vals, metric, means, stds, ax, title, axhline=False):
+        ax.set_title(title, **title_kw)
+        x_sorted = sorted(list(x_vals))
+        x = np.arange(len(x_vals))  # the label locations
+        width = 0.5  # the width of the bars
+        multiplier = 0
+
+        handles = []
+        for method in ["ci-gwas"]:
+            mu = means.loc[method][metric]
+            sig = stds.loc[method][metric]
+            loc_x = np.array(
+                [x_sorted.index(e) for e in means.loc[method].index.values]
+            )
+            offset = width * multiplier
+            try:
+                bars = ax.bar(
+                    loc_x + offset, mu, width, yerr=sig, capsize=1.5, label=method
+                )
+                handles.append(bars)
+            except StopIteration:
+                pass
+            multiplier += 1
+
+        ax.set_ylabel(metric)
+        if title == "e)" or title == "d)":
+            ax.set_xlabel(r"$\alpha$")
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.set_xticks(x, x_vals)
+        plt.setp(
+            ax.get_xticklabels(),
+            rotation=bar_xlabel_rotation,
+            ha="right",
+            rotation_mode="anchor",
+        )
+        if axhline:
+            ax.axhline(0.05, linestyle="dotted", color="gray")
+        # ax.legend(loc='upper left', ncols=3)
+        # ax.set_yscale("symlog")
+        return handles
+
+    def plot_bars(x_vals, metric, means, stds, ax, title, methods):
+        ax.set_title(title, **title_kw)
+        x_sorted = sorted(list(x_vals))
+        x = np.arange(len(x_vals))  # the label locations
+        width = 0.10  # the width of the bars
+        multiplier = 0
+
+        handles = []
+        for method in methods:
+            mu = means.loc[method][metric]
+            sig = stds.loc[method][metric]
+            loc_x = np.array(
+                [x_sorted.index(e) for e in means.loc[method].index.values]
+            )
+            offset = width * multiplier
+            try:
+                bars = ax.bar(
+                    loc_x + offset, mu, width, yerr=sig, capsize=1.5, label=method
+                )
+                handles.append(bars)
+            except StopIteration:
+                pass
+            multiplier += 1
+
+        ax.set_ylabel(metric)
+        if title == "g)" or title == "h)":
+            ax.set_xlabel(r"$\alpha$")
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.set_xticks(x + width, x_vals)
+        plt.setp(
+            ax.get_xticklabels(),
+            rotation=bar_xlabel_rotation,
+            ha="right",
+            rotation_mode="anchor",
+        )
+        # ax.legend(loc='upper left', ncols=3)
+        # ax.set_yscale("symlog")
+        return handles
+
+    fig = plt.figure(
+        # layout="tight",
+        figsize=(9, 6)
+    )
+    ax_dict = fig.subplot_mosaic(
+        """
+        XiX
+        abc
+        ddd
+        """,
+        empty_sentinel="X",
+        sharex=False,
+        # set the height ratios between the rows
+        height_ratios=[0.1, 0.4, 0.5],
+    )
+
+    ax_dict["d"].set_xlabel(r"$\alpha$")
+
+    plot_ci_gwas_bars(
+        alphas, "x -> y fdr", means, stds, ax_dict["a"], "a)", axhline=True
+    )
+    ax_dict["a"].set_ylabel(r"$x - y \ FDR$")
+    plot_ci_gwas_bars(alphas, "x -> y tpr", means, stds, ax_dict["b"], "b)")
+    ax_dict["b"].set_ylabel(r"$x - y \ TPR$")
+    plot_ci_gwas_bars(
+        alphas, "y -> y fdr", means, stds, ax_dict["c"], "c)", axhline=True
+    )
+    ax_dict["c"].set_ylabel(r"$y - y \ FDR$")
+    h = plot_bars(
+        alphas, "y -> y tpr", means, stds, ax_dict["d"], "d)", methods=methods
+    )
+    ax_dict["d"].set_ylabel(r"$y - y \ TPR$")
+    ax_dict["i"].legend(
+        handles=h,
+        labels=["CI-GWAS", "CAUSE", "MR-PRESSO", "MR-PRESSO (MV)", "IVW", "IVW (MV)"],
+        # labels=["CI-GWAS", "CAUSE", "MR-PRESSO", "IVW Regression"],
+        loc="center",
+        fancybox=False,
+        shadow=False,
+        ncol=3,
+        # title="method",
+    )
+    ax_dict["i"].axis("off")
+    # _ = [ax_dict[i].tick_params(labelbottom=False) for i in "de"]
+    # _ = [ax_dict[i].sharex(ax_dict['f']) for i in 'de']
+    fig.subplots_adjust(wspace=0.7, hspace=1.3)
+    if fig_path is not None:
+        plt.savefig(fig_path, bbox_inches="tight")
+
+
 def load_real_data_simulation_results(
     e_arr=[3, 4, 6, 8],
     rep_arr=list(range(1, 41)),
