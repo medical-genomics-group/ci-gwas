@@ -914,7 +914,6 @@ class BlockOutput:
 class GlobalBdpcResult:
     sam: dict
     scm: dict
-    ssm: dict
     gmi: dict
     num_var: int
     num_phen: int
