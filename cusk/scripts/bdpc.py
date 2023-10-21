@@ -3180,7 +3180,8 @@ def load_real_data_simulation_adj_performance(
                 for outcome in range(0, num_p):
                     try:
                         fpaths = glob(
-                            est_dir
+                            wdir
+                            + f"cusk/sim{rep}_e{alpha_e}/"
                             + f"mr_{mr_str}_alpha*_sim{rep}_outcome_y{outcome + 1}_seed1000"
                         )
                         if len(fpaths) == 0:
@@ -3192,7 +3193,7 @@ def load_real_data_simulation_adj_performance(
                         mr_est[exposures, outcome] = mr_res_df["est"].values
                     except FileNotFoundError:
                         continue
-                mr_links = mr_p <= (0.05 / ((num_p - 1) * 2))
+                mr_links = mr_p <= (0.05 / ((num_p - 1) * 2 * 20))
                 mr_adj = make_adj_symmetric(mr_links)
 
                 m = (truth.bidirected != 0) | (truth.dag_pxp != 0)
