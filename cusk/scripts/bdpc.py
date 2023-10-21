@@ -943,7 +943,7 @@ class GlobalBdpcResult:
             fout.write(f"{self.num_var}\t{self.num_phen}\t{self.max_level}\n")
 
         np.array(sorted(list(self.gmi.values())), dtype=np.int32).tofile(
-            basepath + "ixs"
+            basepath + ".ixs"
         )
 
 
