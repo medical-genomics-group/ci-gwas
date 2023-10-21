@@ -534,7 +534,6 @@ def merge_block_outputs(blockfile: str, outdir: str):
         global_marker_offset = bo.block_size()
         sam = bo.sam()
         scm = bo.scm()
-        ssm = bo.ssm()
         gmi = bo.gmi()
     except FileNotFoundError:
         path = basepaths[0]
@@ -543,7 +542,6 @@ def merge_block_outputs(blockfile: str, outdir: str):
         marker_offset = 0
         sam = {}
         scm = {}
-        ssm = {}
         gmi = {}
 
     for path in basepaths[1:]:
@@ -555,13 +553,12 @@ def merge_block_outputs(blockfile: str, outdir: str):
             continue
         add_sam(sam, bo.sam(), bo.num_phen())
         add_scm(scm, bo.scm())
-        add_ssm(ssm, bo.ssm())
         add_gmi(gmi, bo.gmi())
         marker_offset += bo.num_markers()
         global_marker_offset += bo.block_size()
 
     return GlobalBdpcResult(
-        sam, scm, ssm, gmi, marker_offset + bo.num_phen(), bo.num_phen(), bo.max_level()
+        sam, scm, gmi, marker_offset + bo.num_phen(), bo.num_phen(), bo.max_level()
     )
 
 
@@ -942,11 +939,6 @@ class GlobalBdpcResult:
             fout.write(f"{N}\t{M}\t{L}\n")
             for (t1, t2), v in self.scm.items():
                 fout.write(f"{t1}\t{t2}\t{v}\n")
-
-        with open(basepath + ".ssm", "w") as fout:
-            for (t1, t2), v in self.ssm.items():
-                outline = " ".join([str(e) for e in [t1, t2] + sorted(list(v))])
-                fout.write(outline + "\n")
 
         with open(basepath + ".mdim", "w") as fout:
             fout.write(f"{self.num_var}\t{self.num_phen}\t{self.max_level}\n")
