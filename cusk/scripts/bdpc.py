@@ -942,6 +942,10 @@ class GlobalBdpcResult:
         with open(basepath + ".mdim", "w") as fout:
             fout.write(f"{self.num_var}\t{self.num_phen}\t{self.max_level}\n")
 
+        np.array(sorted(list(self.gmi.values())), dtype=np.int32).tofile(
+            basepath + "ixs"
+        )
+
 
 def heatmap(
     data,
@@ -3136,8 +3140,7 @@ def load_real_data_simulation_adj_performance(
                 print(err)
                 continue
 
-            gr = merge_block_outputs(blockfile, est_dir)
-            glob_ixs = np.array(sorted(list(gr.gmi.values())))
+            glob_ixs = np.fromfile(est_dir + "all_merged.ixs", dtype=np.int32)
             est_adj_mxp = pd.DataFrame(
                 est_adj[num_p:, :num_p].toarray(),
                 columns=list(range(1, num_p + 1)),
