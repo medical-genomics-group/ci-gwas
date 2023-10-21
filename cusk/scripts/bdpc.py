@@ -3361,6 +3361,102 @@ def plot_real_data_simulation_adj_performance(
         plt.savefig(fig_path, bbox_inches="tight")
 
 
+def load_real_data_simulation_orient_and_ace_performance(
+    ci_gwas_alpha_exp=4, rep_arr=list(range(1, 41)), num_p=10, max_level=3
+) -> pd.DataFrame:
+    """Load simulation results for ci-gwas and mr methods, calculate fdr, tpr for adjacencies."""
+    rows = []
+    wdir = "/nfs/scistore17/robingrp/mrobinso/cigwas/ukb/sim/real_marker_sim/"
+    blockfile = wdir + "ukb22828_UKB_EST_v3_ldp08_estonia_intersect_m11000_chr1.blocks"
+    bim_path = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/estonian_comparison/ukb22828_UKB_EST_v3_ldp08_estonia_intersect_a1_forced.bim"
+    rs_ids = pd.read_csv(bim_path, sep="\t", header=None)[1].values
+    for rep in rep_arr:
+        truth = load_real_data_simulation_truth(rep)
+        for alpha_e in e_arr:
+            # -------------------- CI-GWAS -----------------------------
+            est_dir = wdir + f"cusk/sim{rep}_e{alpha_e}_l{max_level}_2stepsk/"
+            adj_path = est_dir + "all_merged_sam.mtx"
+            try:
+                est_adj = mmread(adj_path).tocsr()
+            except FileNotFoundError as err:
+                print(err)
+                continue
+
+            glob_ixs = np.fromfile(est_dir + "all_merged.ixs", dtype=np.int32)
+            est_adj_mxp = pd.DataFrame(
+                est_adj[num_p:, :num_p].toarray(),
+                columns=list(range(1, num_p + 1)),
+                index=rs_ids[glob_ixs],
+                dtype=int,
+            )
+            est_adj_pxp = est_adj[:num_p, :num_p].toarray()
+            est_adj_pxp_triu = np.triu(est_adj_pxp, 1)
+
+            p = (truth.dag_mxp != 0).sum().sum()
+            td_mxp_matched = truth.dag_mxp.reindex_like(est_adj_mxp)
+            tp = ((est_adj_mxp != 0) & (td_mxp_matched != 0)).sum().sum()
+            fp = ((est_adj_mxp != 0) & (td_mxp_matched == 0)).sum().sum()
+            mxp_tpr = tp / p
+            mxp_fdr = fp / (tp + fp)
+
+            m = (truth.bidirected != 0) | (truth.dag_pxp != 0)
+            p = np.sum(m)
+            tp = np.sum(m & (est_adj_pxp_triu != 0))
+            fp = np.sum(~m & (est_adj_pxp_triu != 0))
+            pxp_tpr = tp / p
+            pxp_fdr = fp / (tp + fp)
+
+            rows.append(
+                {
+                    "x -> y fdr": mxp_fdr,
+                    "x -> y tpr": mxp_tpr,
+                    "y -> y fdr": pxp_fdr,
+                    "y -> y tpr": pxp_tpr,
+                    "rep": rep,
+                    "alpha": 10 ** (-alpha_e),
+                    "method": "ci-gwas",
+                }
+            )
+
+            # -------------------- MR -----------------------------
+            for mr_str in ["cause", "presso", "mvpresso", "ivw", "mvivw"]:
+                mr_p = np.ones((num_p, num_p))
+                mr_est = np.zeros((num_p, num_p))
+                for outcome in range(0, num_p):
+                    try:
+                        fpaths = glob(
+                            wdir
+                            + f"cusk/sim{rep}_e{alpha_e}/"
+                            + f"mr_{mr_str}_alpha*_sim{rep}_outcome_y{outcome + 1}_seed1000"
+                        )
+                        if len(fpaths) == 0:
+                            continue
+                        fpath = fpaths[0]
+                        mr_res_df = pd.read_csv(fpath)
+                        exposures = [int(s[1:]) - 1 for s in mr_res_df["Exposure"]]
+                        mr_p[exposures, outcome] = mr_res_df["p"].values
+                        mr_est[exposures, outcome] = mr_res_df["est"].values
+                    except FileNotFoundError:
+                        continue
+                mr_links = mr_p <= (0.05 / ((num_p - 1) * 2 * 20))
+                mr_adj = make_adj_symmetric(mr_links)
+
+                m = (truth.bidirected != 0) | (truth.dag_pxp != 0)
+                p = np.sum(m)
+                tp = np.sum(m & (mr_adj != 0))
+                pxp_tpr = tp / p
+
+                rows.append(
+                    {
+                        "y -> y tpr": pxp_tpr,
+                        "rep": rep,
+                        "alpha": 10 ** (-alpha_e),
+                        "method": mr_str,
+                    }
+                )
+    return pd.DataFrame(rows)
+
+
 def load_real_data_simulation_results(
     e_arr=[3, 4, 6, 8],
     rep_arr=list(range(1, 41)),
