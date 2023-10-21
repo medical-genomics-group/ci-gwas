@@ -3069,6 +3069,7 @@ class SimulationTruth:
     dag_mxp: pd.DataFrame
     dag_pxp: np.array
     bidirected: np.array
+    effects: np.array
 
 
 def load_real_data_simulation_truth(
@@ -3116,7 +3117,11 @@ def load_real_data_simulation_truth(
             if not m[i, j] and ((m[0, i] and m[0, j]) or (m[1, i] and m[1, j])):
                 true_bidirected[i - 2, j - 2] = 1
 
-    return SimulationTruth(true_dag_mxp, true_dag_pxp, true_bidirected)
+    m = true_dag_pxp
+    m = np.linalg.inv(np.eye(m.shape[0]) - m.T)
+    true_eff = np.triu(m @ m.T, 1)
+
+    return SimulationTruth(true_dag_mxp, true_dag_pxp, true_bidirected, true_eff)
 
 
 def load_real_data_simulation_adj_performance(
