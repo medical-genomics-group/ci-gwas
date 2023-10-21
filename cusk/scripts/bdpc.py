@@ -3177,6 +3177,43 @@ def load_real_data_simulation_adj_performance(
                 }
             )
 
+            # -------------------- MR -----------------------------
+            for mr_str in ["cause", "presso", "mvpresso", "ivw", "mvivw"]:
+                mr_p = np.ones((num_p, num_p))
+                mr_est = np.zeros((num_p, num_p))
+                for outcome in range(0, num_p):
+                    try:
+                        fpaths = glob(
+                            est_dir
+                            + f"mr_{mr_str}_alpha*_sim{rep}_outcome_y{outcome + 1}_seed1000"
+                        )
+                        if len(fpaths) == 0:
+                            continue
+                        fpath = fpaths[0]
+                        mr_res_df = pd.read_csv(fpath)
+                        exposures = [int(s[1:]) - 1 for s in mr_res_df["Exposure"]]
+                        mr_p[exposures, outcome] = mr_res_df["p"].values
+                        mr_est[exposures, outcome] = mr_res_df["est"].values
+                    except FileNotFoundError:
+                        continue
+                mr_links = mr_p <= (0.05 / ((num_p - 1) * 2))
+                mr_adj = make_adj_symmetric(mr_links)
+
+                m = (truth.bidirected != 0) | (truth.dag_pxp != 0)
+                p = np.sum(m)
+                tp = np.sum(m & (mr_adj != 0))
+                pxp_tpr = tp / p
+
+                rows.append(
+                    {
+                        "y -> y tpr": pxp_tpr,
+                        "rep": rep,
+                        "alpha": 10 ** (-alpha_e),
+                        "method": mr_str,
+                    }
+                )
+    return pd.DataFrame(rows)
+
 
 def load_real_data_simulation_results(
     e_arr=[3, 4, 6, 8],
