@@ -2733,7 +2733,7 @@ def pag_to_dag_possibly_directed(pag: np.array):
 
 def path_in_sem(adj: np.array):
     num_var = adj.shape[0]
-    causal_paths = np.zeros(shape=(num_var, num_var))
+    causal_paths = np.zeros(shape=(num_var, num_var), dtype=bool)
     for start_node in range(num_var):
         q = queue.Queue()
         q.put(start_node)
@@ -2748,7 +2748,7 @@ def path_in_sem(adj: np.array):
                     descendants.add(neighbor)
                     q.put(neighbor)
         for j in descendants:
-            causal_paths[start_node, j] = 1
+            causal_paths[start_node, j] = True
     return causal_paths
 
 
@@ -3196,14 +3196,22 @@ def load_real_data_simulation_adj_performance(
                 mr_links = mr_p <= (0.05 / ((num_p - 1) * 2 * 20))
                 mr_adj = make_adj_symmetric(mr_links)
 
+                # tpr
                 m = (truth.bidirected != 0) | (truth.dag_pxp != 0)
                 p = np.sum(m)
                 tp = np.sum(m & (mr_adj != 0))
                 pxp_tpr = tp / p
 
+                # fdr
+                causal_paths = path_in_sem(mr_adj)
+                tp = np.sum(np.triu(causal_paths, 1) & (np.triu(mr_adj, 1) != 0))
+                fp = np.sum(~np.triu(causal_paths, 1) & (np.triu(mr_adj, 1) != 0))
+                pxp_fdr = fp / (tp + fp) if (tp + fp) > 0 else np.nan
+
                 rows.append(
                     {
                         "y -> y tpr": pxp_tpr,
+                        "y -> y fdr": pxp_fdr,
                         "rep": rep,
                         "alpha": 10 ** (-alpha_e),
                         "method": mr_str,
@@ -3268,7 +3276,7 @@ def plot_real_data_simulation_adj_performance(
         # ax.set_yscale("symlog")
         return handles
 
-    def plot_bars(x_vals, metric, means, stds, ax, title, methods):
+    def plot_bars(x_vals, metric, means, stds, ax, title, methods, axhline=False):
         ax.set_title(title, **title_kw)
         x_sorted = sorted(list(x_vals))
         x = np.arange(len(x_vals))  # the label locations
@@ -3298,6 +3306,8 @@ def plot_real_data_simulation_adj_performance(
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
         ax.set_xticks(x + width, x_vals)
+        if axhline:
+            ax.axhline(0.05, linestyle="dotted", color="gray")
         plt.setp(
             ax.get_xticklabels(),
             rotation=bar_xlabel_rotation,
@@ -3309,14 +3319,13 @@ def plot_real_data_simulation_adj_performance(
         return handles
 
     fig = plt.figure(
-        # layout="tight",
-        figsize=(9, 6)
+        figsize=(8, 6)
     )
     ax_dict = fig.subplot_mosaic(
         """
-        XiX
-        abc
-        ddd
+        ii
+        ab
+        cd
         """,
         empty_sentinel="X",
         sharex=False,
@@ -3332,8 +3341,8 @@ def plot_real_data_simulation_adj_performance(
     ax_dict["a"].set_ylabel(r"$x - y \ FDR$")
     plot_ci_gwas_bars(alphas, "x -> y tpr", means, stds, ax_dict["b"], "b)")
     ax_dict["b"].set_ylabel(r"$x - y \ TPR$")
-    plot_ci_gwas_bars(
-        alphas, "y -> y fdr", means, stds, ax_dict["c"], "c)", axhline=True
+    plot_bars(
+        alphas, "y -> y fdr", means, stds, ax_dict["c"], "c)", axhline=True, methods=methods
     )
     ax_dict["c"].set_ylabel(r"$y - y \ FDR$")
     h = plot_bars(
