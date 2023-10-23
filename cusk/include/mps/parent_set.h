@@ -9,7 +9,17 @@
 #include <unordered_set>
 #include <vector>
 
-std::unordered_set<int> parent_set(
+/**
+ * @brief Make subset of indices of phenotypes and markers that are ancestral at depth <=
+ * max_depth.
+ *
+ * @param G
+ * @param num_var
+ * @param num_markers
+ * @param max_depth
+ * @return std::unordered_set<int>
+ */
+std::unordered_set<int> subset_variables(
     const std::vector<int> &G, const size_t num_var, const size_t num_markers, const int max_depth
 );
 
@@ -26,6 +36,8 @@ struct ReducedGCS
     std::vector<int> G;
     std::vector<float> C;
     std::vector<int> S;
+
+    size_t num_markers() { return num_var - num_phen; }
 
     void to_file(std::string base)
     {
@@ -61,18 +73,40 @@ ReducedGCS reduce_gcs(
     const size_t max_level
 );
 
-class ParentSetIndices
+ReducedGCS reduce_gcs(
+    const std::vector<int> &G,
+    const std::vector<float> &C,
+    const std::vector<int> &S,
+    const std::unordered_set<int> &P,
+    const size_t num_var,
+    const size_t num_phen,
+    const size_t max_level,
+    const std::vector<int> &index_map
+);
+
+class VariableSubsetIndices
 {
    private:
     std::vector<int> new_to_old;
     std::unordered_map<int, int> old_to_new;
 
    public:
-    ParentSetIndices(const std::unordered_set<int> &p)
+    VariableSubsetIndices(const std::unordered_set<int> &p)
     {
         new_to_old = set_to_vec(p);
         for (int i = 0; i < new_to_old.size(); i++)
         {
+            old_to_new[new_to_old[i]] = i;
+        }
+    }
+
+    VariableSubsetIndices(const std::unordered_set<int> &p, const std::vector<int> &index_map)
+    {
+        std::vector<int> new_to_old_tmp = set_to_vec(p);
+        new_to_old = std::vector<int>(new_to_old_tmp.size());
+        for (int i = 0; i < new_to_old.size(); i++)
+        {
+            new_to_old[i] = index_map[new_to_old_tmp[i]];
             old_to_new[new_to_old[i]] = i;
         }
     }

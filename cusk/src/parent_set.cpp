@@ -5,7 +5,7 @@
 #include <unordered_set>
 #include <vector>
 
-std::unordered_set<int> parent_set(
+std::unordered_set<int> subset_variables(
     const std::vector<int> &G, const size_t num_var, const size_t num_markers, const int max_depth
 )
 {
@@ -91,7 +91,54 @@ ReducedGCS reduce_gcs(
     const size_t max_level
 )
 {
-    ParentSetIndices pix(P);
+    VariableSubsetIndices pix(P);
+    ReducedGCS res;
+    res.num_var = P.size();
+    res.num_phen = num_phen;
+    res.max_level = max_level;
+    res.new_to_old_indices = pix.new_to_old_indices();
+    std::vector<int> ordered_ixs = set_to_vec(P);
+
+    for (auto i : ordered_ixs)
+    {
+        for (auto j : ordered_ixs)
+        {
+            res.G.push_back(G[i * num_var + j]);
+            res.C.push_back(C[i * num_var + j]);
+            int s_ij_size = 0;
+
+            for (int l = 0; l < max_level; l++)
+            {
+                int sep_elem = S[(i * num_var + j) * 14 + l];
+                if ((sep_elem != -1) && (P.contains(sep_elem)))
+                {
+                    res.S.push_back(pix.get_new_ix(sep_elem));
+                    ++s_ij_size;
+                }
+            }
+
+            for (int l = s_ij_size; l < max_level; l++)
+            {
+                res.S.push_back(-1);
+            }
+        }
+    }
+
+    return res;
+}
+
+ReducedGCS reduce_gcs(
+    const std::vector<int> &G,
+    const std::vector<float> &C,
+    const std::vector<int> &S,
+    const std::unordered_set<int> &P,
+    const size_t num_var,
+    const size_t num_phen,
+    const size_t max_level,
+    const std::vector<int> &index_map
+)
+{
+    VariableSubsetIndices pix(P, index_map);
     ReducedGCS res;
     res.num_var = P.size();
     res.num_phen = num_phen;

@@ -42,6 +42,32 @@ void check_nargs(const int argc, const int nargs, const std::string usage)
     }
 }
 
+ReducedGCS reduced_gcs_cusk(ReducedGCS gcs, std::vector<float> &thresholds, int max_depth)
+{
+    int max_level = ML;
+    int num_var = gcs.num_var;
+    int start_level = 0;
+    const size_t sepset_size = gcs.num_var * gcs.num_var * ML;
+    std::vector<int> sepset(sepset_size, 0);
+    const size_t g_size = gcs.num_var * gcs.num_var;
+    std::vector<float> pmax(g_size, 0.0);
+    Skeleton(
+        gcs.C.data(),
+        &num_var,
+        gcs.G.data(),
+        thresholds.data(),
+        &start_level,
+        &max_level,
+        pmax.data(),
+        sepset.data()
+    );
+    std::unordered_set<int> variable_subset =
+        subset_variables(gcs.G, gcs.num_var, gcs.num_markers(), max_depth);
+    return reduce_gcs(
+        gcs.G, gcs.C, sepset, variable_subset, gcs.num_var, gcs.num_phen, ML, gcs.new_to_old_indices
+    );
+}
+
 const std::string MCORRKB_CHR_USAGE = R"(
 Compute the banded Kendall correlation matrix for a given chromosome
 
@@ -160,7 +186,7 @@ void make_blocks(int argc, char *argv[])
 const std::string PHENOPC_USAGE = R"(
 Run cuPC on phenotypes only.
 
-usage: mps bdpc <.phen> <alpha> <max-level> <outdir>
+usage: mps phenpc <.phen> <alpha> <max-level> <outdir>
 
 arguments:
     .phen           path to standardized phenotype tsv
@@ -235,13 +261,13 @@ void phenotype_pc(int argc, char *argv[])
     int l = 0;
     Skeleton(sq_corrs.data(), &p, G.data(), Th.data(), &l, &max_level, pmax.data(), sepset.data());
 
-    std::unordered_set<int> parents = {};
+    std::unordered_set<int> variable_subset = {};
     for (size_t i = 0; i < num_phen; i++)
     {
-        parents.insert(i);
+        variable_subset.insert(i);
     }
 
-    ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, parents, p, num_phen, max_level);
+    ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, variable_subset, p, num_phen, max_level);
     gcs.to_file(make_path(outdir, "pheno_sk", ""));
 }
 
@@ -307,12 +333,12 @@ void sim_pc(int argc, char *argv[])
 
     std::cout << "Reducing data to phenotype parent sets" << std::endl;
 
-    std::unordered_set<int> parents = parent_set(G, num_var, num_markers, depth);
+    std::unordered_set<int> variable_subset = subset_variables(G, num_var, num_markers, depth);
 
-    ReducedGCS gcs = reduce_gcs(G, corrs, sepset, parents, num_var, num_phen, max_level);
+    ReducedGCS gcs = reduce_gcs(G, corrs, sepset, variable_subset, num_var, num_phen, max_level);
 
-    std::cout << "Retained " << (parents.size() - num_phen) << " / " << num_markers << " markers"
-              << std::endl;
+    std::cout << "Retained " << (variable_subset.size() - num_phen) << " / " << num_markers
+              << " markers" << std::endl;
 
     gcs.to_file(make_path(outdir, "skeleton", ""));
 }
@@ -518,13 +544,13 @@ void cusk_second_stage(int argc, char *argv[])
         sq_corrs.data(), &p, G.data(), Th.data(), &l, &max_level, pmax.data(), sepset.data()
     );
 
-    std::unordered_set<int> parents = {};
+    std::unordered_set<int> variable_subset = {};
     for (size_t i = 0; i < num_phen; i++)
     {
-        parents.insert(i);
+        variable_subset.insert(i);
     }
 
-    ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, parents, p, num_phen, max_level);
+    ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, variable_subset, p, num_phen, max_level);
     gcs.to_file(make_path(outdir, "cusk_stage2", ""));
 }
 
@@ -579,13 +605,13 @@ void cuskss_trait_only(int argc, char *argv[])
     int l = 0;
     Skeleton(sq_corrs.data(), &p, G.data(), Th.data(), &l, &max_level, pmax.data(), sepset.data());
 
-    std::unordered_set<int> parents = {};
+    std::unordered_set<int> variable_subset = {};
     for (size_t i = 0; i < num_phen; i++)
     {
-        parents.insert(i);
+        variable_subset.insert(i);
     }
 
-    ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, parents, p, num_phen, max_level);
+    ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, variable_subset, p, num_phen, max_level);
     gcs.to_file(make_path(outdir, "pheno_sk", ""));
 }
 
@@ -739,22 +765,18 @@ void cuda_skeleton_summary_stats(int argc, char *argv[])
     int l = 0;
     Skeleton(sq_corrs.data(), &p, G.data(), Th.data(), &l, &max_level, pmax.data(), sepset.data());
 
-    std::cout << "Reducing data to phenotype parent sets" << std::endl;
-
-    std::unordered_set<int> parents = parent_set(G, num_var, num_markers, depth);
-
-    ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, parents, num_var, num_phen, max_level);
-
-    std::cout << "Retained " << (parents.size() - num_phen) << " / " << num_markers << " markers"
-              << std::endl;
-
+    std::unordered_set<int> variable_subset = subset_variables(G, num_var, num_markers, depth);
+    ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, variable_subset, num_var, num_phen, max_level);
+    std::cout << "Starting second cusk stage" << std::endl;
+    gcs = reduced_gcs_cusk(gcs, Th, depth);
+    std::cout << "Retained " << gcs.num_markers() << " markers" << std::endl;
     gcs.to_file(make_path(outdir, block.to_file_string(), ""));
 }
 
-const std::string BDPC_USAGE = R"(
+const std::string CUSK_USAGE = R"(
 Run cuPC on block diagonal genomic covariance matrix.
 
-usage: mps bdpc <.phen> <bfiles> <.blocks> <alpha> <max-level> <depth> <outdir> <first-block>
+usage: mps cusk <.phen> <bfiles> <.blocks> <alpha> <max-level> <depth> <outdir> <first-block>
 
 arguments:
     .phen           path to standardized phenotype tsv
@@ -764,14 +786,14 @@ arguments:
     max-level       maximal size of seperation sets in cuPC ( <= 14)
     depth           max depth at which marker variables are kept as ancestors
     outdir          outdir
-    first-block     0-based index first block to start bdpc from. Meant for resuming interrupted jobs.
+    first-block     0-based index first block to start cusk from. Meant for resuming interrupted jobs.
 )";
 
-const int BDPC_NARGS = 10;
+const int CUSK_NARGS = 10;
 
-void block_diagonal_pc(int argc, char *argv[])
+void cusk(int argc, char *argv[])
 {
-    check_nargs(argc, BDPC_NARGS, BDPC_USAGE);
+    check_nargs(argc, CUSK_NARGS, CUSK_USAGE);
 
     std::string phen_path = argv[2];
     std::string bed_base_path = argv[3];
@@ -872,22 +894,6 @@ void block_diagonal_pc(int argc, char *argv[])
             exit(1);
         }
 
-        // printf("means: [");
-        // for (auto f : means)
-        // {
-        //     printf("%f, ", f);
-        // }
-        // printf("]\n");
-        // fflush(stdout);
-
-        // printf("stds: [");
-        // for (auto f : stds)
-        // {
-        //     printf("%f, ", f);
-        // }
-        // printf("]\n");
-        // fflush(stdout);
-
         // allocate correlation result arrays
         size_t marker_corr_mat_size = num_markers * (num_markers - 1) / 2;
         std::vector<float> marker_corr(marker_corr_mat_size, 0.0);
@@ -940,30 +946,6 @@ void block_diagonal_pc(int argc, char *argv[])
             marker_phen_corr.data(),
             phen_corr.data()
         );
-
-        // printf("m x m: [");
-        // for (auto f : marker_corr)
-        // {
-        //     printf("%f, ", f);
-        // }
-        // printf("]\n");
-        // fflush(stdout);
-
-        // printf("m x p: [");
-        // for (auto f : marker_phen_corr)
-        // {
-        //     printf("%f, ", f);
-        // }
-        // printf("]\n");
-        // fflush(stdout);
-
-        // printf("p x p: [");
-        // for (auto f : phen_corr)
-        // {
-        //     printf("%f, ", f);
-        // }
-        // printf("]\n");
-        // fflush(stdout);
 
         std::cout << "Reformating corrs to n2 format" << std::endl;
 
@@ -1036,27 +1018,20 @@ void block_diagonal_pc(int argc, char *argv[])
             sq_corrs.data(), &p, G.data(), Th.data(), &l, &max_level, pmax.data(), sepset.data()
         );
 
-        // TODO:
-        // separate the following steps into new commands, instead here:
-        // save corrs, graph, sepsets to disc
-
-        std::cout << "Reducing data to phenotype parent sets" << std::endl;
-
-        std::unordered_set<int> parents = parent_set(G, num_var, num_markers, depth);
-
-        ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, parents, num_var, num_phen, max_level);
-
-        std::cout << "Retained " << (parents.size() - num_phen) << " / " << num_markers
-                  << " markers" << std::endl;
-
+        std::unordered_set<int> variable_subset = subset_variables(G, num_var, num_markers, depth);
+        ReducedGCS gcs =
+            reduce_gcs(G, sq_corrs, sepset, variable_subset, num_var, num_phen, max_level);
+        std::cout << "Starting second cusk stage" << std::endl;
+        gcs = reduced_gcs_cusk(gcs, Th, depth);
+        std::cout << "Retained " << gcs.num_markers() << " markers" << std::endl;
         gcs.to_file(make_path(outdir, block.to_file_string(), ""));
     }
 }
 
-const std::string BDPC_SINGLE_USAGE = R"(
+const std::string CUSK_SINGLE_USAGE = R"(
 Run cuPC on a single block of a block diagonal genomic covariance matrix.
 
-usage: mps bdpc-single <.phen> <bfiles> <.blocks> <alpha> <max-level> <depth> <outdir> <first-block>
+usage: mps cusk-single <.phen> <bfiles> <.blocks> <alpha> <max-level> <depth> <outdir> <first-block>
 
 arguments:
     .phen           path to standardized phenotype tsv
@@ -1069,11 +1044,11 @@ arguments:
     block-index     0-based index of the block to run cupc for
 )";
 
-const int BDPC_SINGLE_NARGS = 10;
+const int CUSK_SINGLE_NARGS = 10;
 
-void block_diagonal_pc_single(int argc, char *argv[])
+void cusk_single(int argc, char *argv[])
 {
-    check_nargs(argc, BDPC_SINGLE_NARGS, BDPC_SINGLE_USAGE);
+    check_nargs(argc, CUSK_SINGLE_NARGS, CUSK_SINGLE_USAGE);
 
     std::cout << "Got args: " << std::endl;
     std::string phen_path = argv[2];
@@ -1309,19 +1284,11 @@ void block_diagonal_pc_single(int argc, char *argv[])
     int l = 0;
     Skeleton(sq_corrs.data(), &p, G.data(), Th.data(), &l, &max_level, pmax.data(), sepset.data());
 
-    // TODO:
-    // separate the following steps into new commands, instead here:
-    // save corrs, graph, sepsets to disc
-
-    std::cout << "Reducing data to phenotype parent sets" << std::endl;
-
-    std::unordered_set<int> parents = parent_set(G, num_var, num_markers, depth);
-
-    ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, parents, num_var, num_phen, max_level);
-
-    std::cout << "Retained " << (parents.size() - num_phen) << " / " << num_markers << " markers"
-              << std::endl;
-
+    std::unordered_set<int> variable_subset = subset_variables(G, num_var, num_markers, depth);
+    ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, variable_subset, num_var, num_phen, max_level);
+    std::cout << "Starting second cusk stage" << std::endl;
+    gcs = reduced_gcs_cusk(gcs, Th, depth);
+    std::cout << "Retained " << gcs.num_markers() << " markers" << std::endl;
     gcs.to_file(make_path(outdir, block.to_file_string(), ""));
 }
 
@@ -2049,7 +2016,6 @@ commands:
     cuskss-trait-only       Run cuda-skeleton on a set of pre-computed trait-trait correlations.
     cusk-sim                Run cuda-skeleton on single simulated block
     cusk-phen               Run cuda-skeleton on phenotypes only
-    cusk-second-stage       ...
 
 contact:
     nick.machnik@gmail.com
@@ -2083,11 +2049,11 @@ auto main(int argc, char *argv[]) -> int
     }
     else if (cmd == "cusk")
     {
-        block_diagonal_pc(argc, argv);
+        cusk(argc, argv);
     }
     else if (cmd == "cusk-single")
     {
-        block_diagonal_pc_single(argc, argv);
+        cusk_single(argc, argv);
     }
     else if (cmd == "block")
     {
@@ -2100,10 +2066,6 @@ auto main(int argc, char *argv[]) -> int
     else if (cmd == "cusk-sim")
     {
         sim_pc(argc, argv);
-    }
-    else if (cmd == "cusk-second-stage")
-    {
-        cusk_second_stage(argc, argv);
     }
     else
     {
