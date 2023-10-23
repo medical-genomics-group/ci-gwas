@@ -2368,11 +2368,10 @@ def marker_pheno_associations_with_pnames(
 
 
 def marker_pheno_associations(
-    blockfile: str,
-    outdir: str,
     bim_path: str,
     corr_path: str,
     adj_path: str,
+    ixs_path: str,
     num_phen=None,
     pheno_path=None,
 ):
@@ -2395,9 +2394,7 @@ def marker_pheno_associations(
 
     adj = mmread(adj_path).toarray()
     corr = mmread(corr_path).toarray()
-
-    gr = merge_block_outputs(blockfile, outdir)
-    glob_ixs = np.array(sorted(list(gr.gmi.values())))
+    glob_ixs = np.fromfile(ixs_path, dtype=np.int32)
 
     for pix in np.arange(0, num_phen):
         bim_lines = glob_ixs[np.where(adj[pix, num_phen:])]
