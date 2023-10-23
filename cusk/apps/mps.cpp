@@ -42,9 +42,10 @@ void check_nargs(const int argc, const int nargs, const std::string usage)
     }
 }
 
-ReducedGCS reduced_gcs_cusk(ReducedGCS gcs, std::vector<float> &thresholds, int max_depth)
+ReducedGCS reduced_gcs_cusk(
+    ReducedGCS gcs, std::vector<float> &thresholds, int max_depth, int max_level
+)
 {
-    int max_level = ML;
     int num_var = gcs.num_var;
     int start_level = 0;
     const size_t sepset_size = gcs.num_var * gcs.num_var * ML;
@@ -621,19 +622,20 @@ Run cuda-skeleton on a block of markers and traits with pre-computed correlation
 usage: mps cuskss <mxm> <mxp> <pxp> <block-ix> <.blocks> <alpha> <max-level> <depth> <num-samples> <outdir>
 
 arguments:
-    mxm             correlations between markers in block. Binary of floats, upper triangular, without diagonal.
-    mxp             correlations between markers in all blocks and all traits. Text format, rectangular.
-    pxp             correlations between all traits. Text format, rectangular, only upper triangle is used.
-    block-ix        0-based index of the marker block in the .blocks file
-    .blocks         file with genomic block definitions
-    alpha           significance level
-    max-level       maximal size of seperation sets in cuPC ( <= 14)
-    depth           max depth at which marker variables are kept as ancestors
-    num-samples     number of samples used for computing correlations
-    outdir          outdir
+    mxm                     correlations between markers in block. Binary of floats, upper triangular, without diagonal.
+    mxp                     correlations between markers in all blocks and all traits. Text format, rectangular.
+    pxp                     correlations between all traits. Text format, rectangular, only upper triangle is used.
+    block-ix                0-based index of the marker block in the .blocks file
+    .blocks                 file with genomic block definitions
+    alpha                   significance level
+    max-level-stage-one     maximal size of seperation sets in cuPC round one ( <= 14)
+    max-level-stage-two     maximal size of seperation sets in cuPC round two ( <= 14)
+    depth                   max depth at which marker variables are kept as ancestors
+    num-samples             number of samples used for computing correlations
+    outdir                  outdir
 )";
 
-const int CUSKSS_NARGS = 12;
+const int CUSKSS_NARGS = 13;
 
 void cuda_skeleton_summary_stats(int argc, char *argv[])
 {
@@ -646,9 +648,10 @@ void cuda_skeleton_summary_stats(int argc, char *argv[])
     std::string block_path = argv[6];
     float alpha = std::stof(argv[7]);
     int max_level = std::stoi(argv[8]);
-    int depth = std::stoi(argv[9]);
-    int num_individuals = std::stoi(argv[10]);
-    std::string outdir = (std::string)argv[11];
+    int max_level_two = std::stoi(argv[9]);
+    int depth = std::stoi(argv[10]);
+    int num_individuals = std::stoi(argv[11]);
+    std::string outdir = (std::string)argv[12];
 
     check_path(mxm_path);
     check_path(mxp_path);
@@ -768,7 +771,7 @@ void cuda_skeleton_summary_stats(int argc, char *argv[])
     std::unordered_set<int> variable_subset = subset_variables(G, num_var, num_markers, depth);
     ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, variable_subset, num_var, num_phen, max_level);
     std::cout << "Starting second cusk stage" << std::endl;
-    gcs = reduced_gcs_cusk(gcs, Th, depth);
+    gcs = reduced_gcs_cusk(gcs, Th, depth, max_level_two);
     std::cout << "Retained " << gcs.num_markers() << " markers" << std::endl;
     gcs.to_file(make_path(outdir, block.to_file_string(), ""));
 }
@@ -779,17 +782,18 @@ Run cuPC on block diagonal genomic covariance matrix.
 usage: mps cusk <.phen> <bfiles> <.blocks> <alpha> <max-level> <depth> <outdir> <first-block>
 
 arguments:
-    .phen           path to standardized phenotype tsv
-    bfiles          stem of .bed, .means, .stds, .dim files
-    .blocks         file with genomic block definitions
-    alpha           significance level
-    max-level       maximal size of seperation sets in cuPC ( <= 14)
-    depth           max depth at which marker variables are kept as ancestors
-    outdir          outdir
-    first-block     0-based index first block to start cusk from. Meant for resuming interrupted jobs.
+    .phen                       path to standardized phenotype tsv
+    bfiles                      stem of .bed, .means, .stds, .dim files
+    .blocks                     file with genomic block definitions
+    alpha                       significance level
+    max-level-stage-one         maximal size of seperation sets in cuPC round one ( <= 14)
+    max-level-stage-two         maximal size of seperation sets in cuPC round two ( <= 14)
+    depth                       max depth at which marker variables are kept as ancestors
+    outdir                      outdir
+    first-block                 0-based index first block to start cusk from. Meant for resuming interrupted jobs.
 )";
 
-const int CUSK_NARGS = 10;
+const int CUSK_NARGS = 11;
 
 void cusk(int argc, char *argv[])
 {
@@ -800,9 +804,10 @@ void cusk(int argc, char *argv[])
     std::string block_path = argv[4];
     float alpha = std::stof(argv[5]);
     int max_level = std::stoi(argv[6]);
-    int depth = std::stoi(argv[7]);
-    std::string outdir = (std::string)argv[8];
-    int first_block = std::stoi(argv[9]);
+    int max_level_two = std::stoi(argv[7]);
+    int depth = std::stoi(argv[8]);
+    std::string outdir = (std::string)argv[9];
+    int first_block = std::stoi(argv[10]);
 
     std::cout << "Checking paths" << std::endl;
 
@@ -1022,7 +1027,7 @@ void cusk(int argc, char *argv[])
         ReducedGCS gcs =
             reduce_gcs(G, sq_corrs, sepset, variable_subset, num_var, num_phen, max_level);
         std::cout << "Starting second cusk stage" << std::endl;
-        gcs = reduced_gcs_cusk(gcs, Th, depth);
+        gcs = reduced_gcs_cusk(gcs, Th, depth, max_level_two);
         std::cout << "Retained " << gcs.num_markers() << " markers" << std::endl;
         gcs.to_file(make_path(outdir, block.to_file_string(), ""));
     }
@@ -1034,17 +1039,18 @@ Run cuPC on a single block of a block diagonal genomic covariance matrix.
 usage: mps cusk-single <.phen> <bfiles> <.blocks> <alpha> <max-level> <depth> <outdir> <first-block>
 
 arguments:
-    .phen           path to standardized phenotype tsv
-    bfiles          stem of .bed, .means, .stds, .dim files
-    .blocks         file with genomic block definitions
-    alpha           significance level
-    max-level       maximal size of seperation sets in cuPC ( <= 14)
-    depth           max depth at which marker variables are kept as ancestors
-    outdir          outdir
-    block-index     0-based index of the block to run cupc for
+    .phen                     path to standardized phenotype tsv
+    bfiles                    stem of .bed, .means, .stds, .dim files
+    .blocks                   file with genomic block definitions
+    alpha                     significance level
+    max-level-stage-one       maximal size of seperation sets in cuPC round one ( <= 14)
+    max-level-stage_two       maximal size of seperation sets in cuPC round two ( <= 14)
+    depth                     max depth at which marker variables are kept as ancestors
+    outdir                    outdir
+    block-index               0-based index of the block to run cupc for
 )";
 
-const int CUSK_SINGLE_NARGS = 10;
+const int CUSK_SINGLE_NARGS = 11;
 
 void cusk_single(int argc, char *argv[])
 {
@@ -1061,11 +1067,13 @@ void cusk_single(int argc, char *argv[])
     std::cout << "alpha: " << alpha << std::endl;
     int max_level = std::stoi(argv[6]);
     std::cout << "max_level: " << max_level << std::endl;
-    int depth = std::stoi(argv[7]);
+    int max_level_two = std::stoi(argv[7]);
+    std::cout << "max_level: " << max_level << std::endl;
+    int depth = std::stoi(argv[8]);
     std::cout << "depth: " << depth << std::endl;
-    std::string outdir = (std::string)argv[8];
+    std::string outdir = (std::string)argv[9];
     std::cout << "outdir: " << outdir << std::endl;
-    int block_index = std::stoi(argv[9]);
+    int block_index = std::stoi(argv[10]);
     std::cout << "block-index: " << block_index << std::endl;
 
     std::cout << "Checking paths" << std::endl;
@@ -1287,7 +1295,7 @@ void cusk_single(int argc, char *argv[])
     std::unordered_set<int> variable_subset = subset_variables(G, num_var, num_markers, depth);
     ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, variable_subset, num_var, num_phen, max_level);
     std::cout << "Starting second cusk stage" << std::endl;
-    gcs = reduced_gcs_cusk(gcs, Th, depth);
+    gcs = reduced_gcs_cusk(gcs, Th, depth, max_level_two);
     std::cout << "Retained " << gcs.num_markers() << " markers" << std::endl;
     gcs.to_file(make_path(outdir, block.to_file_string(), ""));
 }
