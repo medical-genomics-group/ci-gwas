@@ -128,6 +128,8 @@ if (external_ambiguous_triples) {
     }
 }
 
+writeMM(as(Amat, "sparseMatrix"), file=paste0(input_filestem, sprintf("_estimated_vStruc_%s.mtx", srfci_mode)))
+print("Done")
 
 print("Applying R1-R10")
 estimate_pag_with_traits_only = FALSE
