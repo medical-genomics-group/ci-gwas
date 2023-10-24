@@ -3117,12 +3117,15 @@ def load_real_data_simulation_truth(
 
 
 def load_real_data_simulation_adj_performance(
-    e_arr=[2, 4, 6, 8], rep_arr=list(range(1, 41)), num_p=10, max_level=3
+    rep_arr=list(range(1, 41)),
+    num_p=10,
+    e_arr=[2, 4, 6, 8],
+    max_level=3,
+    mr_bonferroni=True,
 ) -> pd.DataFrame:
     """Load simulation results for ci-gwas and mr methods, calculate fdr, tpr for adjacencies."""
     rows = []
     wdir = "/nfs/scistore17/robingrp/mrobinso/cigwas/ukb/sim/real_marker_sim/"
-    blockfile = wdir + "ukb22828_UKB_EST_v3_ldp08_estonia_intersect_m11000_chr1.blocks"
     bim_path = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/estonian_comparison/ukb22828_UKB_EST_v3_ldp08_estonia_intersect_a1_forced.bim"
     rs_ids = pd.read_csv(bim_path, sep="\t", header=None)[1].values
     for rep in rep_arr:
@@ -3149,8 +3152,16 @@ def load_real_data_simulation_adj_performance(
 
             p = (truth.dag_mxp != 0).sum().sum()
             td_mxp_matched = truth.dag_mxp.reindex_like(est_adj_mxp)
-            tp = ((est_adj_mxp != 0) & (td_mxp_matched != 0)).sum().sum()
-            fp = ((est_adj_mxp != 0) & (td_mxp_matched == 0)).sum().sum()
+            tp = (
+                ((est_adj_mxp != 0) & (td_mxp_matched != 0) & ~td_mxp_matched.isna())
+                .sum()
+                .sum()
+            )
+            fp = (
+                ((est_adj_mxp != 0) & ((td_mxp_matched == 0) | td_mxp_matched.isna()))
+                .sum()
+                .sum()
+            )
             mxp_tpr = tp / p
             mxp_fdr = fp / (tp + fp)
 
@@ -3193,7 +3204,10 @@ def load_real_data_simulation_adj_performance(
                         mr_est[exposures, outcome] = mr_res_df["est"].values
                     except FileNotFoundError:
                         continue
-                mr_links = mr_p <= (0.05 / ((num_p - 1) * 2 * 20))
+                if mr_bonferroni:
+                    mr_links = mr_p <= (0.05 / ((num_p - 1) * 2 * 20))
+                else:
+                    mr_links = mr_p <= 0.05
                 mr_adj = make_adj_symmetric(mr_links)
 
                 # tpr
@@ -3217,15 +3231,79 @@ def load_real_data_simulation_adj_performance(
                         "method": mr_str,
                     }
                 )
+
+            # -------------------- MR + CI-GWAS --------------------------
+            if alpha_e not in [2, 4]:
+                continue
+            for mr_str in ["cause", "presso", "mvpresso", "ivw", "mvivw"]:
+                mr_p = np.ones((num_p, num_p))
+                mr_est = np.zeros((num_p, num_p))
+                for outcome in range(0, num_p):
+                    try:
+                        mr_str_mod = mr_str
+                        if mr_str == "ivw":
+                            mr_str_mod = "vw"
+                        fpaths = glob(
+                            wdir
+                            + f"cusk/sim{rep}_e{alpha_e}/"
+                            + f"mr_cigwas_{mr_str_mod}_alpha*_sim{rep}_outcome_y{outcome + 1}_seed1000"
+                        )
+                        if len(fpaths) == 0:
+                            continue
+                        fpath = fpaths[0]
+                        mr_res_df = pd.read_csv(fpath)
+                        exposures = [int(s[1:]) - 1 for s in mr_res_df["Exposure"]]
+                        mr_p[exposures, outcome] = mr_res_df["p"].values
+                        mr_est[exposures, outcome] = mr_res_df["est"].values
+                    except FileNotFoundError:
+                        continue
+                if mr_bonferroni:
+                    mr_links = mr_p <= (0.05 / ((num_p - 1) * 2 * len(rep_arr)))
+                else:
+                    mr_links = mr_p <= 0.05
+                mr_adj = make_adj_symmetric(mr_links)
+
+                # tpr
+                m = (truth.bidirected != 0) | (truth.dag_pxp != 0)
+                p = np.sum(m)
+                tp = np.sum(m & (mr_adj != 0))
+                pxp_tpr = tp / p
+
+                # fdr
+                causal_paths = path_in_sem(mr_adj)
+                tp = np.sum(np.triu(causal_paths, 1) & (np.triu(mr_adj, 1) != 0))
+                fp = np.sum(~np.triu(causal_paths, 1) & (np.triu(mr_adj, 1) != 0))
+                pxp_fdr = fp / (tp + fp) if (tp + fp) > 0 else np.nan
+
+                rows.append(
+                    {
+                        "y -> y tpr": pxp_tpr,
+                        "y -> y fdr": pxp_fdr,
+                        "rep": rep,
+                        "alpha": 10 ** (-alpha_e),
+                        "method": mr_str + " + CI-GWAS",
+                    }
+                )
     return pd.DataFrame(rows)
 
 
 def plot_real_data_simulation_adj_performance(
-    e_arr=[2, 4, 6, 8], rep_arr=list(range(1, 41)), num_p=10, max_level=3, fig_path=None
+    rep_arr=list(range(1, 41)),
+    num_p=10,
+    e_arr=[2, 4, 6, 8],
+    max_level=3,
+    mr_bonferroni=True,
+    fig_path=None,
 ):
     bar_xlabel_rotation = 45
 
-    df = load_real_data_simulation_adj_performance(e_arr, rep_arr, num_p, max_level)
+    df = load_real_data_simulation_adj_performance(
+        rep_arr=rep_arr,
+        num_p=num_p,
+        e_arr=e_arr,
+        max_level=max_level,
+        mr_bonferroni=mr_bonferroni,
+    )
     gr = df.groupby(["method", "alpha"])
     means = gr.mean()
     stds = gr.std()
@@ -3328,9 +3406,10 @@ def plot_real_data_simulation_adj_performance(
         empty_sentinel="X",
         sharex=False,
         # set the height ratios between the rows
-        height_ratios=[0.1, 0.4, 0.5],
+        height_ratios=[0.1, 0.3, 0.5],
     )
 
+    ax_dict["c"].set_xlabel(r"$\alpha$")
     ax_dict["d"].set_xlabel(r"$\alpha$")
 
     plot_ci_gwas_bars(
@@ -3354,6 +3433,7 @@ def plot_real_data_simulation_adj_performance(
         alphas, "y -> y tpr", means, stds, ax_dict["d"], "d)", methods=methods
     )
     ax_dict["d"].set_ylabel(r"$y - y \ TPR$")
+
     ax_dict["i"].legend(
         handles=h,
         labels=["CI-GWAS", "CAUSE", "MR-PRESSO", "MR-PRESSO (MV)", "IVW", "IVW (MV)"],
@@ -3372,35 +3452,160 @@ def plot_real_data_simulation_adj_performance(
         plt.savefig(fig_path, bbox_inches="tight")
 
 
+def plot_mr_vs_ci_gwas_plus_mr(
+    rep_arr=list(range(1, 41)),
+    num_p=10,
+    e_arr=[2, 4],
+    max_level=3,
+    mr_bonferroni=True,
+    fig_path=None,
+):
+    bar_xlabel_rotation = 45
+
+    df = load_real_data_simulation_adj_performance(
+        rep_arr=rep_arr,
+        num_p=num_p,
+        e_arr=e_arr,
+        max_level=max_level,
+        mr_bonferroni=mr_bonferroni,
+    )
+    gr = df.groupby(["method", "alpha"])
+    means = gr.mean()
+    stds = gr.std()
+
+    alphas = 10.0 ** -np.array(e_arr[::-1])
+    mr_methods = ["cause", "presso", "mvpresso", "ivw", "mvivw"]
+    mixed_methods = [m + " + CI-GWAS" for m in mr_methods]
+    methods = mr_methods + mixed_methods
+    methods[::2] = mr_methods
+    methods[1::2] = mixed_methods
+
+    title_kw = {"loc": "left", "pad": 15, "size": 20}
+
+    def plot_bars(x_vals, metric, means, stds, ax, title, methods, axhline=False):
+        from itertools import cycle
+        prop_cycle = plt.rcParams["axes.prop_cycle"]
+        colors = cycle(prop_cycle.by_key()["color"])
+        next(colors)
+        ax.set_title(title, **title_kw)
+        x_sorted = sorted(list(x_vals))
+        x = np.arange(len(x_vals))  # the label locations
+        width = 0.07  # the width of the bars
+        multiplier = 0
+
+        handles = []
+        for method in methods:
+            mu = means.loc[method][metric]
+            sig = stds.loc[method][metric]
+            loc_x = np.array(
+                [x_sorted.index(e) for e in means.loc[method].index.values]
+            )
+            offset = width * multiplier
+            try:
+                bars = ax.bar(
+                    loc_x + offset, mu, width, yerr=sig, capsize=1.5, label=method, color=next(colors),
+                )
+                handles.append(bars)
+            except StopIteration:
+                pass
+            multiplier += 1
+
+        ax.set_ylabel(metric)
+        if title == "g)" or title == "h)":
+            ax.set_xlabel(r"$\alpha$")
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.set_xticks(x + offset * 0.5, x_vals)
+        if axhline:
+            ax.axhline(0.05, linestyle="dotted", color="gray")
+        plt.setp(
+            ax.get_xticklabels(),
+            rotation=bar_xlabel_rotation,
+            ha="right",
+            rotation_mode="anchor",
+        )
+        # ax.legend(loc='upper left', ncols=3)
+        # ax.set_yscale("symlog")
+        return handles
+
+    fig = plt.figure(figsize=(8, 6), layout="tight")
+    ax_dict = fig.subplot_mosaic(
+        """
+        dd
+        ii
+        """,
+        empty_sentinel="X",
+        # set the height ratios between the rows
+        # height_ratios=[0.5, 0.5],
+    )
+
+    # ax_dict["c"].set_xlabel(r"$\alpha$")
+    ax_dict["d"].set_xlabel(r"$\alpha$")
+
+    # plot_bars(
+    #     alphas,
+    #     "y -> y fdr",
+    #     means,
+    #     stds,
+    #     ax_dict["c"],
+    #     "c)",
+    #     axhline=True,
+    #     methods=methods,
+    # )
+    # ax_dict["c"].set_ylabel(r"$y - y \ FDR$")
+    h = plot_bars(
+        alphas, "y -> y tpr", means, stds, ax_dict["d"], None, methods=methods
+    )
+    ax_dict["d"].set_ylabel(r"$y - y \ TPR$")
+
+    labels_mr = ["CAUSE", "MR-PRESSO", "MR-PRESSO (MV)", "IVW", "IVW (MV)"]
+    labels_mixed = [l + " + CI-GWAS" for l in labels_mr]
+    labels = labels_mr + labels_mixed
+    labels[::2] = labels_mr
+    labels[1::2] = labels_mixed
+
+    ax_dict["i"].legend(
+        handles=h,
+        labels=labels,
+        loc="center",
+        fancybox=False,
+        shadow=False,
+        ncol=2,
+        # title="method",
+    )
+    ax_dict["i"].axis("off")
+    # _ = [ax_dict[i].tick_params(labelbottom=False) for i in "de"]
+    # _ = [ax_dict[i].sharex(ax_dict['f']) for i in 'de']
+    # fig.subplots_adjust(wspace=0.7, hspace=1.5)
+    if fig_path is not None:
+        plt.savefig(fig_path, bbox_inches="tight")
+
+
 def load_real_data_simulation_orient_and_ace_performance(
-    ci_gwas_alpha_exp=4, rep_arr=list(range(1, 41)), num_p=10, max_level=3
+    ci_gwas_alpha_exp=4,
+    rep_arr=list(range(1, 41)),
+    num_p=10,
+    max_level=3,
+    mr_bonferroni=False,
 ) -> pd.DataFrame:
     """Load simulation results for ci-gwas and mr methods, calculate fdr, tpr for adjacencies."""
     rows = []
     wdir = "/nfs/scistore17/robingrp/mrobinso/cigwas/ukb/sim/real_marker_sim/"
-    bim_path = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/estonian_comparison/ukb22828_UKB_EST_v3_ldp08_estonia_intersect_a1_forced.bim"
-    rs_ids = pd.read_csv(bim_path, sep="\t", header=None)[1].values
     for rep in rep_arr:
+        alpha_e = ci_gwas_alpha_exp
         truth = load_real_data_simulation_truth(rep)
         # here we only need e8 and e2 for MR (for iv selection), and whichever e we decide to use for ci-gwas, probably e4?
         # then we also need the MR + cuda-skeleton runs for the same e as MR.
 
+        # est_dir = wdir + f"cusk/sim{rep}_e{alpha_e}_l{max_level}_2stepsk/"
+        est_dir = wdir + f"cusk/sim{rep}_e{alpha_e}/"
         pag_path = est_dir + "max_sep_min_pc_estimated_pag_cusk2.mtx"
 
         try:
             full_pag = mmread(pag_path).tocsr()
         except:
             continue
-        outdir = wdir + f"cusk/sim{rep}_e{alpha_e}/"
 
-        gr = merge_block_outputs(blockfile, outdir)
-        glob_ixs = np.array(sorted(list(gr.gmi.values())))
-        est_dag_mxp = pd.DataFrame(
-            full_pag[num_p:, :num_p].toarray(),
-            columns=list(range(1, num_p + 1)),
-            index=rs_ids[glob_ixs],
-            dtype=int,
-        )
         est_pag_pxp = full_pag[:num_p, :num_p].toarray()
         est_pag_pxp_triu = np.triu(est_pag_pxp, 1)
 
@@ -3428,53 +3633,28 @@ def load_real_data_simulation_orient_and_ace_performance(
                     # print(err)
                     missing.append((i, j))
 
-            mse = np.mean((pace - truth.effects) ** 2)
+        select = pace != 0
+        mse = np.mean((pace[select] - truth.effects[select]) ** 2)
 
-            glob_ixs = np.fromfile(est_dir + "all_merged.ixs", dtype=np.int32)
-            est_adj_mxp = pd.DataFrame(
-                est_adj[num_p:, :num_p].toarray(),
-                columns=list(range(1, num_p + 1)),
-                index=rs_ids[glob_ixs],
-                dtype=int,
-            )
-            est_adj_pxp = est_adj[:num_p, :num_p].toarray()
-            est_adj_pxp_triu = np.triu(est_adj_pxp, 1)
+        rows.append(
+            {
+                "-> orientation": orientation_perf.directed,
+                "mse": mse,
+                "rep": rep,
+                "alpha": 10 ** (-alpha_e),
+                "method": "ci-gwas",
+            }
+        )
 
-            p = (truth.dag_mxp != 0).sum().sum()
-            td_mxp_matched = truth.dag_mxp.reindex_like(est_adj_mxp)
-            tp = ((est_adj_mxp != 0) & (td_mxp_matched != 0)).sum().sum()
-            fp = ((est_adj_mxp != 0) & (td_mxp_matched == 0)).sum().sum()
-            mxp_tpr = tp / p
-            mxp_fdr = fp / (tp + fp)
-
-            m = (truth.bidirected != 0) | (truth.dag_pxp != 0)
-            p = np.sum(m)
-            tp = np.sum(m & (est_adj_pxp_triu != 0))
-            fp = np.sum(~m & (est_adj_pxp_triu != 0))
-            pxp_tpr = tp / p
-            pxp_fdr = fp / (tp + fp)
-
-            rows.append(
-                {
-                    "x -> y fdr": mxp_fdr,
-                    "x -> y tpr": mxp_tpr,
-                    "y -> y fdr": pxp_fdr,
-                    "y -> y tpr": pxp_tpr,
-                    "rep": rep,
-                    "alpha": 10 ** (-alpha_e),
-                    "method": "ci-gwas",
-                }
-            )
-
-            # -------------------- MR -----------------------------
+        for alpha_e in [2, 8]:
+            est_dir = wdir + f"cusk/sim{rep}_e{alpha_e}/"
             for mr_str in ["cause", "presso", "mvpresso", "ivw", "mvivw"]:
                 mr_p = np.ones((num_p, num_p))
                 mr_est = np.zeros((num_p, num_p))
                 for outcome in range(0, num_p):
                     try:
                         fpaths = glob(
-                            wdir
-                            + f"cusk/sim{rep}_e{alpha_e}/"
+                            est_dir
                             + f"mr_{mr_str}_alpha*_sim{rep}_outcome_y{outcome + 1}_seed1000"
                         )
                         if len(fpaths) == 0:
@@ -3486,23 +3666,208 @@ def load_real_data_simulation_orient_and_ace_performance(
                         mr_est[exposures, outcome] = mr_res_df["est"].values
                     except FileNotFoundError:
                         continue
-                mr_links = mr_p <= (0.05 / ((num_p - 1) * 2 * 20))
+                if mr_bonferroni:
+                    mr_links = mr_p <= (0.05 / (len(rep_arr) * (num_p - 1) * 2))
+                else:
+                    mr_links = mr_p <= 0.05
                 mr_adj = make_adj_symmetric(mr_links)
+                mr_est[~mr_links] = 0.0
 
-                m = (truth.bidirected != 0) | (truth.dag_pxp != 0)
-                p = np.sum(m)
-                tp = np.sum(m & (mr_adj != 0))
-                pxp_tpr = tp / p
+                select = mr_est != 0
+                mse = np.mean((mr_est[select] - truth.effects[select]) ** 2)
+
+                orientation_perf = calculate_pxp_orientation_performance_mr(
+                    truth.dag_pxp != 0, truth.bidirected != 0, mr_links
+                )
+
+                orientation_perf_rel_to_mr = (
+                    compare_ci_gwas_orientation_performance_to_mr(
+                        truth.dag_pxp, truth.bidirected, mr_links, est_pag_pxp
+                    )
+                )
 
                 rows.append(
                     {
-                        "y -> y tpr": pxp_tpr,
+                        "-> orientation": orientation_perf.directed,
+                        "mr_pos_tpr": orientation_perf_rel_to_mr.mr_pos_tpr,
+                        "mr_neg_tdr": orientation_perf_rel_to_mr.mr_neg_tdr,
+                        "mse": mse,
                         "rep": rep,
                         "alpha": 10 ** (-alpha_e),
                         "method": mr_str,
                     }
                 )
     return pd.DataFrame(rows)
+
+
+def plot_real_simulation_orient_and_ace_performance(
+    rep_arr=list(range(1, 41)),
+    ci_gwas_alpha_exp=4,
+    mr_bonferroni=False,
+    fig_path=None,
+):
+    bar_xlabel_rotation = 45
+
+    df = load_real_data_simulation_orient_and_ace_performance(
+        ci_gwas_alpha_exp=ci_gwas_alpha_exp,
+        rep_arr=rep_arr,
+        num_p=10,
+        max_level=3,
+        mr_bonferroni=mr_bonferroni,
+    )
+    gr = df.groupby(["method", "alpha"])
+    means = gr.mean()
+    stds = gr.std()
+
+    alphas = 10.0 ** -np.array([8, 2])
+    methods = ["ci-gwas", "cause", "presso", "mvpresso", "ivw", "mvivw"]
+    title_kw = {"loc": "left", "pad": 15, "size": 20}
+
+    def plot_bars(x_vals, metric, means, stds, ax, title, methods, skip=[]):
+        from itertools import cycle
+        prop_cycle = plt.rcParams["axes.prop_cycle"]
+        colors = cycle(prop_cycle.by_key()["color"])
+        ax.set_title(title, **title_kw)
+        x_sorted = sorted(list(x_vals))
+        x = np.arange(len(x_vals))  # the label locations
+        width = 0.12  # the width of the bars
+        multiplier = 0
+
+        handles = []
+        for method in methods:
+            if method in skip:
+                next(colors)
+                multiplier + 1
+                continue
+            mu = means.loc[method][metric]
+            sig = stds.loc[method][metric]
+            loc_x = np.array(
+                [x_sorted.index(e) for e in means.loc[method].index.values]
+            )
+            offset = width * multiplier
+            try:
+                bars = ax.bar(
+                    loc_x + offset,
+                    mu,
+                    width,
+                    yerr=sig,
+                    capsize=1.5,
+                    label=method,
+                    color=next(colors),
+                )
+                handles.append(bars)
+            except StopIteration:
+                pass
+            multiplier += 1
+
+        ax.set_ylabel(metric)
+        if title == "g)" or title == "h)":
+            ax.set_xlabel(r"$\alpha$")
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.set_xticks(x + offset * 0.5, x_vals)
+        plt.setp(
+            ax.get_xticklabels(),
+            rotation=bar_xlabel_rotation,
+            ha="right",
+            rotation_mode="anchor",
+        )
+        # ax.legend(loc='upper left', ncols=3)
+        # ax.set_yscale("symlog")
+        return handles
+
+    # ---------- orientation and ace performance
+
+    fig = plt.figure(
+        # layout="tight",
+        figsize=(8, 6)
+    )
+    ax_dict = fig.subplot_mosaic(
+        """
+        XiX
+        aaa
+        bbb
+        ccc
+        """,
+        empty_sentinel="X",
+        sharex=False,
+        # set the height ratios between the rows
+        height_ratios=[0.1, 0.3, 0.3, 0.3],
+    )
+
+    ax_dict["c"].set_xlabel(r"IV significance threshold")
+
+    plot_bars(
+        alphas,
+        "mr_pos_tpr",
+        means,
+        stds,
+        ax_dict["a"],
+        "a)",
+        methods=methods,
+        skip=["ci-gwas"],
+    )
+    ax_dict["a"].set_ylabel(r"$\rightarrow TPR_{MR+}$")
+    plot_bars(
+        alphas,
+        "-> orientation",
+        means,
+        stds,
+        ax_dict["b"],
+        "b)",
+        methods=methods,
+        skip=["ci-gwas"],
+    )
+    ax_dict["b"].set_ylabel(r"$\rightarrow TDR$")
+    ax_dict["b"].axhline(
+        means.loc["ci-gwas"]["-> orientation"].values[0], linestyle="--", color="k"
+    )
+    # err_start, err_end = -0.1, 1.2
+    # cig_orient_mean = means.loc["ci-gwas"]["-> orientation"].values[0]
+    # cig_orient_std = stds.loc["ci-gwas"]["-> orientation"].values[0]
+    # ax_dict["b"].axhline(cig_orient_mean, linestyle="--", color="k")
+    # ax_dict["b"].fill_between(
+    #     [err_start, err_end],
+    #     cig_orient_mean - cig_orient_std,
+    #     cig_orient_mean + cig_orient_std,
+    #     alpha=0.1,
+    # )
+    h = plot_bars(
+        alphas,
+        "mse",
+        means,
+        stds,
+        ax_dict["c"],
+        "c)",
+        methods=methods,
+        skip=["ci-gwas"],
+    )
+    ax_dict["c"].set_ylabel("MSE")
+    # cig_mse_mean = means.loc["ci-gwas"]["mse"].values[0]
+    # cig_mse_std = stds.loc["ci-gwas"]["mse"].values[0]
+    # ax_dict["c"].axhline(cig_mse_mean, linestyle="--", color="k")
+    # ax_dict["c"].fill_between(
+    #     [err_start, err_end],
+    #     cig_mse_mean - cig_mse_std,
+    #     cig_mse_mean + cig_mse_std,
+    #     alpha=0.1,
+    # )
+
+    ax_dict["i"].legend(
+        handles=h,
+        # labels=["CI-GWAS", "CAUSE", "MR-PRESSO", "MR-PRESSO (MV)", "IVW", "IVW (MV)"],
+        labels=["CAUSE", "MR-PRESSO", "MR-PRESSO (MV)", "IVW", "IVW (MV)"],
+        loc="center",
+        fancybox=False,
+        shadow=False,
+        ncol=3,
+    )
+    ax_dict["i"].axis("off")
+    _ = [ax_dict[i].tick_params(labelbottom=False) for i in "ab"]
+    _ = [ax_dict[i].sharex(ax_dict["c"]) for i in "ab"]
+    fig.subplots_adjust(wspace=0.7, hspace=1.3)
+    if fig_path is not None:
+        plt.savefig(fig_path, bbox_inches="tight")
 
 
 def load_real_data_simulation_results(
@@ -3674,7 +4039,6 @@ def load_real_data_simulation_results(
                         continue
                 mr_links = mr_p <= (10.0**-alpha_e)
                 mr_adj = make_adj_symmetric(mr_links)
-                # are we doing this?
                 mr_est[~mr_links] = 0.0
 
                 m = (true_bidirected != 0) | (true_dag_pxp != 0)
