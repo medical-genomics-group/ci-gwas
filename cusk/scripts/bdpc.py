@@ -3318,9 +3318,7 @@ def plot_real_data_simulation_adj_performance(
         # ax.set_yscale("symlog")
         return handles
 
-    fig = plt.figure(
-        figsize=(8, 6)
-    )
+    fig = plt.figure(figsize=(8, 6))
     ax_dict = fig.subplot_mosaic(
         """
         ii
@@ -3342,7 +3340,14 @@ def plot_real_data_simulation_adj_performance(
     plot_ci_gwas_bars(alphas, "x -> y tpr", means, stds, ax_dict["b"], "b)")
     ax_dict["b"].set_ylabel(r"$x - y \ TPR$")
     plot_bars(
-        alphas, "y -> y fdr", means, stds, ax_dict["c"], "c)", axhline=True, methods=methods
+        alphas,
+        "y -> y fdr",
+        means,
+        stds,
+        ax_dict["c"],
+        "c)",
+        axhline=True,
+        methods=methods,
     )
     ax_dict["c"].set_ylabel(r"$y - y \ FDR$")
     h = plot_bars(
@@ -3373,20 +3378,57 @@ def load_real_data_simulation_orient_and_ace_performance(
     """Load simulation results for ci-gwas and mr methods, calculate fdr, tpr for adjacencies."""
     rows = []
     wdir = "/nfs/scistore17/robingrp/mrobinso/cigwas/ukb/sim/real_marker_sim/"
-    blockfile = wdir + "ukb22828_UKB_EST_v3_ldp08_estonia_intersect_m11000_chr1.blocks"
     bim_path = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/estonian_comparison/ukb22828_UKB_EST_v3_ldp08_estonia_intersect_a1_forced.bim"
     rs_ids = pd.read_csv(bim_path, sep="\t", header=None)[1].values
     for rep in rep_arr:
         truth = load_real_data_simulation_truth(rep)
-        for alpha_e in e_arr:
-            # -------------------- CI-GWAS -----------------------------
-            est_dir = wdir + f"cusk/sim{rep}_e{alpha_e}_l{max_level}_2stepsk/"
-            adj_path = est_dir + "all_merged_sam.mtx"
-            try:
-                est_adj = mmread(adj_path).tocsr()
-            except FileNotFoundError as err:
-                print(err)
-                continue
+        # here we only need e8 and e2 for MR (for iv selection), and whichever e we decide to use for ci-gwas, probably e4?
+        # then we also need the MR + cuda-skeleton runs for the same e as MR.
+
+        pag_path = est_dir + "max_sep_min_pc_estimated_pag_cusk2.mtx"
+
+        try:
+            full_pag = mmread(pag_path).tocsr()
+        except:
+            continue
+        outdir = wdir + f"cusk/sim{rep}_e{alpha_e}/"
+
+        gr = merge_block_outputs(blockfile, outdir)
+        glob_ixs = np.array(sorted(list(gr.gmi.values())))
+        est_dag_mxp = pd.DataFrame(
+            full_pag[num_p:, :num_p].toarray(),
+            columns=list(range(1, num_p + 1)),
+            index=rs_ids[glob_ixs],
+            dtype=int,
+        )
+        est_pag_pxp = full_pag[:num_p, :num_p].toarray()
+        est_pag_pxp_triu = np.triu(est_pag_pxp, 1)
+
+        orientation_perf = calculate_pxp_orientation_performance_ci_gwas(
+            truth.dag_pxp != 0, truth.bidirected != 0, est_pag_pxp
+        )
+
+        # load aces
+        pace = np.zeros(shape=(num_p, num_p))
+        missing = []
+        for i in range(1, num_p + 1):
+            for j in range(1, num_p + 1):
+                if i == j:
+                    continue
+                file = est_dir + f"ACE_i{i}_j{j}.csv"
+                try:
+                    with open(file) as fin:
+                        next(fin)
+                        sym = fin.readline().strip()
+                        if sym == "NA":
+                            pace[i - 1, j - 1] = 0.0
+                        else:
+                            pace[i - 1, j - 1] = eval(sym)
+                except FileNotFoundError as err:
+                    # print(err)
+                    missing.append((i, j))
+
+            mse = np.mean((pace - truth.effects) ** 2)
 
             glob_ixs = np.fromfile(est_dir + "all_merged.ixs", dtype=np.int32)
             est_adj_mxp = pd.DataFrame(
