@@ -2414,45 +2414,6 @@ def marker_pheno_associations(
     return pd.DataFrame(assoc_markers)
 
 
-# def marker_pheno_associations(
-#     blockfile: str,
-#     outdir: str,
-#     pheno_path: str,
-#     bim_path: str,
-#     depth=1,
-# ):
-#     bim_df = pd.read_csv(bim_path, sep="\t", header=None)
-
-#     rs_ids = bim_df[1].values
-#     chrs = bim_df[0].values
-#     on_chr_positions = bim_df[3].values
-
-#     p_names = get_pheno_codes(pheno_path)
-#     num_phen = len(p_names)
-#     assoc_markers = []
-
-#     anc_sets = global_ancestor_sets(
-#         blockfile, outdir, reduced_indices=False, depth=depth
-#     )
-
-#     for pix in np.arange(0, num_phen) + BASE_INDEX:
-#         for bim_line in anc_sets[pix]:
-#             try:
-#                 assoc_markers.append(
-#                     {
-#                         "phenotype": p_names[pix - BASE_INDEX],
-#                         "rsID": rs_ids[bim_line],
-#                         "bim_line_ix": bim_line,
-#                         "chr": chrs[bim_line],
-#                         "bp": on_chr_positions[bim_line],
-#                     }
-#                 )
-#             except IndexError:
-#                 print("pix: ", pix, "bim_line: ", bim_line)
-
-#     return pd.DataFrame(assoc_markers)
-
-
 def pag_edge_types(pag_path: str, pheno_path: str) -> dict[tuple[int, int], int]:
     all_edges = {}
     p_names = get_pheno_codes(pheno_path)
