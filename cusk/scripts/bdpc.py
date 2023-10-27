@@ -3188,22 +3188,26 @@ def load_real_data_simulation_adj_performance(
             for mr_str in ["cause", "presso", "mvpresso", "ivw", "mvivw"]:
                 mr_p = np.ones((num_p, num_p))
                 mr_est = np.zeros((num_p, num_p))
+                incomplete = False
+
                 for outcome in range(0, num_p):
-                    try:
-                        fpaths = glob(
-                            wdir
-                            + f"cusk/sim{rep}_e{alpha_e}/"
-                            + f"mr_{mr_str}_alpha*_sim{rep}_outcome_y{outcome + 1}_seed1000"
-                        )
-                        if len(fpaths) == 0:
-                            continue
-                        fpath = fpaths[0]
-                        mr_res_df = pd.read_csv(fpath)
-                        exposures = [int(s[1:]) - 1 for s in mr_res_df["Exposure"]]
-                        mr_p[exposures, outcome] = mr_res_df["p"].values
-                        mr_est[exposures, outcome] = mr_res_df["est"].values
-                    except FileNotFoundError:
+                    fpaths = glob(
+                        wdir
+                        + f"cusk/sim{rep}_e{alpha_e}/"
+                        + f"mr_{mr_str}_alpha*_sim{rep}_outcome_y{outcome + 1}_seed1000"
+                    )
+                    if len(fpaths) == 0:
+                        incomplete = True
                         continue
+                    fpath = fpaths[0]
+                    mr_res_df = pd.read_csv(fpath)
+                    exposures = [int(s[1:]) - 1 for s in mr_res_df["Exposure"]]
+                    mr_p[exposures, outcome] = mr_res_df["p"].values
+                    mr_est[exposures, outcome] = mr_res_df["est"].values
+
+                if incomplete:
+                    continue
+
                 if mr_bonferroni:
                     mr_links = mr_p <= (0.05 / ((num_p - 1) * 2 * 20))
                 else:
@@ -3238,25 +3242,28 @@ def load_real_data_simulation_adj_performance(
             for mr_str in ["cause", "presso", "mvpresso", "ivw", "mvivw"]:
                 mr_p = np.ones((num_p, num_p))
                 mr_est = np.zeros((num_p, num_p))
+                incomplete = False
                 for outcome in range(0, num_p):
-                    try:
-                        mr_str_mod = mr_str
-                        if mr_str == "ivw":
-                            mr_str_mod = "vw"
-                        fpaths = glob(
-                            wdir
-                            + f"cusk/sim{rep}_e{alpha_e}/"
-                            + f"mr_cigwas_{mr_str_mod}_alpha*_sim{rep}_outcome_y{outcome + 1}_seed1000"
-                        )
-                        if len(fpaths) == 0:
-                            continue
-                        fpath = fpaths[0]
-                        mr_res_df = pd.read_csv(fpath)
-                        exposures = [int(s[1:]) - 1 for s in mr_res_df["Exposure"]]
-                        mr_p[exposures, outcome] = mr_res_df["p"].values
-                        mr_est[exposures, outcome] = mr_res_df["est"].values
-                    except FileNotFoundError:
+                    mr_str_mod = mr_str
+                    if mr_str == "ivw":
+                        mr_str_mod = "vw"
+                    fpaths = glob(
+                        wdir
+                        + f"cusk/sim{rep}_e{alpha_e}/"
+                        + f"mr_cigwas_{mr_str_mod}_alpha*_sim{rep}_outcome_y{outcome + 1}_seed1000"
+                    )
+                    if len(fpaths) == 0:
+                        incomplete = True
                         continue
+                    fpath = fpaths[0]
+                    mr_res_df = pd.read_csv(fpath)
+                    exposures = [int(s[1:]) - 1 for s in mr_res_df["Exposure"]]
+                    mr_p[exposures, outcome] = mr_res_df["p"].values
+                    mr_est[exposures, outcome] = mr_res_df["est"].values
+
+                if incomplete:
+                    continue
+
                 if mr_bonferroni:
                     mr_links = mr_p <= (0.05 / ((num_p - 1) * 2 * len(rep_arr)))
                 else:
@@ -3484,6 +3491,7 @@ def plot_mr_vs_ci_gwas_plus_mr(
 
     def plot_bars(x_vals, metric, means, stds, ax, title, methods, axhline=False):
         from itertools import cycle
+
         prop_cycle = plt.rcParams["axes.prop_cycle"]
         colors = cycle(prop_cycle.by_key()["color"])
         next(colors)
@@ -3503,7 +3511,13 @@ def plot_mr_vs_ci_gwas_plus_mr(
             offset = width * multiplier
             try:
                 bars = ax.bar(
-                    loc_x + offset, mu, width, yerr=sig, capsize=1.5, label=method, color=next(colors),
+                    loc_x + offset,
+                    mu,
+                    width,
+                    yerr=sig,
+                    capsize=1.5,
+                    label=method,
+                    color=next(colors),
                 )
                 handles.append(bars)
             except StopIteration:
@@ -3597,13 +3611,14 @@ def load_real_data_simulation_orient_and_ace_performance(
         # here we only need e8 and e2 for MR (for iv selection), and whichever e we decide to use for ci-gwas, probably e4?
         # then we also need the MR + cuda-skeleton runs for the same e as MR.
 
-        # est_dir = wdir + f"cusk/sim{rep}_e{alpha_e}_l{max_level}_2stepsk/"
-        est_dir = wdir + f"cusk/sim{rep}_e{alpha_e}/"
+        est_dir = wdir + f"cusk/sim{rep}_e{alpha_e}_l{max_level}_2stepsk/"
+        # est_dir = wdir + f"cusk/sim{rep}_e{alpha_e}/"
         pag_path = est_dir + "max_sep_min_pc_estimated_pag_cusk2.mtx"
 
         try:
             full_pag = mmread(pag_path).tocsr()
-        except:
+        except FileNotFoundError as err:
+            print(err)
             continue
 
         est_pag_pxp = full_pag[:num_p, :num_p].toarray()
@@ -3613,6 +3628,17 @@ def load_real_data_simulation_orient_and_ace_performance(
             truth.dag_pxp != 0, truth.bidirected != 0, est_pag_pxp
         )
 
+        rows.append(
+            {
+                "-> orientation": orientation_perf.directed,
+                "mse": np.nan,
+                "rep": rep,
+                "alpha": 10 ** (-alpha_e),
+                "method": "ci-gwas",
+            }
+        )
+
+        incomplete = False
         # load aces
         pace = np.zeros(shape=(num_p, num_p))
         missing = []
@@ -3622,7 +3648,7 @@ def load_real_data_simulation_orient_and_ace_performance(
                     continue
                 file = est_dir + f"ACE_i{i}_j{j}.csv"
                 try:
-                    with open(file) as fin:
+                    with open(file, "r") as fin:
                         next(fin)
                         sym = fin.readline().strip()
                         if sym == "NA":
@@ -3631,41 +3657,39 @@ def load_real_data_simulation_orient_and_ace_performance(
                             pace[i - 1, j - 1] = eval(sym)
                 except FileNotFoundError as err:
                     # print(err)
+                    incomplete = True
                     missing.append((i, j))
 
         select = pace != 0
         mse = np.mean((pace[select] - truth.effects[select]) ** 2)
+        if not incomplete:
+            rows[-1]["mse"] = mse
 
-        rows.append(
-            {
-                "-> orientation": orientation_perf.directed,
-                "mse": mse,
-                "rep": rep,
-                "alpha": 10 ** (-alpha_e),
-                "method": "ci-gwas",
-            }
-        )
-
+    for rep in rep_arr:
+        truth = load_real_data_simulation_truth(rep)
         for alpha_e in [2, 8]:
             est_dir = wdir + f"cusk/sim{rep}_e{alpha_e}/"
             for mr_str in ["cause", "presso", "mvpresso", "ivw", "mvivw"]:
                 mr_p = np.ones((num_p, num_p))
                 mr_est = np.zeros((num_p, num_p))
+                incomplete = False
                 for outcome in range(0, num_p):
-                    try:
-                        fpaths = glob(
-                            est_dir
-                            + f"mr_{mr_str}_alpha*_sim{rep}_outcome_y{outcome + 1}_seed1000"
-                        )
-                        if len(fpaths) == 0:
-                            continue
-                        fpath = fpaths[0]
-                        mr_res_df = pd.read_csv(fpath)
-                        exposures = [int(s[1:]) - 1 for s in mr_res_df["Exposure"]]
-                        mr_p[exposures, outcome] = mr_res_df["p"].values
-                        mr_est[exposures, outcome] = mr_res_df["est"].values
-                    except FileNotFoundError:
+                    fpaths = glob(
+                        est_dir
+                        + f"mr_{mr_str}_alpha*_sim{rep}_outcome_y{outcome + 1}_seed1000"
+                    )
+                    if len(fpaths) == 0:
+                        incomplete = True
                         continue
+                    fpath = fpaths[0]
+                    mr_res_df = pd.read_csv(fpath)
+                    exposures = [int(s[1:]) - 1 for s in mr_res_df["Exposure"]]
+                    mr_p[exposures, outcome] = mr_res_df["p"].values
+                    mr_est[exposures, outcome] = mr_res_df["est"].values
+
+                if incomplete:
+                    continue
+
                 if mr_bonferroni:
                     mr_links = mr_p <= (0.05 / (len(rep_arr) * (num_p - 1) * 2))
                 else:
@@ -3680,17 +3704,17 @@ def load_real_data_simulation_orient_and_ace_performance(
                     truth.dag_pxp != 0, truth.bidirected != 0, mr_links
                 )
 
-                orientation_perf_rel_to_mr = (
-                    compare_ci_gwas_orientation_performance_to_mr(
-                        truth.dag_pxp, truth.bidirected, mr_links, est_pag_pxp
-                    )
-                )
+                # orientation_perf_rel_to_mr = (
+                #     compare_ci_gwas_orientation_performance_to_mr(
+                #         truth.dag_pxp, truth.bidirected, mr_links, est_pag_pxp
+                #     )
+                # )
 
                 rows.append(
                     {
                         "-> orientation": orientation_perf.directed,
-                        "mr_pos_tpr": orientation_perf_rel_to_mr.mr_pos_tpr,
-                        "mr_neg_tdr": orientation_perf_rel_to_mr.mr_neg_tdr,
+                        # "mr_pos_tpr": orientation_perf_rel_to_mr.mr_pos_tpr,
+                        # "mr_neg_tdr": orientation_perf_rel_to_mr.mr_neg_tdr,
                         "mse": mse,
                         "rep": rep,
                         "alpha": 10 ** (-alpha_e),
@@ -3725,6 +3749,7 @@ def plot_real_simulation_orient_and_ace_performance(
 
     def plot_bars(x_vals, metric, means, stds, ax, title, methods, skip=[]):
         from itertools import cycle
+
         prop_cycle = plt.rcParams["axes.prop_cycle"]
         colors = cycle(prop_cycle.by_key()["color"])
         ax.set_title(title, **title_kw)
@@ -3787,19 +3812,29 @@ def plot_real_simulation_orient_and_ace_performance(
         XiX
         aaa
         bbb
-        ccc
         """,
         empty_sentinel="X",
         sharex=False,
         # set the height ratios between the rows
-        height_ratios=[0.1, 0.3, 0.3, 0.3],
+        height_ratios=[0.1, 0.3, 0.3],
     )
 
-    ax_dict["c"].set_xlabel(r"IV significance threshold")
+    ax_dict["b"].set_xlabel(r"IV significance threshold")
 
+    # plot_bars(
+    #     alphas,
+    #     "mr_pos_tpr",
+    #     means,
+    #     stds,
+    #     ax_dict["a"],
+    #     "a)",
+    #     methods=methods,
+    #     skip=["ci-gwas"],
+    # )
+    # ax_dict["a"].set_ylabel(r"$\rightarrow TPR_{MR+}$")
     plot_bars(
         alphas,
-        "mr_pos_tpr",
+        "-> orientation",
         means,
         stds,
         ax_dict["a"],
@@ -3807,24 +3842,15 @@ def plot_real_simulation_orient_and_ace_performance(
         methods=methods,
         skip=["ci-gwas"],
     )
-    ax_dict["a"].set_ylabel(r"$\rightarrow TPR_{MR+}$")
-    plot_bars(
-        alphas,
-        "-> orientation",
-        means,
-        stds,
-        ax_dict["b"],
-        "b)",
-        methods=methods,
-        skip=["ci-gwas"],
-    )
-    ax_dict["b"].set_ylabel(r"$\rightarrow TDR$")
-    ax_dict["b"].axhline(
+    ax_dict["a"].set_ylabel(r"$\rightarrow TDR$")
+    ax_dict["a"].axhline(
         means.loc["ci-gwas"]["-> orientation"].values[0], linestyle="--", color="k"
     )
     # err_start, err_end = -0.1, 1.2
-    # cig_orient_mean = means.loc["ci-gwas"]["-> orientation"].values[0]
-    # cig_orient_std = stds.loc["ci-gwas"]["-> orientation"].values[0]
+    cig_orient_mean = means.loc["ci-gwas"]["-> orientation"].values[0]
+    cig_orient_std = stds.loc["ci-gwas"]["-> orientation"].values[0]
+    ax_dict["a"].axhline(cig_orient_mean + cig_orient_std, linestyle=":", color="gray")
+    ax_dict["a"].axhline(cig_orient_mean - cig_orient_std, linestyle=":", color="gray")
     # ax_dict["b"].axhline(cig_orient_mean, linestyle="--", color="k")
     # ax_dict["b"].fill_between(
     #     [err_start, err_end],
@@ -3837,15 +3863,17 @@ def plot_real_simulation_orient_and_ace_performance(
         "mse",
         means,
         stds,
-        ax_dict["c"],
-        "c)",
+        ax_dict["b"],
+        "b)",
         methods=methods,
         skip=["ci-gwas"],
     )
-    ax_dict["c"].set_ylabel("MSE")
-    # cig_mse_mean = means.loc["ci-gwas"]["mse"].values[0]
-    # cig_mse_std = stds.loc["ci-gwas"]["mse"].values[0]
-    # ax_dict["c"].axhline(cig_mse_mean, linestyle="--", color="k")
+    cig_mse_mean = means.loc["ci-gwas"]["mse"].values[0]
+    cig_mse_std = stds.loc["ci-gwas"]["mse"].values[0]
+    ax_dict["b"].set_ylabel("MSE")
+    ax_dict["b"].axhline(cig_mse_mean, linestyle="--", color="k")
+    ax_dict["b"].axhline(cig_mse_mean + cig_mse_std, linestyle=":", color="gray")
+    ax_dict["b"].axhline(cig_mse_mean - cig_mse_std, linestyle=":", color="gray")
     # ax_dict["c"].fill_between(
     #     [err_start, err_end],
     #     cig_mse_mean - cig_mse_std,
@@ -3863,8 +3891,8 @@ def plot_real_simulation_orient_and_ace_performance(
         ncol=3,
     )
     ax_dict["i"].axis("off")
-    _ = [ax_dict[i].tick_params(labelbottom=False) for i in "ab"]
-    _ = [ax_dict[i].sharex(ax_dict["c"]) for i in "ab"]
+    _ = [ax_dict[i].tick_params(labelbottom=False) for i in "a"]
+    _ = [ax_dict[i].sharex(ax_dict["b"]) for i in "a"]
     fig.subplots_adjust(wspace=0.7, hspace=1.3)
     if fig_path is not None:
         plt.savefig(fig_path, bbox_inches="tight")
@@ -5249,16 +5277,19 @@ def plot_full_ukb_results_figure_3(
     ace_norm=None,
     p_thr=0.05,
     max_path_len=np.inf,
+    edge_encoding=two_common_edge_types,
+    fig_path=None,
 ):
     e = 4
-    d = 10000
+    d = 1
     # d = 1
-    l = 6
-    outdir = f"/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/production/bdpc_d{d}_l{l}_a1e{e}/"
+    l = 3
+    # outdir = f"/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/production/bdpc_d{d}_l{l}_a1e{e}/"
+    outdir = f"/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/production/cusk_d{d}_l{l}_a1e{e}_input/"
     blockfile = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/ukb22828_UKB_EST_v3_ldp08.blocks"
     pheno_path = f"/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/production/input.phen"
 
-    z2 = get_skeleton_pleiotropy_mat(outdir, blockfile, pheno_path, max_depth=2)
+    z2 = get_skeleton_pleiotropy_mat(outdir, blockfile, pheno_path, max_depth=1)
     # zinf = get_skeleton_pleiotropy_mat(outdir, blockfile, pheno_path, mat_type="union")
 
     fig = plt.figure(
@@ -5295,7 +5326,7 @@ def plot_full_ukb_results_figure_3(
         ax=ax_dict["c"],
         title="c)",
         title_kw=title_kw,
-        edge_encoding=two_common_edge_types,
+        edge_encoding=edge_encoding,
         cbar_kw=cbar_kw,
     )
 
@@ -5316,7 +5347,7 @@ def plot_full_ukb_results_figure_3(
         z2,
         pheno_path,
         ax=ax_dict["a"],
-        title="depth=2",
+        title=None,
         # norm=norm,
         cmap=cmap,
         cbar=True,
@@ -5349,6 +5380,8 @@ def plot_full_ukb_results_figure_3(
     _ = [ax_dict[k].set_box_aspect(1) for k in "acd"]
     ax_dict["b"].set_box_aspect(1)
     fig.subplots_adjust(wspace=0.1, hspace=0.4)
+    if fig_path is not None:
+        plt.savefig(fig_path, bbox_inches="tight")
 
 
 def plot_ace_results_comp_cause_production(
