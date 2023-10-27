@@ -18,7 +18,7 @@ if (is.na(exposure) || is.na(outcome) || is.na(num_individuals) || is.na(pag_pat
 }
 
 max_k = 3
-max_depth = 2
+max_depth = NULL
 
 mdim_path <- paste0(skeleton_results_filestem, ".mdim")
 x <- read.csv(mdim_path, sep="\t", header=FALSE)
