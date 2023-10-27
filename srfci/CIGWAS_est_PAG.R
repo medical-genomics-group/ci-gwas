@@ -132,10 +132,13 @@ writeMM(as(A, "sparseMatrix"), file=paste0(input_filestem, sprintf("_estimated_v
 print("Done")
 
 print("Applying R1-R10")
-estimate_pag_with_traits_only = FALSE
+estimate_pag_with_traits_only = TRUE
 if (estimate_pag_with_traits_only) {
     res <- udag2apag(A[1:num_phen,1:num_phen], suffStat = suffStat, indepTest = gaussCItest, alpha, sepset, rules = rep(TRUE, 10), 
                  unfVect = r.v.$unfTripl, verbose = FALSE)
+    tmp_graph <- A
+    tmp_graph[1:num_phen, 1:num_phen] <- res$graph
+    res$graph <- tmp_graph
 } else {
     res <- udag2apag(A, suffStat = suffStat, indepTest = gaussCItest, alpha, sepset, rules = rep(TRUE, 10), 
                  unfVect = r.v.$unfTripl, verbose = FALSE)
