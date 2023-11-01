@@ -9,7 +9,7 @@ MPS_PATH = "./cusk/build/apps/mps"
 
 class MyParser(argparse.ArgumentParser):
     def error(self, message):
-        sys.stderr.write('error: %s\n' % message)
+        sys.stderr.write("error: %s\n" % message)
         self.print_help()
         sys.exit(2)
 
@@ -78,7 +78,7 @@ def main():
     )
     block_parser.set_defaults(func=block)
 
-    # cusk
+    # cusk (cusk-single)
     cusk_parser = subparsers.add_parser(
         "cusk",
         help="Infer skeleton with markers and traits as nodes, using marker data (requires GPU)",
@@ -164,8 +164,14 @@ def main():
     cuskss_parser.add_argument(
         "max-level",
         type=TypeCheck(int, "max-level", 1, 14),
-        help="maximal size of separation sets in cuPC (<= 14)",
-        default=6,
+        help="maximal size of separation sets in the first round of cuPC (<= 14)",
+        default=3,
+    )
+    cuskss_parser.add_argument(
+        "max-level-two",
+        type=TypeCheck(int, "max-level", 1, 14),
+        help="maximal size of separation sets in the second round of cuPC (<= 14)",
+        default=14,
     )
     cuskss_parser.add_argument(
         "max-depth",
@@ -227,6 +233,7 @@ def cusk(args):
             args.blocks,
             args.alpha,
             args.max_level,
+            args.max_level_two,
             args.max_depth,
             args.outdir,
             args.block_index,
@@ -247,6 +254,7 @@ def cuskss(args):
             args.blocks,
             args.alpha,
             args.max_level,
+            args.max_level_two,
             args.max_depth,
             args.num_samples,
             args.outdir,
