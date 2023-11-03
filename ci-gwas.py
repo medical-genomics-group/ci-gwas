@@ -5,6 +5,8 @@ import sys
 import subprocess
 
 MPS_PATH = "./cusk/build/apps/mps"
+RFCI_PATH = "./srfci/CIGWAS_est_PAG.R"
+DAVS_PATH = "./sdavs/CIGWAS_est_ACE.R"
 
 
 class MyParser(argparse.ArgumentParser):
@@ -224,6 +226,7 @@ def block(args):
 
 
 def cusk(args):
+    # check that everything is standardized, and that all files exist
     subprocess.run(
         [
             MPS_PATH,
@@ -264,7 +267,7 @@ def cuskss(args):
 
 
 def srfci(args):
-    pass
+    subprocess.run([])
 
 
 def sdavs(args):
