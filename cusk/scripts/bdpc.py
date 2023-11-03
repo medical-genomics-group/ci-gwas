@@ -5897,9 +5897,9 @@ def merge_parallel_davs_csvs(
 
 
 def plot_inf_depth_pleio(e=4):
-    d = 10000
-    l = 6
-    outdir = f"/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/production/bdpc_d{d}_l{l}_a1e{e}/"
+    # d = 10000
+    # l = 6
+    outdir = f"/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/production/cusk_d10000_l3_a1e4_input/"
     blockfile = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/ukb22828_UKB_EST_v3_ldp08.blocks"
     pheno_path = f"/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/production/input.phen"
 
