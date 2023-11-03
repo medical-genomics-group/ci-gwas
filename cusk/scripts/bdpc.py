@@ -3211,8 +3211,7 @@ def load_real_data_simulation_adj_performance(
                 # fdr
                 if mr_str.startswith("mv"):
                     # mv methods claim to return direct effects.
-                    fp = np.sum(~m & (mr_adj != 0))
-                    pxp_tpr = tp / p
+                    fp = np.sum(~m & (np.triu(mr_adj, 1) != 0))
                     pxp_fdr = fp / (tp + fp)
                 else:
                     causal_paths = path_in_sem(mr_adj)
@@ -3273,8 +3272,7 @@ def load_real_data_simulation_adj_performance(
                 # fdr
                 if mr_str.startswith("mv"):
                     # mv methods claim to return direct effects.
-                    fp = np.sum(~m & (mr_adj != 0))
-                    pxp_tpr = tp / p
+                    fp = np.sum(~m & (np.triu(mr_adj, 1) != 0))
                     pxp_fdr = fp / (tp + fp)
                 else:
                     causal_paths = path_in_sem(mr_adj)
@@ -3545,6 +3543,7 @@ def plot_mr_vs_ci_gwas_plus_mr(
     fig = plt.figure(figsize=(8, 6), layout="tight")
     ax_dict = fig.subplot_mosaic(
         """
+        cc
         dd
         ii
         """,
@@ -3556,17 +3555,17 @@ def plot_mr_vs_ci_gwas_plus_mr(
     # ax_dict["c"].set_xlabel(r"$\alpha$")
     ax_dict["d"].set_xlabel(r"$\alpha$")
 
-    # plot_bars(
-    #     alphas,
-    #     "y -> y fdr",
-    #     means,
-    #     stds,
-    #     ax_dict["c"],
-    #     "c)",
-    #     axhline=True,
-    #     methods=methods,
-    # )
-    # ax_dict["c"].set_ylabel(r"$y - y \ FDR$")
+    plot_bars(
+        alphas,
+        "y -> y fdr",
+        means,
+        stds,
+        ax_dict["c"],
+        None,
+        axhline=True,
+        methods=methods,
+    )
+    ax_dict["c"].set_ylabel(r"$y - y \ FDR$")
     h = plot_bars(
         alphas, "y -> y tpr", means, stds, ax_dict["d"], None, methods=methods
     )
@@ -3588,8 +3587,8 @@ def plot_mr_vs_ci_gwas_plus_mr(
         # title="method",
     )
     ax_dict["i"].axis("off")
-    # _ = [ax_dict[i].tick_params(labelbottom=False) for i in "de"]
-    # _ = [ax_dict[i].sharex(ax_dict['f']) for i in 'de']
+    _ = [ax_dict[i].tick_params(labelbottom=False) for i in "c"]
+    _ = [ax_dict[i].sharex(ax_dict['d']) for i in 'c']
     # fig.subplots_adjust(wspace=0.7, hspace=1.5)
     if fig_path is not None:
         plt.savefig(fig_path, bbox_inches="tight")
