@@ -2796,6 +2796,33 @@ def calculate_pxp_orientation_performance_mr(
     )
 
 
+def calculate_pxp_orientation_performance_mvmr(
+    true_directed: np.array,
+    true_bidirected: np.array,
+    inferred_links: np.array,
+):
+    """Multi-variante MR claims to find direct links, holding all other exposures fixed. Here we assess it the same way as CI-GWAS."""
+    num_phen = true_directed.shape[0]
+    inferred_uni = 0
+    inferred_bi = 0
+    correct_uni = 0
+    correct_bi = 0
+    for i in range(num_phen):
+        for j in range(i, num_phen):
+            inferred_edge = (inferred_links[i, j], inferred_links[j, i])
+            if inferred_edge == (True, True):
+                inferred_bi += 1
+                correct_bi += true_bidirected[i, j]
+            elif inferred_edge != (False, False):
+                inferred_uni += 1
+                if inferred_edge == (True, False) and true_directed[i, j]:
+                    correct_uni += 1
+    return OrientationPerformance(
+        correct_uni / inferred_uni if inferred_uni > 0 else np.nan,
+        correct_bi / inferred_bi if inferred_bi > 0 else np.nan,
+    )
+
+
 def calculate_pxp_orientation_performance_ci_gwas(
     true_directed: np.array,
     true_bidirected: np.array,
@@ -3182,10 +3209,16 @@ def load_real_data_simulation_adj_performance(
                 pxp_tpr = tp / p
 
                 # fdr
-                causal_paths = path_in_sem(mr_adj)
-                tp = np.sum(np.triu(causal_paths, 1) & (np.triu(mr_adj, 1) != 0))
-                fp = np.sum(~np.triu(causal_paths, 1) & (np.triu(mr_adj, 1) != 0))
-                pxp_fdr = fp / (tp + fp) if (tp + fp) > 0 else np.nan
+                if mr_str.startswith("mv"):
+                    # mv methods claim to return direct effects.
+                    fp = np.sum(~m & (mr_adj != 0))
+                    pxp_tpr = tp / p
+                    pxp_fdr = fp / (tp + fp)
+                else:
+                    causal_paths = path_in_sem(mr_adj)
+                    tp = np.sum(np.triu(causal_paths, 1) & (np.triu(mr_adj, 1) != 0))
+                    fp = np.sum(~np.triu(causal_paths, 1) & (np.triu(mr_adj, 1) != 0))
+                    pxp_fdr = fp / (tp + fp) if (tp + fp) > 0 else np.nan
 
                 rows.append(
                     {
@@ -3238,10 +3271,16 @@ def load_real_data_simulation_adj_performance(
                 pxp_tpr = tp / p
 
                 # fdr
-                causal_paths = path_in_sem(mr_adj)
-                tp = np.sum(np.triu(causal_paths, 1) & (np.triu(mr_adj, 1) != 0))
-                fp = np.sum(~np.triu(causal_paths, 1) & (np.triu(mr_adj, 1) != 0))
-                pxp_fdr = fp / (tp + fp) if (tp + fp) > 0 else np.nan
+                if mr_str.startswith("mv"):
+                    # mv methods claim to return direct effects.
+                    fp = np.sum(~m & (mr_adj != 0))
+                    pxp_tpr = tp / p
+                    pxp_fdr = fp / (tp + fp)
+                else:
+                    causal_paths = path_in_sem(mr_adj)
+                    tp = np.sum(np.triu(causal_paths, 1) & (np.triu(mr_adj, 1) != 0))
+                    fp = np.sum(~np.triu(causal_paths, 1) & (np.triu(mr_adj, 1) != 0))
+                    pxp_fdr = fp / (tp + fp) if (tp + fp) > 0 else np.nan
 
                 rows.append(
                     {
@@ -3661,9 +3700,14 @@ def load_real_data_simulation_orient_and_ace_performance(
                 select = mr_est != 0
                 mse = np.mean((mr_est[select] - truth.effects[select]) ** 2)
 
-                orientation_perf = calculate_pxp_orientation_performance_mr(
-                    truth.dag_pxp != 0, truth.bidirected != 0, mr_links
-                )
+                if mr_str.startswith("mv"):
+                    orientation_perf = calculate_pxp_orientation_performance_mvmr(
+                        truth.dag_pxp != 0, truth.bidirected != 0, mr_links
+                    )
+                else:
+                    orientation_perf = calculate_pxp_orientation_performance_mr(
+                        truth.dag_pxp != 0, truth.bidirected != 0, mr_links
+                    )
 
                 # orientation_perf_rel_to_mr = (
                 #     compare_ci_gwas_orientation_performance_to_mr(
