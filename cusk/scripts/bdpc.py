@@ -2414,45 +2414,6 @@ def marker_pheno_associations(
     return pd.DataFrame(assoc_markers)
 
 
-# def marker_pheno_associations(
-#     blockfile: str,
-#     outdir: str,
-#     pheno_path: str,
-#     bim_path: str,
-#     depth=1,
-# ):
-#     bim_df = pd.read_csv(bim_path, sep="\t", header=None)
-
-#     rs_ids = bim_df[1].values
-#     chrs = bim_df[0].values
-#     on_chr_positions = bim_df[3].values
-
-#     p_names = get_pheno_codes(pheno_path)
-#     num_phen = len(p_names)
-#     assoc_markers = []
-
-#     anc_sets = global_ancestor_sets(
-#         blockfile, outdir, reduced_indices=False, depth=depth
-#     )
-
-#     for pix in np.arange(0, num_phen) + BASE_INDEX:
-#         for bim_line in anc_sets[pix]:
-#             try:
-#                 assoc_markers.append(
-#                     {
-#                         "phenotype": p_names[pix - BASE_INDEX],
-#                         "rsID": rs_ids[bim_line],
-#                         "bim_line_ix": bim_line,
-#                         "chr": chrs[bim_line],
-#                         "bp": on_chr_positions[bim_line],
-#                     }
-#                 )
-#             except IndexError:
-#                 print("pix: ", pix, "bim_line: ", bim_line)
-
-#     return pd.DataFrame(assoc_markers)
-
-
 def pag_edge_types(pag_path: str, pheno_path: str) -> dict[tuple[int, int], int]:
     all_edges = {}
     p_names = get_pheno_codes(pheno_path)
@@ -2828,6 +2789,33 @@ def calculate_pxp_orientation_performance_mr(
             elif inferred_edge != (False, False):
                 inferred_uni += 1
                 if inferred_edge == (True, False) and causal_paths[i, j]:
+                    correct_uni += 1
+    return OrientationPerformance(
+        correct_uni / inferred_uni if inferred_uni > 0 else np.nan,
+        correct_bi / inferred_bi if inferred_bi > 0 else np.nan,
+    )
+
+
+def calculate_pxp_orientation_performance_mvmr(
+    true_directed: np.array,
+    true_bidirected: np.array,
+    inferred_links: np.array,
+):
+    """Multi-variante MR claims to find direct links, holding all other exposures fixed. Here we assess it the same way as CI-GWAS."""
+    num_phen = true_directed.shape[0]
+    inferred_uni = 0
+    inferred_bi = 0
+    correct_uni = 0
+    correct_bi = 0
+    for i in range(num_phen):
+        for j in range(i, num_phen):
+            inferred_edge = (inferred_links[i, j], inferred_links[j, i])
+            if inferred_edge == (True, True):
+                inferred_bi += 1
+                correct_bi += true_bidirected[i, j]
+            elif inferred_edge != (False, False):
+                inferred_uni += 1
+                if inferred_edge == (True, False) and true_directed[i, j]:
                     correct_uni += 1
     return OrientationPerformance(
         correct_uni / inferred_uni if inferred_uni > 0 else np.nan,
@@ -3221,10 +3209,16 @@ def load_real_data_simulation_adj_performance(
                 pxp_tpr = tp / p
 
                 # fdr
-                causal_paths = path_in_sem(mr_adj)
-                tp = np.sum(np.triu(causal_paths, 1) & (np.triu(mr_adj, 1) != 0))
-                fp = np.sum(~np.triu(causal_paths, 1) & (np.triu(mr_adj, 1) != 0))
-                pxp_fdr = fp / (tp + fp) if (tp + fp) > 0 else np.nan
+                if mr_str.startswith("mv"):
+                    # mv methods claim to return direct effects.
+                    fp = np.sum(~m & (mr_adj != 0))
+                    pxp_tpr = tp / p
+                    pxp_fdr = fp / (tp + fp)
+                else:
+                    causal_paths = path_in_sem(mr_adj)
+                    tp = np.sum(np.triu(causal_paths, 1) & (np.triu(mr_adj, 1) != 0))
+                    fp = np.sum(~np.triu(causal_paths, 1) & (np.triu(mr_adj, 1) != 0))
+                    pxp_fdr = fp / (tp + fp) if (tp + fp) > 0 else np.nan
 
                 rows.append(
                     {
@@ -3277,10 +3271,16 @@ def load_real_data_simulation_adj_performance(
                 pxp_tpr = tp / p
 
                 # fdr
-                causal_paths = path_in_sem(mr_adj)
-                tp = np.sum(np.triu(causal_paths, 1) & (np.triu(mr_adj, 1) != 0))
-                fp = np.sum(~np.triu(causal_paths, 1) & (np.triu(mr_adj, 1) != 0))
-                pxp_fdr = fp / (tp + fp) if (tp + fp) > 0 else np.nan
+                if mr_str.startswith("mv"):
+                    # mv methods claim to return direct effects.
+                    fp = np.sum(~m & (mr_adj != 0))
+                    pxp_tpr = tp / p
+                    pxp_fdr = fp / (tp + fp)
+                else:
+                    causal_paths = path_in_sem(mr_adj)
+                    tp = np.sum(np.triu(causal_paths, 1) & (np.triu(mr_adj, 1) != 0))
+                    fp = np.sum(~np.triu(causal_paths, 1) & (np.triu(mr_adj, 1) != 0))
+                    pxp_fdr = fp / (tp + fp) if (tp + fp) > 0 else np.nan
 
                 rows.append(
                     {
@@ -3700,9 +3700,14 @@ def load_real_data_simulation_orient_and_ace_performance(
                 select = mr_est != 0
                 mse = np.mean((mr_est[select] - truth.effects[select]) ** 2)
 
-                orientation_perf = calculate_pxp_orientation_performance_mr(
-                    truth.dag_pxp != 0, truth.bidirected != 0, mr_links
-                )
+                if mr_str.startswith("mv"):
+                    orientation_perf = calculate_pxp_orientation_performance_mvmr(
+                        truth.dag_pxp != 0, truth.bidirected != 0, mr_links
+                    )
+                else:
+                    orientation_perf = calculate_pxp_orientation_performance_mr(
+                        truth.dag_pxp != 0, truth.bidirected != 0, mr_links
+                    )
 
                 # orientation_perf_rel_to_mr = (
                 #     compare_ci_gwas_orientation_performance_to_mr(
