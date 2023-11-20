@@ -4,6 +4,7 @@ import matplotlib
 import matplotlib.patches as mpatches
 from matplotlib import pyplot as plt
 from matplotlib.tri import Triangulation
+from matplotlib.patches import Polygon
 from dataclasses import dataclass
 import json
 import pandas as pd
@@ -1088,6 +1089,7 @@ def plot_skeleton_pleiotropy_mat_z(
     cmap="BuPu",
     norm=None,
     cbar=True,
+    cbarlabel=r"# shared ancestral markers",
     **kwargs,
 ):
     p_names = get_pheno_codes(pheno_path)
@@ -1102,7 +1104,7 @@ def plot_skeleton_pleiotropy_mat_z(
         p_names,
         cmap=cmap,
         cbar_kw=cbar_kw,
-        cbarlabel=r"# shared ancestral markers",
+        cbarlabel=cbarlabel,
         # vmin=-max_z,
         # vmax=max_z,
         # xlabel=r"$y_2$",
@@ -1898,7 +1900,9 @@ def plot_ci_gwas_cause_ace_comparison_tri(
     p_names = get_pheno_codes(pheno_path)
     num_phen = len(p_names)
 
+    causal_links = get_causal_paths(pag_path, pheno_path, max_path_len=1)
     causal_paths = get_causal_paths(pag_path, pheno_path, max_path_len=max_path_len)
+    ci_gwas_paths = {}
     ci_gwas_links = {}
 
     for i in range(num_phen):
@@ -1907,6 +1911,14 @@ def plot_ci_gwas_cause_ace_comparison_tri(
             name_j = p_names[j]
             if name_i in risk_factors and name_j in diseases:
                 if causal_paths[i, j] == 1:
+                    ci_gwas_paths[(name_i, name_j)] = 1
+
+    for i in range(num_phen):
+        for j in range(num_phen):
+            name_i = p_names[i]
+            name_j = p_names[j]
+            if name_i in risk_factors and name_j in diseases:
+                if causal_links[i, j] == 1:
                     ci_gwas_links[(name_i, name_j)] = 1
 
     cause_ys = set(cause_gamma["y1"].values)
@@ -1919,7 +1931,8 @@ def plot_ci_gwas_cause_ace_comparison_tri(
     risk_factor_list = rf_intersection + rf_cg_only
 
     ci_gwas_links_arr = np.array([False] * (len(diseases) * len(risk_factors)))
-    cause_sig_arr = np.array([False] * (len(diseases) * len(risk_factors)))
+    ci_gwas_paths_arr = np.array([False] * (len(diseases) * len(risk_factors)))
+    cause_not_sig_arr = np.array([False] * (len(diseases) * len(risk_factors)))
     ci_gwas_ace_mat = [
         [0 for _ in range(len(diseases))] for _ in range(len(risk_factors))
     ]
@@ -1942,10 +1955,12 @@ def plot_ci_gwas_cause_ace_comparison_tri(
             ].p_value.values
             if len(cg) == 1:
                 cause_ace_mat[i][j] = cg[0]
-                if cp[0] <= p_thr:
-                    cause_sig_arr[i * len(diseases) + j] = True
+                if cp[0] > p_thr:
+                    cause_not_sig_arr[i * len(diseases) + j] = True
             if (rf, ds) in ci_gwas_links:
                 ci_gwas_links_arr[i * len(diseases) + j] = True
+            if (rf, ds) in ci_gwas_paths:
+                ci_gwas_paths_arr[i * len(diseases) + j] = True
 
     col_labels = [r"$\bf{{{0}}}$".format(e) for e in disease_list]
     row_labels = [r"$\bf{{{0}}}$".format(e) for e in rf_intersection] + rf_cg_only
@@ -1966,6 +1981,7 @@ def plot_ci_gwas_cause_ace_comparison_tri(
         for j in range(N)
         for i in range(M)
     ]
+    
     tri_ci_gwas_link_mask = np.array([1] * len(triangles1))
     tri_ci_gwas_link_mask[np.where(ci_gwas_links_arr)] = False
     tri_ci_gwas_link = Triangulation(
@@ -1975,13 +1991,22 @@ def plot_ci_gwas_cause_ace_comparison_tri(
         mask=tri_ci_gwas_link_mask,
     )
 
-    tri_cause_sig_mask = np.array([1] * len(triangles1))
-    tri_cause_sig_mask[np.where(cause_sig_arr)] = False
-    tri_cause_sig = Triangulation(
+    tri_ci_gwas_path_mask = np.array([1] * len(triangles1))
+    tri_ci_gwas_path_mask[np.where(ci_gwas_paths_arr)] = False
+    tri_ci_gwas_path = Triangulation(
+        xs.ravel() - 0.5,
+        ys.ravel() - 0.5,
+        triangles=np.array(triangles1),
+        mask=tri_ci_gwas_path_mask,
+    )
+
+    tri_cause_not_sig_mask = np.array([True] * len(triangles1))
+    tri_cause_not_sig_mask[np.where(cause_not_sig_arr)] = False
+    tri_cause_not_sig = Triangulation(
         xs.ravel() - 0.5,
         ys.ravel() - 0.5,
         triangles=np.array(triangles2),
-        mask=tri_cause_sig_mask,
+        mask=tri_cause_not_sig_mask,
     )
 
     triang1 = Triangulation(xs.ravel() - 0.5, ys.ravel() - 0.5, triangles1)
@@ -2005,16 +2030,29 @@ def plot_ci_gwas_cause_ace_comparison_tri(
         # vmax=vm,
         norm=mpl.colors.SymLogNorm(vmin=-1.0, vmax=1.0, linthresh=0.01),
     )
+
+    tri_x = xs.ravel() - 0.5
+    tri_y = ys.ravel() - 0.5
+    plt.rcParams['hatch.color'] = 'white'
+
+    for tri_points in tri_cause_not_sig.get_masked_triangles():
+        tri_coord = np.array(list(zip([tri_x[e] for e in tri_points], [tri_y[e] for e in tri_points])))
+        ax.add_patch(Polygon(tri_coord, closed=True, hatch="/////", fc=(0,0,0,0)))
+
     _ = ax.tripcolor(
-        tri_cause_sig,
-        np.array(cause_ace_mat).ravel(),
+        tri_ci_gwas_path,
+        np.array(ci_gwas_ace_mat).ravel(),
+        # cmap=mpl.colors.ListedColormap(["w", "#fcb001"]),
         cmap="RdBu",
         # vmin=-vm,
         # vmax=vm,
-        edgecolor="#df4ec8",  # purpleish pink
-        linewidth=4,
+        edgecolor="#019529",  # irish green
+        # edgecolor="black",  # irish green
+        linewidth=2,
+        linestyle=":",
         norm=mpl.colors.SymLogNorm(vmin=-1.0, vmax=1.0, linthresh=0.01),
     )
+
     _ = ax.tripcolor(
         tri_ci_gwas_link,
         np.array(ci_gwas_ace_mat).ravel(),
@@ -2023,8 +2061,9 @@ def plot_ci_gwas_cause_ace_comparison_tri(
         # vmin=-vm,
         # vmax=vm,
         edgecolor="#019529",  # irish green
-        linewidth=4,
-        linestyle=":",
+        # edgecolor="black",  # irish green
+        linewidth=3,
+        linestyle="-",
         norm=mpl.colors.SymLogNorm(vmin=-1.0, vmax=1.0, linthresh=0.01),
     )
 
@@ -2061,139 +2100,6 @@ def plot_ci_gwas_cause_ace_comparison_tri(
 
     ci_gwas_patch = mpatches.Patch(color="#fcb001", label="CI-GWAS")
     cause_patch = mpatches.Patch(color="#448ee4", label="CAUSE")
-
-    # ax.legend(
-    #     handles=[ci_gwas_patch, cause_patch], bbox_to_anchor=(1, 0.5), loc="lower left"
-    # )
-
-    if title:
-        ax.set_title(title, **title_kw)
-
-    return img1, img2
-
-
-def plot_direct_link_cause_comparison_wide(
-    pag_path: str,
-    pheno_path: str,
-    p_thr=0.05,
-    title=None,
-    title_kw=dict(),
-    ax=None,
-    max_path_len=np.inf,
-):
-    if ax is None:
-        plt.figure(figsize=(3, 10))
-        ax = plt.gca()
-
-    disease_list = sorted(list(diseases))
-
-    p_names = get_pheno_codes(pheno_path)
-    num_phen = len(p_names)
-
-    causal_paths = get_causal_paths(pag_path, pheno_path, max_path_len=max_path_len)
-
-    ci_gwas_links = {}
-    cause_links = {}
-
-    cause_ys = set(cause_gamma["y1"].values)
-    cause_ys.update(set(cause_gamma["y2"].values))
-    reg_pnames = cause_ys.intersection(set(p_names))
-
-    for i in range(num_phen):
-        for j in range(num_phen):
-            name_i = p_names[i]
-            name_j = p_names[j]
-            if name_i in risk_factors and name_j in diseases:
-                cp = cause_gamma[
-                    (cause_gamma["y1"] == name_i) & (cause_gamma["y2"] == name_j)
-                ].p_value.values
-                if causal_paths[i, j] == 1:
-                    ci_gwas_links[(name_i, name_j)] = 1
-                if len(cp) >= 1 and cp[0] <= p_thr:
-                    cause_links[(name_i, name_j)] = 1
-
-    rf_intersection = sorted(list(risk_factors.intersection(reg_pnames)))
-    rf_cg_only = sorted(list(risk_factors - set(rf_intersection)))
-
-    risk_factor_list = rf_intersection + rf_cg_only
-
-    ci_gwas_links_mat = [
-        [0 for _ in range(len(diseases))] for _ in range(len(risk_factors))
-    ]
-    cause_links_mat = [
-        [0 for _ in range(len(diseases))] for _ in range(len(risk_factors))
-    ]
-
-    for i, rf in enumerate(risk_factor_list):
-        for j, ds in enumerate(disease_list):
-            if (rf, ds) in ci_gwas_links:
-                ci_gwas_links_mat[i][j] = 1
-            if (rf, ds) in cause_links:
-                cause_links_mat[i][j] = 1
-
-    row_labels = [r"$\bf{{{0}}}$".format(e) for e in disease_list]
-    col_labels = [r"$\bf{{{0}}}$".format(e) for e in rf_intersection] + rf_cg_only
-
-    N = len(diseases)
-    M = len(risk_factors)
-    x = np.arange(M + 1)
-    y = np.arange(N + 1)
-    xs, ys = np.meshgrid(x, y)
-
-    triangles1 = [
-        (i + j * (M + 1), i + 1 + j * (M + 1), i + (j + 1) * (M + 1))
-        for j in range(N)
-        for i in range(M)
-    ]
-    triangles2 = [
-        (i + 1 + j * (M + 1), i + 1 + (j + 1) * (M + 1), i + (j + 1) * (M + 1))
-        for j in range(N)
-        for i in range(M)
-    ]
-    triang1 = Triangulation(xs.ravel() - 0.5, ys.ravel() - 0.5, triangles1)
-    triang2 = Triangulation(xs.ravel() - 0.5, ys.ravel() - 0.5, triangles2)
-    img1 = ax.tripcolor(
-        triang1,
-        np.array(ci_gwas_links_mat).T.ravel(),
-        cmap=mpl.colors.ListedColormap(["w", "#fcb001"]),
-    )
-    img2 = ax.tripcolor(
-        triang2,
-        np.array(cause_links_mat).T.ravel(),
-        cmap=mpl.colors.ListedColormap(["w", "#448ee4"]),
-    )
-
-    # Show all ticks and label them with the respective list entries.
-    ax.set_xticks(np.arange(M))
-    ax.set_xticklabels(col_labels)
-    ax.set_yticks(np.arange(N), labels=row_labels)
-
-    # Let the horizontal axes labeling appear on top.
-    ax.tick_params(top=False, bottom=True, labeltop=False, labelbottom=True)
-
-    # Rotate the tick labels and set their alignment.
-    plt.setp(
-        ax.get_xticklabels(),
-        rotation=XLABEL_ROTATION,
-        ha="right",
-        rotation_mode="anchor",
-    )
-
-    # Turn spines off and create white grid.
-    ax.spines[:].set_visible(False)
-    ax.set_xticks(np.arange(M + 1) - 0.5, minor=True)
-    ax.set_yticks(np.arange(N + 1) - 0.5, minor=True)
-    ax.grid(which="minor", color="gray", linestyle="--", linewidth=1)
-    ax.tick_params(which="minor", bottom=False, left=False)
-    ax.set_ylabel("disease")
-    ax.set_xlabel("risk factor")
-
-    ci_gwas_patch = mpatches.Patch(color="#fcb001", label="CI-GWAS")
-    cause_patch = mpatches.Patch(color="#448ee4", label="CAUSE")
-
-    ax.legend(
-        handles=[ci_gwas_patch, cause_patch], bbox_to_anchor=(1, 0.5), loc="lower left"
-    )
 
     if title:
         ax.set_title(title, **title_kw)
@@ -3050,6 +2956,7 @@ class SimulationTruth:
     dag_pxp: np.array
     bidirected: np.array
     effects: np.array
+    direct_effects: np.array
 
 
 def load_real_data_simulation_truth(
@@ -3101,7 +3008,53 @@ def load_real_data_simulation_truth(
     m = np.linalg.inv(np.eye(m.shape[0]) - m.T)
     true_eff = np.triu(m @ m.T, 1)
 
-    return SimulationTruth(true_dag_mxp, true_dag_pxp, true_bidirected, true_eff)
+    return SimulationTruth(true_dag_mxp, true_dag_pxp, true_bidirected, true_eff, true_dag_pxp)
+
+
+@dataclass
+class MrResult:
+    p: np.array
+    est: np.array
+    links: np.array
+    adj: np.array
+    incomplete: bool
+
+
+def load_mr_result(
+    num_p: int,
+    rep: int,
+    mr_str: str,
+    mr_type: str,
+    alpha_e: str,
+    wdir: str,
+    mr_bonferroni: bool,
+    mr_exclude_zero_eff_links: bool
+):
+    mr_p = np.ones((num_p, num_p))
+    mr_est = np.zeros((num_p, num_p))
+    incomplete = False
+    for outcome in range(0, num_p):
+        pathstr = wdir + f"cusk/sim{rep}_e{alpha_e}/" + f"mr{mr_type}_{mr_str}_alpha*_sim{rep}_outcome_y{outcome + 1}_seed1000"
+        fpaths = glob(pathstr)
+        if len(fpaths) == 0:
+            # print(f"missing: {pathstr}")
+            incomplete = True
+            continue
+        fpath = fpaths[0]
+        mr_res_df = pd.read_csv(fpath)
+        exposures = [int(s[1:]) - 1 for s in mr_res_df["Exposure"]]
+        mr_p[exposures, outcome] = mr_res_df["p"].values
+        mr_est[exposures, outcome] = mr_res_df["est"].values
+    
+    if mr_bonferroni:
+        mr_links = mr_p <= (0.05 / ((num_p - 1) * 2 * 40))
+    else:
+        mr_links = mr_p <= 0.05
+    if mr_exclude_zero_eff_links:
+        mr_links = mr_links & (mr_est != 0.0)
+    mr_adj = make_adj_symmetric(mr_links)
+    
+    return MrResult(mr_p, mr_est, mr_links, mr_adj, incomplete)
 
 
 def load_real_data_simulation_adj_performance(
@@ -3110,6 +3063,7 @@ def load_real_data_simulation_adj_performance(
     e_arr=[2, 4, 6, 8],
     max_level=3,
     mr_bonferroni=True,
+    mr_exclude_zero_eff_links=True,
 ) -> pd.DataFrame:
     """Load simulation results for ci-gwas and mr methods, calculate fdr, tpr for adjacencies."""
     rows = []
@@ -3118,6 +3072,39 @@ def load_real_data_simulation_adj_performance(
     rs_ids = pd.read_csv(bim_path, sep="\t", header=None)[1].values
     for rep in rep_arr:
         truth = load_real_data_simulation_truth(rep)
+        # -------------------- MVIVW + oracle IVs --------------------
+        mr_str = "mvivw"
+        mr_res = load_mr_result(num_p, rep, mr_str, "_oracle", 1, wdir, mr_bonferroni, mr_exclude_zero_eff_links)
+        if mr_res.incomplete:
+            continue
+
+        # tpr
+        m = (truth.bidirected != 0) | (truth.dag_pxp != 0)
+        p = np.sum(m)
+        tp = np.sum(m & (mr_res.adj != 0))
+        pxp_tpr = tp / p
+
+        # fdr
+        if mr_str.startswith("mv"):
+            # mv methods claim to return direct effects.
+            fp = np.sum(~m & (np.triu(mr_res.adj, 1) != 0))
+            pxp_fdr = fp / (tp + fp)
+        else:
+            causal_paths = path_in_sem(mr_res.adj)
+            tp = np.sum(np.triu(causal_paths, 1) & (np.triu(mr_res.adj, 1) != 0))
+            fp = np.sum(~np.triu(causal_paths, 1) & (np.triu(mr_res.adj, 1) != 0))
+            pxp_fdr = fp / (tp + fp) if (tp + fp) > 0 else np.nan
+
+        rows.append(
+            {
+                "y -> y tpr": pxp_tpr,
+                "y -> y fdr": pxp_fdr,
+                "rep": rep,
+                "alpha": None,
+                "method": mr_str + " + oracle IV",
+            }
+        )
+
         for alpha_e in e_arr:
             # -------------------- CI-GWAS -----------------------------
             est_dir = wdir + f"cusk/sim{rep}_e{alpha_e}_l{max_level}_2stepsk/"
@@ -3174,49 +3161,25 @@ def load_real_data_simulation_adj_performance(
 
             # -------------------- MR -----------------------------
             for mr_str in ["cause", "presso", "mvpresso", "ivw", "mvivw"]:
-                mr_p = np.ones((num_p, num_p))
-                mr_est = np.zeros((num_p, num_p))
-                incomplete = False
-
-                for outcome in range(0, num_p):
-                    fpaths = glob(
-                        wdir
-                        + f"cusk/sim{rep}_e{alpha_e}/"
-                        + f"mr_{mr_str}_alpha*_sim{rep}_outcome_y{outcome + 1}_seed1000"
-                    )
-                    if len(fpaths) == 0:
-                        incomplete = True
-                        continue
-                    fpath = fpaths[0]
-                    mr_res_df = pd.read_csv(fpath)
-                    exposures = [int(s[1:]) - 1 for s in mr_res_df["Exposure"]]
-                    mr_p[exposures, outcome] = mr_res_df["p"].values
-                    mr_est[exposures, outcome] = mr_res_df["est"].values
-
-                if incomplete:
+                mr_res = load_mr_result(num_p, rep, mr_str, "", alpha_e, wdir, mr_bonferroni, mr_exclude_zero_eff_links)
+                if mr_res.incomplete:
                     continue
-
-                if mr_bonferroni:
-                    mr_links = mr_p <= (0.05 / ((num_p - 1) * 2 * 20))
-                else:
-                    mr_links = mr_p <= 0.05
-                mr_adj = make_adj_symmetric(mr_links)
 
                 # tpr
                 m = (truth.bidirected != 0) | (truth.dag_pxp != 0)
                 p = np.sum(m)
-                tp = np.sum(m & (mr_adj != 0))
+                tp = np.sum(m & (mr_res.adj != 0))
                 pxp_tpr = tp / p
 
                 # fdr
                 if mr_str.startswith("mv"):
                     # mv methods claim to return direct effects.
-                    fp = np.sum(~m & (np.triu(mr_adj, 1) != 0))
+                    fp = np.sum(~m & (np.triu(mr_res.adj, 1) != 0))
                     pxp_fdr = fp / (tp + fp)
                 else:
-                    causal_paths = path_in_sem(mr_adj)
-                    tp = np.sum(np.triu(causal_paths, 1) & (np.triu(mr_adj, 1) != 0))
-                    fp = np.sum(~np.triu(causal_paths, 1) & (np.triu(mr_adj, 1) != 0))
+                    causal_paths = path_in_sem(mr_res.adj)
+                    tp = np.sum(np.triu(causal_paths, 1) & (np.triu(mr_res.adj, 1) != 0))
+                    fp = np.sum(~np.triu(causal_paths, 1) & (np.triu(mr_res.adj, 1) != 0))
                     pxp_fdr = fp / (tp + fp) if (tp + fp) > 0 else np.nan
 
                 rows.append(
@@ -3233,51 +3196,28 @@ def load_real_data_simulation_adj_performance(
             if alpha_e not in [2, 4]:
                 continue
             for mr_str in ["cause", "presso", "mvpresso", "ivw", "mvivw"]:
-                mr_p = np.ones((num_p, num_p))
-                mr_est = np.zeros((num_p, num_p))
-                incomplete = False
-                for outcome in range(0, num_p):
-                    mr_str_mod = mr_str
-                    if mr_str == "ivw":
-                        mr_str_mod = "vw"
-                    fpaths = glob(
-                        wdir
-                        + f"cusk/sim{rep}_e{alpha_e}/"
-                        + f"mr_cigwas_{mr_str_mod}_alpha*_sim{rep}_outcome_y{outcome + 1}_seed1000"
-                    )
-                    if len(fpaths) == 0:
-                        incomplete = True
-                        continue
-                    fpath = fpaths[0]
-                    mr_res_df = pd.read_csv(fpath)
-                    exposures = [int(s[1:]) - 1 for s in mr_res_df["Exposure"]]
-                    mr_p[exposures, outcome] = mr_res_df["p"].values
-                    mr_est[exposures, outcome] = mr_res_df["est"].values
-
-                if incomplete:
+                mr_str_mod = mr_str
+                if mr_str == "ivw":
+                    mr_str_mod = "vw"
+                mr_res = load_mr_result(num_p, rep, mr_str_mod, "_cigwas", alpha_e, wdir, mr_bonferroni, mr_exclude_zero_eff_links)
+                if mr_res.incomplete:
                     continue
-
-                if mr_bonferroni:
-                    mr_links = mr_p <= (0.05 / ((num_p - 1) * 2 * len(rep_arr)))
-                else:
-                    mr_links = mr_p <= 0.05
-                mr_adj = make_adj_symmetric(mr_links)
 
                 # tpr
                 m = (truth.bidirected != 0) | (truth.dag_pxp != 0)
                 p = np.sum(m)
-                tp = np.sum(m & (mr_adj != 0))
+                tp = np.sum(m & (mr_res.adj != 0))
                 pxp_tpr = tp / p
 
                 # fdr
                 if mr_str.startswith("mv"):
                     # mv methods claim to return direct effects.
-                    fp = np.sum(~m & (np.triu(mr_adj, 1) != 0))
+                    fp = np.sum(~m & (np.triu(mr_res.adj, 1) != 0))
                     pxp_fdr = fp / (tp + fp)
                 else:
-                    causal_paths = path_in_sem(mr_adj)
-                    tp = np.sum(np.triu(causal_paths, 1) & (np.triu(mr_adj, 1) != 0))
-                    fp = np.sum(~np.triu(causal_paths, 1) & (np.triu(mr_adj, 1) != 0))
+                    causal_paths = path_in_sem(mr_res.adj)
+                    tp = np.sum(np.triu(causal_paths, 1) & (np.triu(mr_res.adj, 1) != 0))
+                    fp = np.sum(~np.triu(causal_paths, 1) & (np.triu(mr_res.adj, 1) != 0))
                     pxp_fdr = fp / (tp + fp) if (tp + fp) > 0 else np.nan
 
                 rows.append(
@@ -3289,6 +3229,7 @@ def load_real_data_simulation_adj_performance(
                         "method": mr_str + " + CI-GWAS",
                     }
                 )
+    
     return pd.DataFrame(rows)
 
 
@@ -3420,9 +3361,9 @@ def plot_real_data_simulation_adj_performance(
     plot_ci_gwas_bars(
         alphas, "x -> y fdr", means, stds, ax_dict["a"], "a)", axhline=True
     )
-    ax_dict["a"].set_ylabel(r"$x - y \ FDR$")
+    ax_dict["a"].set_ylabel(r"$X - Y \ FDR$")
     plot_ci_gwas_bars(alphas, "x -> y tpr", means, stds, ax_dict["b"], "b)")
-    ax_dict["b"].set_ylabel(r"$x - y \ TPR$")
+    ax_dict["b"].set_ylabel(r"$X - Y \ TPR$")
     plot_bars(
         alphas,
         "y -> y fdr",
@@ -3433,11 +3374,14 @@ def plot_real_data_simulation_adj_performance(
         axhline=True,
         methods=methods,
     )
-    ax_dict["c"].set_ylabel(r"$y - y \ FDR$")
+    ax_dict["c"].set_ylabel(r"$Y - Y \ FDR$")
     h = plot_bars(
         alphas, "y -> y tpr", means, stds, ax_dict["d"], "d)", methods=methods
     )
-    ax_dict["d"].set_ylabel(r"$y - y \ TPR$")
+    ax_dict["d"].set_ylabel(r"$Y - Y \ TPR$")
+
+    for ax_sym in "abcd":
+        ax_dict[ax_sym].set_ylim(0.0)
 
     ax_dict["i"].legend(
         handles=h,
@@ -3487,12 +3431,36 @@ def plot_mr_vs_ci_gwas_plus_mr(
 
     title_kw = {"loc": "left", "pad": 15, "size": 20}
 
+    def plot_single_bar(mean, std, ax, title, ticklabel, axhline=False, color_index=1):
+        from itertools import cycle
+        prop_cycle = plt.cycler("color", plt.cm.tab20.colors)
+        colors = cycle(prop_cycle.by_key()["color"])
+        for i in range(color_index):
+            next(colors)
+        width = 0.07
+        bar = ax.bar(
+            0, mean, width, yerr=std, capsize=1.5, color=next(colors)
+        )
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.spines["left"].set_visible(False)
+        ax.yaxis.set_ticks_position('none') 
+        ax.set_xticks([0], [ticklabel])
+        if axhline:
+            ax.axhline(0.05, linestyle="dotted", color="gray")
+        plt.setp(
+            ax.get_xticklabels(),
+            rotation=bar_xlabel_rotation,
+            ha="right",
+            rotation_mode="anchor",
+        )
+        return bar
+
     def plot_bars(x_vals, metric, means, stds, ax, title, methods, axhline=False):
         from itertools import cycle
 
-        prop_cycle = plt.rcParams["axes.prop_cycle"]
+        prop_cycle = plt.cycler("color", plt.cm.tab20.colors)
         colors = cycle(prop_cycle.by_key()["color"])
-        next(colors)
         ax.set_title(title, **title_kw)
         x_sorted = sorted(list(x_vals))
         x = np.arange(len(x_vals))  # the label locations
@@ -3523,8 +3491,6 @@ def plot_mr_vs_ci_gwas_plus_mr(
             multiplier += 1
 
         ax.set_ylabel(metric)
-        if title == "g)" or title == "h)":
-            ax.set_xlabel(r"$\alpha$")
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
         ax.set_xticks(x + offset * 0.5, x_vals)
@@ -3540,20 +3506,25 @@ def plot_mr_vs_ci_gwas_plus_mr(
         # ax.set_yscale("symlog")
         return handles
 
-    fig = plt.figure(figsize=(8, 6), layout="tight")
+    fig = plt.figure(figsize=(8, 6), layout='tight')
     ax_dict = fig.subplot_mosaic(
         """
-        cc
-        dd
-        ii
+        cce
+        ddf
+        iii
         """,
         empty_sentinel="X",
+        sharey=True,
+        width_ratios=[1, 1, 0.1],
         # set the height ratios between the rows
-        # height_ratios=[0.5, 0.5],
+        height_ratios=[0.5, 0.5, 0.8],
     )
 
     # ax_dict["c"].set_xlabel(r"$\alpha$")
     ax_dict["d"].set_xlabel(r"$\alpha$")
+
+    for ax_sym in "di":
+        ax_dict[ax_sym].set_ylim(0.0)
 
     plot_bars(
         alphas,
@@ -3565,17 +3536,45 @@ def plot_mr_vs_ci_gwas_plus_mr(
         axhline=True,
         methods=methods,
     )
-    ax_dict["c"].set_ylabel(r"$y - y \ FDR$")
+    oracle_mse_mean = df[df["method"] == "mvivw + oracle IV"].groupby("method").mean()["y -> y fdr"].values[0]
+    oracle_mse_std = df[df["method"] == "mvivw + oracle IV"].groupby("method").std()["y -> y fdr"].values[0]
+    plot_single_bar(
+        oracle_mse_mean,
+        oracle_mse_std,
+        ax_dict['e'],
+        None,
+        'oracle IV',
+        axhline=True,
+        color_index=len(methods),
+    )
+
+    ax_dict["c"].set_ylabel(r"$Y - Y \ FDR$")
+    
     h = plot_bars(
         alphas, "y -> y tpr", means, stds, ax_dict["d"], None, methods=methods
     )
-    ax_dict["d"].set_ylabel(r"$y - y \ TPR$")
+
+    oracle_mse_mean = df[df["method"] == "mvivw + oracle IV"].groupby("method").mean()["y -> y tpr"].values[0]
+    oracle_mse_std = df[df["method"] == "mvivw + oracle IV"].groupby("method").std()["y -> y tpr"].values[0]
+    single_bar = plot_single_bar(
+        oracle_mse_mean,
+        oracle_mse_std,
+        ax_dict['f'],
+        None,
+        'oracle IV',
+        axhline=False,
+        color_index=len(methods),
+    )
+    h.append(single_bar)
+    
+    ax_dict["d"].set_ylabel(r"$Y - Y \ TPR$")
 
     labels_mr = ["CAUSE", "MR-PRESSO", "MR-PRESSO (MV)", "IVW", "IVW (MV)"]
     labels_mixed = [l + " + CI-GWAS" for l in labels_mr]
     labels = labels_mr + labels_mixed
     labels[::2] = labels_mr
     labels[1::2] = labels_mixed
+    labels.append("IVW (MV) + oracle IV")
 
     ax_dict["i"].legend(
         handles=h,
@@ -3587,9 +3586,10 @@ def plot_mr_vs_ci_gwas_plus_mr(
         # title="method",
     )
     ax_dict["i"].axis("off")
-    _ = [ax_dict[i].tick_params(labelbottom=False) for i in "c"]
+    _ = [ax_dict[i].tick_params(labelbottom=False) for i in "ce"]
     _ = [ax_dict[i].sharex(ax_dict['d']) for i in 'c']
-    # fig.subplots_adjust(wspace=0.7, hspace=1.5)
+    _ = [ax_dict[i].sharex(ax_dict['f']) for i in 'e']
+    # fig.subplots_adjust(hspace=1)
     if fig_path is not None:
         plt.savefig(fig_path, bbox_inches="tight")
 
@@ -3697,7 +3697,10 @@ def load_real_data_simulation_orient_and_ace_performance(
                 mr_est[~mr_links] = 0.0
 
                 select = mr_est != 0
-                mse = np.mean((mr_est[select] - truth.effects[select]) ** 2)
+                if mr_str.startswith("mv"):
+                    mse = np.mean((mr_est[select] - truth.direct_effects[select]) ** 2)
+                else:
+                    mse = np.mean((mr_est[select] - truth.effects[select]) ** 2)
 
                 if mr_str.startswith("mv"):
                     orientation_perf = calculate_pxp_orientation_performance_mvmr(
@@ -3707,12 +3710,6 @@ def load_real_data_simulation_orient_and_ace_performance(
                     orientation_perf = calculate_pxp_orientation_performance_mr(
                         truth.dag_pxp != 0, truth.bidirected != 0, mr_links
                     )
-
-                # orientation_perf_rel_to_mr = (
-                #     compare_ci_gwas_orientation_performance_to_mr(
-                #         truth.dag_pxp, truth.bidirected, mr_links, est_pag_pxp
-                #     )
-                # )
 
                 rows.append(
                     {
@@ -3878,6 +3875,8 @@ def plot_real_simulation_orient_and_ace_performance(
     ax_dict["b"].axhline(cig_mse_mean, linestyle="--", color="k")
     ax_dict["b"].axhline(cig_mse_mean + cig_mse_std, linestyle=":", color="gray")
     ax_dict["b"].axhline(cig_mse_mean - cig_mse_std, linestyle=":", color="gray")
+    ax_dict["b"].set_ylim(0.0)
+    ax_dict["a"].set_ylim(0.0)
     # ax_dict["c"].fill_between(
     #     [err_start, err_end],
     #     cig_mse_mean - cig_mse_std,
@@ -5355,6 +5354,7 @@ def plot_full_ukb_results_figure_3(
         # norm=norm,
         cmap=cmap,
         cbar=True,
+        cbarlabel=r"# shared parent markers",
         # aspect="auto",
     )
     # ax_dict["b"].text(0, -2.5, "b)", size=20, verticalalignment="top")
