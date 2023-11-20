@@ -2,7 +2,7 @@ library("pcalg");
 library("fastmatch")
 library("Matrix")
 
-#source("/nfs/scistore17/robingrp/nmachnik/dev/ci-gwas/srfci/RFCI_functions_final.R")
+source("/nfs/scistore17/robingrp/nmachnik/dev/ci-gwas/srfci/RFCI_functions_final.R")
 
 myargs = commandArgs(trailingOnly=TRUE)
 print(myargs)

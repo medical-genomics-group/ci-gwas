@@ -57,6 +57,7 @@ udag2apag<-function (apag, suffStat, indepTest, alpha, sepset, rules = rep(TRUE,
     while (any(old_apag1 != apag)) {
       old_apag1 <- apag
       if (rules[1]) {
+        cat("Applying rule 1 \n")
         ind <- which((apag == 2 & t(apag) != 0), arr.ind = TRUE)
         for (i in seq_len(nrow(ind))) {
           a <- ind[i, 1]
@@ -92,6 +93,7 @@ udag2apag<-function (apag, suffStat, indepTest, alpha, sepset, rules = rep(TRUE,
         }
       }
       if (rules[2]) {
+        cat("Applying rule 2 \n")
         ind <- which((apag == 1 & t(apag) != 0), arr.ind = TRUE)
         for (i in seq_len(nrow(ind))) {
           a <- ind[i, 1]
@@ -112,6 +114,7 @@ udag2apag<-function (apag, suffStat, indepTest, alpha, sepset, rules = rep(TRUE,
         }
       }
       if (rules[3]) {
+        cat("Applying rule 3 \n")
         ind <- which(apag != 0 & t(apag) == 1, arr.ind = TRUE)
         for (i in seq_len(nrow(ind))) {
           b <- ind[i, 1]
@@ -161,6 +164,7 @@ udag2apag<-function (apag, suffStat, indepTest, alpha, sepset, rules = rep(TRUE,
         }
       }
       if (rules[4]) {
+        cat("Applying rule 4 \n")
         ind <- which((apag != 0 & t(apag) == 1), arr.ind = TRUE)
         while (length(ind) > 0) {
           b <- ind[1, 1]
@@ -222,6 +226,7 @@ udag2apag<-function (apag, suffStat, indepTest, alpha, sepset, rules = rep(TRUE,
         }
       }
       if (rules[5]) {
+        cat("Applying rule 5 \n")
         ind <- which((apag == 1 & t(apag) == 1), arr.ind = TRUE)
         while (length(ind) > 0) {
           a <- ind[1, 1]
@@ -297,6 +302,7 @@ udag2apag<-function (apag, suffStat, indepTest, alpha, sepset, rules = rep(TRUE,
         }
       }
       if (rules[6]) {
+        cat("Applying rule 6 \n")
         ind <- which((apag != 0 & t(apag) == 1), arr.ind = TRUE)
         for (i in seq_len(nrow(ind))) {
           b <- ind[i, 1]
@@ -312,6 +318,7 @@ udag2apag<-function (apag, suffStat, indepTest, alpha, sepset, rules = rep(TRUE,
         }
       }
       if (rules[7]) {
+        cat("Applying rule 7 \n")
         ind <- which((apag != 0 & t(apag) == 1), arr.ind = TRUE)
         for (i in seq_len(nrow(ind))) {
           b <- ind[i, 1]
@@ -348,6 +355,7 @@ udag2apag<-function (apag, suffStat, indepTest, alpha, sepset, rules = rep(TRUE,
         }
       }
       if (rules[8]) {
+        cat("Applying rule 8 \n")
         ind <- which((apag == 2 & t(apag) == 1), arr.ind = TRUE)
         for (i in seq_len(nrow(ind))) {
           a <- ind[i, 1]
@@ -367,6 +375,7 @@ udag2apag<-function (apag, suffStat, indepTest, alpha, sepset, rules = rep(TRUE,
         }
       }
       if (rules[9]) {
+        cat("Applying rule 9 \n")
         ind <- which((apag == 2 & t(apag) == 1), arr.ind = TRUE)
         while (length(ind) > 0) {
           a <- ind[1, 1]
@@ -395,6 +404,7 @@ udag2apag<-function (apag, suffStat, indepTest, alpha, sepset, rules = rep(TRUE,
         }
       }
       if (rules[10]) {
+        cat("Applying rule 10 \n")
         ind <- which((apag == 2 & t(apag) == 1), arr.ind = TRUE)
         while (length(ind) > 0) {
           a <- ind[1, 1]
