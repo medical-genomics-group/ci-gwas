@@ -176,8 +176,8 @@ udag2apag<-function (apag, suffStat, indepTest, alpha, sepset, rules = rep(TRUE,
             a <- indA[1]
             indA <- indA[-1]
             Done <- FALSE
-            while (!Done && apag[a, b] != 0 && apag[a, 
-                                                    c] != 0 && apag[b, c] != 0) {
+            while (!Done && apag[a, b] != 0 && apag[a, c] != 0 && apag[b, c] != 0) {
+              cat("")
               md.path <- minDiscrPath(apag, a, b, c, 
                                       verbose = verbose)
               N.md <- length(md.path)
@@ -185,41 +185,66 @@ udag2apag<-function (apag, suffStat, indepTest, alpha, sepset, rules = rep(TRUE,
                 Done <- TRUE
               }
               else {
-                chkE <- checkEdges(suffStat, indepTest, 
-                                   alpha = alpha, apag = apag, sepset = sepset, 
-                                   path = md.path, unfVect = unfVect, 
-                                   verbose = verbose)
-                sepset <- chkE$sepset
-                apag <- chkE$apag
-                unfVect <- c(unfVect, chkE$unfTripl)
-                if (!chkE$deleted) {
-                  if (b %in% sepset[[md.path[1]]][[md.path[N.md]]] || 
-                      b %in% sepset[[md.path[N.md]]][[md.path[1]]]) {
-                    if (verbose) {
-                      cat("\nRule 4", "\n")
-                      cat("There is a discriminating path between", 
-                          md.path[1], "and", c, "for", 
-                          b, ",and", b, "is in Sepset of", 
-                          c, "and", md.path[1], ". Orient:", 
-                          b, "->", c, "\n")
-                    }
-                    apag[b, c] <- 2
-                    apag[c, b] <- 3
+                if (b %in% sepset[[md.path[1]]][[md.path[N.md]]] || 
+                    b %in% sepset[[md.path[N.md]]][[md.path[1]]]) {
+                  if (verbose) {
+                    cat("\nRule 4", "\n")
+                    cat("There is a discriminating path between", 
+                        md.path[1], "and", c, "for", 
+                        b, ",and", b, "is in Sepset of", 
+                        c, "and", md.path[1], ". Orient:", 
+                        b, "->", c, "\n")
                   }
-                  else {
-                    if (verbose) {
-                      cat("\nRule 4", "\n")
-                      cat("There is a discriminating path between:", 
-                          md.path[1], "and", c, "for", 
-                          b, ",and", b, "is not in Sepset of", 
-                          c, "and", md.path[1], ". Orient", 
-                          a, "<->", b, "<->", c, "\n")
-                    }
-                    apag[a, b] <- apag[b, c] <- apag[c, 
-                                                     b] <- 2
-                  }
-                  Done <- TRUE
+                  apag[b, c] <- 2
+                  apag[c, b] <- 3
                 }
+                else {
+                  if (verbose) {
+                    cat("\nRule 4", "\n")
+                    cat("There is a discriminating path between:", 
+                        md.path[1], "and", c, "for", 
+                        b, ",and", b, "is not in Sepset of", 
+                        c, "and", md.path[1], ". Orient", 
+                        a, "<->", b, "<->", c, "\n")
+                  }
+                  apag[a, b] <- apag[b, c] <- apag[c, b] <- 2
+                }
+                Done <- TRUE
+                # chkE <- checkEdges(suffStat, indepTest, 
+                #                    alpha = alpha, apag = apag, sepset = sepset, 
+                #                    path = md.path, unfVect = unfVect, 
+                #                    verbose = verbose)
+                # sepset <- chkE$sepset
+                # apag <- chkE$apag
+                # unfVect <- c(unfVect, chkE$unfTripl)
+                # if (!chkE$deleted) {
+                #   if (b %in% sepset[[md.path[1]]][[md.path[N.md]]] || 
+                #       b %in% sepset[[md.path[N.md]]][[md.path[1]]]) {
+                #     if (verbose) {
+                #       cat("\nRule 4", "\n")
+                #       cat("There is a discriminating path between", 
+                #           md.path[1], "and", c, "for", 
+                #           b, ",and", b, "is in Sepset of", 
+                #           c, "and", md.path[1], ". Orient:", 
+                #           b, "->", c, "\n")
+                #     }
+                #     apag[b, c] <- 2
+                #     apag[c, b] <- 3
+                #   }
+                #   else {
+                #     if (verbose) {
+                #       cat("\nRule 4", "\n")
+                #       cat("There is a discriminating path between:", 
+                #           md.path[1], "and", c, "for", 
+                #           b, ",and", b, "is not in Sepset of", 
+                #           c, "and", md.path[1], ". Orient", 
+                #           a, "<->", b, "<->", c, "\n")
+                #     }
+                #     apag[a, b] <- apag[b, c] <- apag[c, 
+                #                                      b] <- 2
+                #   }
+                #   Done <- TRUE
+                # }
               }
             }
           }
