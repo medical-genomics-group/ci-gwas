@@ -79,43 +79,16 @@ rule1_order_indp <- function(apag, unfVect = NULL) {
     apag
 }
 
-# rule1_order_indp <- function(apag, unfVect = NULL) {
-#     p <- ncol(apag)
-#     ind <- which((apag == 2 & t(apag) != 0), arr.ind = TRUE)
-#     for (i in seq_len(nrow(ind))) {
-#         a <- ind[i, 1]
-#         b <- ind[i, 2]
-#         # this is not going to select edges which have been modified before
-#         # indC <- which(apag[b, ] != 0 & apag[, b] == 1 & apag[a, ] == 0 & apag[, a] == 0)
-#         # to select all neighbors that are not adjacent to a we have to do
-#         indC <- which(apag[b, ] != 0 & apag[, b] != 0 & apag[a, ] == 0 & apag[, a] == 0)
-#         indC <- setdiff(indC, a)
-#         for (c in indC) {
-#             if (any(unfVect == triple2numb(p, a, b, c), na.rm = TRUE) ||
-#                 any(unfVect == triple2numb(p, c, b, a), na.rm = TRUE)) {
-#                 # skip if the triple is ambiguous, we are not using those for orientations
-#                 next
-#             }
-#             if (apag[c, b] == 1) { # not oriented yet
-#                 apag[b, c] <- 2
-#                 apag[c, b] <- 3
-#             } else if (apag[c, b] == 2) { # has been orientated in opposing direction before
-#                 apag[b, c] <- 2
-#                 apag[c, b] <- 2
-#             }
-#         }
-#     }
-#     apag
-# }
 
 rule2_order_indp <- function(apag, unfVect = NULL) {
+    search_apag <- apag
     ind <- which((apag == 1 & t(apag) != 0), arr.ind = TRUE)
     for (i in seq_len(nrow(ind))) {
         a <- ind[i, 1]
         c <- ind[i, 2]
         indB <- which(
-            ((apag[a, ] == 2 & apag[, a] == 3) & (apag[c, ] != 0 & apag[, c] == 2)) |
-                ((apag[a, ] == 2 & apag[, a] != 0) & (apag[c, ] == 3 & apag[, c] == 2))
+            ((search_apag[a, ] == 2 & search_apag[, a] == 3) & (search_apag[c, ] != 0 & search_apag[, c] == 2)) |
+                ((search_apag[a, ] == 2 & search_apag[, a] != 0) & (search_apag[c, ] == 3 & search_apag[, c] == 2))
         )
         if (length(indB) > 0) {
             # it doesn't matter if it has been orientated in the other direction before or not,
@@ -127,12 +100,13 @@ rule2_order_indp <- function(apag, unfVect = NULL) {
 }
 
 rule3_order_indp <- function(apag, unfVect = NULL) {
+    search_apag <- apag
     p <- ncol(apag)
     ind <- which(apag != 0 & t(apag) == 1, arr.ind = TRUE)
     for (i in seq_len(nrow(ind))) {
         b <- ind[i, 1]
         d <- ind[i, 2]
-        indAC <- which(apag[b, ] != 0 & apag[, b] == 2 & apag[, d] == 1 & apag[d, ] != 0)
+        indAC <- which(search_apag[b, ] != 0 & search_apag[, b] == 2 & search_apag[, d] == 1 & search_apag[d, ] != 0)
         if (length(indAC) >= 2) {
             comb.indAC <- combn(indAC, 2)
             for (j in seq_len(ncol(comb.indAC))) {
@@ -151,11 +125,12 @@ rule3_order_indp <- function(apag, unfVect = NULL) {
 }
 
 rule4_order_indp <- function(apag, unfVect = NULL) {
+    search_apag <- apag
     ind <- which((apag != 0 & t(apag) == 1), arr.ind = TRUE)
     for (i in seq_len(nrow(ind))) {
         b <- ind[i, 1]
         c <- ind[i, 2]
-        indA <- which((apag[b, ] == 2 & apag[, b] != 0) & (apag[c, ] == 3 & apag[, c] == 2))
+        indA <- which((search_apag[b, ] == 2 & search_apag[, b] != 0) & (search_apag[c, ] == 3 & search_apag[, c] == 2))
         for (a in indA) {
             if (apag[a, b] == 2 && apag[b, c] == 2 && apag[c, b] == 2) {
                 break
