@@ -55,11 +55,12 @@ find.unsh.triple <- function(g, check = TRUE) {
 
 rule1_order_indp <- function(apag, unfVect = NULL) {
     p <- ncol(apag)
+    search_apag <- apag
     ind <- which((apag != 0 & t(apag) == 1), arr.ind = TRUE)
     for (i in seq_len(nrow(ind))) {
         b <- ind[i, 1]
         c <- ind[i, 2]
-        indA <- which(apag[b, ] != 0 & apag[, b] == 2 & apag[c, ] == 0 & apag[, c] == 0)
+        indA <- which(search_apag[b, ] != 0 & search_apag[, b] == 2 & search_apag[c, ] == 0 & search_apag[, c] == 0)
         indA <- setdiff(indA, c)
         for (a in indA) {
             if (any(unfVect == triple2numb(p, a, b, c), na.rm = TRUE) ||
