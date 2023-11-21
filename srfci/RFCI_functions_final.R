@@ -158,6 +158,7 @@ udag2apag_ci_gwas <- function(apag, sepset, rules = rep(TRUE, 10), unfVect = Nul
     p <- ncol(apag)
     old_apag <- matrix(0, nrow = p, ncol = p)
     while (any(old_apag != apag)) {
+        old_apag <- apag
         if (rules[1]) {
             cat("Applying rule 1 \n")
             apag <- rule1_order_indp(apag, unfVect = unfVect)
