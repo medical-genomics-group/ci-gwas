@@ -78,7 +78,7 @@ rule2_order_indp <- function(apag, unfVect=NULL)
   ind <- which((apag == 1 & t(apag) != 0), arr.ind=TRUE)
   for (i in seq_len(nrow(ind))) {
     a <- ind[i, 1]
-    c <- ind[i, 2
+    c <- ind[i, 2]
     indB <- which(
       ((apag[a, ] == 2 & apag[, a] == 3) & (apag[c, ] != 0 & apag[, c] == 2)) |
       ((apag[a, ] == 2 & apag[, a] != 0) & (apag[c, ] == 3 & apag[, c] == 2))
