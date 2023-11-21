@@ -53,36 +53,59 @@ find.unsh.triple <- function(g, check = TRUE) {
     list(unshTripl = unshTripl, unshVect = unshVect)
 }
 
-
-
 rule1_order_indp <- function(apag, unfVect = NULL) {
     p <- ncol(apag)
-    ind <- which((apag == 2 & t(apag) != 0), arr.ind = TRUE)
+    ind <- which((apag != 0 & t(apag) == 1), arr.ind = TRUE)
     for (i in seq_len(nrow(ind))) {
-        a <- ind[i, 1]
-        b <- ind[i, 2]
-        # this is not going to select edges which have been modified before
-        # indC <- which(apag[b, ] != 0 & apag[, b] == 1 & apag[a, ] == 0 & apag[, a] == 0)
-        # to select all neighbors that are not adjacent to a we have to do
-        indC <- which(apag[b, ] != 0 & apag[, b] != 0 & apag[a, ] == 0 & apag[, a] == 0)
-        indC <- setdiff(indC, a)
-        for (c in indC) {
+        b <- ind[i, 1]
+        c <- ind[i, 2]
+        indA <- which(apag[b, ] != 0 & apag[, b] == 2 & apag[c, ] == 0 & apag[, c] == 0)
+        indA <- setdiff(indA, c)
+        for (a in indA) {
             if (any(unfVect == triple2numb(p, a, b, c), na.rm = TRUE) ||
                 any(unfVect == triple2numb(p, c, b, a), na.rm = TRUE)) {
                 # skip if the triple is ambiguous, we are not using those for orientations
                 next
             }
-            if (apag[c, b] == 1) { # not oriented yet
+            if (apag[c, b] == 1 & apag[b, c] != 0) { # not oriented yet
                 apag[b, c] <- 2
                 apag[c, b] <- 3
             } else if (apag[c, b] == 2) { # has been orientated in opposing direction before
                 apag[b, c] <- 2
-                apag[c, b] <- 2
             }
         }
     }
     apag
 }
+
+# rule1_order_indp <- function(apag, unfVect = NULL) {
+#     p <- ncol(apag)
+#     ind <- which((apag == 2 & t(apag) != 0), arr.ind = TRUE)
+#     for (i in seq_len(nrow(ind))) {
+#         a <- ind[i, 1]
+#         b <- ind[i, 2]
+#         # this is not going to select edges which have been modified before
+#         # indC <- which(apag[b, ] != 0 & apag[, b] == 1 & apag[a, ] == 0 & apag[, a] == 0)
+#         # to select all neighbors that are not adjacent to a we have to do
+#         indC <- which(apag[b, ] != 0 & apag[, b] != 0 & apag[a, ] == 0 & apag[, a] == 0)
+#         indC <- setdiff(indC, a)
+#         for (c in indC) {
+#             if (any(unfVect == triple2numb(p, a, b, c), na.rm = TRUE) ||
+#                 any(unfVect == triple2numb(p, c, b, a), na.rm = TRUE)) {
+#                 # skip if the triple is ambiguous, we are not using those for orientations
+#                 next
+#             }
+#             if (apag[c, b] == 1) { # not oriented yet
+#                 apag[b, c] <- 2
+#                 apag[c, b] <- 3
+#             } else if (apag[c, b] == 2) { # has been orientated in opposing direction before
+#                 apag[b, c] <- 2
+#                 apag[c, b] <- 2
+#             }
+#         }
+#     }
+#     apag
+# }
 
 rule2_order_indp <- function(apag, unfVect = NULL) {
     ind <- which((apag == 1 & t(apag) != 0), arr.ind = TRUE)
