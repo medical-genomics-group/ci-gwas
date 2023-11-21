@@ -67,8 +67,8 @@ rule1_order_indp <- function(apag, unfVect = NULL) {
         indC <- which(apag[b, ] != 0 & apag[, b] != 0 & apag[a, ] == 0 & apag[, a] == 0)
         indC <- setdiff(indC, a)
         for (c in indC) {
-            if (!any(unfVect == triple2numb(p, a, b, c), na.rm = TRUE) &&
-                !any(unfVect == triple2numb(p, c, b, a), na.rm = TRUE)) {
+            if (any(unfVect == triple2numb(p, a, b, c), na.rm = TRUE) ||
+                any(unfVect == triple2numb(p, c, b, a), na.rm = TRUE)) {
                 # skip if the triple is ambiguous, we are not using those for orientations
                 next
             }
@@ -115,8 +115,8 @@ rule3_order_indp <- function(apag, unfVect = NULL) {
                 a <- comb.indAC[1, j]
                 c <- comb.indAC[2, j]
                 if (apag[a, c] == 0 && apag[c, a] == 0 && c != a) {
-                    if (!any(unfVect == triple2numb(p, a, d, c), na.rm = TRUE) &&
-                        !any(unfVect == triple2numb(p, c, d, a), na.rm = TRUE)) {
+                    if (any(unfVect == triple2numb(p, a, d, c), na.rm = TRUE) ||
+                        any(unfVect == triple2numb(p, c, d, a), na.rm = TRUE)) {
                         apag[d, b] <- 2
                     }
                 }
@@ -152,6 +152,94 @@ rule4_order_indp <- function(apag, unfVect = NULL) {
         }
     }
     apag
+}
+
+rule5_order_indp <- function(apag, unfVect = NULL) {
+    ind <- which((apag == 1 & t(apag) == 1), arr.ind = TRUE)
+    while (length(ind) > 0) {
+        a <- ind[1, 1]
+        b <- ind[1, 2]
+        ind <- ind[-1, , drop = FALSE]
+        indC <- which((apag[a, ] == 1 & apag[, a] ==
+            1) & (apag[b, ] == 0 & apag[, b] == 0))
+        indC <- setdiff(indC, b)
+        indD <- which((apag[b, ] == 1 & apag[, b] ==
+            1) & (apag[a, ] == 0 & apag[, a] == 0))
+        indD <- setdiff(indD, a)
+        if (length(indC) > 0 && length(indD) > 0) {
+            counterC <- 0
+            while ((counterC < length(indC)) && apag[
+                a,
+                b
+            ] == 1) {
+                counterC <- counterC + 1
+                c <- indC[counterC]
+                counterD <- 0
+                while ((counterD < length(indD)) && apag[
+                    a,
+                    b
+                ] == 1) {
+                    counterD <- counterD + 1
+                    d <- indD[counterD]
+                    if (apag[c, d] == 1 && apag[d, c] ==
+                        1) {
+                        if (length(unfVect) == 0) {
+                            apag[a, b] <- apag[b, a] <- 3
+                            apag[a, c] <- apag[c, a] <- 3
+                            apag[c, d] <- apag[d, c] <- 3
+                            apag[d, b] <- apag[b, d] <- 3
+                            if (verbose) {
+                                cat("\nRule 5", "\n")
+                                cat(
+                                    "There exists an uncovered circle path between",
+                                    a, "and", b, ". Orient", a, "-",
+                                    b, "and", a, "-", c, "-", d,
+                                    "-", b, "\n"
+                                )
+                            }
+                        } else {
+                            path2check <- c(a, c, d, b)
+                            if (faith.check(
+                                path2check, unfVect,
+                                p
+                            )) {
+                                apag[a, b] <- apag[b, a] <- 3
+                                apag[a, c] <- apag[c, a] <- 3
+                                apag[c, d] <- apag[d, c] <- 3
+                                apag[d, b] <- apag[b, d] <- 3
+                                if (verbose) {
+                                    cat("\nRule 5", "\n")
+                                    cat(
+                                        "There exists a faithful uncovered circle path between",
+                                        a, "and", b, ". Conservatively orient:",
+                                        a, "-", b, "and", a, "-", c,
+                                        "-", d, "-", b, "\n"
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        ucp <- minUncovCircPath(p,
+                            pag = apag,
+                            path = c(a, c, d, b), unfVect = unfVect,
+                            verbose = verbose
+                        )
+                        if (length(ucp) > 1) {
+                            n <- length(ucp)
+                            apag[ucp[1], ucp[n]] <- apag[
+                                ucp[n],
+                                ucp[1]
+                            ] <- 3
+                            for (j in seq_len(length(ucp) - 1)) {
+                                apag[ucp[j], ucp[j + 1]] <- apag[ucp[j +
+                                    1], ucp[j]] <- 3
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 udag2apag_ci_gwas <- function(apag, sepset, rules = rep(TRUE, 10), unfVect = Null) {
