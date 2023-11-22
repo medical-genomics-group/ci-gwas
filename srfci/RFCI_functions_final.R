@@ -115,6 +115,7 @@ rule5_order_indp <- function(apag, unfVect = NULL) {
         for (c in indC) {
             for (d in indD) {
                 if (search_apag[c, d] == 1 && search_apag[d, c] == 1) {
+                    path2check <- c(a, c, d, b)
                     if (faith.check(path2check, unfVect, p)) {
                         apag[a, b] <- apag[b, a] <- 3
                         apag[a, c] <- apag[c, a] <- 3
@@ -252,8 +253,8 @@ rule10_order_indp <- function(apag, unfVect = NULL) {
                     apag[c, a] <- 3
                 } else {
                     indX <- which(
-                        (seach_apag[a, ] == 1 | seach_apag[a, ] == 2) &
-                            (seach_apag[, a] == 1 | seach_apag[, a] == 3),
+                        (search_apag[a, ] == 1 | search_apag[a, ] == 2) &
+                            (search_apag[, a] == 1 | search_apag[, a] == 3),
                         arr.ind = TRUE
                     )
                     indX <- setdiff(indX, c)
