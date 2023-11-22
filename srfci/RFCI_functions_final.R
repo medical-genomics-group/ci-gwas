@@ -154,84 +154,177 @@ rule4_order_indp <- function(apag, unfVect = NULL) {
 }
 
 rule5_order_indp <- function(apag, unfVect = NULL) {
+    search_apag <- apag
+    p <- ncol(apag)
     ind <- which((apag == 1 & t(apag) == 1), arr.ind = TRUE)
-    while (length(ind) > 0) {
-        a <- ind[1, 1]
-        b <- ind[1, 2]
-        ind <- ind[-1, , drop = FALSE]
-        indC <- which((apag[a, ] == 1 & apag[, a] ==
-            1) & (apag[b, ] == 0 & apag[, b] == 0))
+    for (i in seq_len(nrow(ind))) {
+        a <- ind[i, 1]
+        b <- ind[i, 2]
+        indC <- which((search_apag[a, ] == 1 & search_apag[, a] == 1) & (search_apag[b, ] == 0 & search_apag[, b] == 0))
         indC <- setdiff(indC, b)
-        indD <- which((apag[b, ] == 1 & apag[, b] ==
-            1) & (apag[a, ] == 0 & apag[, a] == 0))
+        indD <- which((search_apag[b, ] == 1 & search_apag[, b] == 1) & (search_apag[a, ] == 0 & search_apag[, a] == 0))
         indD <- setdiff(indD, a)
-        if (length(indC) > 0 && length(indD) > 0) {
-            counterC <- 0
-            while ((counterC < length(indC)) && apag[
-                a,
-                b
-            ] == 1) {
-                counterC <- counterC + 1
-                c <- indC[counterC]
-                counterD <- 0
-                while ((counterD < length(indD)) && apag[
-                    a,
-                    b
-                ] == 1) {
-                    counterD <- counterD + 1
-                    d <- indD[counterD]
-                    if (apag[c, d] == 1 && apag[d, c] ==
-                        1) {
-                        if (length(unfVect) == 0) {
-                            apag[a, b] <- apag[b, a] <- 3
-                            apag[a, c] <- apag[c, a] <- 3
-                            apag[c, d] <- apag[d, c] <- 3
-                            apag[d, b] <- apag[b, d] <- 3
-                            if (verbose) {
-                                cat("\nRule 5", "\n")
-                                cat(
-                                    "There exists an uncovered circle path between",
-                                    a, "and", b, ". Orient", a, "-",
-                                    b, "and", a, "-", c, "-", d,
-                                    "-", b, "\n"
-                                )
-                            }
-                        } else {
-                            path2check <- c(a, c, d, b)
-                            if (faith.check(
-                                path2check, unfVect,
-                                p
-                            )) {
-                                apag[a, b] <- apag[b, a] <- 3
-                                apag[a, c] <- apag[c, a] <- 3
-                                apag[c, d] <- apag[d, c] <- 3
-                                apag[d, b] <- apag[b, d] <- 3
-                                if (verbose) {
-                                    cat("\nRule 5", "\n")
-                                    cat(
-                                        "There exists a faithful uncovered circle path between",
-                                        a, "and", b, ". Conservatively orient:",
-                                        a, "-", b, "and", a, "-", c,
-                                        "-", d, "-", b, "\n"
-                                    )
-                                }
-                            }
+        for (c in indC) {
+            for (d in indD) {
+                if (search_apag[c, d] == 1 && search_apag[d, c] == 1) {
+                    if (faith.check(path2check, unfVect, p)) {
+                        apag[a, b] <- apag[b, a] <- 3
+                        apag[a, c] <- apag[c, a] <- 3
+                        apag[c, d] <- apag[d, c] <- 3
+                        apag[d, b] <- apag[b, d] <- 3
+                    }
+                } else {
+                    ucp <- minUncovCircPath(
+                        p,
+                        pag = search_apag,
+                        path = c(a, c, d, b),
+                        unfVect = unfVect
+                    )
+                    if (length(ucp) > 1) {
+                        n <- length(ucp)
+                        apag[ucp[1], ucp[n]] <- apag[ucp[n], ucp[1]] <- 3
+                        for (j in seq_len(length(ucp) - 1)) {
+                            apag[ucp[j], ucp[j + 1]] <- apag[ucp[j + 1], ucp[j]] <- 3
                         }
-                    } else {
-                        ucp <- minUncovCircPath(p,
-                            pag = apag,
-                            path = c(a, c, d, b), unfVect = unfVect,
-                            verbose = verbose
-                        )
-                        if (length(ucp) > 1) {
-                            n <- length(ucp)
-                            apag[ucp[1], ucp[n]] <- apag[
-                                ucp[n],
-                                ucp[1]
-                            ] <- 3
-                            for (j in seq_len(length(ucp) - 1)) {
-                                apag[ucp[j], ucp[j + 1]] <- apag[ucp[j +
-                                    1], ucp[j]] <- 3
+                    }
+                }
+            }
+        }
+    }
+    apag
+}
+
+rule6_order_indp <- function(apag, unfVect = NULL) {
+    search_apag <- apag
+    ind <- which((apag != 0 & t(apag) == 1), arr.ind = TRUE)
+    for (i in seq_len(nrow(ind))) {
+        b <- ind[i, 1]
+        c <- ind[i, 2]
+        indA <- which(search_apag[b, ] == 3 & search_apag[, b] == 3)
+        if (length(indA) > 0) {
+            apag[c, b] <- 3
+        }
+    }
+    apag
+}
+
+rule7_order_indp <- function(apag, unfVect = NULL) {
+    search_apag <- apag
+    p <- ncol(apag)
+    ind <- which((apag != 0 & t(apag) == 1), arr.ind = TRUE)
+    for (i in seq_len(nrow(ind))) {
+        b <- ind[i, 1]
+        c <- ind[i, 2]
+        indA <- which((search_apag[b, ] == 3 & search_apag[, b] == 1) & (search_apag[c, ] == 0 & search_apag[, c] == 0))
+        indA <- setdiff(indA, c)
+        for (a in indA) {
+            if (apag[c, b] == 3) {
+                break
+            }
+            if (any(unfVect == triple2numb(p, a, b, c), na.rm = TRUE) ||
+                any(unfVect == triple2numb(p, c, b, a), na.rm = TRUE)) {
+                next
+            }
+            apag[c, b] <- 3
+        }
+    }
+    apag
+}
+
+rule8_order_indp <- function(apag, unfVect = NULL) {
+    search_apag <- apag
+    p <- ncol(apag)
+    ind <- which((apag == 2 & t(apag) == 1), arr.ind = TRUE)
+    for (i in seq_len(nrow(ind))) {
+        a <- ind[i, 1]
+        c <- ind[i, 2]
+        indB <- which(
+            ((search_apag[a, ] == 2 & search_apag[, a] == 3) | (search_apag[a, ] == 1 & search_apag[, a] == 3)) &
+                (search_apag[c, ] == 3 & search_apag[, c] == 2)
+        )
+        if (length(indB) > 0) {
+            apag[c, a] <- 3
+        }
+    }
+    apag
+}
+
+rule9_order_indp <- function(apag, unfVect = NULL) {
+    search_apag <- apag
+    p <- ncol(apag)
+    ind <- which((apag == 2 & t(apag) == 1), arr.ind = TRUE)
+    for (i in seq_len(nrow(ind))) {
+        a <- ind[i, 1]
+        c <- ind[i, 2]
+        indB <- which(
+            (search_apag[a, ] == 2 | search_apag[a, ] == 1) &
+                (search_apag[, a] == 1 | search_apag[, a] == 3) &
+                (search_apag[c, ] == 0 & search_apag[, c] == 0)
+        )
+        indB <- setdiff(indB, c)
+        for (b in indB) {
+            if (apag[c, a] == 3) { # nothing to do here anymore
+                break
+            }
+            upd <- minUncovPdPath(p, search_apag, a, b, c, unfVect = unfVect)
+            if (length(upd) > 1) {
+                apag[c, a] <- 3
+            }
+        }
+    }
+    apag
+}
+
+rule10_order_indp <- function(apag, unfVect = NULL) {
+    search_apag <- apag
+    p <- ncol(apag)
+    cat("Applying rule 10 \n")
+    ind <- which((apag == 2 & t(apag) == 1), arr.ind = TRUE)
+    for (i in seq_len(nrow(ind))) {
+        a <- ind[i, 1]
+        c <- ind[i, 2]
+        indB <- which((search_apag[c, ] == 3 & search_apag[, c] == 2))
+        for (b in indB) {
+            if (apag[c, a] != 1) {
+                break
+            }
+            for (d in indB) {
+                if (b == d || apag[c, a] != 1) {
+                    next
+                }
+                if (
+                    (search_apag[a, b] == 1 || search_apag[a, b] == 2) &&
+                        (search_apag[b, a] == 1 || search_apag[b, a] == 3) &&
+                        (search_apag[a, d] == 1 || search_apag[a, d] == 2) &&
+                        (search_apag[d, a] == 1 || search_apag[d, a] == 3) &&
+                        (search_apag[d, b] == 0 && search_apag[b, d] == 0)) {
+                    if (any(unfVect == triple2numb(p, b, a, d), na.rm = TRUE) ||
+                        any(unfVect == triple2numb(p, d, a, b), na.rm = TRUE)) {
+                        next
+                    }
+                    apag[c, a] <- 3
+                } else {
+                    indX <- which(
+                        (seach_apag[a, ] == 1 | seach_apag[a, ] == 2) &
+                            (seach_apag[, a] == 1 | seach_apag[, a] == 3),
+                        arr.ind = TRUE
+                    )
+                    indX <- setdiff(indX, c)
+                    for (pos.1 in indX) {
+                        if (apag[c, a] != 1) {
+                            break
+                        }
+                        for (pos.2 in indX) {
+                            if (pos.1 == pos.2 || apag[c, a] != 1) {
+                                next
+                            }
+                            tmp1 <- minUncovPdPath(p, search_apag, a, pos.1, b, unfVect = unfVect)
+                            tmp2 <- minUncovPdPath(p, search_apag, a, pos.2, d, unfVect = unfVect)
+                            if (length(tmp1) > 1 && length(tmp2) > 1 && pos.1 != pos.2 && apag[pos.1, pos.2] == 0) {
+                                if (!any(unfVect == triple2numb(p, pos.1, a, pos.2), na.rm = TRUE) &&
+                                    !any(unfVect == triple2numb(p, pos.2, a, pos.1), na.rm = TRUE)) {
+                                    apag[c, a] <- 3
+                                }
                             }
                         }
                     }
@@ -239,9 +332,10 @@ rule5_order_indp <- function(apag, unfVect = NULL) {
             }
         }
     }
+    apag
 }
 
-udag2apag_ci_gwas <- function(apag, sepset, rules = rep(TRUE, 10), unfVect = Null) {
+udag2apag_ci_gwas <- function(apag, sepset, rules = rep(TRUE, 10), unfVect = NULL) {
     p <- ncol(apag)
     old_apag <- matrix(0, nrow = p, ncol = p)
     while (any(old_apag != apag)) {
@@ -261,6 +355,30 @@ udag2apag_ci_gwas <- function(apag, sepset, rules = rep(TRUE, 10), unfVect = Nul
         if (rules[4]) {
             cat("Applying rule 4 \n")
             apag <- rule4_order_indp(apag, unfVect = unfVect)
+        }
+        if (rules[5]) {
+            cat("Applying rule 5 \n")
+            apag <- rule5_order_indp(apag, unfVect = unfVect)
+        }
+        if (rules[6]) {
+            cat("Applying rule 6 \n")
+            apag <- rule6_order_indp(apag, unfVect = unfVect)
+        }
+        if (rules[7]) {
+            cat("Applying rule 7 \n")
+            apag <- rule7_order_indp(apag, unfVect = unfVect)
+        }
+        if (rules[8]) {
+            cat("Applying rule 8 \n")
+            apag <- rule8_order_indp(apag, unfVect = unfVect)
+        }
+        if (rules[9]) {
+            cat("Applying rule 9 \n")
+            apag <- rule9_order_indp(apag, unfVect = unfVect)
+        }
+        if (rules[10]) {
+            cat("Applying rule 10 \n")
+            apag <- rule10_order_indp(apag, unfVect = unfVect)
         }
     }
     list(graph = apag, sepset = sepset)
