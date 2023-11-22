@@ -1,57 +1,5 @@
 library(Matrix)
-#######################################
-#######################################
-
-# functions from pcalg package for running RFCI v_ structure part and orientations with sparce matrix
-
-########################################
-########################################
-find.unsh.triple <- function(g, check = TRUE) {
-    require(Matrix)
-    if (check) {
-        stopifnot(all(g == t(g)))
-    }
-    m <- 0L
-    unshTripl <- matrix(integer(), 3, m)
-    if (any(g != 0)) {
-        p <- nrow(g)
-        indS <- which(g == 1, arr.ind = TRUE)
-        for (i in seq_len(nrow(indS))) {
-            xy <- indS[i, ]
-            x <- xy[1]
-            y <- xy[2]
-            allZ <- setdiff(which(g[y, ] == 1), x)
-            for (z in allZ) {
-                if (g[x, z] == 0 && g[z, x] == 0) {
-                    unshTripl <- cbind(unshTripl, c(xy, z))
-                }
-            }
-        }
-        if ((m <- ncol(unshTripl)) > 0) {
-            deleteDupl <- logical(m)
-            for (i in seq_len(m)) {
-                if (unshTripl[1, i] > unshTripl[
-                    3,
-                    i
-                ]) {
-                    deleteDupl[i] <- TRUE
-                }
-            }
-            if (any(deleteDupl)) {
-                m <- ncol(unshTripl <- unshTripl[, !deleteDupl,
-                    drop = FALSE
-                ])
-            }
-        }
-    }
-    unshVect <- vapply(seq_len(m), function(k) {
-        triple2numb(
-            p,
-            unshTripl[1, k], unshTripl[2, k], unshTripl[3, k]
-        )
-    }, numeric(1))
-    list(unshTripl = unshTripl, unshVect = unshVect)
-}
+library(pcalg)
 
 rule1_order_indp <- function(apag, unfVect = NULL) {
     p <- ncol(apag)
