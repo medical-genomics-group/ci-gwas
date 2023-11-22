@@ -1309,3 +1309,32 @@ checkEdges <- function(suffStat, indepTest, alpha, apag, sepset, path,
     ## if SepSet is the empty set do nothing because surely the vertices are dependent
     list(deleted = found, apag = apag, sepset = sepset, unfTripl = unfTripl)
 }
+
+faith.check <- function(cp, unfVect, p, boolean = TRUE) {
+    ## Purpose: check if every triple on the circle path  cp is unambiguous
+    ## ----------------------------------------------------------------------
+    ## Arguments: cp: circle path to check for unambiguity
+    ##  boolean:  if TRUE,  return TRUE iff there is no ambiguity, i.e. "faithful"
+    ##            if FALSE, return the number of ambiguities.
+    ## ----------------------------------------------------------------------
+    ## Author: Diego Colombo, Date: 25 May 2010; 'boolean' etc by Martin Maechler
+    if (!boolean) res <- 0L
+    n <- length(cp)
+    ## MM: FIXME speedup by precomputing (l%%n)+1, ((l+1)%%n)+1, and  ((l+2)%%n)+1 as *integers*
+    ## ok, in steps: first "slowly" but surely correct
+    ii <- 0:(n - 1L)
+    i1 <- (ii %% n) + 1L
+    i2 <- ((ii + 1L) %% n) + 1L
+    i3 <- ((ii + 2L) %% n) + 1L
+    for (l in ii) {
+        if (any(unfVect == triple2numb(p, cp[i1[l]], cp[i2[l]], cp[i3[l]]), na.rm = TRUE) ||
+            any(unfVect == triple2numb(p, cp[i3[l]], cp[i2[l]], cp[i1[l]]), na.rm = TRUE)) {
+            if (boolean) {
+                return(FALSE)
+            } # the first time we found one: not faithful
+            ## else count
+            res <- res + 1L
+        }
+    }
+    if (boolean) TRUE else res
+}
