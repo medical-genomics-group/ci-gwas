@@ -278,7 +278,6 @@ rule9_order_indp <- function(apag, unfVect = NULL) {
 rule10_order_indp <- function(apag, unfVect = NULL) {
     search_apag <- apag
     p <- ncol(apag)
-    cat("Applying rule 10 \n")
     ind <- which((apag == 2 & t(apag) == 1), arr.ind = TRUE)
     for (i in seq_len(nrow(ind))) {
         a <- ind[i, 1]
