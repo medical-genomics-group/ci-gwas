@@ -715,8 +715,13 @@ def is_possible_child(pag, v1, v2):
     return is_child(pag, v1, v2) or (pag[v2, v1] == 2 and pag[v1, v2] == 1)
 
 
-def pag_exclusive_pleiotropy_sets(pag_path: str, pheno_path: str, neighbor_fn, depth=1):
-    p_names = get_pheno_codes(pheno_path)
+def pag_exclusive_pleiotropy_sets(
+    pag_path: str, pheno_path: str, neighbor_fn, depth=1, pheno_codes=None
+):
+    if pheno_codes is None:
+        p_names = get_pheno_codes(pheno_path)
+    else:
+        p_names = pheno_codes
     num_phen = len(p_names)
     pag = mmread(pag_path).tocsr()
 
@@ -1090,9 +1095,13 @@ def plot_skeleton_pleiotropy_mat_z(
     norm=None,
     cbar=True,
     cbarlabel=r"# shared ancestral markers",
+    pheno_codes=None,
     **kwargs,
 ):
-    p_names = get_pheno_codes(pheno_path)
+    if pheno_codes is None:
+        p_names = get_pheno_codes(pheno_path)
+    else:
+        p_names = pheno_codes
     mask = ~np.tri(z.shape[0], k=-1, dtype=bool)
     z = np.ma.array(z, mask=mask)  # mask out the lower triangle
     cmap = plt.get_cmap(cmap)
@@ -1308,8 +1317,12 @@ def plot_ace(
     norm=None,
     xlabel=r"$y_2$",
     ylabel=r"$y_1$",
+    pheno_codes=None,
 ):
-    p_names = get_pheno_codes(pheno_path)
+    if pheno_codes is None:
+        p_names = get_pheno_codes(pheno_path)
+    else:
+        p_names = pheno_codes
     num_phen = len(p_names)
     ace = mmread(ace_path).tocsr()
     z = [[0.0 for _ in range(num_phen)] for _ in range(num_phen)]
@@ -1557,21 +1570,21 @@ def plot_pag(
     edge_encoding=all_edge_types,
     ax=None,
     cbar=True,
-    pheno_names=None,
+    pheno_codes=None,
     pheno_subset=None,
     pheno_offset=0,
     pag=None,
 ):
-    if pheno_names is None:
-        pheno_names = get_pheno_codes(pheno_path)
-    num_phen = len(pheno_names)
+    if pheno_codes is None:
+        pheno_codes = get_pheno_codes(pheno_path)
+    num_phen = len(pheno_codes)
 
     if pheno_subset is None:
         pheno_indices = list(range(num_phen))
     else:
-        pheno_indices = [pheno_names.index(e) for e in pheno_subset]
+        pheno_indices = [pheno_codes.index(e) for e in pheno_subset]
         num_phen = len(pheno_indices)
-        pheno_names = pheno_subset
+        pheno_codes = pheno_subset
 
     if pag is None:
         pag = mmread(pag_path).tocsr()
@@ -1596,8 +1609,8 @@ def plot_pag(
 
     im, _ = heatmap(
         np.array(z),
-        pheno_names,
-        pheno_names,
+        pheno_codes,
+        pheno_codes,
         cmap=edge_encoding.cmap,
         norm=norm,
         cbar_kw=cbar_kw,
@@ -1887,6 +1900,7 @@ def plot_ci_gwas_cause_ace_comparison_tri(
     cbar_kw=None,
     cbarlabel=r"$ACE \: (y_1 \rightarrow y_2), \ CAUSE \ \gamma$",
     max_path_len=np.inf,
+    pheno_codes=None,
 ):
     if ax is None:
         plt.figure(figsize=(3, 8))
@@ -1897,11 +1911,18 @@ def plot_ci_gwas_cause_ace_comparison_tri(
 
     disease_list = sorted(list(diseases))
 
-    p_names = get_pheno_codes(pheno_path)
+    if pheno_codes is None:
+        p_names = get_pheno_codes(pheno_path)
+    else:
+        p_names = pheno_codes
     num_phen = len(p_names)
 
-    causal_links = get_causal_paths(pag_path, pheno_path, max_path_len=1)
-    causal_paths = get_causal_paths(pag_path, pheno_path, max_path_len=max_path_len)
+    causal_links = get_causal_paths(
+        pag_path, pheno_path, max_path_len=1, pheno_names=pheno_codes
+    )
+    causal_paths = get_causal_paths(
+        pag_path, pheno_path, max_path_len=max_path_len, pheno_names=pheno_codes
+    )
     ci_gwas_paths = {}
     ci_gwas_links = {}
 
@@ -1923,21 +1944,21 @@ def plot_ci_gwas_cause_ace_comparison_tri(
 
     cause_ys = set(cause_gamma["y1"].values)
     cause_ys.update(set(cause_gamma["y2"].values))
-    reg_pnames = cause_ys.intersection(set(p_names))
-
+    cg_risk_factors = sorted(list(set(p_names) - diseases))
+    reg_pnames = cause_ys.intersection(set(cg_risk_factors))
     rf_intersection = sorted(list(risk_factors.intersection(reg_pnames)))
-    rf_cg_only = sorted(list(risk_factors - set(rf_intersection)))
+    rf_cg_only = sorted(list(set(cg_risk_factors) - set(rf_intersection)))
 
     risk_factor_list = rf_intersection + rf_cg_only
 
-    ci_gwas_links_arr = np.array([False] * (len(diseases) * len(risk_factors)))
-    ci_gwas_paths_arr = np.array([False] * (len(diseases) * len(risk_factors)))
-    cause_not_sig_arr = np.array([False] * (len(diseases) * len(risk_factors)))
+    ci_gwas_links_arr = np.array([False] * (len(diseases) * len(risk_factor_list)))
+    ci_gwas_paths_arr = np.array([False] * (len(diseases) * len(risk_factor_list)))
+    cause_not_sig_arr = np.array([False] * (len(diseases) * len(risk_factor_list)))
     ci_gwas_ace_mat = [
-        [0 for _ in range(len(diseases))] for _ in range(len(risk_factors))
+        [0 for _ in range(len(diseases))] for _ in range(len(risk_factor_list))
     ]
     cause_ace_mat = [
-        [0 for _ in range(len(diseases))] for _ in range(len(risk_factors))
+        [0 for _ in range(len(diseases))] for _ in range(len(risk_factor_list))
     ]
 
     ace = load_ace(ace_path, pheno_path)
@@ -1966,7 +1987,7 @@ def plot_ci_gwas_cause_ace_comparison_tri(
     row_labels = [r"$\bf{{{0}}}$".format(e) for e in rf_intersection] + rf_cg_only
 
     M = len(diseases)
-    N = len(risk_factors)
+    N = len(cg_risk_factors)
     x = np.arange(M + 1)
     y = np.arange(N + 1)
     xs, ys = np.meshgrid(x, y)
@@ -1981,7 +2002,7 @@ def plot_ci_gwas_cause_ace_comparison_tri(
         for j in range(N)
         for i in range(M)
     ]
-    
+
     tri_ci_gwas_link_mask = np.array([1] * len(triangles1))
     tri_ci_gwas_link_mask[np.where(ci_gwas_links_arr)] = False
     tri_ci_gwas_link = Triangulation(
@@ -2033,11 +2054,20 @@ def plot_ci_gwas_cause_ace_comparison_tri(
 
     tri_x = xs.ravel() - 0.5
     tri_y = ys.ravel() - 0.5
-    plt.rcParams['hatch.color'] = 'white'
+    plt.rcParams["hatch.color"] = "white"
 
     for tri_points in tri_cause_not_sig.get_masked_triangles():
-        tri_coord = np.array(list(zip([tri_x[e] for e in tri_points], [tri_y[e] for e in tri_points])))
-        ax.add_patch(Polygon(tri_coord, closed=True, hatch="/////", fc=(0,0,0,0)))
+        tri_coord = np.array(
+            list(zip([tri_x[e] for e in tri_points], [tri_y[e] for e in tri_points]))
+        )
+        ax.add_patch(Polygon(tri_coord, closed=True, hatch="/////", fc=(0, 0, 0, 0)))
+
+    # Turn spines off and create white grid.
+    ax.spines[:].set_visible(False)
+    ax.set_xticks(np.arange(M + 1) - 0.5, minor=True)
+    ax.set_yticks(np.arange(N + 1) - 0.5, minor=True)
+    # ax.set_axisbelow(True)
+    ax.grid(which="minor", color="black", linestyle="--", linewidth=1)
 
     _ = ax.tripcolor(
         tri_ci_gwas_path,
@@ -2046,9 +2076,9 @@ def plot_ci_gwas_cause_ace_comparison_tri(
         cmap="RdBu",
         # vmin=-vm,
         # vmax=vm,
-        edgecolor="#019529",  # irish green
-        # edgecolor="black",  # irish green
-        linewidth=2,
+        edgecolor="#1f3b4d",  # neon green
+        # edgecolor="#9338e0", # some cool violet
+        linewidth=3,
         linestyle=":",
         norm=mpl.colors.SymLogNorm(vmin=-1.0, vmax=1.0, linthresh=0.01),
     )
@@ -2060,8 +2090,8 @@ def plot_ci_gwas_cause_ace_comparison_tri(
         cmap="RdBu",
         # vmin=-vm,
         # vmax=vm,
-        edgecolor="#019529",  # irish green
-        # edgecolor="black",  # irish green
+        edgecolor="#1f3b4d",  # neon green
+        # edgecolor="#9338e0", # some cool violet
         linewidth=3,
         linestyle="-",
         norm=mpl.colors.SymLogNorm(vmin=-1.0, vmax=1.0, linthresh=0.01),
@@ -2089,11 +2119,6 @@ def plot_ci_gwas_cause_ace_comparison_tri(
         rotation_mode="anchor",
     )
 
-    # Turn spines off and create white grid.
-    ax.spines[:].set_visible(False)
-    ax.set_xticks(np.arange(M + 1) - 0.5, minor=True)
-    ax.set_yticks(np.arange(N + 1) - 0.5, minor=True)
-    ax.grid(which="minor", color="gray", linestyle="--", linewidth=1)
     ax.tick_params(which="minor", bottom=False, left=False)
     ax.set_xlabel("disease")
     ax.set_ylabel("risk factor")
@@ -2279,15 +2304,19 @@ def marker_pheno_associations(
     adj_path: str,
     ixs_path: str,
     num_phen=None,
+    pheno_codes=None,
     pheno_path=None,
 ):
     if num_phen is None and pheno_path is None:
         raise RuntimeError("Either num_phen or pheno_path have to specified")
 
-    if pheno_path is None:
+    if pheno_path is None and pheno_codes is None:
         p_names = list(range(1, num_phen + 1))
-    else:
+    elif pheno_codes is None:
         p_names = get_pheno_codes(pheno_path)
+        num_phen = len(p_names)
+    else:
+        p_names = pheno_codes
         num_phen = len(p_names)
 
     bim_df = pd.read_csv(bim_path, sep="\t", header=None)
@@ -2673,6 +2702,7 @@ def compare_ci_gwas_orientation_performance_to_mr(
 class OrientationPerformance:
     directed: float
     bidirected: float
+    tpr_directed: float
 
 
 def calculate_pxp_orientation_performance_mr(
@@ -2699,6 +2729,7 @@ def calculate_pxp_orientation_performance_mr(
     return OrientationPerformance(
         correct_uni / inferred_uni if inferred_uni > 0 else np.nan,
         correct_bi / inferred_bi if inferred_bi > 0 else np.nan,
+        correct_uni / np.sum(causal_paths),
     )
 
 
@@ -2726,6 +2757,7 @@ def calculate_pxp_orientation_performance_mvmr(
     return OrientationPerformance(
         correct_uni / inferred_uni if inferred_uni > 0 else np.nan,
         correct_bi / inferred_bi if inferred_bi > 0 else np.nan,
+        correct_uni / np.sum(true_directed),
     )
 
 
@@ -2752,6 +2784,7 @@ def calculate_pxp_orientation_performance_ci_gwas(
     return OrientationPerformance(
         correct_uni / inferred_uni if inferred_uni > 0 else np.nan,
         correct_bi / inferred_bi if inferred_bi > 0 else np.nan,
+        correct_uni / np.sum(true_directed),
     )
 
 
@@ -3008,7 +3041,9 @@ def load_real_data_simulation_truth(
     m = np.linalg.inv(np.eye(m.shape[0]) - m.T)
     true_eff = np.triu(m @ m.T, 1)
 
-    return SimulationTruth(true_dag_mxp, true_dag_pxp, true_bidirected, true_eff, true_dag_pxp)
+    return SimulationTruth(
+        true_dag_mxp, true_dag_pxp, true_bidirected, true_eff, true_dag_pxp
+    )
 
 
 @dataclass
@@ -3028,13 +3063,17 @@ def load_mr_result(
     alpha_e: str,
     wdir: str,
     mr_bonferroni: bool,
-    mr_exclude_zero_eff_links: bool
+    mr_exclude_zero_eff_links: bool,
 ):
     mr_p = np.ones((num_p, num_p))
     mr_est = np.zeros((num_p, num_p))
     incomplete = False
     for outcome in range(0, num_p):
-        pathstr = wdir + f"cusk/sim{rep}_e{alpha_e}/" + f"mr{mr_type}_{mr_str}_alpha*_sim{rep}_outcome_y{outcome + 1}_seed1000"
+        pathstr = (
+            wdir
+            + f"cusk/sim{rep}_e{alpha_e}/"
+            + f"mr{mr_type}_{mr_str}_alpha*_sim{rep}_outcome_y{outcome + 1}_seed1000"
+        )
         fpaths = glob(pathstr)
         if len(fpaths) == 0:
             # print(f"missing: {pathstr}")
@@ -3045,7 +3084,7 @@ def load_mr_result(
         exposures = [int(s[1:]) - 1 for s in mr_res_df["Exposure"]]
         mr_p[exposures, outcome] = mr_res_df["p"].values
         mr_est[exposures, outcome] = mr_res_df["est"].values
-    
+
     if mr_bonferroni:
         mr_links = mr_p <= (0.05 / ((num_p - 1) * 2 * 40))
     else:
@@ -3053,7 +3092,7 @@ def load_mr_result(
     if mr_exclude_zero_eff_links:
         mr_links = mr_links & (mr_est != 0.0)
     mr_adj = make_adj_symmetric(mr_links)
-    
+
     return MrResult(mr_p, mr_est, mr_links, mr_adj, incomplete)
 
 
@@ -3062,7 +3101,8 @@ def load_real_data_simulation_adj_performance(
     num_p=10,
     e_arr=[2, 4, 6, 8],
     max_level=3,
-    mr_bonferroni=True,
+    mr_bonferroni=False,
+    mv_mr_bonferroni=False,
     mr_exclude_zero_eff_links=True,
 ) -> pd.DataFrame:
     """Load simulation results for ci-gwas and mr methods, calculate fdr, tpr for adjacencies."""
@@ -3074,7 +3114,16 @@ def load_real_data_simulation_adj_performance(
         truth = load_real_data_simulation_truth(rep)
         # -------------------- MVIVW + oracle IVs --------------------
         mr_str = "mvivw"
-        mr_res = load_mr_result(num_p, rep, mr_str, "_oracle", 1, wdir, mr_bonferroni, mr_exclude_zero_eff_links)
+        mr_res = load_mr_result(
+            num_p,
+            rep,
+            mr_str,
+            "_oracle",
+            1,
+            wdir,
+            mv_mr_bonferroni,
+            mr_exclude_zero_eff_links,
+        )
         if mr_res.incomplete:
             continue
 
@@ -3161,7 +3210,16 @@ def load_real_data_simulation_adj_performance(
 
             # -------------------- MR -----------------------------
             for mr_str in ["cause", "presso", "mvpresso", "ivw", "mvivw"]:
-                mr_res = load_mr_result(num_p, rep, mr_str, "", alpha_e, wdir, mr_bonferroni, mr_exclude_zero_eff_links)
+                mr_res = load_mr_result(
+                    num_p,
+                    rep,
+                    mr_str,
+                    "",
+                    alpha_e,
+                    wdir,
+                    mv_mr_bonferroni if mr_str.startswith("mv") else mr_bonferroni,
+                    mr_exclude_zero_eff_links,
+                )
                 if mr_res.incomplete:
                     continue
 
@@ -3178,8 +3236,12 @@ def load_real_data_simulation_adj_performance(
                     pxp_fdr = fp / (tp + fp)
                 else:
                     causal_paths = path_in_sem(mr_res.adj)
-                    tp = np.sum(np.triu(causal_paths, 1) & (np.triu(mr_res.adj, 1) != 0))
-                    fp = np.sum(~np.triu(causal_paths, 1) & (np.triu(mr_res.adj, 1) != 0))
+                    tp = np.sum(
+                        np.triu(causal_paths, 1) & (np.triu(mr_res.adj, 1) != 0)
+                    )
+                    fp = np.sum(
+                        ~np.triu(causal_paths, 1) & (np.triu(mr_res.adj, 1) != 0)
+                    )
                     pxp_fdr = fp / (tp + fp) if (tp + fp) > 0 else np.nan
 
                 rows.append(
@@ -3199,7 +3261,16 @@ def load_real_data_simulation_adj_performance(
                 mr_str_mod = mr_str
                 if mr_str == "ivw":
                     mr_str_mod = "vw"
-                mr_res = load_mr_result(num_p, rep, mr_str_mod, "_cigwas", alpha_e, wdir, mr_bonferroni, mr_exclude_zero_eff_links)
+                mr_res = load_mr_result(
+                    num_p,
+                    rep,
+                    mr_str_mod,
+                    "_cigwas",
+                    alpha_e,
+                    wdir,
+                    mv_mr_bonferroni if mr_str.startswith("mv") else mr_bonferroni,
+                    mr_exclude_zero_eff_links,
+                )
                 if mr_res.incomplete:
                     continue
 
@@ -3216,8 +3287,12 @@ def load_real_data_simulation_adj_performance(
                     pxp_fdr = fp / (tp + fp)
                 else:
                     causal_paths = path_in_sem(mr_res.adj)
-                    tp = np.sum(np.triu(causal_paths, 1) & (np.triu(mr_res.adj, 1) != 0))
-                    fp = np.sum(~np.triu(causal_paths, 1) & (np.triu(mr_res.adj, 1) != 0))
+                    tp = np.sum(
+                        np.triu(causal_paths, 1) & (np.triu(mr_res.adj, 1) != 0)
+                    )
+                    fp = np.sum(
+                        ~np.triu(causal_paths, 1) & (np.triu(mr_res.adj, 1) != 0)
+                    )
                     pxp_fdr = fp / (tp + fp) if (tp + fp) > 0 else np.nan
 
                 rows.append(
@@ -3229,7 +3304,7 @@ def load_real_data_simulation_adj_performance(
                         "method": mr_str + " + CI-GWAS",
                     }
                 )
-    
+
     return pd.DataFrame(rows)
 
 
@@ -3238,7 +3313,8 @@ def plot_real_data_simulation_adj_performance(
     num_p=10,
     e_arr=[2, 4, 6, 8],
     max_level=3,
-    mr_bonferroni=True,
+    mr_bonferroni=False,
+    mv_mr_bonferroni=False,
     fig_path=None,
 ):
     bar_xlabel_rotation = 45
@@ -3249,6 +3325,7 @@ def plot_real_data_simulation_adj_performance(
         e_arr=e_arr,
         max_level=max_level,
         mr_bonferroni=mr_bonferroni,
+        mv_mr_bonferroni=mv_mr_bonferroni,
     )
     gr = df.groupby(["method", "alpha"])
     means = gr.mean()
@@ -3406,8 +3483,10 @@ def plot_mr_vs_ci_gwas_plus_mr(
     num_p=10,
     e_arr=[2, 4],
     max_level=3,
-    mr_bonferroni=True,
+    mr_bonferroni=False,
+    mv_mr_bonferroni=False,
     fig_path=None,
+    ylim_fdr=None,
 ):
     bar_xlabel_rotation = 45
 
@@ -3417,6 +3496,7 @@ def plot_mr_vs_ci_gwas_plus_mr(
         e_arr=e_arr,
         max_level=max_level,
         mr_bonferroni=mr_bonferroni,
+        mv_mr_bonferroni=mv_mr_bonferroni,
     )
     gr = df.groupby(["method", "alpha"])
     means = gr.mean()
@@ -3433,18 +3513,17 @@ def plot_mr_vs_ci_gwas_plus_mr(
 
     def plot_single_bar(mean, std, ax, title, ticklabel, axhline=False, color_index=1):
         from itertools import cycle
+
         prop_cycle = plt.cycler("color", plt.cm.tab20.colors)
         colors = cycle(prop_cycle.by_key()["color"])
         for i in range(color_index):
             next(colors)
         width = 0.07
-        bar = ax.bar(
-            0, mean, width, yerr=std, capsize=1.5, color=next(colors)
-        )
+        bar = ax.bar(0, mean, width, yerr=std, capsize=1.5, color=next(colors))
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
-        ax.spines["left"].set_visible(False)
-        ax.yaxis.set_ticks_position('none') 
+        # ax.spines["left"].set_visible(False)
+        # ax.yaxis.set_ticks_position("none")
         ax.set_xticks([0], [ticklabel])
         if axhline:
             ax.axhline(0.05, linestyle="dotted", color="gray")
@@ -3506,7 +3585,7 @@ def plot_mr_vs_ci_gwas_plus_mr(
         # ax.set_yscale("symlog")
         return handles
 
-    fig = plt.figure(figsize=(8, 6), layout='tight')
+    fig = plt.figure(figsize=(8, 6), layout="tight")
     ax_dict = fig.subplot_mosaic(
         """
         cce
@@ -3514,7 +3593,7 @@ def plot_mr_vs_ci_gwas_plus_mr(
         iii
         """,
         empty_sentinel="X",
-        sharey=True,
+        # sharey=True,
         width_ratios=[1, 1, 0.1],
         # set the height ratios between the rows
         height_ratios=[0.5, 0.5, 0.8],
@@ -3522,9 +3601,6 @@ def plot_mr_vs_ci_gwas_plus_mr(
 
     # ax_dict["c"].set_xlabel(r"$\alpha$")
     ax_dict["d"].set_xlabel(r"$\alpha$")
-
-    for ax_sym in "di":
-        ax_dict[ax_sym].set_ylim(0.0)
 
     plot_bars(
         alphas,
@@ -3536,37 +3612,57 @@ def plot_mr_vs_ci_gwas_plus_mr(
         axhline=True,
         methods=methods,
     )
-    oracle_mse_mean = df[df["method"] == "mvivw + oracle IV"].groupby("method").mean()["y -> y fdr"].values[0]
-    oracle_mse_std = df[df["method"] == "mvivw + oracle IV"].groupby("method").std()["y -> y fdr"].values[0]
+    oracle_mse_mean = (
+        df[df["method"] == "mvivw + oracle IV"]
+        .groupby("method")
+        .mean()["y -> y fdr"]
+        .values[0]
+    )
+    oracle_mse_std = (
+        df[df["method"] == "mvivw + oracle IV"]
+        .groupby("method")
+        .std()["y -> y fdr"]
+        .values[0]
+    )
     plot_single_bar(
         oracle_mse_mean,
         oracle_mse_std,
-        ax_dict['e'],
+        ax_dict["e"],
         None,
-        'oracle IV',
+        "oracle IV",
         axhline=True,
         color_index=len(methods),
     )
 
     ax_dict["c"].set_ylabel(r"$Y - Y \ FDR$")
-    
+
     h = plot_bars(
         alphas, "y -> y tpr", means, stds, ax_dict["d"], None, methods=methods
     )
 
-    oracle_mse_mean = df[df["method"] == "mvivw + oracle IV"].groupby("method").mean()["y -> y tpr"].values[0]
-    oracle_mse_std = df[df["method"] == "mvivw + oracle IV"].groupby("method").std()["y -> y tpr"].values[0]
+    oracle_mse_mean = (
+        df[df["method"] == "mvivw + oracle IV"]
+        .groupby("method")
+        .mean()["y -> y tpr"]
+        .values[0]
+    )
+    oracle_mse_std = (
+        df[df["method"] == "mvivw + oracle IV"]
+        .groupby("method")
+        .std()["y -> y tpr"]
+        .values[0]
+    )
     single_bar = plot_single_bar(
         oracle_mse_mean,
         oracle_mse_std,
-        ax_dict['f'],
+        ax_dict["f"],
         None,
-        'oracle IV',
+        "oracle IV",
         axhline=False,
         color_index=len(methods),
     )
     h.append(single_bar)
-    
+
     ax_dict["d"].set_ylabel(r"$Y - Y \ TPR$")
 
     labels_mr = ["CAUSE", "MR-PRESSO", "MR-PRESSO (MV)", "IVW", "IVW (MV)"]
@@ -3587,9 +3683,19 @@ def plot_mr_vs_ci_gwas_plus_mr(
     )
     ax_dict["i"].axis("off")
     _ = [ax_dict[i].tick_params(labelbottom=False) for i in "ce"]
-    _ = [ax_dict[i].sharex(ax_dict['d']) for i in 'c']
-    _ = [ax_dict[i].sharex(ax_dict['f']) for i in 'e']
+    _ = [ax_dict[i].sharey(ax_dict["c"]) for i in "e"]
+    _ = [ax_dict[i].sharey(ax_dict["d"]) for i in "f"]
+    _ = [ax_dict[i].sharex(ax_dict["d"]) for i in "c"]
+    _ = [ax_dict[i].sharex(ax_dict["f"]) for i in "e"]
     # fig.subplots_adjust(hspace=1)
+
+    for ax_sym in "cedf":
+        ax_dict[ax_sym].set_ylim(0.0)
+
+    if ylim_fdr is not None:
+        ax_dict["c"].set_ylim(0.0, ylim_fdr)
+        ax_dict["e"].set_ylim(0.0, ylim_fdr)
+
     if fig_path is not None:
         plt.savefig(fig_path, bbox_inches="tight")
 
@@ -3600,6 +3706,7 @@ def load_real_data_simulation_orient_and_ace_performance(
     num_p=10,
     max_level=3,
     mr_bonferroni=False,
+    mv_mr_bonferroni=False,
 ) -> pd.DataFrame:
     """Load simulation results for ci-gwas and mr methods, calculate fdr, tpr for adjacencies."""
     rows = []
@@ -3630,6 +3737,7 @@ def load_real_data_simulation_orient_and_ace_performance(
         rows.append(
             {
                 "-> orientation": orientation_perf.directed,
+                "-> orientation tpr": orientation_perf.tpr_directed,
                 "mse": np.nan,
                 "rep": rep,
                 "alpha": 10 ** (-alpha_e),
@@ -3663,6 +3771,9 @@ def load_real_data_simulation_orient_and_ace_performance(
         mse = np.mean((pace[select] - truth.effects[select]) ** 2)
         if not incomplete:
             rows[-1]["mse"] = mse
+            rows[-1]["mse tpr"] = np.sum(pace != 0 & truth.effects != 0) / np.sum(
+                truth.effects != 0
+            )
 
     for rep in rep_arr:
         truth = load_real_data_simulation_truth(rep)
@@ -3689,7 +3800,9 @@ def load_real_data_simulation_orient_and_ace_performance(
                 if incomplete:
                     continue
 
-                if mr_bonferroni:
+                if mr_str.startswith("mv") and mv_mr_bonferroni:
+                    mr_links = mr_p <= (0.05 / (len(rep_arr) * (num_p - 1) * 2))
+                elif mr_bonferroni:
                     mr_links = mr_p <= (0.05 / (len(rep_arr) * (num_p - 1) * 2))
                 else:
                     mr_links = mr_p <= 0.05
@@ -3699,8 +3812,14 @@ def load_real_data_simulation_orient_and_ace_performance(
                 select = mr_est != 0
                 if mr_str.startswith("mv"):
                     mse = np.mean((mr_est[select] - truth.direct_effects[select]) ** 2)
+                    mse_tpr = np.sum(mr_est != 0 & truth.direct_effects != 0) / np.sum(
+                        truth.direct_effects != 0
+                    )
                 else:
                     mse = np.mean((mr_est[select] - truth.effects[select]) ** 2)
+                    mse_tpr = np.sum(mr_est != 0 & truth.effects != 0) / np.sum(
+                        truth.effects != 0
+                    )
 
                 if mr_str.startswith("mv"):
                     orientation_perf = calculate_pxp_orientation_performance_mvmr(
@@ -3714,9 +3833,11 @@ def load_real_data_simulation_orient_and_ace_performance(
                 rows.append(
                     {
                         "-> orientation": orientation_perf.directed,
+                        "-> orientation tpr": orientation_perf.tpr_directed,
                         # "mr_pos_tpr": orientation_perf_rel_to_mr.mr_pos_tpr,
                         # "mr_neg_tdr": orientation_perf_rel_to_mr.mr_neg_tdr,
                         "mse": mse,
+                        "mse tpr": mse_tpr,
                         "rep": rep,
                         "alpha": 10 ** (-alpha_e),
                         "method": mr_str,
@@ -3729,6 +3850,7 @@ def plot_real_simulation_orient_and_ace_performance(
     rep_arr=list(range(1, 41)),
     ci_gwas_alpha_exp=4,
     mr_bonferroni=False,
+    mv_mr_bonferroni=False,
     fig_path=None,
 ):
     bar_xlabel_rotation = 45
@@ -3739,6 +3861,7 @@ def plot_real_simulation_orient_and_ace_performance(
         num_p=10,
         max_level=3,
         mr_bonferroni=mr_bonferroni,
+        mv_mr_bonferroni=mv_mr_bonferroni,
     )
     gr = df.groupby(["method", "alpha"])
     means = gr.mean()
@@ -5282,22 +5405,36 @@ def plot_full_ukb_results_figure_3(
     max_path_len=np.inf,
     edge_encoding=two_common_edge_types,
     fig_path=None,
+    blockfile=None,
+    outdir=None,
+    pheno_codes=None,
 ):
     e = 4
     d = 1
     # d = 1
     l = 3
     # outdir = f"/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/production/bdpc_d{d}_l{l}_a1e{e}/"
-    outdir = f"/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/production/cusk_d{d}_l{l}_a1e{e}_input/"
-    blockfile = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/ukb22828_UKB_EST_v3_ldp08.blocks"
-    pheno_path = f"/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/production/input.phen"
+    if outdir is None:
+        outdir = f"/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/production/cusk_d{d}_l{l}_a1e{e}_input/"
+    if blockfile is None:
+        blockfile = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/ukb22828_UKB_EST_v3_ldp08.blocks"
+    if pheno_path is None and pheno_codes is None:
+        pheno_path = f"/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/production/input.phen"
+    if pheno_codes is not None:
+        pheno_path = None
 
-    z2 = get_skeleton_pleiotropy_mat(outdir, blockfile, pheno_path, max_depth=1)
+    if pheno_path is None:
+        z2 = get_skeleton_pleiotropy_mat(
+            outdir, blockfile, pheno_path, max_depth=1, num_phen=len(pheno_codes)
+        )
+    else:
+        z2 = get_skeleton_pleiotropy_mat(outdir, blockfile, pheno_path, max_depth=1)
     # zinf = get_skeleton_pleiotropy_mat(outdir, blockfile, pheno_path, mat_type="union")
 
     fig = plt.figure(
-        # layout="tight",
-        figsize=(17, 8.5)
+        layout="tight",
+        figsize=(20, 9.5),
+        # figsize=(20, (9.5 / 17) * 14)
     )
     ax_dict = fig.subplot_mosaic(
         """
@@ -5305,33 +5442,38 @@ def plot_full_ukb_results_figure_3(
         cde
         """,
         empty_sentinel="X",
-        width_ratios=[1, 1, 0.45],
+        width_ratios=[1, 1, 0.3],
+        # width_ratios=[1, 1, 0.35],
     )
 
     cbar_kw = {"fraction": 0.046, "pad": 0.04}
     title_kw = {"loc": "left", "pad": 15, "size": 20}
 
-    plot_ace(
-        ace_path,
-        pheno_path,
-        ax=ax_dict["d"],
-        title="d)",
-        cbar_kw=cbar_kw,
-        title_kw=title_kw,
-        cmap="RdBu",
-        norm=ace_norm,
-        cbar=False,
-    )
+    if ace_path is not None:
+        plot_ace(
+            ace_path,
+            pheno_path,
+            ax=ax_dict["d"],
+            title="d)",
+            cbar_kw=cbar_kw,
+            title_kw=title_kw,
+            cmap="RdBu",
+            norm=ace_norm,
+            cbar=False,
+            pheno_codes=pheno_codes,
+        )
 
-    plot_pag(
-        pag_path,
-        pheno_path,
-        ax=ax_dict["c"],
-        title="c)",
-        title_kw=title_kw,
-        edge_encoding=edge_encoding,
-        cbar_kw=cbar_kw,
-    )
+    if pag_path is not None:
+        plot_pag(
+            pag_path,
+            pheno_path,
+            ax=ax_dict["c"],
+            title="c)",
+            title_kw=title_kw,
+            edge_encoding=edge_encoding,
+            cbar_kw=cbar_kw,
+            pheno_codes=pheno_codes,
+        )
 
     # plot_cause_ci_gwas_ace_comparison(
     #     ace_path, pheno_path, p_thr=p_thr, ax=ax_dict["f"], title="f)", title_kw=title_kw
@@ -5339,7 +5481,12 @@ def plot_full_ukb_results_figure_3(
     # ax_dict['f'].set_ylim(-0.05, 0.25)
 
     plot_non_pleio_barplot(
-        pag_path, pheno_path, ax=ax_dict["b"], title="b)", title_kw=title_kw
+        pag_path,
+        pheno_path,
+        ax=ax_dict["b"],
+        title="b)",
+        title_kw=title_kw,
+        pheno_codes=pheno_codes,
     )
 
     # norm = mpl.colors.LogNorm(vmin=1, vmax=np.max(z2))
@@ -5356,6 +5503,7 @@ def plot_full_ukb_results_figure_3(
         cbar=True,
         cbarlabel=r"# shared parent markers",
         # aspect="auto",
+        pheno_codes=pheno_codes,
     )
     # ax_dict["b"].text(0, -2.5, "b)", size=20, verticalalignment="top")
     # plot_skeleton_pleiotropy_mat_z(
@@ -5369,21 +5517,24 @@ def plot_full_ukb_results_figure_3(
     #     # aspect="auto",
     # )
 
-    plot_ci_gwas_cause_ace_comparison_tri(
-        pag_path,
-        ace_path,
-        pheno_path,
-        p_thr,
-        ax=ax_dict["e"],
-        title="e)",
-        title_kw=title_kw,
-        cbar_kw=cbar_kw,
-        max_path_len=max_path_len,
-    )
+    if ace_path is not None and pag_path is not None:
+        plot_ci_gwas_cause_ace_comparison_tri(
+            pag_path,
+            ace_path,
+            pheno_path,
+            p_thr,
+            ax=ax_dict["e"],
+            title="e)",
+            title_kw=title_kw,
+            cbar_kw=cbar_kw,
+            max_path_len=max_path_len,
+            pheno_codes=pheno_codes,
+        )
 
     _ = [ax_dict[k].set_box_aspect(1) for k in "acd"]
     ax_dict["b"].set_box_aspect(1)
-    fig.subplots_adjust(wspace=0.1, hspace=0.4)
+    fig.subplots_adjust(wspace=0.1, hspace=0.5)
+    # fig.subplots_adjust(wspace=0.0005, hspace=0.5)
     if fig_path is not None:
         plt.savefig(fig_path, bbox_inches="tight")
 
@@ -5625,12 +5776,22 @@ def plot_cause_ci_gwas_ace_comparison(
 
 
 def plot_non_pleio_barplot(
-    pag_path: str, pheno_path: str, ax=None, title=None, title_kw=None
+    pag_path: str,
+    pheno_path: str,
+    ax=None,
+    title=None,
+    title_kw=None,
+    pheno_codes=None,
 ):
     if ax is None:
         ax = plt.gca()
-    ps = pag_exclusive_pleiotropy_sets(pag_path, pheno_path, is_possible_child)
-    p_names = get_pheno_codes(pheno_path)
+    ps = pag_exclusive_pleiotropy_sets(
+        pag_path, pheno_path, is_possible_child, pheno_codes=pheno_codes
+    )
+    if pheno_codes is None:
+        p_names = get_pheno_codes(pheno_path)
+    else:
+        p_names = pheno_codes
     bd = [len(ps[i, i]) for i in range(len(p_names))]
     ax.bar(range(len(bd)), bd, color="gray")
     ax.set_ylabel("# non-pleiotropic parent markers")
