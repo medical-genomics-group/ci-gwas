@@ -1,10 +1,7 @@
-import bdpc
 import numpy as np
 import scipy
 from scipy.stats import norm
 from scipy.io import mmread, mmwrite
-import matplotlib.pyplot as plt
-import matplotlib as mpl
 
 
 def pcorr(corr: np.array, var: list[int]):
