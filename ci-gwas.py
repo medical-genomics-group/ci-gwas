@@ -3,13 +3,17 @@
 import argparse
 import sys
 import subprocess
+from sepselect.sepselect import sepselect_merged
+from sepselect.merge_blocks import merge_block_outputs
 
 MPS_PATH = "./cusk/build/apps/mps"
+RFCI_PATH = "./srfci/CIGWAS_est_PAG.R"
+DAVS_PATH = "./sdavs/CIGWAS_est_ACE.R"
 
 
 class MyParser(argparse.ArgumentParser):
     def error(self, message):
-        sys.stderr.write('error: %s\n' % message)
+        sys.stderr.write("error: %s\n" % message)
         self.print_help()
         sys.exit(2)
 
@@ -33,7 +37,7 @@ class TypeCheck:
 def main():
     ci_gwas_parser = MyParser(
         prog="ci-gwas",
-        description="Causal inference for multiple risk factors and diseases from summary statistic data",
+        description="Causal inference for multiple risk factors and diseases from genomics data",
     )
     subparsers = ci_gwas_parser.add_subparsers(
         required=True,
@@ -78,7 +82,7 @@ def main():
     )
     block_parser.set_defaults(func=block)
 
-    # cusk
+    # cusk (cusk-single)
     cusk_parser = subparsers.add_parser(
         "cusk",
         help="Infer skeleton with markers and traits as nodes, using marker data (requires GPU)",
@@ -97,7 +101,7 @@ def main():
         "bfiles", help="filestem of .bed, .bim, .fam fileset", type=str
     )
     cusk_parser.add_argument(
-        "phen", help="path to standardized phenotype tsv", type=str
+        "phen", help="path to standardized phenotype tsv.", type=str
     )
     cusk_parser.add_argument(
         "alpha",
@@ -143,7 +147,7 @@ def main():
     cuskss_parser.add_argument(
         "pxp",
         type=str,
-        help="Correlations between all traits. Textfile, whitespace separated, rectangular, only upper triangle is used. With trait names as column and row names.",
+        help="Correlations between all traits. Textfile, whitespace separated, rectangular, only upper triangle is used. With trait names as column and row names. Order of traits has to be same as in the mxp file.",
     )
     cuskss_parser.add_argument(
         "block-index",
@@ -164,8 +168,14 @@ def main():
     cuskss_parser.add_argument(
         "max-level",
         type=TypeCheck(int, "max-level", 1, 14),
-        help="maximal size of separation sets in cuPC (<= 14)",
-        default=6,
+        help="maximal size of separation sets in the first round of cuPC (<= 14)",
+        default=3,
+    )
+    cuskss_parser.add_argument(
+        "max-level-two",
+        type=TypeCheck(int, "max-level", 1, 14),
+        help="maximal size of separation sets in the second round of cuPC (<= 14)",
+        default=14,
     )
     cuskss_parser.add_argument(
         "max-depth",
@@ -186,15 +196,108 @@ def main():
     )
     cuskss_parser.set_defaults(func=cuskss)
 
+    # merge block outputs
+    merge_blocks_parser = subparsers.add_parser(
+        "merge-block-outputs",
+        help="Merge outputs from multiple blocks processed with cusk or cuskss",
+    )
+    merge_blocks_parser.add_argument(
+        "cusk-output-dir",
+        type=str,
+        help="output directory of cusk or cuskss",
+    )
+    merge_blocks_parser.add_argument(
+        "blockfile",
+        help="file with genomic block definitions (output of ci-gwas block)",
+        type=str,
+    )
+    merge_blocks_parser.set_defaults(func=merge_blocks)
+
+    # sepselect
+    sepselect_parser = subparsers.add_parser(
+        "sepselect",
+        help="Compute maximal and partial-correlation-minimizing separation sets on merged cusk skeletons",
+    )
+    sepselect_parser.add_argument(
+        "cusk-result-stem",
+        help="outdir + stem of merged cusk results",
+        type=str,
+    )
+    sepselect_parser.add_argument(
+        "alpha",
+        type=TypeCheck(float, "alpha", 0.0, 1.0),
+        help="significance level for conditional independence tests",
+        default=10**-4,
+    )
+    sepselect_parser.add_argument(
+        "num_samples",
+        type=TypeCheck(int, "num-samples", 1, None),
+        help="number of samples used for computing correlations",
+    )
+    sepselect_parser.set_defaults(func=run_sepselect)
+
     # sRFCI
     srfci_parser = subparsers.add_parser("srfci", help="Run sRFCI to infer a PAG")
+    srfci_parser.add_argument(
+        "sepselect-result-stem",
+        help="outdir + stem of sepselect",
+        type=str,
+    )
+    srfci_parser.add_argument(
+        "alpha",
+        type=TypeCheck(float, "alpha", 0.0, 1.0),
+        help="significance level for conditional independence tests",
+        default=10**-4,
+    )
+    srfci_parser.add_argument(
+        "num_samples",
+        type=TypeCheck(int, "num-samples", 1, None),
+        help="number of samples used for computing correlations",
+    )
     srfci_parser.set_defaults(func=srfci)
 
     # sDAVS
-    sdavs_parser = subparsers.add_parser("sdavs", help="Run sDAVS to infer ACEs")
+    sdavs_parser = subparsers.add_parser(
+        "sdavs", help="Run sDAVS on a pair of traits to infer the ACE"
+    )
+    sdavs_parser.add_argument(
+        "exposure",
+        help="1-based index of exposure trait",
+        type=TypeCheck(int, "exposure", 1, None),
+    )
+    sdavs_parser.add_argument(
+        "outcome",
+        help="1-based index of outcome trait",
+        type=TypeCheck(int, "outcome", 1, None),
+    )
+    sdavs_parser.add_argument(
+        "pag-path",
+        help="path to pag estimated with srfci",
+        type=str,
+    )
+    sdavs_parser.add_argument(
+        "output-file",
+        help="output filename",
+        type=str,
+    )
+    sdavs_parser.add_argument(
+        "sepselect-result-stem",
+        help="outdir + stem of sepselect",
+        type=str,
+    )
+    sdavs_parser.add_argument(
+        "alpha",
+        type=TypeCheck(float, "alpha", 0.0, 1.0),
+        help="significance level for conditional independence tests",
+        default=10**-4,
+    )
+    sdavs_parser.add_argument(
+        "num_samples",
+        type=TypeCheck(int, "num-samples", 1, None),
+        help="number of samples used for computing correlations",
+    )
     sdavs_parser.set_defaults(func=sdavs)
 
-    # args = ci_gwas_parser.parse_args(sys.argv[1:])
     args = ci_gwas_parser.parse_args()
     args.func(args)
 
@@ -218,6 +321,7 @@ def block(args):
 
 
 def cusk(args):
+    # check that everything is standardized, and that all files exist
     subprocess.run(
         [
             MPS_PATH,
@@ -227,6 +331,7 @@ def cusk(args):
             args.blocks,
             args.alpha,
             args.max_level,
+            args.max_level_two,
             args.max_depth,
             args.outdir,
             args.block_index,
@@ -247,6 +352,7 @@ def cuskss(args):
             args.blocks,
             args.alpha,
             args.max_level,
+            args.max_level_two,
             args.max_depth,
             args.num_samples,
             args.outdir,
@@ -255,12 +361,43 @@ def cuskss(args):
     )
 
 
+def merge_blocks(args):
+    merge_block_outputs(args.blockfile, args.cusk_output_dir)
+
+
+def run_sepselect(args):
+    sepselect_merged(args.cusk_result_stem, args.alpha, args.num_samples)
+
+
 def srfci(args):
-    pass
+    subprocess.run(
+        [
+            "R",
+            RFCI_PATH,
+            args.sepselect_result_stem,
+            args.alpha,
+            args.num_samples,
+            "cusk2",
+        ],
+        check=True,
+    )
 
 
 def sdavs(args):
-    pass
+    subprocess.run(
+        [
+            "R",
+            DAVS_PATH,
+            args.exposure,
+            args.outcome,
+            args.num_samples,
+            args.alpha,
+            args.pag_path,
+            args.sepselect_result_stem,
+            args.output_file,
+        ],
+        check=True,
+    )
 
 
 if __name__ == "__main__":
