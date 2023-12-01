@@ -134,8 +134,8 @@ print("Done")
 print("Applying R1-R10")
 estimate_pag_with_traits_only = TRUE
 if (estimate_pag_with_traits_only) {
-    res <- udag2apag(A[1:num_phen,1:num_phen], suffStat = suffStat, indepTest = gaussCItest, alpha, sepset, rules = rep(TRUE, 10), 
-                 unfVect = r.v.$unfTripl, verbose = FALSE)
+    res <- udag2apag_ci_gwas(A[1:num_phen,1:num_phen], sepset, rules=rep(TRUE, 10), unfVect = r.v.$unfTripl)
+    #res <- udag2apag(A[1:num_phen,1:num_phen], suffStat=suffStat, indepTest=gaussCItest, alpha, sepset, rules=c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE), unfVect = r.v.$unfTripl, verbose=FALSE)
     tmp_graph <- A
     tmp_graph[1:num_phen, 1:num_phen] <- res$graph
     res$graph <- tmp_graph
