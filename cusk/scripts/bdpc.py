@@ -3103,9 +3103,19 @@ def load_real_data_simulation_adj_performance(
     max_level=3,
     mr_bonferroni=False,
     mv_mr_bonferroni=False,
+    cause_bonferroni=False,
     mr_exclude_zero_eff_links=True,
 ) -> pd.DataFrame:
     """Load simulation results for ci-gwas and mr methods, calculate fdr, tpr for adjacencies."""
+
+    correction_map = {
+        "cause": cause_bonferroni,
+        "ivw": mr_bonferroni,
+        "presso": mr_bonferroni,
+        "mvpresso": mv_mr_bonferroni,
+        "mvivw": mv_mr_bonferroni,
+    }
+
     rows = []
     wdir = "/nfs/scistore17/robingrp/mrobinso/cigwas/ukb/sim/real_marker_sim/"
     bim_path = "/nfs/scistore17/robingrp/human_data/causality/parent_set_selection/estonian_comparison/ukb22828_UKB_EST_v3_ldp08_estonia_intersect_a1_forced.bim"
@@ -3217,7 +3227,7 @@ def load_real_data_simulation_adj_performance(
                     "",
                     alpha_e,
                     wdir,
-                    mv_mr_bonferroni if mr_str.startswith("mv") else mr_bonferroni,
+                    correction_map[mr_str],
                     mr_exclude_zero_eff_links,
                 )
                 if mr_res.incomplete:
@@ -3268,7 +3278,7 @@ def load_real_data_simulation_adj_performance(
                     "_cigwas",
                     alpha_e,
                     wdir,
-                    mv_mr_bonferroni if mr_str.startswith("mv") else mr_bonferroni,
+                    correction_map[mr_str],
                     mr_exclude_zero_eff_links,
                 )
                 if mr_res.incomplete:
@@ -3315,6 +3325,7 @@ def plot_real_data_simulation_adj_performance(
     max_level=3,
     mr_bonferroni=False,
     mv_mr_bonferroni=False,
+    cause_bonferroni=False,
     fig_path=None,
 ):
     bar_xlabel_rotation = 45
@@ -3326,6 +3337,7 @@ def plot_real_data_simulation_adj_performance(
         max_level=max_level,
         mr_bonferroni=mr_bonferroni,
         mv_mr_bonferroni=mv_mr_bonferroni,
+        cause_bonferroni=cause_bonferroni,
     )
     gr = df.groupby(["method", "alpha"])
     means = gr.mean()
@@ -3485,6 +3497,7 @@ def plot_mr_vs_ci_gwas_plus_mr(
     max_level=3,
     mr_bonferroni=False,
     mv_mr_bonferroni=False,
+    cause_bonferroni=False,
     fig_path=None,
     ylim_fdr=None,
 ):
@@ -3497,6 +3510,7 @@ def plot_mr_vs_ci_gwas_plus_mr(
         max_level=max_level,
         mr_bonferroni=mr_bonferroni,
         mv_mr_bonferroni=mv_mr_bonferroni,
+        cause_bonferroni=cause_bonferroni,
     )
     gr = df.groupby(["method", "alpha"])
     means = gr.mean()
@@ -3707,8 +3721,19 @@ def load_real_data_simulation_orient_and_ace_performance(
     max_level=3,
     mr_bonferroni=False,
     mv_mr_bonferroni=False,
+    cause_bonferroni=False,
+    mr_exclude_zero_eff_links=False
 ) -> pd.DataFrame:
     """Load simulation results for ci-gwas and mr methods, calculate fdr, tpr for adjacencies."""
+
+    correction_map = {
+        "cause": cause_bonferroni,
+        "ivw": mr_bonferroni,
+        "presso": mr_bonferroni,
+        "mvpresso": mv_mr_bonferroni,
+        "mvivw": mv_mr_bonferroni,
+    }
+
     rows = []
     wdir = "/nfs/scistore17/robingrp/mrobinso/cigwas/ukb/sim/real_marker_sim/"
     for rep in rep_arr:
@@ -3771,7 +3796,7 @@ def load_real_data_simulation_orient_and_ace_performance(
         mse = np.mean((pace[select] - truth.effects[select]) ** 2)
         if not incomplete:
             rows[-1]["mse"] = mse
-            rows[-1]["mse tpr"] = np.sum(pace != 0 & truth.effects != 0) / np.sum(
+            rows[-1]["mse tpr"] = np.sum((pace != 0) & (truth.effects != 0)) / np.sum(
                 truth.effects != 0
             )
 
@@ -3780,54 +3805,43 @@ def load_real_data_simulation_orient_and_ace_performance(
         for alpha_e in [2, 8]:
             est_dir = wdir + f"cusk/sim{rep}_e{alpha_e}/"
             for mr_str in ["cause", "presso", "mvpresso", "ivw", "mvivw"]:
-                mr_p = np.ones((num_p, num_p))
-                mr_est = np.zeros((num_p, num_p))
-                incomplete = False
-                for outcome in range(0, num_p):
-                    fpaths = glob(
-                        est_dir
-                        + f"mr_{mr_str}_alpha*_sim{rep}_outcome_y{outcome + 1}_seed1000"
-                    )
-                    if len(fpaths) == 0:
-                        incomplete = True
-                        continue
-                    fpath = fpaths[0]
-                    mr_res_df = pd.read_csv(fpath)
-                    exposures = [int(s[1:]) - 1 for s in mr_res_df["Exposure"]]
-                    mr_p[exposures, outcome] = mr_res_df["p"].values
-                    mr_est[exposures, outcome] = mr_res_df["est"].values
-
-                if incomplete:
+                mr_str_mod = mr_str
+                if mr_str == "ivw":
+                    mr_str_mod = "vw"
+                mr_res = load_mr_result(
+                    num_p,
+                    rep,
+                    mr_str,
+                    "",
+                    alpha_e,
+                    wdir,
+                    correction_map[mr_str],
+                    mr_exclude_zero_eff_links,
+                )
+                if mr_res.incomplete:
                     continue
 
-                if mr_str.startswith("mv") and mv_mr_bonferroni:
-                    mr_links = mr_p <= (0.05 / (len(rep_arr) * (num_p - 1) * 2))
-                elif mr_bonferroni:
-                    mr_links = mr_p <= (0.05 / (len(rep_arr) * (num_p - 1) * 2))
-                else:
-                    mr_links = mr_p <= 0.05
-                mr_adj = make_adj_symmetric(mr_links)
-                mr_est[~mr_links] = 0.0
+                mr_res.est[~mr_res.links] = 0.0
 
-                select = mr_est != 0
+                select = mr_res.est != 0
                 if mr_str.startswith("mv"):
-                    mse = np.mean((mr_est[select] - truth.direct_effects[select]) ** 2)
-                    mse_tpr = np.sum(mr_est != 0 & truth.direct_effects != 0) / np.sum(
-                        truth.direct_effects != 0
-                    )
+                    mse = np.mean((mr_res.est[select] - truth.direct_effects[select]) ** 2)
+                    mse_tpr = np.sum(
+                        (mr_res.est != 0) & (truth.direct_effects != 0)
+                    ) / np.sum(truth.direct_effects != 0)
                 else:
-                    mse = np.mean((mr_est[select] - truth.effects[select]) ** 2)
-                    mse_tpr = np.sum(mr_est != 0 & truth.effects != 0) / np.sum(
+                    mse = np.mean((mr_res.est[select] - truth.effects[select]) ** 2)
+                    mse_tpr = np.sum((mr_res.est != 0) & (truth.effects != 0)) / np.sum(
                         truth.effects != 0
                     )
 
                 if mr_str.startswith("mv"):
                     orientation_perf = calculate_pxp_orientation_performance_mvmr(
-                        truth.dag_pxp != 0, truth.bidirected != 0, mr_links
+                        truth.dag_pxp != 0, truth.bidirected != 0, mr_res.links
                     )
                 else:
                     orientation_perf = calculate_pxp_orientation_performance_mr(
-                        truth.dag_pxp != 0, truth.bidirected != 0, mr_links
+                        truth.dag_pxp != 0, truth.bidirected != 0, mr_res.links
                     )
 
                 rows.append(
@@ -3851,6 +3865,7 @@ def plot_real_simulation_orient_and_ace_performance(
     ci_gwas_alpha_exp=4,
     mr_bonferroni=False,
     mv_mr_bonferroni=False,
+    cause_bonferroni=False,
     fig_path=None,
 ):
     bar_xlabel_rotation = 45
@@ -3862,6 +3877,7 @@ def plot_real_simulation_orient_and_ace_performance(
         max_level=3,
         mr_bonferroni=mr_bonferroni,
         mv_mr_bonferroni=mv_mr_bonferroni,
+        cause_bonferroni=cause_bonferroni,
     )
     gr = df.groupby(["method", "alpha"])
     means = gr.mean()
@@ -3929,13 +3945,13 @@ def plot_real_simulation_orient_and_ace_performance(
 
     fig = plt.figure(
         # layout="tight",
-        figsize=(8, 6)
+        figsize=(8, 4)
     )
     ax_dict = fig.subplot_mosaic(
         """
-        XiX
-        aaa
-        bbb
+        ii
+        ac
+        bd
         """,
         empty_sentinel="X",
         sharex=False,
@@ -3943,69 +3959,89 @@ def plot_real_simulation_orient_and_ace_performance(
         height_ratios=[0.1, 0.3, 0.3],
     )
 
+    ax_dict["d"].set_xlabel(r"IV significance threshold")
     ax_dict["b"].set_xlabel(r"IV significance threshold")
 
-    # plot_bars(
-    #     alphas,
-    #     "mr_pos_tpr",
-    #     means,
-    #     stds,
-    #     ax_dict["a"],
-    #     "a)",
-    #     methods=methods,
-    #     skip=["ci-gwas"],
-    # )
-    # ax_dict["a"].set_ylabel(r"$\rightarrow TPR_{MR+}$")
+    ax = ax_dict["a"]
     plot_bars(
         alphas,
         "-> orientation",
         means,
         stds,
-        ax_dict["a"],
+        ax,
         "a)",
         methods=methods,
         skip=["ci-gwas"],
     )
-    ax_dict["a"].set_ylabel(r"$\rightarrow TDR$")
-    ax_dict["a"].axhline(
+    ax.set_ylabel(r"$\rightarrow TDR$")
+    ax.axhline(
         means.loc["ci-gwas"]["-> orientation"].values[0], linestyle="--", color="k"
     )
-    # err_start, err_end = -0.1, 1.2
     cig_orient_mean = means.loc["ci-gwas"]["-> orientation"].values[0]
     cig_orient_std = stds.loc["ci-gwas"]["-> orientation"].values[0]
-    ax_dict["a"].axhline(cig_orient_mean + cig_orient_std, linestyle=":", color="gray")
-    ax_dict["a"].axhline(cig_orient_mean - cig_orient_std, linestyle=":", color="gray")
-    # ax_dict["b"].axhline(cig_orient_mean, linestyle="--", color="k")
-    # ax_dict["b"].fill_between(
-    #     [err_start, err_end],
-    #     cig_orient_mean - cig_orient_std,
-    #     cig_orient_mean + cig_orient_std,
-    #     alpha=0.1,
-    # )
+    ax.axhline(cig_orient_mean + cig_orient_std, linestyle=":", color="gray")
+    ax.axhline(cig_orient_mean - cig_orient_std, linestyle=":", color="gray")
+
+    ax = ax_dict["c"]
+    plot_bars(
+        alphas,
+        "-> orientation tpr",
+        means,
+        stds,
+        ax,
+        "b)",
+        methods=methods,
+        skip=["ci-gwas"],
+    )
+    ax.set_ylabel(r"$\rightarrow TPR$")
+    ax.axhline(
+        means.loc["ci-gwas"]["-> orientation tpr"].values[0], linestyle="--", color="k"
+    )
+    cig_orient_mean = means.loc["ci-gwas"]["-> orientation tpr"].values[0]
+    cig_orient_std = stds.loc["ci-gwas"]["-> orientation tpr"].values[0]
+    ax.axhline(cig_orient_mean + cig_orient_std, linestyle=":", color="gray")
+    ax.axhline(cig_orient_mean - cig_orient_std, linestyle=":", color="gray")
+
+    ax = ax_dict["b"]
     h = plot_bars(
         alphas,
         "mse",
         means,
         stds,
-        ax_dict["b"],
-        "b)",
+        ax,
+        "c)",
         methods=methods,
         skip=["ci-gwas"],
     )
     cig_mse_mean = means.loc["ci-gwas"]["mse"].values[0]
     cig_mse_std = stds.loc["ci-gwas"]["mse"].values[0]
-    ax_dict["b"].set_ylabel("MSE")
-    ax_dict["b"].axhline(cig_mse_mean, linestyle="--", color="k")
-    ax_dict["b"].axhline(cig_mse_mean + cig_mse_std, linestyle=":", color="gray")
-    ax_dict["b"].axhline(cig_mse_mean - cig_mse_std, linestyle=":", color="gray")
+    ax.set_ylabel("MSE")
+    ax.axhline(cig_mse_mean, linestyle="--", color="k")
+    ax.axhline(cig_mse_mean + cig_mse_std, linestyle=":", color="gray")
+    ax.axhline(cig_mse_mean - cig_mse_std, linestyle=":", color="gray")
+
+    ax = ax_dict["d"]
+    h = plot_bars(
+        alphas,
+        "mse tpr",
+        means,
+        stds,
+        ax,
+        "d)",
+        methods=methods,
+        skip=["ci-gwas"],
+    )
+    cig_mse_mean = means.loc["ci-gwas"]["mse tpr"].values[0]
+    cig_mse_std = stds.loc["ci-gwas"]["mse tpr"].values[0]
+    ax.set_ylabel("MSE TPR")
+    ax.axhline(cig_mse_mean, linestyle="--", color="k")
+    ax.axhline(cig_mse_mean + cig_mse_std, linestyle=":", color="gray")
+    ax.axhline(cig_mse_mean - cig_mse_std, linestyle=":", color="gray")
+
     ax_dict["b"].set_ylim(0.0)
     ax_dict["a"].set_ylim(0.0)
-    # ax_dict["c"].fill_between(
-    #     [err_start, err_end],
-    #     cig_mse_mean - cig_mse_std,
-    #     cig_mse_mean + cig_mse_std,
-    #     alpha=0.1,
-    # )
+    ax_dict["c"].set_ylim(0.0)
+    ax_dict["d"].set_ylim(0.0)
 
     ax_dict["i"].legend(
         handles=h,
@@ -4017,9 +4053,10 @@ def plot_real_simulation_orient_and_ace_performance(
         ncol=3,
     )
     ax_dict["i"].axis("off")
-    _ = [ax_dict[i].tick_params(labelbottom=False) for i in "a"]
+    _ = [ax_dict[i].tick_params(labelbottom=False) for i in "ac"]
+    _ = [ax_dict[i].sharex(ax_dict["d"]) for i in "c"]
     _ = [ax_dict[i].sharex(ax_dict["b"]) for i in "a"]
-    fig.subplots_adjust(wspace=0.7, hspace=1.3)
+    fig.subplots_adjust(wspace=0.4, hspace=1.3)
     if fig_path is not None:
         plt.savefig(fig_path, bbox_inches="tight")
 
