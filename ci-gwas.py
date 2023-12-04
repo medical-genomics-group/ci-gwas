@@ -396,9 +396,7 @@ def merge_blocks(args):
 
 
 def run_sepselect(args):
-    merged_cusk = sepselect_merged(
-        args.cusk_result_stem, str(args.alpha), str(args.num_samples)
-    )
+    merged_cusk = sepselect_merged(args.cusk_result_stem, args.alpha, args.num_samples)
     merged_cusk.to_file(f"{os.path.dirname(args.cusk_result_stem)}/max_sep_min_pc")
 
 
