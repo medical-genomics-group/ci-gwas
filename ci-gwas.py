@@ -65,19 +65,22 @@ def main():
         "bfiles", help="filestem of .bed, .bim, .fam fileset", type=str
     )
     block_parser.add_argument(
-        "max-block-size",
+        "max_block_size",
+        metavar="max-block-size",
         help="maximum number of markers per block",
         default=11000,
         type=TypeCheck(int, "max-block-size", 2, None),
     )
     block_parser.add_argument(
-        "device-mem-gb",
+        "device_mem_gb",
+        metavar="device-mem-gb",
         help="maximum memory available on GPU in GB",
         default=10,
         type=TypeCheck(int, "device-mem-gb", 0, None),
     )
     block_parser.add_argument(
-        "corr-width",
+        "corr_width",
+        metavar="corr-width",
         help="width of banded-correlation matrix",
         default=2000,
         type=TypeCheck(int, "corr-width", 2, None),
@@ -90,7 +93,8 @@ def main():
         help="Infer skeleton with markers and traits as nodes, using marker data (requires GPU)",
     )
     cusk_parser.add_argument(
-        "block-index",
+        "block_index",
+        metavar="block-index",
         type=TypeCheck(int, "block-index", 0, None),
         help="0-based index of the block to run cusk on",
     )
@@ -112,13 +116,15 @@ def main():
         default=10**-4,
     )
     cusk_parser.add_argument(
-        "max-level",
+        "max_level",
+        metavar="max-level",
         type=TypeCheck(int, "max-level", 1, 14),
         help="maximal size of separation sets in cuPC (<= 14)",
         default=6,
     )
     cusk_parser.add_argument(
-        "max-depth",
+        "max_depth",
+        metavar="max-depth",
         type=TypeCheck(int, "max-depth", 1, None),
         help="max depth at which marker variables are kept as ancestors (>= 1)",
         default=1,
@@ -152,7 +158,8 @@ def main():
         help="Correlations between all traits. Textfile, whitespace separated, rectangular, only upper triangle is used. With trait names as column and row names. Order of traits has to be same as in the mxp file.",
     )
     cuskss_parser.add_argument(
-        "block-index",
+        "block_index",
+        metavar="block-index",
         type=TypeCheck(int, "block-index", 0, None),
         help="0-based index of the block to run cusk on",
     )
@@ -168,25 +175,29 @@ def main():
         default=10**-4,
     )
     cuskss_parser.add_argument(
-        "max-level",
+        "max_level",
+        metavar="max-level",
         type=TypeCheck(int, "max-level", 1, 14),
         help="maximal size of separation sets in the first round of cuPC (<= 14)",
         default=3,
     )
     cuskss_parser.add_argument(
-        "max-level-two",
+        "max_level_two",
+        metavar="max-level-two",
         type=TypeCheck(int, "max-level", 1, 14),
         help="maximal size of separation sets in the second round of cuPC (<= 14)",
         default=14,
     )
     cuskss_parser.add_argument(
-        "max-depth",
+        "max_depth",
+        metavar="max-depth",
         type=TypeCheck(int, "max-depth", 1, None),
         help="max depth at which marker variables are kept as ancestors (>= 1)",
         default=1,
     )
     cuskss_parser.add_argument(
         "num_samples",
+        metavar="num-samples",
         type=TypeCheck(int, "num-samples", 1, None),
         help="number of samples used for computing correlations",
     )
@@ -204,7 +215,8 @@ def main():
         help="Merge outputs from multiple blocks processed with cusk or cuskss",
     )
     merge_blocks_parser.add_argument(
-        "cusk-output-dir",
+        "cusk_output_dir",
+        metavar="cusk-output-dir",
         type=str,
         help="output directory of cusk or cuskss",
     )
@@ -221,7 +233,8 @@ def main():
         help="Compute maximal and partial-correlation-minimizing separation sets on merged cusk skeletons",
     )
     sepselect_parser.add_argument(
-        "cusk-result-stem",
+        "cusk_result_stem",
+        metavar="cusk-result-stem",
         help="outdir + stem of merged cusk results",
         type=str,
     )
@@ -233,6 +246,7 @@ def main():
     )
     sepselect_parser.add_argument(
         "num_samples",
+        metavar="num-samples",
         type=TypeCheck(int, "num-samples", 1, None),
         help="number of samples used for computing correlations",
     )
@@ -241,7 +255,8 @@ def main():
     # sRFCI
     srfci_parser = subparsers.add_parser("srfci", help="Run sRFCI to infer a PAG")
     srfci_parser.add_argument(
-        "sepselect-result-stem",
+        "sepselect_result_stem",
+        metavar="sepselect-result-stem",
         help="outdir + stem of sepselect",
         type=str,
     )
@@ -253,6 +268,7 @@ def main():
     )
     srfci_parser.add_argument(
         "num_samples",
+        metavar="num-samples",
         type=TypeCheck(int, "num-samples", 1, None),
         help="number of samples used for computing correlations",
     )
@@ -273,17 +289,20 @@ def main():
         type=TypeCheck(int, "outcome", 1, None),
     )
     sdavs_parser.add_argument(
-        "pag-path",
+        "pag_path",
+        metavar="pag-path",
         help="path to pag estimated with srfci",
         type=str,
     )
     sdavs_parser.add_argument(
-        "output-file",
+        "output_file",
+        metavar="output-file",
         help="output filename",
         type=str,
     )
     sdavs_parser.add_argument(
-        "sepselect-result-stem",
+        "sepselect_result_stem",
+        metavar="sepselect-result-stem",
         help="outdir + stem of sepselect",
         type=str,
     )
@@ -295,6 +314,7 @@ def main():
     )
     sdavs_parser.add_argument(
         "num_samples",
+        metavar="num-samples",
         type=TypeCheck(int, "num-samples", 1, None),
         help="number of samples used for computing correlations",
     )
@@ -309,6 +329,7 @@ def prep_bed(args):
 
 
 def block(args):
+    print(args)
     subprocess.run(
         [
             MPS_PATH,
