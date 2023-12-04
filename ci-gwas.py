@@ -329,7 +329,6 @@ def prep_bed(args):
 
 
 def block(args):
-    print(args)
     subprocess.run(
         [
             MPS_PATH,
