@@ -351,12 +351,12 @@ def cusk(args):
             args.phen,
             args.bfiles,
             args.blocks,
-            args.alpha,
-            args.max_level,
-            args.max_level_two,
-            args.max_depth,
+            str(args.alpha),
+            str(args.max_level),
+            str(args.max_level_two),
+            str(args.max_depth),
             args.outdir,
-            args.block_index,
+            str(args.block_index),
         ],
         check=True,
     )
@@ -370,13 +370,13 @@ def cuskss(args):
             args.mxm,
             args.mxp,
             args.pxp,
-            args.block_index,
+            str(args.block_index),
             args.blocks,
-            args.alpha,
-            args.max_level,
-            args.max_level_two,
-            args.max_depth,
-            args.num_samples,
+            str(args.alpha),
+            str(args.max_level),
+            str(args.max_level_two),
+            str(args.max_depth),
+            str(args.num_samples),
             args.outdir,
         ],
         check=True,
@@ -388,7 +388,7 @@ def merge_blocks(args):
 
 
 def run_sepselect(args):
-    sepselect_merged(args.cusk_result_stem, args.alpha, args.num_samples)
+    sepselect_merged(args.cusk_result_stem, str(args.alpha), str(args.num_samples))
 
 
 def srfci(args):
@@ -397,8 +397,8 @@ def srfci(args):
             "R",
             RFCI_PATH,
             args.sepselect_result_stem,
-            args.alpha,
-            args.num_samples,
+            str(args.alpha),
+            str(args.num_samples),
             "cusk2",
         ],
         check=True,
@@ -410,10 +410,10 @@ def sdavs(args):
         [
             "R",
             DAVS_PATH,
-            args.exposure,
-            args.outcome,
-            args.num_samples,
-            args.alpha,
+            str(args.exposure),
+            str(args.outcome),
+            str(args.num_samples),
+            str(args.alpha),
             args.pag_path,
             args.sepselect_result_stem,
             args.output_file,
