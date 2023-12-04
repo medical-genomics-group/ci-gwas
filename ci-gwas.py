@@ -392,7 +392,7 @@ def cuskss(args):
 
 def merge_blocks(args):
     merged_blocks = merge_block_outputs(args.blockfile, args.cusk_output_dir)
-    merged_blocks.write_mm(args.cusk_output_dir)
+    merged_blocks.write_mm(f"{args.cusk_output_dir}/merged_blocks")
 
 
 def run_sepselect(args):
