@@ -403,7 +403,7 @@ def run_sepselect(args):
 def srfci(args):
     subprocess.run(
         [
-            "R",
+            "Rscript",
             RFCI_PATH,
             args.sepselect_result_stem,
             str(args.alpha),
@@ -417,7 +417,7 @@ def srfci(args):
 def sdavs(args):
     subprocess.run(
         [
-            "R",
+            "Rscript",
             DAVS_PATH,
             str(args.exposure),
             str(args.outcome),
