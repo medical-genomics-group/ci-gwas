@@ -391,11 +391,15 @@ def cuskss(args):
 
 
 def merge_blocks(args):
-    merge_block_outputs(args.blockfile, args.cusk_output_dir)
+    merged_blocks = merge_block_outputs(args.blockfile, args.cusk_output_dir)
+    merged_blocks.write_mm(args.cusk_output_dir)
 
 
 def run_sepselect(args):
-    sepselect_merged(args.cusk_result_stem, str(args.alpha), str(args.num_samples))
+    merged_cusk = sepselect_merged(
+        args.cusk_result_stem, str(args.alpha), str(args.num_samples)
+    )
+    merged_cusk.to_file(f"{os.path.dirname(args.cusk_result_stem)}/max_sep_min_pc")
 
 
 def srfci(args):
