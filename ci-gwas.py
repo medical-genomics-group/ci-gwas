@@ -334,9 +334,9 @@ def block(args):
             MPS_PATH,
             "block",
             args.bfiles,
-            args.max_block_size,
-            args.device_mem_gb,
-            args.corr_width,
+            str(args.max_block_size),
+            str(args.device_mem_gb),
+            str(args.corr_width),
         ],
         check=True,
     )
