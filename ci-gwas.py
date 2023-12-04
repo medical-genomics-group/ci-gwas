@@ -7,7 +7,7 @@ from sepselect.sepselect import sepselect_merged
 from sepselect.merge_blocks import merge_block_outputs
 import os
 
-script_dir = os.path.abspath(os.path.dirname(__file__))
+script_dir = os.path.dirname(os.path.realpath(__file__))
 MPS_PATH = f"{script_dir}/cusk/build/apps/mps"
 RFCI_PATH = f"{script_dir}/srfci/CIGWAS_est_PAG.R"
 DAVS_PATH = f"{script_dir}/sdavs/CIGWAS_est_ACE.R"
