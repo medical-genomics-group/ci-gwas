@@ -46,16 +46,21 @@ Get help:
 ./ci-gwas.py -h
 ```
 
+First of all, make sure that any marker data you want to plug in is LD pruned, or at least does not have markers with a correlation of 1.
+
 A standard analysis, if you have data at the individual-level available, consists of subsquent calls to
 1) `ci-gwas.py prep-bed` to compute means and variances of all markers
 2) `ci-gwas.py block` to block the LD matrix
 3) `ci-gwas.py cusk` (once for each block) to compute skeletons
+    (**make sure that the trait values are standardized**)
 4) `ci-gwas.py merge-block-outputs` to merge all skeletons
 5) `ci-gwas.py sepselect` to find separation sets
 6) `ci-gwas.py srfci` to infer a PAG
 7) `ci-gwas.py srfci` to infer ACEs
 
-Alternatively, if you have correlations from summarized data, you can start at step 3) with `cuskss` instead of `cusk`.
+Alternatively, if you have correlations from summarized data, you can start at step 3) with `cuskss` instead of `cusk`. In that case it is important that
+- the traits have the same order in the `mxp` and `pxp` files
+- the markers have the same order in the `mxm` and `mxp` files
 
 ## Common Errors
 
