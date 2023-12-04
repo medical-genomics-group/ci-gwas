@@ -122,7 +122,7 @@ def main():
         help="maximal size of separation sets in cuPC (<= 14)",
         default=3,
     )
-    cuskss_parser.add_argument(
+    cusk_parser.add_argument(
         "max_level_two",
         metavar="max-level-two",
         type=TypeCheck(int, "max-level", 1, 14),
