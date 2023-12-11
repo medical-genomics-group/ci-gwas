@@ -57,6 +57,7 @@ First of all, make sure that any marker data you want to plug in is LD pruned, o
 A standard analysis, if you have data at the individual-level available, consists of subsquent calls to
 
 1. `ci-gwas.py prep-bed` to compute means and variances of all markers
+   (**make sure to exclude any markers that have no recorded variation; the .stds file should not have any 0.0 entries**)
 2. `ci-gwas.py block` to block the LD matrix
 3. `ci-gwas.py cusk` (once for each block) to compute skeletons
    (**make sure that the trait values are standardized**)
