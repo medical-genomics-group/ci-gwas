@@ -3,7 +3,7 @@
 
 /**
  * @brief Load mxm matrix from binary file. Assumed to contain float32 values in lower triangular
- * matrix format, including the diagonal.
+ * matrix format, including the diagonal, row major.
  */
 MarkerSummaryStats::MarkerSummaryStats(const std::string path)
 {

@@ -622,7 +622,7 @@ Run cuda-skeleton on a block of markers and traits with pre-computed correlation
 usage: mps cuskss <mxm> <mxp> <pxp> <block-ix> <.blocks> <alpha> <max-level> <depth> <num-samples> <outdir>
 
 arguments:
-    mxm                     correlations between markers in block. Binary of floats, upper triangular, without diagonal.
+    mxm                     correlations between markers in block. Binary of floats, lower triangular, with diagonal, row major.
     mxp                     correlations between markers in all blocks and all traits. Text format, rectangular.
     pxp                     correlations between all traits. Text format, rectangular, only upper triangle is used.
     block-ix                0-based index of the marker block in the .blocks file

@@ -152,7 +152,7 @@ def main():
     cuskss_parser.add_argument(
         "mxm",
         type=str,
-        help="Correlations between markers in block. Binary of floats, upper triangular, without diagonal.",
+        help="Correlations between markers in block. Binary of floats, lower triangular, with diagonal, row major.",
     )
     cuskss_parser.add_argument(
         "mxp",
