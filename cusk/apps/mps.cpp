@@ -688,6 +688,8 @@ void cuda_skeleton_summary_stats(int argc, char *argv[])
 
     // dims ok, now merge them all into one matrix.
 
+    std::cout << "Merging correlations into single matrix" << std::endl;
+
     // make n2 matrix to please cuPC
     size_t num_phen = pxp.get_num_phen();
     size_t num_markers = mxm.get_num_markers();
@@ -756,7 +758,17 @@ void cuda_skeleton_summary_stats(int argc, char *argv[])
         );
     }
 
+    std::cout << "Number of levels: " << max_level << std::endl;
+
     std::vector<float> Th = threshold_array(num_individuals, alpha);
+
+    std::cout << "Setting level thr for cuPC: " << std::endl;
+    for (int i = 0; i <= max_level; ++i)
+    {
+        std::cout << "\t Level: " << i << " thr: " << Th[i] << std::endl;
+    }
+
+    std::cout << "Running cuPC" << std::endl;
 
     // call cuPC
     int p = num_var;
