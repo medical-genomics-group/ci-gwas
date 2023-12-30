@@ -391,7 +391,10 @@ def cuskss(args):
 
 
 def merge_blocks(args):
-    merged_blocks = merge_block_outputs(args.blockfile, args.cusk_output_dir)
+    out_dir = args.cusk_output_dir
+    if not out_dir.endswith("/"):
+        out_dir += "/"
+    merged_blocks = merge_block_outputs(args.blockfile, out_dir)
     merged_blocks.write_mm(f"{args.cusk_output_dir}/merged_blocks")
 
 
