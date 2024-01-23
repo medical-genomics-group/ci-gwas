@@ -638,7 +638,7 @@ const int CUSKSS_MERGED_NARGS = 12;
 
 void cuda_skeleton_summary_stats_merged_blocks(int argc, char *argv[])
 {
-    check_nargs(argc, CUSKSS_NARGS, CUSKSS_USAGE);
+    check_nargs(argc, CUSKSS_MERGED_NARGS, CUSKSS_MERGED_USAGE);
 
     std::string mxm_path = argv[2];
     std::string mxp_path = argv[3];
