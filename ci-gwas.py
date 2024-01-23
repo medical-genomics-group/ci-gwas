@@ -237,7 +237,8 @@ def main():
         help="Correlations between all traits. Textfile, whitespace separated, rectangular, only upper triangle is used. With trait names as column and row names. Order of traits has to be same as in the mxp file.",
     )
     cuskss_merged_parser.add_argument(
-        "marker-indices",
+        "marker_indices",
+        metavar="marker-indices",
         type=str,
         help="Row indices if selected markers in mxp file. E.g. the .ixs file produced by `ci-gwas merge-block-outputs`. Binary of 32 bit ints.",
     )
