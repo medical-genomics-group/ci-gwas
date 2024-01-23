@@ -73,6 +73,7 @@ Alternatively, if you have correlations from summarized data, you can start at s
 
 ## Common Errors
 
-`no kernel image is available for execution on the device`
+`invalid device function`,
+`no kernel image is available for execution on the device`,
 
 Can be caused by the chosen device having a lower [GPU Compute Capability](https://developer.nvidia.com/cuda-gpus#collapseOne) than the one `cusk` was compiled for. The Compute Capability targeted by the build is specified in the top level `CMakeLists.txt`. If there are multiple devices on the machine and only a subset of them have the appropriate Compute Capability, you can choose one by setting `CUDA_VISIBLE_DEVICES=X` where X is the index of the device. The device list can be inspected with `nvidia-smi -L`.
