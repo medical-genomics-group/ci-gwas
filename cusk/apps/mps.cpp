@@ -490,71 +490,6 @@ void marker_pheno_corr_dist(int argc, char *argv[])
     }
 }
 
-const std::string CUSK_SECOND_STAGE_USAGE = R"(
-Run the second stage of cuda-skeleton.
-
-usage: mps cusk2 <corr> <alpha> <max-level> <num-samples> <outdir>
-
-arguments:
-    corr            correlation matrix as returned by first cusk stage
-    skeleton        skeleton (adjacency matrix) as returned by first cusk stage
-    num-var         number of variables
-    alpha           significance level
-    max-level       maximal size of seperation sets in cuPC ( <= 14)
-    num-samples     number of samples used for computing correlations
-    outdir          outdir
-)";
-
-const int CUSK_SECOND_STAGE_NARGS = 8;
-
-void cusk_second_stage(int argc, char *argv[])
-{
-    check_nargs(argc, CUSK_SECOND_STAGE_NARGS, CUSK_SECOND_STAGE_USAGE);
-
-    std::string corr_path = argv[2];
-    std::string adj_path = argv[3];
-    int num_var = std::stoi(argv[4]);
-    float alpha = std::stof(argv[5]);
-    int max_level = std::stoi(argv[6]);
-    int num_individuals = std::stoi(argv[7]);
-    std::string outdir = (std::string)argv[8];
-
-    check_path(corr_path);
-    check_path(outdir);
-
-    // load everything
-    std::cout << "Loading input files" << std::endl;
-    std::cout << "Loading corrs" << std::endl;
-    std::vector<float> sq_corrs = read_floats_from_binary(corr_path);
-    std::cout << "Loading skeleton" << std::endl;
-    std::vector<int> G = read_ints_from_binary(adj_path);
-
-    // make n2 matrix to please cuPC
-    size_t num_markers = 0;
-    size_t num_phen = num_var;
-
-    std::vector<float> Th = threshold_array(num_individuals, alpha);
-
-    // call cuPC
-    int p = num_var;
-    const size_t sepset_size = p * p * ML;
-    std::vector<float> pmax(num_var * num_var, 0.0);
-    std::vector<int> sepset(sepset_size, 0);
-    int l = 0;
-    cusk_second_stage(
-        sq_corrs.data(), &p, G.data(), Th.data(), &l, &max_level, pmax.data(), sepset.data()
-    );
-
-    std::unordered_set<int> variable_subset = {};
-    for (size_t i = 0; i < num_phen; i++)
-    {
-        variable_subset.insert(i);
-    }
-
-    ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, variable_subset, p, num_phen, max_level);
-    gcs.to_file(make_path(outdir, "cusk_stage2", ""));
-}
-
 const std::string CUSKSS_TRAIT_ONLY_USAGE = R"(
 Run cuda-skeleton on precomputed trait-trait correlations.
 
@@ -614,6 +549,173 @@ void cuskss_trait_only(int argc, char *argv[])
 
     ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, variable_subset, p, num_phen, max_level);
     gcs.to_file(make_path(outdir, "pheno_sk", ""));
+}
+
+const std::string CUSKSS_MERGED_USAGE = R"(
+Run cuda-skeleton on pre-selected markers and traits with pre-computed correlations.
+
+usage: mps cuskss-merged <mxm> <mxp> <pxp> <marker-ixs> <alpha> <max-level-stage-one> <max-level-stage-two> <depth> <num-samples> <outdir>
+
+arguments:
+    mxm                     correlations between markers in block. Binary of floats, lower triangular, with diagonal, row major.
+    mxp                     correlations between markers in all blocks and all traits. Text format, rectangular.
+    pxp                     correlations between all traits. Text format, rectangular, only upper triangle is used.
+    marker-ixs              binary file of ints giving the row indices of the selected markers in the mxp file.
+    alpha                   significance level
+    max-level-stage-one     maximal size of seperation sets in cuPC round one ( <= 14)
+    max-level-stage-two     maximal size of seperation sets in cuPC round two ( <= 14)
+    depth                   max depth at which marker variables are kept as ancestors
+    num-samples             number of samples used for computing correlations
+    outdir                  outdir
+)";
+
+const int CUSKSS_MERGED_NARGS = 12;
+
+void cuda_skeleton_summary_stats_merged_blocks(int argc, char *argv[])
+{
+    check_nargs(argc, CUSKSS_MERGED_NARGS, CUSKSS_MERGED_USAGE);
+
+    std::string mxm_path = argv[2];
+    std::string mxp_path = argv[3];
+    std::string pxp_path = argv[4];
+    std::string marker_ixs_path = argv[5];
+    float alpha = std::stof(argv[6]);
+    int max_level = std::stoi(argv[7]);
+    int max_level_two = std::stoi(argv[8]);
+    int depth = std::stoi(argv[9]);
+    int num_individuals = std::stoi(argv[10]);
+    std::string outdir = (std::string)argv[11];
+
+    check_path(mxm_path);
+    check_path(mxp_path);
+    check_path(pxp_path);
+    check_path(marker_ixs_path);
+    check_path(outdir);
+
+    // load everything
+    std::cout << "Loading input files" << std::endl;
+    std::cout << "Loading blocks" << std::endl;
+    std::vector<int> marker_ixs = read_ints_from_binary(marker_ixs_path);
+    std::cout << "Loading pxp" << std::endl;
+    TraitSummaryStats pxp = TraitSummaryStats(pxp_path);
+    std::cout << "Loading mxm" << std::endl;
+    MarkerSummaryStats mxm = MarkerSummaryStats(mxm_path);
+    std::cout << "Loading mxp" << std::endl;
+    MarkerTraitSummaryStats mxp = MarkerTraitSummaryStats(mxp_path, marker_ixs);
+
+    // check if all dims check out
+    if (pxp.get_num_phen() != mxp.get_num_phen())
+    {
+        std::cout << "Numbers of traits seem to differ between pxp and mxp" << std::endl;
+        exit(1);
+    }
+    if (mxm.get_num_markers() != mxp.get_num_markers())
+    {
+        std::cout << "Numbers of markers seem to differ between mxm and mxp" << std::endl;
+        std::cout << "mxp: " << mxp.get_num_markers() << " x " << mxp.get_num_phen() << std::endl;
+        std::cout << "mxm: " << mxm.get_num_markers() << " x " << mxm.get_num_markers()
+                  << std::endl;
+        exit(1);
+    }
+
+    // dims ok, now merge them all into one matrix.
+
+    std::cout << "Merging correlations into single matrix" << std::endl;
+
+    // make n2 matrix to please cuPC
+    size_t num_phen = pxp.get_num_phen();
+    size_t num_markers = mxm.get_num_markers();
+    size_t num_var = num_markers + num_phen;
+    std::vector<float> sq_corrs(num_var * num_var, 1.0);
+    std::vector<float> marker_corr = mxm.get_corrs();
+
+    size_t sq_row_ix = 0;
+    size_t sq_col_ix = 0;
+    for (size_t i = 0; i < marker_corr.size(); ++i)
+    {
+        sq_corrs[num_var * sq_row_ix + sq_col_ix] = (float)marker_corr[i];
+        if (sq_col_ix == num_markers - 1)
+        {
+            ++sq_row_ix;
+            // marker_corr is square
+            sq_col_ix = 0;
+        }
+        else
+        {
+            ++sq_col_ix;
+        }
+    }
+
+    std::vector<float> marker_phen_corr = mxp.get_corrs();
+    sq_row_ix = 0;
+    sq_col_ix = num_markers;
+    for (size_t i = 0; i < marker_phen_corr.size(); ++i)
+    {
+        sq_corrs[num_var * sq_row_ix + sq_col_ix] = (float)marker_phen_corr[i];
+        sq_corrs[num_var * sq_col_ix + sq_row_ix] = (float)marker_phen_corr[i];
+        if (sq_col_ix == (num_var - 1))
+        {
+            sq_col_ix = num_markers;
+            ++sq_row_ix;
+        }
+        else
+        {
+            ++sq_col_ix;
+        }
+    }
+
+    std::vector<float> phen_corr = pxp.get_corrs();
+    sq_row_ix = num_markers;
+    sq_col_ix = num_markers;
+    for (size_t i = 0; i < phen_corr.size(); ++i)
+    {
+        sq_corrs[num_var * sq_row_ix + sq_col_ix] = (float)phen_corr[i];
+        if (sq_col_ix == (num_var - 1))
+        {
+            ++sq_row_ix;
+            sq_col_ix = num_markers;
+        }
+        else
+        {
+            ++sq_col_ix;
+        }
+    }
+
+    if (WRITE_FULL_CORRMATS)
+    {
+        write_floats_to_binary(
+            sq_corrs.data(), sq_corrs.size(), make_path(outdir, "cuskss_merged", ".all_corrs")
+        );
+    }
+
+    std::cout << "Number of levels: " << max_level << std::endl;
+
+    std::vector<float> Th = threshold_array(num_individuals, alpha);
+
+    std::cout << "Setting level thr for cuPC: " << std::endl;
+    for (int i = 0; i <= max_level; ++i)
+    {
+        std::cout << "\t Level: " << i << " thr: " << Th[i] << std::endl;
+    }
+
+    std::cout << "Running cuPC" << std::endl;
+
+    // call cuPC
+    int p = num_var;
+    const size_t sepset_size = p * p * ML;
+    const size_t g_size = num_var * num_var;
+    std::vector<float> pmax(g_size, 0.0);
+    std::vector<int> G(g_size, 1);
+    std::vector<int> sepset(sepset_size, 0);
+    int l = 0;
+    Skeleton(sq_corrs.data(), &p, G.data(), Th.data(), &l, &max_level, pmax.data(), sepset.data());
+
+    std::unordered_set<int> variable_subset = subset_variables(G, num_var, num_markers, depth);
+    ReducedGCS gcs = reduce_gcs(G, sq_corrs, sepset, variable_subset, num_var, num_phen, max_level);
+    std::cout << "Starting second cusk stage" << std::endl;
+    gcs = reduced_gcs_cusk(gcs, Th, depth, max_level_two);
+    std::cout << "Retained " << gcs.num_markers() << " markers" << std::endl;
+    gcs.to_file(make_path(outdir, "cuskss_merged", ""));
 }
 
 const std::string CUSKSS_USAGE = R"(
@@ -2033,6 +2135,7 @@ commands:
     cusk                    Run cuda-skeleton on block diagonal genomic covariance matrix
     cusk-single             Run cuda-skeleton on a single block of block diagonal genomic covariance matrix
     cuskss                  Run cuda-skeleton on a block of markers and traits with pre-computed correlations.
+    cuskss-merged           Run cuda-skeleton on pre-selected markers and traits with pre-computed correlations.
     cuskss-trait-only       Run cuda-skeleton on a set of pre-computed trait-trait correlations.
     cusk-sim                Run cuda-skeleton on single simulated block
     cusk-phen               Run cuda-skeleton on phenotypes only
@@ -2058,6 +2161,10 @@ auto main(int argc, char *argv[]) -> int
     else if (cmd == "cuskss")
     {
         cuda_skeleton_summary_stats(argc, argv);
+    }
+    else if (cmd == "cuskss-merged")
+    {
+        cuda_skeleton_summary_stats_merged_blocks(argc, argv);
     }
     else if (cmd == "cuskss-trait-only")
     {

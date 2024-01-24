@@ -4,7 +4,7 @@ import argparse
 import sys
 import subprocess
 from sepselect.sepselect import sepselect_merged
-from sepselect.merge_blocks import merge_block_outputs
+from sepselect.merge_blocks import merge_block_outputs, reformat_cuskss_merged_output
 import os
 
 script_dir = os.path.dirname(os.path.realpath(__file__))
@@ -216,6 +216,73 @@ def main():
     )
     cuskss_parser.set_defaults(func=cuskss)
 
+    # cuskss-merged
+    cuskss_merged_parser = subparsers.add_parser(
+        "cuskss-merged",
+        help="Infer skeleton with markers and traits as nodes, using summary statistic data (requires GPU)",
+    )
+    cuskss_merged_parser.add_argument(
+        "mxm",
+        type=str,
+        help="Correlations between selected markers. Binary of floats, lower triangular, with diagonal, row major.",
+    )
+    cuskss_merged_parser.add_argument(
+        "mxp",
+        type=str,
+        help="Correlations between markers in all blocks and all traits. Textfile, whitespace separated, with columns: [chr, snp, ref, ...<trait names>], rectangular.",
+    )
+    cuskss_merged_parser.add_argument(
+        "pxp",
+        type=str,
+        help="Correlations between all traits. Textfile, whitespace separated, rectangular, only upper triangle is used. With trait names as column and row names. Order of traits has to be same as in the mxp file.",
+    )
+    cuskss_merged_parser.add_argument(
+        "marker_indices",
+        metavar="marker-indices",
+        type=str,
+        help="Row indices if selected markers in mxp file. E.g. the .ixs file produced by `ci-gwas merge-block-outputs`. Binary of 32 bit ints.",
+    )
+    cuskss_merged_parser.add_argument(
+        "alpha",
+        type=TypeCheck(float, "alpha", 0.0, 1.0),
+        help="significance level for conditional independence tests",
+        default=10**-4,
+    )
+    cuskss_merged_parser.add_argument(
+        "max_level",
+        metavar="max-level",
+        type=TypeCheck(int, "max-level", 1, 14),
+        help="maximal size of separation sets in the first round of cuPC (<= 14)",
+        default=3,
+    )
+    cuskss_merged_parser.add_argument(
+        "max_level_two",
+        metavar="max-level-two",
+        type=TypeCheck(int, "max-level", 1, 14),
+        help="maximal size of separation sets in the second round of cuPC (<= 14)",
+        default=14,
+    )
+    cuskss_merged_parser.add_argument(
+        "max_depth",
+        metavar="max-depth",
+        type=TypeCheck(int, "max-depth", 1, None),
+        help="max depth at which marker variables are kept as ancestors (>= 1)",
+        default=1,
+    )
+    cuskss_merged_parser.add_argument(
+        "num_samples",
+        metavar="num-samples",
+        type=TypeCheck(int, "num-samples", 1, None),
+        help="number of samples used for computing correlations",
+    )
+    cuskss_merged_parser.add_argument(
+        "outdir",
+        type=str,
+        help="directory for output",
+        default="./",
+    )
+    cuskss_merged_parser.set_defaults(func=cuskss_merged)
+
     # merge block outputs
     merge_blocks_parser = subparsers.add_parser(
         "merge-block-outputs",
@@ -387,6 +454,30 @@ def cuskss(args):
             args.outdir,
         ],
         check=True,
+    )
+
+
+def cuskss_merged(args):
+    subprocess.run(
+        [
+            MPS_PATH,
+            "cuskss-merged",
+            args.mxm,
+            args.mxp,
+            args.pxp,
+            args.marker_indices,
+            str(args.alpha),
+            str(args.max_level),
+            str(args.max_level_two),
+            str(args.max_depth),
+            str(args.num_samples),
+            args.outdir,
+        ],
+        check=True,
+    )
+    # reformat the output to conform with the merge_blocks format
+    reformat_cuskss_merged_output(cusk_dir=args.outdir).write_mm(
+        basepath=f"{args.outdir}/cuskss_merged"
     )
 
 
