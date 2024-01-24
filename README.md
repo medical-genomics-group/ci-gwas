@@ -62,9 +62,10 @@ A standard analysis, if you have data at the individual-level available, consist
 3. `ci-gwas.py cusk` (once for each block) to compute skeletons
    (**make sure that the trait values are standardized**)
 4. `ci-gwas.py merge-block-outputs` to merge all skeletons
-5. `ci-gwas.py sepselect` to find separation sets
-6. `ci-gwas.py srfci` to infer a PAG
-7. `ci-gwas.py srfci` to infer ACEs
+5. `ci-gwas.py cuskss-merged` to run another of cuda-skeleton using only the selected markers. This is optional, but can help to reduce the marker-trait FDR.
+6. `ci-gwas.py sepselect` to find separation sets
+7. `ci-gwas.py srfci` to infer a PAG
+8. `ci-gwas.py srfci` to infer ACEs
 
 Alternatively, if you have correlations from summarized data, you can start at step 3) with `cuskss` instead of `cusk`. In that case it is important that
 
