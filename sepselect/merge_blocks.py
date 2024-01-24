@@ -393,3 +393,33 @@ def merge_block_outputs(blockfile: str, outdir: str):
     return GlobalBdpcResult(
         sam, scm, gmi, marker_offset + bo.num_phen(), bo.num_phen(), bo.max_level()
     )
+
+
+def reformat_cuskss_merged_output(cusk_dir: str) -> GlobalBdpcResult:
+    with open(f"{cusk_dir}/cuskss_merged.mdim") as f:
+        num_var, num_trait, max_level = [int(e) for e in next(f).split()]
+    num_snp = num_var - num_trait
+    old_glob_ixs = np.fromfile(f"{cusk_dir}/merged_blocks.ixs", dtype=np.int32)
+    ixs = np.fromfile(f"{cusk_dir}/cuskss_merged.ixs", dtype=np.int32)
+    glob_ixs = old_glob_ixs[ixs[:-num_trait]]
+    gmi = {ix: gix for ix, gix in enumerate(glob_ixs)}
+    sam = load_adj_sparse(
+        basepath=f"{cusk_dir}/cuskss_merged",
+        num_m=num_snp,
+        num_p=num_trait,
+        marker_offset=0,
+    )
+    scm = load_corr_sparse(
+        basepath=f"{cusk_dir}/cuskss_merged",
+        num_m=num_snp,
+        num_p=num_trait,
+        marker_offset=0,
+    )
+    return GlobalBdpcResult(
+        num_var=num_var,
+        num_phen=num_trait,
+        sam=sam,
+        scm=scm,
+        max_level=max_level,
+        gmi=gmi,
+    )

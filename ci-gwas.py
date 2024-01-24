@@ -4,7 +4,7 @@ import argparse
 import sys
 import subprocess
 from sepselect.sepselect import sepselect_merged
-from sepselect.merge_blocks import merge_block_outputs
+from sepselect.merge_blocks import merge_block_outputs, reformat_cuskss_merged_output
 import os
 
 script_dir = os.path.dirname(os.path.realpath(__file__))
@@ -474,6 +474,10 @@ def cuskss_merged(args):
             args.outdir,
         ],
         check=True,
+    )
+    # reformat the output to conform with the merge_blocks format
+    reformat_cuskss_merged_output(cusk_dir=args.outdir).write_mm(
+        basepath=f"{args.outdir}/cuskss_merged"
     )
 
 
