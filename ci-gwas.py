@@ -1,11 +1,14 @@
 #!/usr/bin/env python
 
 import argparse
+import os
 import sys
 import subprocess
-from sepselect.sepselect import sepselect_merged
-from sepselect.merge_blocks import merge_block_outputs, reformat_cuskss_merged_output
-import os
+from cusk_postprocessing.sepselect import sepselect_merged
+from cusk_postprocessing.merge_blocks import (
+    merge_block_outputs,
+    reformat_cuskss_merged_output,
+)
 
 script_dir = os.path.dirname(os.path.realpath(__file__))
 MPS_PATH = f"{script_dir}/cusk/build/apps/mps"
