@@ -25,21 +25,44 @@ def _mvivw(
     node_ix: int,
     num_trait: int,
     random_effects=True,
+    use_skeleton=True,
+    use_ld=True,
+    exclude_pleiotropic_markers=True,
 ):
     """
+    Use all traits except for target node as exposures
+
     Ported from
     https://github.com/cran/MendelianRandomization/blob/master/R/mr_mvivw-methods.R
     """
     phen_nb = []
     ivs = []
-    for p in _get_neighbors(adj, node_ix, num_trait):
-        parents = _get_parent_markers(adj, p, num_trait)
-        if len(parents) > 0:
-            phen_nb.append(p)
-            ivs.append(parents)
+    if use_skeleton:
+        for p in _get_neighbors(adj, node_ix, num_trait):
+            parents = _get_parent_markers(adj, p, num_trait)
+            if len(parents) > 0:
+                phen_nb.append(p)
+                ivs.append(parents)
+    else:
+        for p in range(num_trait):
+            if p == node_ix:
+                continue
+            parents = _get_parent_markers(adj, p, num_trait)
+            if len(parents) > 0:
+                phen_nb.append(p)
+                ivs.append(parents)
+
+    if len(ivs) == 0:
+        return [], [], []
 
     ivs = np.unique(np.concatenate(ivs))
-    ld = corr[np.ix_(ivs, ivs)]
+    if exclude_pleiotropic_markers:
+        pleiotropic_ixs = set(np.where(np.sum(adj[:10, :], axis=0) > 1)[0])
+        ivs = np.sort(list(set(ivs) - pleiotropic_ixs))
+    if use_ld:
+        ld = corr[np.ix_(ivs, ivs)]
+    else:
+        ld = np.eye(N=len(ivs))
 
     bx = corr[np.ix_(ivs, phen_nb)]
     by = corr[np.ix_(ivs, [node_ix])]
@@ -64,6 +87,9 @@ def cig_w_mvivw(
     num_samples: int,
     num_trait: int,
     random_effects=True,
+    use_skeleton=True,
+    use_ld=True,
+    exclude_pleiotropic_markers=True,
 ):
     """Run MV-IVW on a ci-gwas skeleton
 
@@ -87,6 +113,9 @@ def cig_w_mvivw(
             node_ix=i,
             num_trait=num_trait,
             random_effects=random_effects,
+            use_skeleton=use_skeleton,
+            use_ld=use_ld,
+            exclude_pleiotropic_markers=exclude_pleiotropic_markers
         )
         for e, p, nix in zip(*res):
             pvals[nix, i] = p
