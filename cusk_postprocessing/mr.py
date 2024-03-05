@@ -28,6 +28,7 @@ def _mvivw(
     use_skeleton=True,
     use_ld=True,
     exclude_pleiotropic_markers=True,
+    verbose=False,
 ):
     """
     Use all traits except for target node as exposures
@@ -58,6 +59,10 @@ def _mvivw(
     ivs = np.unique(np.concatenate(ivs))
     if exclude_pleiotropic_markers:
         pleiotropic_ixs = set(np.where(np.sum(adj[:10, :], axis=0) > 1)[0])
+        if verbose:
+            print(
+                f"excluding {len(pleiotropic_ixs)} pleiotropic ivs out of {len(ivs)} total"
+            )
         ivs = np.sort(list(set(ivs) - pleiotropic_ixs))
     if use_ld:
         ld = corr[np.ix_(ivs, ivs)]
@@ -90,6 +95,7 @@ def cig_w_mvivw(
     use_skeleton=True,
     use_ld=True,
     exclude_pleiotropic_markers=True,
+    verbose=False,
 ):
     """Run MV-IVW on a ci-gwas skeleton
 
@@ -115,7 +121,8 @@ def cig_w_mvivw(
             random_effects=random_effects,
             use_skeleton=use_skeleton,
             use_ld=use_ld,
-            exclude_pleiotropic_markers=exclude_pleiotropic_markers
+            exclude_pleiotropic_markers=exclude_pleiotropic_markers,
+            verbose=verbose,
         )
         for e, p, nix in zip(*res):
             pvals[nix, i] = p
