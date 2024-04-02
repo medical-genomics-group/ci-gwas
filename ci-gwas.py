@@ -12,6 +12,7 @@ from cusk_postprocessing.merge_blocks import (
 
 script_dir = os.path.dirname(os.path.realpath(__file__))
 MPS_PATH = f"{script_dir}/cusk/build/apps/mps"
+MVIVW_PATH = f"{script_dir}/mvivw/cig_mvivw.R"
 RFCI_PATH = f"{script_dir}/srfci/CIGWAS_est_PAG.R"
 DAVS_PATH = f"{script_dir}/sdavs/CIGWAS_est_ACE.R"
 
@@ -304,6 +305,25 @@ def main():
     )
     merge_blocks_parser.set_defaults(func=merge_blocks)
 
+    # mvivw
+    mvivw_parser = subparsers.add_parser(
+        "mvivw",
+        help="Run multivariable inverse-variance weighted mendelian randomization between all adjacent traits, using cusk-identified markers as intrumental variables",
+    )
+    mvivw_parser.add_argument(
+        "cusk_output_dir",
+        metavar="cusk-output-dir",
+        type=str,
+        help="output directory of cusk or cuskss",
+    )
+    mvivw_parser.add_argument(
+        "num_samples",
+        metavar="num-samples",
+        type=TypeCheck(int, "num-samples", 1, None),
+        help="number of samples used for computing correlations",
+    )
+    mvivw_parser.set_defaults(func=run_mvivw)
+
     # sepselect
     sepselect_parser = subparsers.add_parser(
         "sepselect",
@@ -495,6 +515,20 @@ def merge_blocks(args):
 def run_sepselect(args):
     merged_cusk = sepselect_merged(args.cusk_result_stem, args.alpha, args.num_samples)
     merged_cusk.to_file(f"{os.path.dirname(args.cusk_result_stem)}/max_sep_min_pc")
+
+
+def run_mvivw(args):
+    subprocess.run(
+        [
+            MVIVW_PATH,
+            args.cusk_output_dir,
+            str(args.num_samples),
+            "TRUE", # rm exposures that have been identified as non-adjacent in cusk
+            "FALSE", # use ld matrix
+            f"{args.cusk_output_dir}/mvivw_results.tsv", # output dir
+        ],
+        check=True,
+    )
 
 
 def srfci(args):
