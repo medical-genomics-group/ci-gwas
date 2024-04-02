@@ -2,7 +2,6 @@
 library("MendelianRandomization")
 library("Matrix")
 
-# this should accept the cusk output location and form the necessary matrices itself.
 args = commandArgs(trailingOnly=TRUE)
 cusk_output_path = args[1]
 num_samples = as.numeric(args[2])
