@@ -39,8 +39,7 @@ effects = c()
 ps = c()
 
 for (outcome_ix in 1:num_trait) {
-    # we drop the rows which are parents of the outcome;
-    # TODO: check that there are enough variants left, i.e. more variants than exposures
+    # we drop the rows which are parents of the outcome
     outcome_eff_rows = which(mxp_adj[, outcome_ix] == 1)
     by = B[-outcome_eff_rows, outcome_ix]
     byse = SE[-outcome_eff_rows, outcome_ix]
@@ -53,7 +52,9 @@ for (outcome_ix in 1:num_trait) {
         bx = B[-outcome_eff_rows, -outcome_ix, drop=FALSE]
         bxse = SE[-outcome_eff_rows, -outcome_ix, drop=FALSE]
     }
-    if (length(tested_traits) > 0) {
+    # make sure that we have more ivs than exposures
+    sufficient_ivs = dim(bx)[1] > dim(bx)[2]
+    if ((length(tested_traits) > 0) && (sufficient_ivs)) {
         if (use_ld) {
             sub_ld_mat = full_ld_mat[-outcome_eff_rows, -outcome_eff_rows]
             input = MendelianRandomization::mr_mvinput(bx=bx, bxse=bxse, by=by, byse=byse, correlation=sub_ld_mat)
@@ -65,7 +66,7 @@ for (outcome_ix in 1:num_trait) {
     for (exposure_ix in 1:num_trait) {
         if (exposure_ix == outcome_ix) {
             next
-        } else if (exposure_ix %in% tested_traits) {
+        } else if ((exposure_ix %in% tested_traits) && (sufficient_ivs)) {
             if (exposure_ix > outcome_ix) {
                 mvivw_exp_ix = exposure_ix - 1
             } else {
