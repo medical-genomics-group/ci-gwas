@@ -2,6 +2,7 @@
 
 import numpy as np
 from scipy.stats import norm
+from statsmodels.regression.linear_model import WLS
 
 
 def _se_of_corr(r: np.array, n: int):
@@ -86,6 +87,77 @@ def _mvivw(
     return beta.flatten(), p_value, phen_nb
 
 
+def _mvivw_lm(
+    adj: np.array,
+    corr: np.array,
+    num_samples: int,
+    node_ix: int,
+    num_trait: int,
+    random_effects=True,
+    use_skeleton=True,
+    exclude_pleiotropic_markers=True,
+    verbose=False,
+    **kwargs
+):
+    """
+    Use all traits except for target node as exposures
+
+    Ported from
+    https://github.com/cran/MendelianRandomization/blob/master/R/mr_mvivw-methods.R
+    """
+    phen_nb = []
+    ivs = []
+    if use_skeleton:
+        for p in _get_neighbors(adj, node_ix, num_trait):
+            parents = _get_parent_markers(adj, p, num_trait)
+            if len(parents) > 0:
+                phen_nb.append(p)
+                ivs.append(parents)
+    else:
+        for p in range(num_trait):
+            if p == node_ix:
+                continue
+            parents = _get_parent_markers(adj, p, num_trait)
+            if len(parents) > 0:
+                phen_nb.append(p)
+                ivs.append(parents)
+
+    if len(ivs) == 0:
+        return [], [], []
+
+    ivs = np.unique(np.concatenate(ivs))
+    if exclude_pleiotropic_markers:
+        pleiotropic_ixs = set(np.where(np.sum(adj[:10, :], axis=0) > 1)[0])
+        if verbose:
+            print(
+                f"excluding {len(pleiotropic_ixs)} pleiotropic ivs out of {len(ivs)} total"
+            )
+        ivs = np.sort(list(set(ivs) - pleiotropic_ixs))
+
+    bx = corr[np.ix_(ivs, phen_nb)]
+    by = corr[np.ix_(ivs, [node_ix])]
+    se_by = _se_of_corr(r=by, n=num_samples)
+
+    # I need a weighted regression by ~ bx with weights se_by**(-2)
+    # both betas and standard errors of betas
+    reg = WLS(endog=by,
+        exog=bx,
+        weights=(1 / (se_by ** 2))).fit()
+
+    sigma = np.std(reg.resid)
+    beta = reg.params
+
+    if random_effects:
+        beta_se = reg.bse / min(sigma, 1)
+    else:
+        beta_se = reg.bse / sigma
+
+    # TODO: normal dist test, or should we to t-test?
+    p_value = 2 * norm.cdf(-np.abs(beta / beta_se))
+
+    return beta, p_value, phen_nb
+
+
 def cig_w_mvivw(
     adj: np.array,
     corr: np.array,
@@ -96,6 +168,7 @@ def cig_w_mvivw(
     use_ld=True,
     exclude_pleiotropic_markers=True,
     verbose=False,
+    lm=True,
 ):
     """Run MV-IVW on a ci-gwas skeleton
 
@@ -109,10 +182,14 @@ def cig_w_mvivw(
     Returns:
         _type_: _description_
     """
+    if lm:
+        mvivw_fn = _mvivw_lm
+    else:
+        mvivw_fn = _mvivw
     pvals = np.ones((num_trait, num_trait))
     betas = np.zeros_like(pvals)
     for i in range(num_trait):
-        res = _mvivw(
+        res = mvivw_fn(
             adj=adj,
             corr=corr,
             num_samples=num_samples,
