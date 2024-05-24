@@ -322,6 +322,11 @@ def main():
         type=TypeCheck(int, "num-samples", 1, None),
         help="number of samples used for computing correlations",
     )
+    mvivw_parser.add_argument(
+        '-s',
+        action='store_true',
+        help="use cusk inferred trait-trait skeleton to select exposures"
+    )
     mvivw_parser.set_defaults(func=run_mvivw)
 
     # sepselect
@@ -518,12 +523,16 @@ def run_sepselect(args):
 
 
 def run_mvivw(args):
+    if args.s:
+        use_skeleton = "TRUE"
+    else:
+        use_skeleton = "FALSE"
     subprocess.run(
         [
             MVIVW_PATH,
             args.cusk_output_dir,
             str(args.num_samples),
-            "TRUE", # rm exposures that have been identified as non-adjacent in cusk
+            use_skeleton, # rm exposures that have been identified as non-adjacent in cusk
             "FALSE", # use ld matrix
             f"{args.cusk_output_dir}/mvivw_results.tsv", # output dir
         ],
