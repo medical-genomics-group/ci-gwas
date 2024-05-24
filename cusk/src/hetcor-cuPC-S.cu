@@ -6,19 +6,6 @@
 
 #include <iostream>
 
-//========================> Main Function Parameter <========================
-// Description : this function just calculate one Stage of PC stable algorithm
-//@param C          = Correlation matrix
-//@param VarSize    = Number of Nodes in Dataset
-//@param Stage      = Number of Neighbor in each dimension of Neighbor Matrix
-//@param G          = Is the Graph array
-//@param TH         = The Th for deleting each edge
-//@param Nbr        = Neighbor Matrix with format of:
-//[i , j , |Neighbor idx 1|,|Neighbor idx 2| , ...]
-//@param Nrow       = Number Of row in Nbr matrix
-//@param Ncol       = Number of Col in Nbr matrix
-//============================================================================
-
 void print_degree_distribution(int *GPrime_cuda, int n)
 {
     int degree = 0;
@@ -34,12 +21,21 @@ void print_degree_distribution(int *GPrime_cuda, int n)
     fflush(stdout);
 }
 
-void Skeleton(
-    float *C, int *P, int *G, float *Th, int *l, const int *maxlevel, float *pMax, int *SepSet
+/** @brief Computes the skeleton using hetcor correlations and estimates of effective sample sizes.
+ *
+ * @param[in]  C  Pointer to full, square, correlation matrix
+ * @param[in]  P  Pointer to number of variables
+ * @param[in]  G  Pointer to adjacency matrix
+ * @param[in]  Th  Pointer to alpha / 2 percentile
+ * @param[in]  l  Pointer to current level
+ * @param[in]  maxlevel  Pointer to maximal level
+ * @return return_name return description
+ */
+void hetcor_skeleton(
+    float *C, int *P, int *G, float *Th, int *l, const int *maxlevel, int *SepSet
 )
 {
     float *C_cuda;  // Copy of C array in GPU
-    float *pMax_cuda;
     int *G_cuda;  // Copy of G Array in GPU
     int *nprime_cuda;
     int *SepSet_cuda;
@@ -64,7 +60,6 @@ void Skeleton(
     HANDLE_ERROR(cudaMalloc((void **)&GPrime_cuda, n * n * sizeof(int)));
     HANDLE_ERROR(cudaMalloc((void **)&C_cuda, n * n * sizeof(float)));
     HANDLE_ERROR(cudaMalloc((void **)&G_cuda, n * n * sizeof(int)));
-    HANDLE_ERROR(cudaMalloc((void **)&pMax_cuda, n * n * sizeof(float)));
     // copy correlation matrix from CPU to GPU
     HANDLE_ERROR(cudaMemcpy(C_cuda, C, n * n * sizeof(float), cudaMemcpyHostToDevice));
     // initialize a 0 matrix
@@ -86,7 +81,7 @@ void Skeleton(
                 BLOCKS_PER_GRID = dim3(1, 1, 1);
                 THREADS_PER_BLOCK = dim3(32, 32, 1);
                 cal_Indepl0<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
-                    C_cuda, G_cuda, Th[0], pMax_cuda, n
+                    C_cuda, G_cuda, Th[0], n
                 );
                 CudaCheckError();
             }
@@ -95,7 +90,7 @@ void Skeleton(
                 BLOCKS_PER_GRID = dim3(ceil(((float)(n)) / 32.0), ceil(((float)(n)) / 32.0), 1);
                 THREADS_PER_BLOCK = dim3(32, 32, 1);
                 cal_Indepl0<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
-                    C_cuda, G_cuda, Th[0], pMax_cuda, n
+                    C_cuda, G_cuda, Th[0], n
                 );
                 CudaCheckError();
             }
@@ -143,7 +138,7 @@ void Skeleton(
                 THREADS_PER_BLOCK = dim3(ParGivenL1, 1, 1);
                 // HANDLE_ERROR( cudaMalloc((void**)&SepSet_cuda,  n * n * 1 * sizeof(int)) );
                 cal_Indepl1<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, Th[1], n
+                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, Th[1], n
                 );
                 // HANDLE_ERROR( cudaFree(SepSet_cuda) );
                 CudaCheckError();
@@ -164,7 +159,7 @@ void Skeleton(
                 THREADS_PER_BLOCK = dim3(ParGivenL2, 1, 1);
                 // HANDLE_ERROR( cudaMalloc((void**)&SepSet_cuda,  n * n * 1 * sizeof(int)) );
                 cal_Indepl2<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, n, Th[2]
+                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, n, Th[2]
                 );
                 // HANDLE_ERROR( cudaFree(SepSet_cuda) );
                 CudaCheckError();
@@ -183,7 +178,7 @@ void Skeleton(
                 THREADS_PER_BLOCK = dim3(ParGivenL3, 1, 1);
                 // HANDLE_ERROR( cudaMalloc((void**)&SepSet_cuda,  n * n * 1 * sizeof(int)) );
                 cal_Indepl3<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, n, Th[3]
+                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, n, Th[3]
                 );
                 // HANDLE_ERROR( cudaFree(SepSet_cuda) );
                 CudaCheckError();
@@ -201,7 +196,7 @@ void Skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL4, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL4, 1, 1);
                 cal_Indepl4<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, n, Th[4]
+                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, n, Th[4]
                 );
                 CudaCheckError();
                 cudaEventRecord(stop);
@@ -219,7 +214,7 @@ void Skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL5, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL5, 1, 1);
                 cal_Indepl5<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, n, Th[5]
+                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, n, Th[5]
                 );
                 CudaCheckError();
                 cudaEventRecord(stop);
@@ -237,7 +232,7 @@ void Skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL6, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL6, 1, 1);
                 cal_Indepl6<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, n, Th[6]
+                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, n, Th[6]
                 );
                 CudaCheckError();
                 cudaEventRecord(stop);
@@ -255,7 +250,7 @@ void Skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL7, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL7, 1, 1);
                 cal_Indepl7<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, n, Th[7]
+                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, n, Th[7]
                 );
                 CudaCheckError();
                 cudaEventRecord(stop);
@@ -272,7 +267,7 @@ void Skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL8, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL8, 1, 1);
                 cal_Indepl8<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, n, Th[8]
+                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, n, Th[8]
                 );
                 CudaCheckError();
                 cudaEventRecord(stop);
@@ -289,7 +284,7 @@ void Skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL9, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL9, 1, 1);
                 cal_Indepl9<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, n, Th[9]
+                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, n, Th[9]
                 );
                 CudaCheckError();
                 cudaEventRecord(stop);
@@ -306,7 +301,7 @@ void Skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL10, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL10, 1, 1);
                 cal_Indepl10<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, n, Th[10]
+                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, n, Th[10]
                 );
                 CudaCheckError();
                 cudaEventRecord(stop);
@@ -323,7 +318,7 @@ void Skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL11, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL11, 1, 1);
                 cal_Indepl11<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, n, Th[11]
+                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, n, Th[11]
                 );
                 CudaCheckError();
                 cudaEventRecord(stop);
@@ -340,7 +335,7 @@ void Skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL12, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL12, 1, 1);
                 cal_Indepl12<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, n, Th[12]
+                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, n, Th[12]
                 );
                 CudaCheckError();
                 cudaEventRecord(stop);
@@ -357,7 +352,7 @@ void Skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL13, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL13, 1, 1);
                 cal_Indepl13<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, n, Th[13]
+                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, n, Th[13]
                 );
                 CudaCheckError();
                 cudaEventRecord(stop);
@@ -374,7 +369,7 @@ void Skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL14, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL14, 1, 1);
                 cal_Indepl14<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, pMax_cuda, n, Th[14]
+                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, SepSet_cuda, n, Th[14]
                 );
                 CudaCheckError();
                 cudaEventRecord(stop);
@@ -394,35 +389,12 @@ void Skeleton(
     HANDLE_ERROR(cudaMemcpy(G, G_cuda, n * n * sizeof(int), cudaMemcpyDeviceToHost));
     // Copy separation set from GPU to CPU
     HANDLE_ERROR(cudaMemcpy(SepSet, SepSet_cuda, n * n * ML * sizeof(int), cudaMemcpyDeviceToHost));
-    // Copy  Pmax from GPU to CPU
-    HANDLE_ERROR(cudaMemcpy(pMax, pMax_cuda, n * n * sizeof(float), cudaMemcpyDeviceToHost));
-    // Preprocess pMax
-    float temp = 0;
-    for (int i = 0; i < n; i++)
-    {
-        pMax[i * n + i] = 1;
-        for (int j = (i + 1); j < n; j++)
-        {
-            if (G[i * n + j] == 0)
-            {
-                temp = fmax(pMax[j * n + i], pMax[i * n + j]);
-                pMax[j * n + i] = temp;
-                pMax[i * n + j] = temp;
-            }
-            else
-            {
-                pMax[j * n + i] = -100000;
-                pMax[i * n + j] = -100000;
-            }
-        }
-    }
     // Free allocated space
     HANDLE_ERROR(cudaFree(SepSet_cuda));
     HANDLE_ERROR(cudaFree(C_cuda));
     HANDLE_ERROR(cudaFree(GPrime_cuda));
     HANDLE_ERROR(cudaFree(G_cuda));
     HANDLE_ERROR(cudaFree(mutex_cuda));
-    HANDLE_ERROR(cudaFree(pMax_cuda));
 }  // Skeleton
 
 __global__ void SepSet_initialize(int *SepSet, int size)
@@ -431,7 +403,7 @@ __global__ void SepSet_initialize(int *SepSet, int size)
     SepSet[row * ML + tx] = -1;
 }
 
-__global__ void cal_Indepl0(float *C, int *G, float th, float *pMax, int n)
+__global__ void cal_Indepl0(float *C, int *G, float th, int n)
 {
     int row = blockDim.x * bx + tx;
     int col = blockDim.y * by + ty;
@@ -441,8 +413,6 @@ __global__ void cal_Indepl0(float *C, int *G, float th, float *pMax, int n)
         res = abs(0.5 * log(abs((1 + res) / (1 - res))));
         if (res < th)
         {
-            pMax[row * n + col] = res;
-            pMax[col * n + row] = res;
             G[row * n + col] = 0;
             G[col * n + row] = 0;
         }
@@ -460,7 +430,7 @@ __global__ void cal_Indepl0(float *C, int *G, float th, float *pMax, int n)
 }
 
 __global__ void cal_Indepl1(
-    float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax, float th, int n
+    float *C, int *G, int *GPrime, int *mutex, int *Sepset, float th, int n
 )
 {
     int YIdx;
@@ -547,7 +517,6 @@ __global__ void cal_Indepl1(
                         {
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            pMax[XIdx * n + YIdx] = Z;
                             Sepset[(XIdx * n + YIdx) * ML] = NbrIdx;
                         }
                     }
@@ -558,7 +527,7 @@ __global__ void cal_Indepl1(
 }
 
 __global__ void cal_Indepl2(
-    float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax, int n, float th
+    float *C, int *G, int *GPrime, int *mutex, int *Sepset, int n, float th
 )
 {
     int YIdx;
@@ -680,7 +649,6 @@ __global__ void cal_Indepl2(
                         {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            pMax[XIdx * n + YIdx] = Z;
                             Sepset[(XIdx * n + YIdx) * ML] = NbrIdx[0];
                             Sepset[(XIdx * n + YIdx) * ML + 1] = NbrIdx[1];
                         }
@@ -692,7 +660,7 @@ __global__ void cal_Indepl2(
 }
 
 __global__ void cal_Indepl3(
-    float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax, int n, float th
+    float *C, int *G, int *GPrime, int *mutex, int *Sepset, int n, float th
 )
 {
     int YIdx;
@@ -834,7 +802,6 @@ __global__ void cal_Indepl3(
                         {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            pMax[XIdx * n + YIdx] = Z;
                             Sepset[(XIdx * n + YIdx) * ML] = NbrIdx[0];
                             Sepset[(XIdx * n + YIdx) * ML + 1] = NbrIdx[1];
                             Sepset[(XIdx * n + YIdx) * ML + 2] = NbrIdx[2];
@@ -847,7 +814,7 @@ __global__ void cal_Indepl3(
 }
 
 __global__ void cal_Indepl4(
-    float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax, int n, float th
+    float *C, int *G, int *GPrime, int *mutex, int *Sepset, int n, float th
 )
 {
     int YIdx;
@@ -1007,7 +974,6 @@ __global__ void cal_Indepl4(
                         {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            pMax[XIdx * n + YIdx] = Z;
                             Sepset[(XIdx * n + YIdx) * ML] = NbrIdx[0];
                             Sepset[(XIdx * n + YIdx) * ML + 1] = NbrIdx[1];
                             Sepset[(XIdx * n + YIdx) * ML + 2] = NbrIdx[2];
@@ -1021,7 +987,7 @@ __global__ void cal_Indepl4(
 }
 
 __global__ void cal_Indepl5(
-    float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax, int n, float th
+    float *C, int *G, int *GPrime, int *mutex, int *Sepset, int n, float th
 )
 {
     int YIdx;
@@ -1194,7 +1160,6 @@ __global__ void cal_Indepl5(
                         {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            pMax[XIdx * n + YIdx] = Z;
                             Sepset[(XIdx * n + YIdx) * ML] = NbrIdx[0];
                             Sepset[(XIdx * n + YIdx) * ML + 1] = NbrIdx[1];
                             Sepset[(XIdx * n + YIdx) * ML + 2] = NbrIdx[2];
@@ -1209,7 +1174,7 @@ __global__ void cal_Indepl5(
 }
 
 __global__ void cal_Indepl6(
-    float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax, int n, float th
+    float *C, int *G, int *GPrime, int *mutex, int *Sepset, int n, float th
 )
 {
     int YIdx;
@@ -1397,7 +1362,6 @@ __global__ void cal_Indepl6(
                         {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            pMax[XIdx * n + YIdx] = Z;
                             Sepset[(XIdx * n + YIdx) * ML] = NbrIdx[0];
                             Sepset[(XIdx * n + YIdx) * ML + 1] = NbrIdx[1];
                             Sepset[(XIdx * n + YIdx) * ML + 2] = NbrIdx[2];
@@ -1413,7 +1377,7 @@ __global__ void cal_Indepl6(
 }
 
 __global__ void cal_Indepl7(
-    float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax, int n, float th
+    float *C, int *G, int *GPrime, int *mutex, int *Sepset, int n, float th
 )
 {
     int YIdx;
@@ -1620,7 +1584,6 @@ __global__ void cal_Indepl7(
                         {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            pMax[XIdx * n + YIdx] = Z;
                             Sepset[(XIdx * n + YIdx) * ML] = NbrIdx[0];
                             Sepset[(XIdx * n + YIdx) * ML + 1] = NbrIdx[1];
                             Sepset[(XIdx * n + YIdx) * ML + 2] = NbrIdx[2];
@@ -1637,7 +1600,7 @@ __global__ void cal_Indepl7(
 }
 
 __global__ void cal_Indepl8(
-    float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax, int n, float th
+    float *C, int *G, int *GPrime, int *mutex, int *Sepset, int n, float th
 )
 {
     int YIdx;
@@ -1860,7 +1823,6 @@ __global__ void cal_Indepl8(
                         {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            pMax[XIdx * n + YIdx] = Z;
                             Sepset[(XIdx * n + YIdx) * ML] = NbrIdx[0];
                             Sepset[(XIdx * n + YIdx) * ML + 1] = NbrIdx[1];
                             Sepset[(XIdx * n + YIdx) * ML + 2] = NbrIdx[2];
@@ -1878,7 +1840,7 @@ __global__ void cal_Indepl8(
 }
 
 __global__ void cal_Indepl9(
-    float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax, int n, float th
+    float *C, int *G, int *GPrime, int *mutex, int *Sepset, int n, float th
 )
 {
     int YIdx;
@@ -2041,7 +2003,6 @@ __global__ void cal_Indepl9(
                         {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            pMax[XIdx * n + YIdx] = Z;
                             Sepset[(XIdx * n + YIdx) * ML] = NbrIdx[0];
                             Sepset[(XIdx * n + YIdx) * ML + 1] = NbrIdx[1];
                             Sepset[(XIdx * n + YIdx) * ML + 2] = NbrIdx[2];
@@ -2060,7 +2021,7 @@ __global__ void cal_Indepl9(
 }
 
 __global__ void cal_Indepl10(
-    float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax, int n, float th
+    float *C, int *G, int *GPrime, int *mutex, int *Sepset, int n, float th
 )
 {
     int YIdx;
@@ -2224,7 +2185,6 @@ __global__ void cal_Indepl10(
                         {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            pMax[XIdx * n + YIdx] = Z;
                             Sepset[(XIdx * n + YIdx) * ML] = NbrIdx[0];
                             Sepset[(XIdx * n + YIdx) * ML + 1] = NbrIdx[1];
                             Sepset[(XIdx * n + YIdx) * ML + 2] = NbrIdx[2];
@@ -2244,7 +2204,7 @@ __global__ void cal_Indepl10(
 }
 
 __global__ void cal_Indepl11(
-    float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax, int n, float th
+    float *C, int *G, int *GPrime, int *mutex, int *Sepset, int n, float th
 )
 {
     int YIdx;
@@ -2409,7 +2369,6 @@ __global__ void cal_Indepl11(
                         {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            pMax[XIdx * n + YIdx] = Z;
                             Sepset[(XIdx * n + YIdx) * ML] = NbrIdx[0];
                             Sepset[(XIdx * n + YIdx) * ML + 1] = NbrIdx[1];
                             Sepset[(XIdx * n + YIdx) * ML + 2] = NbrIdx[2];
@@ -2430,7 +2389,7 @@ __global__ void cal_Indepl11(
 }
 
 __global__ void cal_Indepl12(
-    float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax, int n, float th
+    float *C, int *G, int *GPrime, int *mutex, int *Sepset, int n, float th
 )
 {
     int YIdx;
@@ -2595,7 +2554,6 @@ __global__ void cal_Indepl12(
                         {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            pMax[XIdx * n + YIdx] = Z;
                             Sepset[(XIdx * n + YIdx) * ML] = NbrIdx[0];
                             Sepset[(XIdx * n + YIdx) * ML + 1] = NbrIdx[1];
                             Sepset[(XIdx * n + YIdx) * ML + 2] = NbrIdx[2];
@@ -2617,7 +2575,7 @@ __global__ void cal_Indepl12(
 }
 
 __global__ void cal_Indepl13(
-    float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax, int n, float th
+    float *C, int *G, int *GPrime, int *mutex, int *Sepset, int n, float th
 )
 {
     int YIdx;
@@ -2783,7 +2741,6 @@ __global__ void cal_Indepl13(
                         {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            pMax[XIdx * n + YIdx] = Z;
                             Sepset[(XIdx * n + YIdx) * ML] = NbrIdx[0];
                             Sepset[(XIdx * n + YIdx) * ML + 1] = NbrIdx[1];
                             Sepset[(XIdx * n + YIdx) * ML + 2] = NbrIdx[2];
@@ -2806,7 +2763,7 @@ __global__ void cal_Indepl13(
 }
 
 __global__ void cal_Indepl14(
-    float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax, int n, float th
+    float *C, int *G, int *GPrime, int *mutex, int *Sepset, int n, float th
 )
 {
     int YIdx;
@@ -2972,7 +2929,6 @@ __global__ void cal_Indepl14(
                         {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            pMax[XIdx * n + YIdx] = Z;
                             Sepset[(XIdx * n + YIdx) * ML] = NbrIdx[0];
                             Sepset[(XIdx * n + YIdx) * ML + 1] = NbrIdx[1];
                             Sepset[(XIdx * n + YIdx) * ML + 2] = NbrIdx[2];
