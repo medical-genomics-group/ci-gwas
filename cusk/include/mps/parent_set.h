@@ -53,7 +53,7 @@ struct ReducedGCS
 };
 
 /**
- * @brief Removes non-phenotype and non-ancestral nodes from adajcency matrix, corr matrix and
+ * @brief Removes everything but ancestral and phenotype nodes from adajcency matrix, corr matrix and
  * separations sets.
  *
  * @param G         n*n adjacency matrix
