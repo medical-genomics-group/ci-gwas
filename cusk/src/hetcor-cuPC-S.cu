@@ -60,8 +60,11 @@ void hetcor_skeleton(
     HANDLE_ERROR(cudaMalloc((void **)&GPrime_cuda, n * n * sizeof(int)));
     HANDLE_ERROR(cudaMalloc((void **)&C_cuda, n * n * sizeof(float)));
     HANDLE_ERROR(cudaMalloc((void **)&G_cuda, n * n * sizeof(int)));
+    HANDLE_ERROR(cudaMalloc((void **)&N_cuda, n * n * sizeof(int)));
     // copy correlation matrix from CPU to GPU
     HANDLE_ERROR(cudaMemcpy(C_cuda, C, n * n * sizeof(float), cudaMemcpyHostToDevice));
+    // copy correlation matrix from CPU to GPU
+    HANDLE_ERROR(cudaMemcpy(N_cuda, N, n * n * sizeof(int), cudaMemcpyHostToDevice));
     // initialize a 0 matrix
     HANDLE_ERROR(cudaMemset(mutex_cuda, 0, n * n * sizeof(int)));
 
