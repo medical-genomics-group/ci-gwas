@@ -405,7 +405,9 @@ __global__ void cal_Indepl1(
                     rho = H[0][1] / (sqrt(fabs(H[0][0])) * sqrt(fabs(H[1][1])));
                     Z = fabs(0.5 * (log(fabs((1 + rho))) - log(fabs(1 - rho))));
 
-                    var_ixs = {XIdx, YIdx, NbrIdx};
+                    var_ixs[0] = XIdx;
+                    var_ixs[1] = YIdx;
+                    var_ixs[2] = NbrIdx;
                     loc_th = th / sqrt(mean_ess(N, var_ixs, 3, n) - 1.0 - 3.0);
 
                     if (Z < loc_th)
@@ -537,7 +539,10 @@ __global__ void cal_Indepl2(
                     H[0][1] = M0 - (M1MulM2Inv[0][0] * M1[1][0] + M1MulM2Inv[0][1] * M1[1][1]);
                     H[1][1] = 1 - (M1MulM2Inv[1][0] * M1[1][0] + M1MulM2Inv[1][1] * M1[1][1]);
 
-                    var_ixs = {XIdx, YIdx, NbrIdx[0], NbrIdx[1]};
+                    var_ixs[0] = XIdx;
+                    var_ixs[1] = YIdx;
+                    var_ixs[2] = NbrIdx[0];
+                    var_ixs[3] = NbrIdx[1];
                     loc_th = th / sqrt(mean_ess(N, var_ixs, 4, n) - 2.0 - 3.0);
 
                     rho = H[0][1] / (sqrt(abs(H[0][0] * H[1][1])));
@@ -692,7 +697,11 @@ __global__ void cal_Indepl3(
                     H[0][1] = M0 - H[0][1];
                     H[1][1] = 1 - H[1][1];
 
-                    var_ixs = {XIdx, YIdx, NbrIdx[0], NbrIdx[1], NbrIdx[2]};
+                    var_ixs[0] = XIdx;
+                    var_ixs[1] = YIdx;
+                    var_ixs[2] = NbrIdx[0];
+                    var_ixs[3] = NbrIdx[1];
+                    var_ixs[4] = NbrIdx[2];
                     loc_th = th / sqrt(mean_ess(N, var_ixs, 5, n) - 3.0 - 3.0);
 
                     rho = H[0][1] / (sqrt(abs(H[0][0] * H[1][1])));
@@ -865,12 +874,12 @@ __global__ void cal_Indepl4(
                     H[0][1] = M0 - H[0][1];
                     H[1][1] = 1 - H[1][1];
 
-                    var_ixs = {
-                        XIdx, YIdx,
-                        NbrIdx[0],
-                        NbrIdx[1],
-                        NbrIdx[2],
-                        NbrIdx[3]};
+                    var_ixs[0] = XIdx;
+                    var_ixs[1] = YIdx;
+                    var_ixs[2] = NbrIdx[0];
+                    var_ixs[3] = NbrIdx[1];
+                    var_ixs[4] = NbrIdx[2];
+                    var_ixs[5] = NbrIdx[3];
                     loc_th = th / sqrt(mean_ess(N, var_ixs, 6, n) - 4.0 - 3.0);
 
                     rho = H[0][1] / (sqrt(abs(H[0][0] * H[1][1])));
@@ -1057,13 +1066,13 @@ __global__ void cal_Indepl5(
                     H[0][1] = M0 - H[0][1];
                     H[1][1] = 1 - H[1][1];
 
-                    var_ixs = {
-                        XIdx, YIdx,
-                        NbrIdx[0],
-                        NbrIdx[1],
-                        NbrIdx[2],
-                        NbrIdx[3],
-                        NbrIdx[4]};
+                    var_ixs[0] = XIdx;
+                    var_ixs[1] = YIdx;
+                    var_ixs[2] = NbrIdx[0];
+                    var_ixs[3] = NbrIdx[1];
+                    var_ixs[4] = NbrIdx[2];
+                    var_ixs[5] = NbrIdx[3];
+                    var_ixs[6] = NbrIdx[4];
                     loc_th = th / sqrt(mean_ess(N, var_ixs, 7, n) - 5.0 - 3.0);
 
                     rho = H[0][1] / (sqrt(abs(H[0][0] * H[1][1])));
@@ -1265,14 +1274,14 @@ __global__ void cal_Indepl6(
                     H[0][1] = M0 - H[0][1];
                     H[1][1] = 1 - H[1][1];
 
-                    var_ixs = {
-                        XIdx, YIdx,
-                        NbrIdx[0],
-                        NbrIdx[1],
-                        NbrIdx[2],
-                        NbrIdx[3],
-                        NbrIdx[4],
-                        NbrIdx[5]};
+                    var_ixs[0] = XIdx;
+                    var_ixs[1] = YIdx;
+                    var_ixs[2] = NbrIdx[0];
+                    var_ixs[3] = NbrIdx[1];
+                    var_ixs[4] = NbrIdx[2];
+                    var_ixs[5] = NbrIdx[3];
+                    var_ixs[6] = NbrIdx[4];
+                    var_ixs[7] = NbrIdx[5];
                     loc_th = th / sqrt(mean_ess(N, var_ixs, 8, n) - 6.0 - 3.0);
                     
                     rho = H[0][1] / (sqrt(abs(H[0][0] * H[1][1])));
@@ -1493,15 +1502,15 @@ __global__ void cal_Indepl7(
                     H[0][1] = M0 - H[0][1];
                     H[1][1] = 1 - H[1][1];
 
-                    var_ixs = {
-                        XIdx, YIdx,
-                        NbrIdx[0],
-                        NbrIdx[1],
-                        NbrIdx[2],
-                        NbrIdx[3],
-                        NbrIdx[4],
-                        NbrIdx[5],
-                        NbrIdx[6]};
+                    var_ixs[0] = XIdx;
+                    var_ixs[1] = YIdx;
+                    var_ixs[2] = NbrIdx[0];
+                    var_ixs[3] = NbrIdx[1];
+                    var_ixs[4] = NbrIdx[2];
+                    var_ixs[5] = NbrIdx[3];
+                    var_ixs[6] = NbrIdx[4];
+                    var_ixs[7] = NbrIdx[5];
+                    var_ixs[8] = NbrIdx[6];
                     loc_th = th / sqrt(mean_ess(N, var_ixs, 9, n) - 7.0 - 3.0);
 
                     rho = H[0][1] / (sqrt(abs(H[0][0] * H[1][1])));
@@ -1738,16 +1747,16 @@ __global__ void cal_Indepl8(
                     H[0][1] = M0 - H[0][1];
                     H[1][1] = 1 - H[1][1];
 
-                    var_ixs = {
-                        XIdx, YIdx,
-                        NbrIdx[0],
-                        NbrIdx[1],
-                        NbrIdx[2],
-                        NbrIdx[3],
-                        NbrIdx[4],
-                        NbrIdx[5],
-                        NbrIdx[6],
-                        NbrIdx[7]};
+                    var_ixs[0] = XIdx;
+                    var_ixs[1] = YIdx;
+                    var_ixs[2] = NbrIdx[0];
+                    var_ixs[3] = NbrIdx[1];
+                    var_ixs[4] = NbrIdx[2];
+                    var_ixs[5] = NbrIdx[3];
+                    var_ixs[6] = NbrIdx[4];
+                    var_ixs[7] = NbrIdx[5];
+                    var_ixs[8] = NbrIdx[6];
+                    var_ixs[9] = NbrIdx[7];
                     loc_th = th / sqrt(mean_ess(N, var_ixs, 10, n) - 8.0 - 3.0);
 
                     rho = H[0][1] / (sqrt(abs(H[0][0] * H[1][1])));
@@ -1924,17 +1933,17 @@ __global__ void cal_Indepl9(
                     H[0][1] = M0 - H[0][1];
                     H[1][1] = 1 - H[1][1];
 
-                    var_ixs = {
-                        XIdx, YIdx,
-                        NbrIdx[0],
-                        NbrIdx[1],
-                        NbrIdx[2],
-                        NbrIdx[3],
-                        NbrIdx[4],
-                        NbrIdx[5],
-                        NbrIdx[6],
-                        NbrIdx[7],
-                        NbrIdx[8]};
+                    var_ixs[0] = XIdx;
+                    var_ixs[1] = YIdx;
+                    var_ixs[2] = NbrIdx[0];
+                    var_ixs[3] = NbrIdx[1];
+                    var_ixs[4] = NbrIdx[2];
+                    var_ixs[5] = NbrIdx[3];
+                    var_ixs[6] = NbrIdx[4];
+                    var_ixs[7] = NbrIdx[5];
+                    var_ixs[8] = NbrIdx[6];
+                    var_ixs[9] = NbrIdx[7];
+                    var_ixs[10] = NbrIdx[8];
                     loc_th = th / sqrt(mean_ess(N, var_ixs, 11, n) - 9.0 - 3.0);
 
                     rho = H[0][1] / (sqrt(abs(H[0][0] * H[1][1])));
@@ -2112,18 +2121,18 @@ __global__ void cal_Indepl10(
                     H[0][1] = M0 - H[0][1];
                     H[1][1] = 1 - H[1][1];
 
-                    var_ixs = {
-                        XIdx, YIdx,
-                        NbrIdx[0],
-                        NbrIdx[1],
-                        NbrIdx[2],
-                        NbrIdx[3],
-                        NbrIdx[4],
-                        NbrIdx[5],
-                        NbrIdx[6],
-                        NbrIdx[7],
-                        NbrIdx[8],
-                        NbrIdx[9]};
+                    var_ixs[0] = XIdx;
+                    var_ixs[1] = YIdx;
+                    var_ixs[2] = NbrIdx[0];
+                    var_ixs[3] = NbrIdx[1];
+                    var_ixs[4] = NbrIdx[2];
+                    var_ixs[5] = NbrIdx[3];
+                    var_ixs[6] = NbrIdx[4];
+                    var_ixs[7] = NbrIdx[5];
+                    var_ixs[8] = NbrIdx[6];
+                    var_ixs[9] = NbrIdx[7];
+                    var_ixs[10] = NbrIdx[8];
+                    var_ixs[11] = NbrIdx[9];
                     loc_th = th / sqrt(mean_ess(N, var_ixs, 12, n) - 10.0 - 3.0);
 
                     rho = H[0][1] / (sqrt(abs(H[0][0] * H[1][1])));
@@ -2302,19 +2311,19 @@ __global__ void cal_Indepl11(
                     H[0][1] = M0 - H[0][1];
                     H[1][1] = 1 - H[1][1];
 
-                    var_ixs = {
-                        XIdx, YIdx,
-                        NbrIdx[0],
-                        NbrIdx[1],
-                        NbrIdx[2],
-                        NbrIdx[3],
-                        NbrIdx[4],
-                        NbrIdx[5],
-                        NbrIdx[6],
-                        NbrIdx[7],
-                        NbrIdx[8],
-                        NbrIdx[9],
-                        NbrIdx[10]};
+                    var_ixs[0] = XIdx;
+                    var_ixs[1] = YIdx;
+                    var_ixs[2] = NbrIdx[0];
+                    var_ixs[3] = NbrIdx[1];
+                    var_ixs[4] = NbrIdx[2];
+                    var_ixs[5] = NbrIdx[3];
+                    var_ixs[6] = NbrIdx[4];
+                    var_ixs[7] = NbrIdx[5];
+                    var_ixs[8] = NbrIdx[6];
+                    var_ixs[9] = NbrIdx[7];
+                    var_ixs[10] = NbrIdx[8];
+                    var_ixs[11] = NbrIdx[9];
+                    var_ixs[12] = NbrIdx[10];
                     loc_th = th / sqrt(mean_ess(N, var_ixs, 13, n) - 11.0 - 3.0);
 
                     rho = H[0][1] / (sqrt(abs(H[0][0] * H[1][1])));
@@ -2493,20 +2502,20 @@ __global__ void cal_Indepl12(
                     H[0][1] = M0 - H[0][1];
                     H[1][1] = 1 - H[1][1];
 
-                    var_ixs = {
-                        XIdx, YIdx,
-                        NbrIdx[0],
-                        NbrIdx[1],
-                        NbrIdx[2],
-                        NbrIdx[3],
-                        NbrIdx[4],
-                        NbrIdx[5],
-                        NbrIdx[6],
-                        NbrIdx[7],
-                        NbrIdx[8],
-                        NbrIdx[9],
-                        NbrIdx[10],
-                        NbrIdx[11]};
+                    var_ixs[0] = XIdx;
+                    var_ixs[1] = YIdx;
+                    var_ixs[2] = NbrIdx[0];
+                    var_ixs[3] = NbrIdx[1];
+                    var_ixs[4] = NbrIdx[2];
+                    var_ixs[5] = NbrIdx[3];
+                    var_ixs[6] = NbrIdx[4];
+                    var_ixs[7] = NbrIdx[5];
+                    var_ixs[8] = NbrIdx[6];
+                    var_ixs[9] = NbrIdx[7];
+                    var_ixs[10] = NbrIdx[8];
+                    var_ixs[11] = NbrIdx[9];
+                    var_ixs[12] = NbrIdx[10];
+                    var_ixs[13] = NbrIdx[11];
                     loc_th = th / sqrt(mean_ess(N, var_ixs, 14, n) - 12.0 - 3.0);
 
                     rho = H[0][1] / (sqrt(abs(H[0][0] * H[1][1])));
@@ -2686,21 +2695,21 @@ __global__ void cal_Indepl13(
                     H[0][1] = M0 - H[0][1];
                     H[1][1] = 1 - H[1][1];
 
-                    var_ixs = {
-                        XIdx, YIdx,
-                        NbrIdx[0],
-                        NbrIdx[1],
-                        NbrIdx[2],
-                        NbrIdx[3],
-                        NbrIdx[4],
-                        NbrIdx[5],
-                        NbrIdx[6],
-                        NbrIdx[7],
-                        NbrIdx[8],
-                        NbrIdx[9],
-                        NbrIdx[10],
-                        NbrIdx[11],
-                        NbrIdx[12]};
+                    var_ixs[0] = XIdx;
+                    var_ixs[1] = YIdx;
+                    var_ixs[2] = NbrIdx[0];
+                    var_ixs[3] = NbrIdx[1];
+                    var_ixs[4] = NbrIdx[2];
+                    var_ixs[5] = NbrIdx[3];
+                    var_ixs[6] = NbrIdx[4];
+                    var_ixs[7] = NbrIdx[5];
+                    var_ixs[8] = NbrIdx[6];
+                    var_ixs[9] = NbrIdx[7];
+                    var_ixs[10] = NbrIdx[8];
+                    var_ixs[11] = NbrIdx[9];
+                    var_ixs[12] = NbrIdx[10];
+                    var_ixs[13] = NbrIdx[11];
+                    var_ixs[14] = NbrIdx[12];
                     loc_th = th / sqrt(mean_ess(N, var_ixs, 15, n) - 13.0 - 3.0);
 
                     rho = H[0][1] / (sqrt(abs(H[0][0] * H[1][1])));
@@ -2880,22 +2889,22 @@ __global__ void cal_Indepl14(
                     H[0][1] = M0 - H[0][1];
                     H[1][1] = 1 - H[1][1];
 
-                    var_ixs = {
-                        XIdx, YIdx,
-                        NbrIdx[0],
-                        NbrIdx[1],
-                        NbrIdx[2],
-                        NbrIdx[3],
-                        NbrIdx[4],
-                        NbrIdx[5],
-                        NbrIdx[6],
-                        NbrIdx[7],
-                        NbrIdx[8],
-                        NbrIdx[9],
-                        NbrIdx[10],
-                        NbrIdx[11],
-                        NbrIdx[12],
-                        NbrIdx[13]};
+                    var_ixs[0] = XIdx;
+                    var_ixs[1] = YIdx;
+                    var_ixs[2] = NbrIdx[0];
+                    var_ixs[3] = NbrIdx[1];
+                    var_ixs[4] = NbrIdx[2];
+                    var_ixs[5] = NbrIdx[3];
+                    var_ixs[6] = NbrIdx[4];
+                    var_ixs[7] = NbrIdx[5];
+                    var_ixs[8] = NbrIdx[6];
+                    var_ixs[9] = NbrIdx[7];
+                    var_ixs[10] = NbrIdx[8];
+                    var_ixs[11] = NbrIdx[9];
+                    var_ixs[12] = NbrIdx[10];
+                    var_ixs[13] = NbrIdx[11];
+                    var_ixs[14] = NbrIdx[12];
+                    var_ixs[15] = NbrIdx[13];
                     loc_th = th / sqrt(mean_ess(N, var_ixs, 16, n) - 14.0 - 3.0);
 
                     rho = H[0][1] / (sqrt(abs(H[0][0] * H[1][1])));
