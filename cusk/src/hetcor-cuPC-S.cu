@@ -2733,7 +2733,7 @@ __global__ void cal_Indepl14(
     float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
 )
 {
-    float loc_thr;
+    float loc_th;
     int YIdx;
     int XIdx = by;
     int NbrIdxPointer[14];
