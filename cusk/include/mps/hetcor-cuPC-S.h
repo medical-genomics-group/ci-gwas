@@ -186,17 +186,6 @@ __global__ void find_min_pcorr(
     int n
 );
 
-/** @brief Computes the skeleton using hetcor correlations and estimates of effective sample sizes.
- *
- * @param[in]  C  Pointer to full, square, correlation matrix
- * @param[in]  P  Pointer to number of variables
- * @param[in]  G  Pointer to adjacency matrix
- * @param[in]  N  Pointer to effective sample size matrix
- * @param[in]  Th  Pointer to alpha / 2 percentile
- * @param[in]  l  Pointer to current level
- * @param[in]  maxlevel  Pointer to maximal level
- * @return return_name return description
- */
 extern "C" void hetcor_skeleton(
     float *C, int *P, int *G, float *N, float *Th, int *l, const int *maxlevel
 )
