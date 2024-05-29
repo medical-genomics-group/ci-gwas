@@ -1534,7 +1534,7 @@ __global__ void cal_Indepl8(
     float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
 )
 {
-    float loc_th,
+    float loc_th;
     int YIdx;
     int XIdx = by;
     int NbrIdxPointer[8];
@@ -1780,7 +1780,7 @@ __global__ void cal_Indepl9(
     float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
 )
 {
-    float loc_th,
+    float loc_th;
     int YIdx;
     int XIdx = by;
     int NbrIdxPointer[9];
@@ -2344,7 +2344,7 @@ __global__ void cal_Indepl11(
 }
 
 __global__ void cal_Indepl12(
-    float *C, int *G, int *N, int *GPrime, int *mutex, int n, float th
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
 )
 {
     float loc_th;
