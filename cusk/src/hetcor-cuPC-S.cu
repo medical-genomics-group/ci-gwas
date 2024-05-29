@@ -33,12 +33,12 @@ void print_degree_distribution(int *GPrime_cuda, int n)
  * @return return_name return description
  */
 void hetcor_skeleton(
-    float *C, int *P, int *G, int *N, float *Th, int *l, const int *maxlevel
+    float *C, int *P, int *G, float *N, float *Th, int *l, const int *maxlevel
 )
 {
     float *C_cuda;  // Copy of C array in GPU
     int *G_cuda;  // Copy of G Array in GPU
-    int *N_cuda; // Copy of N Array in GPU
+    float *N_cuda; // Copy of N Array in GPU
     int *nprime_cuda;
     int *GPrime_cuda;
     int *mutex_cuda;
@@ -55,11 +55,11 @@ void hetcor_skeleton(
     HANDLE_ERROR(cudaMalloc((void **)&GPrime_cuda, n * n * sizeof(int)));
     HANDLE_ERROR(cudaMalloc((void **)&C_cuda, n * n * sizeof(float)));
     HANDLE_ERROR(cudaMalloc((void **)&G_cuda, n * n * sizeof(int)));
-    HANDLE_ERROR(cudaMalloc((void **)&N_cuda, n * n * sizeof(int)));
+    HANDLE_ERROR(cudaMalloc((void **)&N_cuda, n * n * sizeof(float)));
     // copy correlation matrix from CPU to GPU
     HANDLE_ERROR(cudaMemcpy(C_cuda, C, n * n * sizeof(float), cudaMemcpyHostToDevice));
-    // copy correlation matrix from CPU to GPU
-    HANDLE_ERROR(cudaMemcpy(N_cuda, N, n * n * sizeof(int), cudaMemcpyHostToDevice));
+    // copy effective sample size matrix from CPU to GPU
+    HANDLE_ERROR(cudaMemcpy(N_cuda, N, n * n * sizeof(float), cudaMemcpyHostToDevice));
     // initialize a 0 matrix
     HANDLE_ERROR(cudaMemset(mutex_cuda, 0, n * n * sizeof(int)));
 
@@ -102,7 +102,7 @@ void hetcor_skeleton(
             BLOCKS_PER_GRID = dim3(1, n, 1);
             THREADS_PER_BLOCK = dim3(1024, 1, 1);
             scan_compact<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, n * sizeof(int)>>>(
-                GPrime_cuda, G_cuda, n, nprime_cuda
+                GPrime_cuda, G_cuda, N_cuda, n, nprime_cuda
             );
             CudaCheckError();
             HANDLE_ERROR(cudaMemcpy(&nprime, nprime_cuda, 1 * sizeof(int), cudaMemcpyDeviceToHost));
@@ -127,7 +127,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL1, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL1, 1, 1);
                 cal_Indepl1<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, Th[1], n
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, Th[1], n
                 );
                 CudaCheckError();
             }
@@ -138,7 +138,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL2, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL2, 1, 1);
                 cal_Indepl2<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, n, Th[2]
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, Th[2]
                 );
                 CudaCheckError();
             }
@@ -149,7 +149,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL3, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL3, 1, 1);
                 cal_Indepl3<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, n, Th[3]
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, Th[3]
                 );
                 CudaCheckError();
             }
@@ -160,7 +160,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL4, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL4, 1, 1);
                 cal_Indepl4<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, n, Th[4]
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, Th[4]
                 );
                 CudaCheckError();
             }
@@ -172,7 +172,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL5, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL5, 1, 1);
                 cal_Indepl5<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, n, Th[5]
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, Th[5]
                 );
                 CudaCheckError();
             }
@@ -184,7 +184,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL6, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL6, 1, 1);
                 cal_Indepl6<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, n, Th[6]
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, Th[6]
                 );
                 CudaCheckError();
                 CudaCheckError();
@@ -196,7 +196,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL7, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL7, 1, 1);
                 cal_Indepl7<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, n, Th[7]
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, Th[7]
                 );
                 CudaCheckError();
             }
@@ -207,7 +207,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL8, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL8, 1, 1);
                 cal_Indepl8<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, n, Th[8]
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, Th[8]
                 );
                 CudaCheckError();
             }
@@ -218,7 +218,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL9, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL9, 1, 1);
                 cal_Indepl9<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, n, Th[9]
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, Th[9]
                 );
                 CudaCheckError();
             }
@@ -229,7 +229,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL10, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL10, 1, 1);
                 cal_Indepl10<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, n, Th[10]
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, Th[10]
                 );
                 CudaCheckError();
             }
@@ -240,7 +240,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL11, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL11, 1, 1);
                 cal_Indepl11<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, n, Th[11]
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, Th[11]
                 );
                 CudaCheckError();
             }
@@ -251,7 +251,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL12, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL12, 1, 1);
                 cal_Indepl12<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, n, Th[12]
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, Th[12]
                 );
                 CudaCheckError();
             }
@@ -262,7 +262,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL13, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL13, 1, 1);
                 cal_Indepl13<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, n, Th[13]
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, Th[13]
                 );
                 CudaCheckError();
             }
@@ -273,7 +273,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL14, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL14, 1, 1);
                 cal_Indepl14<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, GPrime_cuda, mutex_cuda, n, Th[14]
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, Th[14]
                 );
                 CudaCheckError();
             }
@@ -293,7 +293,7 @@ void hetcor_skeleton(
     HANDLE_ERROR(cudaFree(mutex_cuda));
 }  // Skeleton
 
-__global__ void cal_Indepl0(float *C, int *G, float th, int n)
+__global__ void cal_Indepl0(float *C, int *G, float *N, float th, int n)
 {
     int row = blockDim.x * bx + tx;
     int col = blockDim.y * by + ty;
@@ -301,7 +301,8 @@ __global__ void cal_Indepl0(float *C, int *G, float th, int n)
     {
         float res = C[row * n + col];
         res = abs(0.5 * log(abs((1 + res) / (1 - res))));
-        if (res < th)
+        float loc_th = th / sqrt(N[row * n + col] - 3);
+        if (res < loc_th)
         {
             G[row * n + col] = 0;
             G[col * n + row] = 0;
@@ -320,9 +321,10 @@ __global__ void cal_Indepl0(float *C, int *G, float th, int n)
 }
 
 __global__ void cal_Indepl1(
-    float *C, int *G, int *GPrime, int *mutex, float th, int n
+    float *C, int *G, float *N, int *GPrime, int *mutex, float th, int n
 )
 {
+    float loc_th;
     int YIdx;
     int XIdx = by;
     int NbrIdxPointer;
@@ -336,6 +338,7 @@ __global__ void cal_Indepl1(
     float M1[2];
     float rho, Z;
     extern __shared__ int G_Chunk[];
+    int var_ixs[3];
 
     NoEdgeFlag = 0;
     SizeOfArr = GPrime[XIdx * n + n - 1];
@@ -401,7 +404,10 @@ __global__ void cal_Indepl1(
                     rho = H[0][1] / (sqrt(fabs(H[0][0])) * sqrt(fabs(H[1][1])));
                     Z = fabs(0.5 * (log(fabs((1 + rho))) - log(fabs(1 - rho))));
 
-                    if (Z < th)
+                    var_ixs = {XIdx, YIdx, NbrIdx};
+                    loc_th = th / sqrt(mean_ess(N, var_ixs, 3, n) - 1.0 - 3.0);
+
+                    if (Z < loc_th)
                     {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
                         {
@@ -416,9 +422,10 @@ __global__ void cal_Indepl1(
 }
 
 __global__ void cal_Indepl2(
-    float *C, int *G, int *GPrime, int *mutex, int n, float th
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
 )
 {
+    float loc_th;
     int YIdx;
     int XIdx = by;
     int NbrIdxPointer[2];
@@ -436,6 +443,7 @@ __global__ void cal_Indepl2(
     float H[2][2];
     float rho;
     float Z;
+    int var_ixs[4];
 
     extern __shared__ int G_Chunk[];
 
@@ -528,10 +536,13 @@ __global__ void cal_Indepl2(
                     H[0][1] = M0 - (M1MulM2Inv[0][0] * M1[1][0] + M1MulM2Inv[0][1] * M1[1][1]);
                     H[1][1] = 1 - (M1MulM2Inv[1][0] * M1[1][0] + M1MulM2Inv[1][1] * M1[1][1]);
 
+                    var_ixs = {XIdx, YIdx, NbrIdx[0], NbrIdx[1]};
+                    loc_th = th / sqrt(mean_ess(N, var_ixs, 4, n) - 2.0 - 3.0);
+
                     rho = H[0][1] / (sqrt(abs(H[0][0] * H[1][1])));
                     Z = 0.5 * abs(log(abs((1 + rho) / (1 - rho))));
 
-                    if (Z < th)
+                    if (Z < loc_th)
                     {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
                         {  // lock
@@ -546,9 +557,10 @@ __global__ void cal_Indepl2(
 }
 
 __global__ void cal_Indepl3(
-    float *C, int *G, int *GPrime, int *mutex, int n, float th
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
 )
 {
+    float loc_th;
     int YIdx;
     int XIdx = by;
     int NbrIdxPointer[3];
@@ -558,6 +570,7 @@ __global__ void cal_Indepl3(
     int NumOfComb;
     __shared__ int NoEdgeFlag;
     int NbrIdx[3];
+    int var_ixs[5];
     float M0;
     float M1[2][3];
     float M2[3][3];
@@ -678,10 +691,13 @@ __global__ void cal_Indepl3(
                     H[0][1] = M0 - H[0][1];
                     H[1][1] = 1 - H[1][1];
 
+                    var_ixs = {XIdx, YIdx, NbrIdx[0], NbrIdx[1], NbrIdx[2]};
+                    loc_th = th / sqrt(mean_ess(N, var_ixs, 5, n) - 3.0 - 3.0);
+
                     rho = H[0][1] / (sqrt(abs(H[0][0] * H[1][1])));
                     Z = abs(0.5 * log(abs((1 + rho) / (1 - rho))));
 
-                    if (Z < th)
+                    if (Z < loc_th)
                     {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
                         {  // lock
@@ -696,9 +712,10 @@ __global__ void cal_Indepl3(
 }
 
 __global__ void cal_Indepl4(
-    float *C, int *G, int *GPrime, int *mutex, int n, float th
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
 )
 {
+    float loc_th;
     int YIdx;
     int XIdx = by;
     int NbrIdxPointer[4];
@@ -717,6 +734,7 @@ __global__ void cal_Indepl4(
     float H[2][2];
     float rho;
     float Z;
+    int var_ixs[6];
 
     float v[4][4];
     float w[4], rv1[4];
@@ -846,10 +864,18 @@ __global__ void cal_Indepl4(
                     H[0][1] = M0 - H[0][1];
                     H[1][1] = 1 - H[1][1];
 
+                    var_ixs = {
+                        XIdx, YIdx,
+                        NbrIdx[0],
+                        NbrIdx[1],
+                        NbrIdx[2],
+                        NbrIdx[3]};
+                    loc_th = th / sqrt(mean_ess(N, var_ixs, 6, n) - 4.0 - 3.0);
+
                     rho = H[0][1] / (sqrt(abs(H[0][0] * H[1][1])));
                     Z = abs(0.5 * log(abs((1 + rho) / (1 - rho))));
 
-                    if (Z < th)
+                    if (Z < loc_th)
                     {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
                         {  // lock
@@ -864,9 +890,10 @@ __global__ void cal_Indepl4(
 }
 
 __global__ void cal_Indepl5(
-    float *C, int *G, int *GPrime, int *mutex, int n, float th
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
 )
 {
+    float loc_th;
     int YIdx;
     int XIdx = by;
     int NbrIdxPointer[5];
@@ -876,6 +903,7 @@ __global__ void cal_Indepl5(
     int NumOfComb;
     __shared__ int NoEdgeFlag;
     int NbrIdx[5];
+    int var_ixs[7];
 
     float M0;
     float M1[2][5];
@@ -1028,10 +1056,19 @@ __global__ void cal_Indepl5(
                     H[0][1] = M0 - H[0][1];
                     H[1][1] = 1 - H[1][1];
 
+                    var_ixs = {
+                        XIdx, YIdx,
+                        NbrIdx[0],
+                        NbrIdx[1],
+                        NbrIdx[2],
+                        NbrIdx[3],
+                        NbrIdx[4]};
+                    loc_th = th / sqrt(mean_ess(N, var_ixs, 7, n) - 5.0 - 3.0);
+
                     rho = H[0][1] / (sqrt(abs(H[0][0] * H[1][1])));
                     Z = abs(0.5 * log(abs((1 + rho) / (1 - rho))));
 
-                    if (Z < th)
+                    if (Z < loc_th)
                     {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
                         {  // lock
@@ -1046,9 +1083,10 @@ __global__ void cal_Indepl5(
 }
 
 __global__ void cal_Indepl6(
-    float *C, int *G, int *GPrime, int *mutex, int n, float th
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
 )
 {
+    float loc_th;
     int YIdx;
     int XIdx = by;
     int NbrIdxPointer[6];
@@ -1058,6 +1096,7 @@ __global__ void cal_Indepl6(
     int NumOfComb;
     __shared__ int NoEdgeFlag;
     int NbrIdx[6];
+    int var_ixs[8];
 
     float M0;
     float M1[2][6];
@@ -1225,10 +1264,20 @@ __global__ void cal_Indepl6(
                     H[0][1] = M0 - H[0][1];
                     H[1][1] = 1 - H[1][1];
 
+                    var_ixs = {
+                        XIdx, YIdx,
+                        NbrIdx[0],
+                        NbrIdx[1],
+                        NbrIdx[2],
+                        NbrIdx[3],
+                        NbrIdx[4],
+                        NbrIdx[5]};
+                    loc_th = th / sqrt(mean_ess(N, var_ixs, 8, n) - 6.0 - 3.0);
+                    
                     rho = H[0][1] / (sqrt(abs(H[0][0] * H[1][1])));
                     Z = abs(0.5 * log(abs((1 + rho) / (1 - rho))));
 
-                    if (Z < th)
+                    if (Z < loc_th)
                     {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
                         {  // lock
@@ -1243,9 +1292,10 @@ __global__ void cal_Indepl6(
 }
 
 __global__ void cal_Indepl7(
-    float *C, int *G, int *GPrime, int *mutex, int n, float th
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
 )
 {
+    float loc_th;
     int YIdx;
     int XIdx = by;
     int NbrIdxPointer[7];
@@ -1255,6 +1305,7 @@ __global__ void cal_Indepl7(
     int NumOfComb;
     __shared__ int NoEdgeFlag;
     int NbrIdx[7];
+    int var_ixs[9];
 
     float M0;
     float M1[2][7];
@@ -1441,10 +1492,21 @@ __global__ void cal_Indepl7(
                     H[0][1] = M0 - H[0][1];
                     H[1][1] = 1 - H[1][1];
 
+                    var_ixs = {
+                        XIdx, YIdx,
+                        NbrIdx[0],
+                        NbrIdx[1],
+                        NbrIdx[2],
+                        NbrIdx[3],
+                        NbrIdx[4],
+                        NbrIdx[5],
+                        NbrIdx[6]};
+                    loc_th = th / sqrt(mean_ess(N, var_ixs, 9, n) - 7.0 - 3.0);
+
                     rho = H[0][1] / (sqrt(abs(H[0][0] * H[1][1])));
                     Z = abs(0.5 * log(abs((1 + rho) / (1 - rho))));
 
-                    if (Z < th)
+                    if (Z < loc_th)
                     {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
                         {  // lock
@@ -1459,9 +1521,10 @@ __global__ void cal_Indepl7(
 }
 
 __global__ void cal_Indepl8(
-    float *C, int *G, int *GPrime, int *mutex, int n, float th
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
 )
 {
+    float loc_th,
     int YIdx;
     int XIdx = by;
     int NbrIdxPointer[8];
@@ -1471,6 +1534,7 @@ __global__ void cal_Indepl8(
     int NumOfComb;
     __shared__ int NoEdgeFlag;
     int NbrIdx[8];
+    int var_ixs[10];
 
     float M0;
     float M1[2][8];
@@ -1673,10 +1737,22 @@ __global__ void cal_Indepl8(
                     H[0][1] = M0 - H[0][1];
                     H[1][1] = 1 - H[1][1];
 
+                    var_ixs = {
+                        XIdx, YIdx,
+                        NbrIdx[0],
+                        NbrIdx[1],
+                        NbrIdx[2],
+                        NbrIdx[3],
+                        NbrIdx[4],
+                        NbrIdx[5],
+                        NbrIdx[6],
+                        NbrIdx[7]};
+                    loc_th = th / sqrt(mean_ess(N, var_ixs, 10, n) - 8.0 - 3.0);
+
                     rho = H[0][1] / (sqrt(abs(H[0][0] * H[1][1])));
                     Z = abs(0.5 * log(abs((1 + rho) / (1 - rho))));
 
-                    if (Z < th)
+                    if (Z < loc_th)
                     {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
                         {  // lock
@@ -1691,9 +1767,10 @@ __global__ void cal_Indepl8(
 }
 
 __global__ void cal_Indepl9(
-    float *C, int *G, int *GPrime, int *mutex, int n, float th
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
 )
 {
+    float loc_th,
     int YIdx;
     int XIdx = by;
     int NbrIdxPointer[9];
@@ -1703,6 +1780,7 @@ __global__ void cal_Indepl9(
     int NumOfComb;
     __shared__ int NoEdgeFlag;
     int NbrIdx[9];
+    int var_ixs[11];
 
     float M0;
     float M1[2][9];
@@ -1845,10 +1923,23 @@ __global__ void cal_Indepl9(
                     H[0][1] = M0 - H[0][1];
                     H[1][1] = 1 - H[1][1];
 
+                    var_ixs = {
+                        XIdx, YIdx,
+                        NbrIdx[0],
+                        NbrIdx[1],
+                        NbrIdx[2],
+                        NbrIdx[3],
+                        NbrIdx[4],
+                        NbrIdx[5],
+                        NbrIdx[6],
+                        NbrIdx[7],
+                        NbrIdx[8]};
+                    loc_th = th / sqrt(mean_ess(N, var_ixs, 11, n) - 9.0 - 3.0);
+
                     rho = H[0][1] / (sqrt(abs(H[0][0] * H[1][1])));
                     Z = abs(0.5 * log(abs((1 + rho) / (1 - rho))));
 
-                    if (Z < th)
+                    if (Z < loc_th)
                     {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
                         {  // lock
@@ -1863,9 +1954,10 @@ __global__ void cal_Indepl9(
 }
 
 __global__ void cal_Indepl10(
-    float *C, int *G, int *GPrime, int *mutex, int n, float th
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
 )
 {
+    float loc_th;
     int YIdx;
     int XIdx = by;
     int NbrIdxPointer[10];
@@ -1875,6 +1967,7 @@ __global__ void cal_Indepl10(
     int NumOfComb;
     __shared__ int NoEdgeFlag;
     int NbrIdx[10];
+    int var_ixs[12];
 
     float M0;
     float M1[2][10];
@@ -2018,10 +2111,24 @@ __global__ void cal_Indepl10(
                     H[0][1] = M0 - H[0][1];
                     H[1][1] = 1 - H[1][1];
 
+                    var_ixs = {
+                        XIdx, YIdx,
+                        NbrIdx[0],
+                        NbrIdx[1],
+                        NbrIdx[2],
+                        NbrIdx[3],
+                        NbrIdx[4],
+                        NbrIdx[5],
+                        NbrIdx[6],
+                        NbrIdx[7],
+                        NbrIdx[8],
+                        NbrIdx[9]};
+                    loc_th = th / sqrt(mean_ess(N, var_ixs, 12, n) - 10.0 - 3.0);
+
                     rho = H[0][1] / (sqrt(abs(H[0][0] * H[1][1])));
                     Z = abs(0.5 * log(abs((1 + rho) / (1 - rho))));
 
-                    if (Z < th)
+                    if (Z < loc_th)
                     {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
                         {  // lock
@@ -2036,9 +2143,10 @@ __global__ void cal_Indepl10(
 }
 
 __global__ void cal_Indepl11(
-    float *C, int *G, int *GPrime, int *mutex, int n, float th
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
 )
 {
+    float loc_th;
     int YIdx;
     int XIdx = by;
     int NbrIdxPointer[11];
@@ -2048,6 +2156,7 @@ __global__ void cal_Indepl11(
     int NumOfComb;
     __shared__ int NoEdgeFlag;
     int NbrIdx[11];
+    int var_ixs[13];
 
     float M0;
     float M1[2][11];
@@ -2192,10 +2301,25 @@ __global__ void cal_Indepl11(
                     H[0][1] = M0 - H[0][1];
                     H[1][1] = 1 - H[1][1];
 
+                    var_ixs = {
+                        XIdx, YIdx,
+                        NbrIdx[0],
+                        NbrIdx[1],
+                        NbrIdx[2],
+                        NbrIdx[3],
+                        NbrIdx[4],
+                        NbrIdx[5],
+                        NbrIdx[6],
+                        NbrIdx[7],
+                        NbrIdx[8],
+                        NbrIdx[9],
+                        NbrIdx[10]};
+                    loc_th = th / sqrt(mean_ess(N, var_ixs, 13, n) - 11.0 - 3.0);
+
                     rho = H[0][1] / (sqrt(abs(H[0][0] * H[1][1])));
                     Z = abs(0.5 * log(abs((1 + rho) / (1 - rho))));
 
-                    if (Z < th)
+                    if (Z < loc_th)
                     {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
                         {  // lock
@@ -2210,9 +2334,10 @@ __global__ void cal_Indepl11(
 }
 
 __global__ void cal_Indepl12(
-    float *C, int *G, int *GPrime, int *mutex, int n, float th
+    float *C, int *G, int *N, int *GPrime, int *mutex, int n, float th
 )
 {
+    float loc_th;
     int YIdx;
     int XIdx = by;
     int NbrIdxPointer[12];
@@ -2222,6 +2347,7 @@ __global__ void cal_Indepl12(
     int NumOfComb;
     __shared__ int NoEdgeFlag;
     int NbrIdx[12];
+    int var_ixs[14];
 
     float M0;
     float M1[2][12];
@@ -2366,10 +2492,26 @@ __global__ void cal_Indepl12(
                     H[0][1] = M0 - H[0][1];
                     H[1][1] = 1 - H[1][1];
 
+                    var_ixs = {
+                        XIdx, YIdx,
+                        NbrIdx[0],
+                        NbrIdx[1],
+                        NbrIdx[2],
+                        NbrIdx[3],
+                        NbrIdx[4],
+                        NbrIdx[5],
+                        NbrIdx[6],
+                        NbrIdx[7],
+                        NbrIdx[8],
+                        NbrIdx[9],
+                        NbrIdx[10],
+                        NbrIdx[11]};
+                    loc_th = th / sqrt(mean_ess(N, var_ixs, 14, n) - 12.0 - 3.0);
+
                     rho = H[0][1] / (sqrt(abs(H[0][0] * H[1][1])));
                     Z = abs(0.5 * log(abs((1 + rho) / (1 - rho))));
 
-                    if (Z < th)
+                    if (Z < loc_th)
                     {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
                         {  // lock
@@ -2384,9 +2526,10 @@ __global__ void cal_Indepl12(
 }
 
 __global__ void cal_Indepl13(
-    float *C, int *G, int *GPrime, int *mutex, int n, float th
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
 )
 {
+    float loc_th;
     int YIdx;
     int XIdx = by;
     int NbrIdxPointer[13];
@@ -2396,6 +2539,7 @@ __global__ void cal_Indepl13(
     int NumOfComb;
     __shared__ int NoEdgeFlag;
     int NbrIdx[13];
+    int var_ixs[15];
 
     float M0;
     float M1[2][13];
@@ -2541,10 +2685,27 @@ __global__ void cal_Indepl13(
                     H[0][1] = M0 - H[0][1];
                     H[1][1] = 1 - H[1][1];
 
+                    var_ixs = {
+                        XIdx, YIdx,
+                        NbrIdx[0],
+                        NbrIdx[1],
+                        NbrIdx[2],
+                        NbrIdx[3],
+                        NbrIdx[4],
+                        NbrIdx[5],
+                        NbrIdx[6],
+                        NbrIdx[7],
+                        NbrIdx[8],
+                        NbrIdx[9],
+                        NbrIdx[10],
+                        NbrIdx[11],
+                        NbrIdx[12]};
+                    loc_th = th / sqrt(mean_ess(N, var_ixs, 15, n) - 13.0 - 3.0);
+
                     rho = H[0][1] / (sqrt(abs(H[0][0] * H[1][1])));
                     Z = abs(0.5 * log(abs((1 + rho) / (1 - rho))));
 
-                    if (Z < th)
+                    if (Z < loc_th)
                     {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
                         {  // lock
@@ -2559,9 +2720,10 @@ __global__ void cal_Indepl13(
 }
 
 __global__ void cal_Indepl14(
-    float *C, int *G, int *GPrime, int *mutex, int n, float th
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
 )
 {
+    float loc_thr;
     int YIdx;
     int XIdx = by;
     int NbrIdxPointer[14];
@@ -2571,6 +2733,7 @@ __global__ void cal_Indepl14(
     int NumOfComb;
     __shared__ int NoEdgeFlag;
     int NbrIdx[14];
+    int var_ixs[16];
 
     float M0;
     float M1[2][14];
@@ -2716,10 +2879,28 @@ __global__ void cal_Indepl14(
                     H[0][1] = M0 - H[0][1];
                     H[1][1] = 1 - H[1][1];
 
+                    var_ixs = {
+                        XIdx, YIdx,
+                        NbrIdx[0],
+                        NbrIdx[1],
+                        NbrIdx[2],
+                        NbrIdx[3],
+                        NbrIdx[4],
+                        NbrIdx[5],
+                        NbrIdx[6],
+                        NbrIdx[7],
+                        NbrIdx[8],
+                        NbrIdx[9],
+                        NbrIdx[10],
+                        NbrIdx[11],
+                        NbrIdx[12],
+                        NbrIdx[13]};
+                    loc_th = th / sqrt(mean_ess(N, var_ixs, 16, n) - 14.0 - 3.0);
+
                     rho = H[0][1] / (sqrt(abs(H[0][0] * H[1][1])));
                     Z = abs(0.5 * log(abs((1 + rho) / (1 - rho))));
 
-                    if (Z < th)
+                    if (Z < loc_th)
                     {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
                         {  // lock
@@ -2772,6 +2953,22 @@ __global__ void Compact(int *G_Compact, const int *G, const int *G_ScanRes, int 
             }
         }
     }
+}
+
+__device__ float mean_ess(float *N, int var_ixs[], int l, int n)
+{
+    float s = 0.0;
+    int ix_a;
+    int ix_b;
+    for (int i = 0; i < l; i++)
+    {
+        ix_a = var_ixs[i];
+        for (int j = 0; j < i; j++) {
+            ix_b = var_ixs[j];
+            s += N[ix_a * n + ix_b];
+        }
+    }
+    return s / (float)l;
 }
 
 __device__ float PYTHAG(float a, float b)
