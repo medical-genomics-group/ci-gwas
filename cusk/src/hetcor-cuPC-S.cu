@@ -50,11 +50,6 @@ void hetcor_skeleton(
 
     bool FinishFlag = false;
 
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-    float milliseconds = 0;
-
     HANDLE_ERROR(cudaMalloc((void **)&mutex_cuda, n * n * sizeof(int)));
     HANDLE_ERROR(cudaMalloc((void **)&nprime_cuda, 1 * sizeof(int)));
     HANDLE_ERROR(cudaMalloc((void **)&GPrime_cuda, n * n * sizeof(int)));
@@ -75,7 +70,6 @@ void hetcor_skeleton(
         CudaCheckError();
         if (*l == 0)
         {
-            cudaEventRecord(start);
             printf("Starting lvl 0\n");
             fflush(stdout);
 
@@ -100,11 +94,6 @@ void hetcor_skeleton(
             BLOCKS_PER_GRID = dim3(n * n, 1, 1);
             THREADS_PER_BLOCK = dim3(ML, 1, 1);
             CudaCheckError();
-            cudaEventRecord(stop);
-            cudaEventSynchronize(stop);
-            cudaEventElapsedTime(&milliseconds, start, stop);
-            printf("spent seconds: %f \n", milliseconds * 0.001);
-            fflush(stdout);
         }
         else
         {
@@ -133,7 +122,6 @@ void hetcor_skeleton(
 
             if (*l == 1)
             {
-                cudaEventRecord(start);
                 printf("Starting lvl 1\n");
                 fflush(stdout);
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL1, n, 1);
@@ -142,17 +130,9 @@ void hetcor_skeleton(
                     C_cuda, G_cuda, GPrime_cuda, mutex_cuda, Th[1], n
                 );
                 CudaCheckError();
-                HANDLE_ERROR(cudaDeviceSynchronize());
-                CudaCheckError();
-                cudaEventRecord(stop);
-                cudaEventSynchronize(stop);
-                cudaEventElapsedTime(&milliseconds, start, stop);
-                printf("spent seconds: %f \n", milliseconds * 0.001);
-                fflush(stdout);
             }
             else if (*l == 2)
             {
-                cudaEventRecord(start);
                 printf("Starting lvl 2\n");
                 fflush(stdout);
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL2, n, 1);
@@ -161,15 +141,9 @@ void hetcor_skeleton(
                     C_cuda, G_cuda, GPrime_cuda, mutex_cuda, n, Th[2]
                 );
                 CudaCheckError();
-                cudaEventRecord(stop);
-                cudaEventSynchronize(stop);
-                cudaEventElapsedTime(&milliseconds, start, stop);
-                printf("spent seconds: %f \n", milliseconds * 0.001);
-                fflush(stdout);
             }
             else if (*l == 3)
             {
-                cudaEventRecord(start);
                 printf("Starting lvl 3\n");
                 fflush(stdout);
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL3, n, 1);
@@ -178,15 +152,9 @@ void hetcor_skeleton(
                     C_cuda, G_cuda, GPrime_cuda, mutex_cuda, n, Th[3]
                 );
                 CudaCheckError();
-                cudaEventRecord(stop);
-                cudaEventSynchronize(stop);
-                cudaEventElapsedTime(&milliseconds, start, stop);
-                printf("spent seconds: %f \n", milliseconds * 0.001);
-                fflush(stdout);
             }
             else if (*l == 4)
             {
-                cudaEventRecord(start);
                 printf("Starting lvl 4\n");
                 fflush(stdout);
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL4, n, 1);
@@ -195,15 +163,9 @@ void hetcor_skeleton(
                     C_cuda, G_cuda, GPrime_cuda, mutex_cuda, n, Th[4]
                 );
                 CudaCheckError();
-                cudaEventRecord(stop);
-                cudaEventSynchronize(stop);
-                cudaEventElapsedTime(&milliseconds, start, stop);
-                printf("spent seconds: %f \n", milliseconds * 0.001);
-                fflush(stdout);
             }
             else if (*l == 5)
             {
-                cudaEventRecord(start);
                 printf("Starting lvl 5\n");
                 fflush(stdout);
 
@@ -213,15 +175,9 @@ void hetcor_skeleton(
                     C_cuda, G_cuda, GPrime_cuda, mutex_cuda, n, Th[5]
                 );
                 CudaCheckError();
-                cudaEventRecord(stop);
-                cudaEventSynchronize(stop);
-                cudaEventElapsedTime(&milliseconds, start, stop);
-                printf("spent seconds: %f \n", milliseconds * 0.001);
-                fflush(stdout);
             }
             else if (*l == 6)
             {
-                cudaEventRecord(start);
                 printf("Starting lvl 6\n");
                 fflush(stdout);
 
@@ -231,16 +187,10 @@ void hetcor_skeleton(
                     C_cuda, G_cuda, GPrime_cuda, mutex_cuda, n, Th[6]
                 );
                 CudaCheckError();
-                cudaEventRecord(stop);
-                cudaEventSynchronize(stop);
-                cudaEventElapsedTime(&milliseconds, start, stop);
-                printf("spent seconds: %f \n", milliseconds * 0.001);
-                fflush(stdout);
                 CudaCheckError();
             }
             else if (*l == 7)
             {
-                cudaEventRecord(start);
                 printf("Starting lvl 7\n");
                 fflush(stdout);
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL7, n, 1);
@@ -249,15 +199,9 @@ void hetcor_skeleton(
                     C_cuda, G_cuda, GPrime_cuda, mutex_cuda, n, Th[7]
                 );
                 CudaCheckError();
-                cudaEventRecord(stop);
-                cudaEventSynchronize(stop);
-                cudaEventElapsedTime(&milliseconds, start, stop);
-                printf("spent seconds: %f \n", milliseconds * 0.001);
-                fflush(stdout);
             }
             else if (*l == 8)
             {
-                cudaEventRecord(start);
                 printf("Starting lvl 8\n");
                 fflush(stdout);
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL8, n, 1);
@@ -266,15 +210,9 @@ void hetcor_skeleton(
                     C_cuda, G_cuda, GPrime_cuda, mutex_cuda, n, Th[8]
                 );
                 CudaCheckError();
-                cudaEventRecord(stop);
-                cudaEventSynchronize(stop);
-                cudaEventElapsedTime(&milliseconds, start, stop);
-                printf("spent seconds: %f \n", milliseconds * 0.001);
-                fflush(stdout);
             }
             else if (*l == 9)
             {
-                cudaEventRecord(start);
                 printf("Starting lvl 9\n");
                 fflush(stdout);
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL9, n, 1);
@@ -283,15 +221,9 @@ void hetcor_skeleton(
                     C_cuda, G_cuda, GPrime_cuda, mutex_cuda, n, Th[9]
                 );
                 CudaCheckError();
-                cudaEventRecord(stop);
-                cudaEventSynchronize(stop);
-                cudaEventElapsedTime(&milliseconds, start, stop);
-                printf("spent seconds: %f \n", milliseconds * 0.001);
-                fflush(stdout);
             }
             else if (*l == 10)
             {
-                cudaEventRecord(start);
                 printf("Starting lvl 10\n");
                 fflush(stdout);
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL10, n, 1);
@@ -300,15 +232,9 @@ void hetcor_skeleton(
                     C_cuda, G_cuda, GPrime_cuda, mutex_cuda, n, Th[10]
                 );
                 CudaCheckError();
-                cudaEventRecord(stop);
-                cudaEventSynchronize(stop);
-                cudaEventElapsedTime(&milliseconds, start, stop);
-                printf("spent seconds: %f \n", milliseconds * 0.001);
-                fflush(stdout);
             }
             else if (*l == 11)
             {
-                cudaEventRecord(start);
                 printf("Starting lvl 11\n");
                 fflush(stdout);
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL11, n, 1);
@@ -317,15 +243,9 @@ void hetcor_skeleton(
                     C_cuda, G_cuda, GPrime_cuda, mutex_cuda, n, Th[11]
                 );
                 CudaCheckError();
-                cudaEventRecord(stop);
-                cudaEventSynchronize(stop);
-                cudaEventElapsedTime(&milliseconds, start, stop);
-                printf("spent seconds: %f \n", milliseconds * 0.001);
-                fflush(stdout);
             }
             else if (*l == 12)
             {
-                cudaEventRecord(start);
                 printf("Starting lvl 12\n");
                 fflush(stdout);
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL12, n, 1);
@@ -334,15 +254,9 @@ void hetcor_skeleton(
                     C_cuda, G_cuda, GPrime_cuda, mutex_cuda, n, Th[12]
                 );
                 CudaCheckError();
-                cudaEventRecord(stop);
-                cudaEventSynchronize(stop);
-                cudaEventElapsedTime(&milliseconds, start, stop);
-                printf("spent seconds: %f \n", milliseconds * 0.001);
-                fflush(stdout);
             }
             else if (*l == 13)
             {
-                cudaEventRecord(start);
                 printf("Starting lvl 13\n");
                 fflush(stdout);
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL13, n, 1);
@@ -351,15 +265,9 @@ void hetcor_skeleton(
                     C_cuda, G_cuda, GPrime_cuda, mutex_cuda, n, Th[13]
                 );
                 CudaCheckError();
-                cudaEventRecord(stop);
-                cudaEventSynchronize(stop);
-                cudaEventElapsedTime(&milliseconds, start, stop);
-                printf("spent seconds: %f \n", milliseconds * 0.001);
-                fflush(stdout);
             }
             else if (*l == 14)
             {
-                cudaEventRecord(start);
                 printf("Starting lvl 14\n");
                 fflush(stdout);
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL14, n, 1);
@@ -368,11 +276,6 @@ void hetcor_skeleton(
                     C_cuda, G_cuda, GPrime_cuda, mutex_cuda, n, Th[14]
                 );
                 CudaCheckError();
-                cudaEventRecord(stop);
-                cudaEventSynchronize(stop);
-                cudaEventElapsedTime(&milliseconds, start, stop);
-                printf("spent seconds: %f \n", milliseconds * 0.001);
-                fflush(stdout);
             }
             else
             {
