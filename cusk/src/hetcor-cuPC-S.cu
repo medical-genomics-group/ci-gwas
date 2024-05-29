@@ -1,5 +1,5 @@
 #include <math.h>
-#include <mps/cuPC-S.h>
+#include <mps/hetcor-cuPC-S.h>
 #include <mps/gpuerrors.h>
 #include <stdlib.h>
 #include <time.h>
