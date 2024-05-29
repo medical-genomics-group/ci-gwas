@@ -78,7 +78,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(1, 1, 1);
                 THREADS_PER_BLOCK = dim3(32, 32, 1);
                 cal_Indepl0<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
-                    C_cuda, G_cuda, Th, n
+                    C_cuda, G_cuda, N_cuda, Th, n
                 );
                 CudaCheckError();
             }
@@ -87,7 +87,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(ceil(((float)(n)) / 32.0), ceil(((float)(n)) / 32.0), 1);
                 THREADS_PER_BLOCK = dim3(32, 32, 1);
                 cal_Indepl0<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
-                    C_cuda, G_cuda, Th[0], n
+                    C_cuda, G_cuda, N_cuda, Th, n
                 );
                 CudaCheckError();
             }
@@ -102,7 +102,7 @@ void hetcor_skeleton(
             BLOCKS_PER_GRID = dim3(1, n, 1);
             THREADS_PER_BLOCK = dim3(1024, 1, 1);
             scan_compact<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, n * sizeof(int)>>>(
-                GPrime_cuda, G_cuda, N_cuda, n, nprime_cuda
+                GPrime_cuda, G_cuda, n, nprime_cuda
             );
             CudaCheckError();
             HANDLE_ERROR(cudaMemcpy(&nprime, nprime_cuda, 1 * sizeof(int), cudaMemcpyDeviceToHost));

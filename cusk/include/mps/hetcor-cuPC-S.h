@@ -51,48 +51,48 @@
 #define PCORR_MAX_DEGREE 100
 
 //==========================> Function Declaration <==========================
-__global__ void cal_Indepl0(float *C, int *G, float *N, float th, float *pMax, int n);
+__global__ void cal_Indepl0(float *C, int *G, float *N, float th, int n);
 __global__ void cal_Indepl1(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int *Sepset, float *pMax, float th, int n
+    float *C, int *G, float *N, int *GPrime, int *mutex, float th, int n
 );
 __global__ void cal_Indepl3(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int *Sepset, float *pMax, int n, float th
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
 );
 __global__ void cal_Indepl4(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int *Sepset, float *pMax, int n, float th
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
 );
 __global__ void cal_Indepl5(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int *Sepset, float *pMax, int n, float th
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
 );
 __global__ void cal_Indepl2(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int *Sepset, float *pMax, int n, float th
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
 );
 __global__ void cal_Indepl6(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int *Sepset, float *pMax, int n, float th
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
 );
 __global__ void cal_Indepl7(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int *Sepset, float *pMax, int n, float th
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
 );
 __global__ void cal_Indepl8(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int *Sepset, float *pMax, int n, float th
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
 );
 __global__ void cal_Indepl9(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int *Sepset, float *pMax, int n, float th
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
 );
 __global__ void cal_Indepl10(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int *Sepset, float *pMax, int n, float th
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
 );
 __global__ void cal_Indepl11(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int *Sepset, float *pMax, int n, float th
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
 );
 __global__ void cal_Indepl12(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int *Sepset, float *pMax, int n, float th
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
 );
 __global__ void cal_Indepl13(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int *Sepset, float *pMax, int n, float th
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
 );
 __global__ void cal_Indepl14(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int *Sepset, float *pMax, int n, float th
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
 );
 __device__ float mean_ess(float *N, int var_ixs[], int l, int n);
 __device__ void pseudoinversel2(float M2[][2], float M2Inv[][2]);
