@@ -186,9 +186,7 @@ __global__ void find_min_pcorr(
     int n
 );
 
-extern "C" void hetcor_skeleton(
-    float *C, int *P, int *G, float *N, float *Th, int *l, const int *maxlevel
-)
+extern "C" void hetcor_skeleton(float *C, int *P, int *G, float *N, float *Th, int *l, const int *maxlevel);
 
 __global__ void Initialize(int *Mat, int n);
 __global__ void scan_compact(int *G_Compact, const int *G, const int n, int *nprime);
