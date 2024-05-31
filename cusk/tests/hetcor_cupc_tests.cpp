@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <mps/cuPC-S.h>
 #include <mps/hetcor-cuPC-S.h>
 #include <mps/cuPC_call_prep.h>
 #include <test_data/cupc_test_set.h>
