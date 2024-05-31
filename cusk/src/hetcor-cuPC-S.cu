@@ -64,7 +64,7 @@ void hetcor_skeleton(
             {
                 BLOCKS_PER_GRID = dim3(1, 1, 1);
                 THREADS_PER_BLOCK = dim3(32, 32, 1);
-                cal_Indepl0<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
+                cal_Indepl0_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
                     C_cuda, G_cuda, N_cuda, th, n
                 );
                 CudaCheckError();
@@ -73,7 +73,7 @@ void hetcor_skeleton(
             {
                 BLOCKS_PER_GRID = dim3(ceil(((float)(n)) / 32.0), ceil(((float)(n)) / 32.0), 1);
                 THREADS_PER_BLOCK = dim3(32, 32, 1);
-                cal_Indepl0<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
+                cal_Indepl0_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
                     C_cuda, G_cuda, N_cuda, th, n
                 );
                 CudaCheckError();
@@ -113,7 +113,7 @@ void hetcor_skeleton(
                 fflush(stdout);
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL1, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL1, 1, 1);
-                cal_Indepl1<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
+                cal_Indepl1_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
                     C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th
                 );
                 CudaCheckError();
@@ -124,7 +124,7 @@ void hetcor_skeleton(
                 fflush(stdout);
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL2, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL2, 1, 1);
-                cal_Indepl2<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
+                cal_Indepl2_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
                     C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th
                 );
                 CudaCheckError();
@@ -135,7 +135,7 @@ void hetcor_skeleton(
                 fflush(stdout);
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL3, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL3, 1, 1);
-                cal_Indepl3<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
+                cal_Indepl3_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
                     C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th
                 );
                 CudaCheckError();
@@ -146,7 +146,7 @@ void hetcor_skeleton(
                 fflush(stdout);
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL4, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL4, 1, 1);
-                cal_Indepl4<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
+                cal_Indepl4_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
                     C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th
                 );
                 CudaCheckError();
@@ -158,7 +158,7 @@ void hetcor_skeleton(
 
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL5, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL5, 1, 1);
-                cal_Indepl5<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
+                cal_Indepl5_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
                     C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th
                 );
                 CudaCheckError();
@@ -170,7 +170,7 @@ void hetcor_skeleton(
 
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL6, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL6, 1, 1);
-                cal_Indepl6<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
+                cal_Indepl6_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
                     C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th
                 );
                 CudaCheckError();
@@ -182,7 +182,7 @@ void hetcor_skeleton(
                 fflush(stdout);
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL7, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL7, 1, 1);
-                cal_Indepl7<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
+                cal_Indepl7_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
                     C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th
                 );
                 CudaCheckError();
@@ -193,7 +193,7 @@ void hetcor_skeleton(
                 fflush(stdout);
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL8, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL8, 1, 1);
-                cal_Indepl8<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
+                cal_Indepl8_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
                     C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th
                 );
                 CudaCheckError();
@@ -204,7 +204,7 @@ void hetcor_skeleton(
                 fflush(stdout);
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL9, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL9, 1, 1);
-                cal_Indepl9<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
+                cal_Indepl9_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
                     C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th
                 );
                 CudaCheckError();
@@ -215,7 +215,7 @@ void hetcor_skeleton(
                 fflush(stdout);
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL10, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL10, 1, 1);
-                cal_Indepl10<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
+                cal_Indepl10_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
                     C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th
                 );
                 CudaCheckError();
@@ -226,7 +226,7 @@ void hetcor_skeleton(
                 fflush(stdout);
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL11, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL11, 1, 1);
-                cal_Indepl11<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
+                cal_Indepl11_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
                     C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th
                 );
                 CudaCheckError();
@@ -237,7 +237,7 @@ void hetcor_skeleton(
                 fflush(stdout);
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL12, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL12, 1, 1);
-                cal_Indepl12<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
+                cal_Indepl12_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
                     C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th
                 );
                 CudaCheckError();
@@ -248,7 +248,7 @@ void hetcor_skeleton(
                 fflush(stdout);
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL13, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL13, 1, 1);
-                cal_Indepl13<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
+                cal_Indepl13_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
                     C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th
                 );
                 CudaCheckError();
@@ -259,7 +259,7 @@ void hetcor_skeleton(
                 fflush(stdout);
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL14, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL14, 1, 1);
-                cal_Indepl14<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
+                cal_Indepl14_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
                     C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th
                 );
                 CudaCheckError();
