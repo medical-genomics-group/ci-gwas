@@ -173,3 +173,61 @@ ReducedGCS reduce_gcs(
 
     return res;
 }
+
+ReducedGC reduce_gc(
+    const std::vector<int> &G,
+    const std::vector<float> &C,
+    const std::unordered_set<int> &P,
+    const size_t num_var,
+    const size_t num_phen,
+    const size_t max_level
+)
+{
+    VariableSubsetIndices pix(P);
+    ReducedGC res;
+    res.num_var = P.size();
+    res.num_phen = num_phen;
+    res.max_level = max_level;
+    res.new_to_old_indices = pix.new_to_old_indices();
+    std::vector<int> ordered_ixs = set_to_vec(P);
+
+    for (auto i : ordered_ixs)
+    {
+        for (auto j : ordered_ixs)
+        {
+            res.G.push_back(G[i * num_var + j]);
+            res.C.push_back(C[i * num_var + j]);
+        }
+    }
+
+    return res;
+}
+
+ReducedGC reduce_gc(
+    const std::vector<int> &G,
+    const std::vector<float> &C,
+    const std::unordered_set<int> &P,
+    const size_t num_var,
+    const size_t num_phen,
+    const size_t max_level,
+    const std::vector<int> &index_map
+)
+{
+    VariableSubsetIndices pix(P, index_map);
+    ReducedGC res;
+    res.num_var = P.size();
+    res.num_phen = num_phen;
+    res.max_level = max_level;
+    res.new_to_old_indices = pix.new_to_old_indices();
+    std::vector<int> ordered_ixs = set_to_vec(P);
+
+    for (auto i : ordered_ixs)
+    {
+        for (auto j : ordered_ixs)
+        {
+            res.G.push_back(G[i * num_var + j]);
+            res.C.push_back(C[i * num_var + j]);
+    }
+
+    return res;
+}
