@@ -49,7 +49,6 @@ ReducedGC reduced_gc_cusk(
 {
     int num_var = gc.num_var;
     int start_level = 0;
-    const size_t g_size = gc.num_var * gc.num_var;
     hetcor_skeleton(
         gc.C.data(),
         &num_var,
@@ -57,7 +56,7 @@ ReducedGC reduced_gc_cusk(
         sample_sizes.data(),
         &threshold,
         &start_level,
-        &max_level,
+        &max_level
     );
     std::unordered_set<int> variable_subset =
         subset_variables(gc.G, gc.num_var, gc.num_markers(), max_depth);
@@ -949,7 +948,7 @@ void cuda_skeleton_summary_stats_hetcor(int argc, char *argv[])
     int max_level = std::stoi(argv[8]);
     int max_level_two = std::stoi(argv[9]);
     int depth = std::stoi(argv[10]);
-    int ess_path = argv[11];
+    std::string ess_path = argv[11];
     std::string outdir = (std::string)argv[12];
 
     check_path(mxm_path);
@@ -1069,10 +1068,11 @@ void cuda_skeleton_summary_stats_hetcor(int argc, char *argv[])
     std::cout << "Running cuPC" << std::endl;
 
     // call cuPC
+    int p = num_var;
     const size_t g_size = num_var * num_var;
     std::vector<int> G(g_size, 1);
     int init_level = 0;
-    hetcor_skeleton(sq_corrs.data(), &num_var, G.data(), ess.data(), &th, &init_level, &max_level);
+    hetcor_skeleton(sq_corrs.data(), &p, G.data(), ess.data(), &th, &init_level, &max_level);
 
     std::unordered_set<int> variable_subset = subset_variables(G, num_var, num_markers, depth);
     ReducedGC gc = reduce_gc(G, sq_corrs, variable_subset, num_var, num_phen, max_level);
