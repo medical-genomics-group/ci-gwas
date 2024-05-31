@@ -44,5 +44,3 @@ __global__ void cal_Indepl14_ess(
 __device__ float mean_ess(float *N, int var_ixs[], int l, int n);
 
 extern "C" void hetcor_skeleton(float *C, int *P, int *G, float *N, float *Th, int *l, const int *maxlevel);
-
-#endif /* CUPC_S_H_ */
