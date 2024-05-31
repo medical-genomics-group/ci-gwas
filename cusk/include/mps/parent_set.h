@@ -53,7 +53,7 @@ struct ReducedGCS
 };
 
 /**
- * @brief Removes non-phenotype and non-ancestral nodes from adajcency matrix, corr matrix and
+ * @brief Removes everything but ancestral and phenotype nodes from adajcency matrix, corr matrix and
  * separations sets.
  *
  * @param G         n*n adjacency matrix
@@ -77,6 +77,57 @@ ReducedGCS reduce_gcs(
     const std::vector<int> &G,
     const std::vector<float> &C,
     const std::vector<int> &S,
+    const std::unordered_set<int> &P,
+    const size_t num_var,
+    const size_t num_phen,
+    const size_t max_level,
+    const std::vector<int> &index_map
+);
+
+struct ReducedGC
+{
+    size_t num_var;
+    size_t num_phen;
+    size_t max_level;
+    std::vector<int> new_to_old_indices;
+    std::vector<int> G;
+    std::vector<float> C;
+
+    size_t num_markers() { return num_var - num_phen; }
+
+    void to_file(std::string base)
+    {
+        std::ofstream fout;
+        fout.open(base + ".mdim", std::ios::out);
+        fout << num_var << "\t" << num_phen << "\t" << max_level << std::endl;
+        fout.close();
+        write_ints_to_binary(new_to_old_indices.data(), new_to_old_indices.size(), base + ".ixs");
+        write_ints_to_binary(G.data(), G.size(), base + ".adj");
+        write_floats_to_binary(C.data(), C.size(), base + ".corr");
+    }
+};
+
+/**
+ * @brief Removes everything but ancestral and phenotype nodes from adajcency matrix and corr matrix
+ *
+ * @param G         n*n adjacency matrix
+ * @param C         n*n correlation matrix
+ * @param P         set of indices of nodes to be retained
+ * @param num_var   number of variables in G, C, S
+ * @param max_level max size of a separation set
+ */
+ReducedGC reduce_gc(
+    const std::vector<int> &G,
+    const std::vector<float> &C,
+    const std::unordered_set<int> &P,
+    const size_t num_var,
+    const size_t num_phen,
+    const size_t max_level
+);
+
+ReducedGC reduce_gc(
+    const std::vector<int> &G,
+    const std::vector<float> &C,
     const std::unordered_set<int> &P,
     const size_t num_var,
     const size_t num_phen,

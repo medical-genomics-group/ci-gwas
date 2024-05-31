@@ -4,6 +4,7 @@
 #include <mps/corr_host.h>
 #include <mps/corr_kernels.h>
 #include <mps/cuPC-S.h>
+#include <mps/hetcor-cuPC-S.h>
 #include <mps/cuPC_call_prep.h>
 #include <mps/io.h>
 #include <mps/marker_summary_stats.h>
@@ -40,6 +41,28 @@ void check_nargs(const int argc, const int nargs, const std::string usage)
         std::cout << usage << std::endl;
         exit(1);
     }
+}
+
+ReducedGC reduced_gc_cusk(
+    ReducedGC gc, std::vector<float> &sample_sizes, float threshold, int max_depth, int max_level
+)
+{
+    int num_var = gc.num_var;
+    int start_level = 0;
+    hetcor_skeleton(
+        gc.C.data(),
+        &num_var,
+        gc.G.data(),
+        sample_sizes.data(),
+        &threshold,
+        &start_level,
+        &max_level
+    );
+    std::unordered_set<int> variable_subset =
+        subset_variables(gc.G, gc.num_var, gc.num_markers(), max_depth);
+    return reduce_gc(
+        gc.G, gc.C, variable_subset, gc.num_var, gc.num_phen, ML, gc.new_to_old_indices
+    );
 }
 
 ReducedGCS reduced_gcs_cusk(
@@ -888,6 +911,175 @@ void cuda_skeleton_summary_stats(int argc, char *argv[])
     gcs = reduced_gcs_cusk(gcs, Th, depth, max_level_two);
     std::cout << "Retained " << gcs.num_markers() << " markers" << std::endl;
     gcs.to_file(make_path(outdir, block.to_file_string(), ""));
+}
+
+
+const std::string CUSKSS_HET_USAGE = R"(
+Run cuda-skeleton on a block of markers and traits with pre-computed heterogeneous correlations.
+
+usage: mps cuskss <mxm> <mxp> <pxp> <block-ix> <.blocks> <alpha> <max-level> <depth> <num-samples> <outdir>
+
+arguments:
+    mxm                     correlations between markers in block. Binary of floats, lower triangular, with diagonal, row major.
+    mxp                     correlations between markers in all blocks and all traits. Text format, rectangular.
+    pxp                     correlations between all traits. Text format, rectangular, only upper triangle is used.
+    block-ix                0-based index of the marker block in the .blocks file
+    .blocks                 file with genomic block definitions
+    alpha                   significance level
+    max-level-stage-one     maximal size of seperation sets in cuPC round one ( <= 14)
+    max-level-stage-two     maximal size of seperation sets in cuPC round two ( <= 14)
+    depth                   max depth at which marker variables are kept as ancestors
+    num-samples             number of samples used for computing correlations (square matrix of floats, num var * num_var entries, binary)
+    outdir                  outdir
+)";
+
+const int CUSKSS_HET_NARGS = 13;
+
+void cuda_skeleton_summary_stats_hetcor(int argc, char *argv[])
+{
+    check_nargs(argc, CUSKSS_HET_NARGS, CUSKSS_HET_USAGE);
+
+    std::string mxm_path = argv[2];
+    std::string mxp_path = argv[3];
+    std::string pxp_path = argv[4];
+    int block_ix = std::stoi(argv[5]);
+    std::string block_path = argv[6];
+    float alpha = std::stof(argv[7]);
+    int max_level = std::stoi(argv[8]);
+    int max_level_two = std::stoi(argv[9]);
+    int depth = std::stoi(argv[10]);
+    std::string ess_path = argv[11];
+    std::string outdir = (std::string)argv[12];
+
+    check_path(mxm_path);
+    check_path(mxp_path);
+    check_path(pxp_path);
+    check_path(ess_path);
+    check_path(block_path);
+    check_path(outdir);
+
+    // load everything
+    std::cout << "Loading input files" << std::endl;
+    std::cout << "Loading blocks" << std::endl;
+    std::vector<MarkerBlock> blocks = read_blocks_from_file(block_path);
+    MarkerBlock block = blocks[block_ix];
+    std::cout << "Loading pxp" << std::endl;
+    TraitSummaryStats pxp = TraitSummaryStats(pxp_path);
+    std::cout << "Loading mxm" << std::endl;
+    MarkerSummaryStats mxm = MarkerSummaryStats(mxm_path);
+    std::cout << "Loading mxp" << std::endl;
+    MarkerTraitSummaryStats mxp = MarkerTraitSummaryStats(mxp_path, block);
+    std::cout << "Loading ess matrix" << std::endl;
+    std::vector<float> ess = read_floats_from_binary(ess_path);
+
+    // check if all dims check out
+    if (pxp.get_num_phen() != mxp.get_num_phen())
+    {
+        std::cout << "Numbers of traits seem to differ between pxp and mxp" << std::endl;
+        exit(1);
+    }
+    if (mxm.get_num_markers() != mxp.get_num_markers())
+    {
+        std::cout << "Numbers of markers seem to differ between mxm and mxp" << std::endl;
+        std::cout << "mxp: " << mxp.get_num_markers() << " x " << mxp.get_num_phen() << std::endl;
+        std::cout << "mxm: " << mxm.get_num_markers() << " x " << mxm.get_num_markers()
+                  << std::endl;
+        exit(1);
+    }
+    if (ess.size() != (pxp.get_num_phen() + mxm.get_num_markers())) {
+        std::cout << "Numbers of variables seem to differ between sample size matrix and pxp + mxm" << std::endl;
+        exit(1);
+    }
+
+    // dims ok, now merge them all into one matrix.
+
+    std::cout << "Merging correlations into single matrix" << std::endl;
+
+    // make n2 matrix to please cuPC
+    size_t num_phen = pxp.get_num_phen();
+    size_t num_markers = mxm.get_num_markers();
+    size_t num_var = num_markers + num_phen;
+    std::vector<float> sq_corrs(num_var * num_var, 1.0);
+    std::vector<float> marker_corr = mxm.get_corrs();
+
+    size_t sq_row_ix = 0;
+    size_t sq_col_ix = 0;
+    for (size_t i = 0; i < marker_corr.size(); ++i)
+    {
+        sq_corrs[num_var * sq_row_ix + sq_col_ix] = (float)marker_corr[i];
+        if (sq_col_ix == num_markers - 1)
+        {
+            ++sq_row_ix;
+            // marker_corr is square
+            sq_col_ix = 0;
+        }
+        else
+        {
+            ++sq_col_ix;
+        }
+    }
+
+    std::vector<float> marker_phen_corr = mxp.get_corrs();
+    sq_row_ix = 0;
+    sq_col_ix = num_markers;
+    for (size_t i = 0; i < marker_phen_corr.size(); ++i)
+    {
+        sq_corrs[num_var * sq_row_ix + sq_col_ix] = (float)marker_phen_corr[i];
+        sq_corrs[num_var * sq_col_ix + sq_row_ix] = (float)marker_phen_corr[i];
+        if (sq_col_ix == (num_var - 1))
+        {
+            sq_col_ix = num_markers;
+            ++sq_row_ix;
+        }
+        else
+        {
+            ++sq_col_ix;
+        }
+    }
+
+    std::vector<float> phen_corr = pxp.get_corrs();
+    sq_row_ix = num_markers;
+    sq_col_ix = num_markers;
+    for (size_t i = 0; i < phen_corr.size(); ++i)
+    {
+        sq_corrs[num_var * sq_row_ix + sq_col_ix] = (float)phen_corr[i];
+        if (sq_col_ix == (num_var - 1))
+        {
+            ++sq_row_ix;
+            sq_col_ix = num_markers;
+        }
+        else
+        {
+            ++sq_col_ix;
+        }
+    }
+
+    if (WRITE_FULL_CORRMATS)
+    {
+        write_floats_to_binary(
+            sq_corrs.data(),
+            sq_corrs.size(),
+            make_path(outdir, block.to_file_string(), ".all_corrs")
+        );
+    }
+
+    float th = hetcor_threshold(alpha);
+
+    std::cout << "Running cuPC" << std::endl;
+
+    // call cuPC
+    int p = num_var;
+    const size_t g_size = num_var * num_var;
+    std::vector<int> G(g_size, 1);
+    int init_level = 0;
+    hetcor_skeleton(sq_corrs.data(), &p, G.data(), ess.data(), &th, &init_level, &max_level);
+
+    std::unordered_set<int> variable_subset = subset_variables(G, num_var, num_markers, depth);
+    ReducedGC gc = reduce_gc(G, sq_corrs, variable_subset, num_var, num_phen, max_level);
+    std::cout << "Starting second cusk stage" << std::endl;
+    gc = reduced_gc_cusk(gc, ess, th, depth, max_level_two);
+    std::cout << "Retained " << gc.num_markers() << " markers" << std::endl;
+    gc.to_file(make_path(outdir, block.to_file_string(), ""));
 }
 
 const std::string CUSK_USAGE = R"(
@@ -2161,6 +2353,10 @@ auto main(int argc, char *argv[]) -> int
     else if (cmd == "cuskss")
     {
         cuda_skeleton_summary_stats(argc, argv);
+    }
+    else if (cmd == "cuskss-het")
+    {
+        cuda_skeleton_summary_stats_hetcor(argc, argv);
     }
     else if (cmd == "cuskss-merged")
     {

@@ -21,3 +21,8 @@ std::vector<float> threshold_array(const int n, const float alpha)
     }
     return thr;
 }
+
+float hetcor_threshold(const float alpha)
+{
+    return abs(std_normal_qnorm(0.5 * alpha));
+}
