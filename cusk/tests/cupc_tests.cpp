@@ -74,11 +74,11 @@ TEST(hetcor_cuPC, expected_skeleton_n10)
     int l = 0;
     hetcor_skeleton(C_N10.data(), &p, G.data(), N.data(), &threshold, &l, &max_level);
 
-    // printf("ix | obs | exp \n");
-    // for (size_t i = 0; i < CUPCT1_ADJSIZE; ++i)
-    // {
-    //     printf("%i | %i | %i \n", i, G[i], cupct1_g[i]);
-    // }
+    printf("ix | obs | exp \n");
+    for (size_t i = 0; i < CUPCT1_ADJSIZE; ++i)
+    {
+        printf("%i | %i | %i \n", i, G[i], cupct1_g[i]);
+    }
 
     for (size_t i = 0; i < p * p; ++i)
     {
