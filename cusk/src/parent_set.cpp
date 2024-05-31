@@ -227,6 +227,7 @@ ReducedGC reduce_gc(
         {
             res.G.push_back(G[i * num_var + j]);
             res.C.push_back(C[i * num_var + j]);
+        }
     }
 
     return res;
