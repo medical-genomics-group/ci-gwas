@@ -69,7 +69,6 @@ TEST(hetcor_cuPC, expected_skeleton_n10)
     int p = N_N10;
     float threshold = hetcor_threshold(ALPHA_N10);
     std::vector<float> N(p * p, SAMPLE_SIZE_N10);
-    const size_t sepset_size = p * p * ML;
     const size_t g_size = p * p;
     std::vector<int> G(g_size, 1);
     int l = 0;
