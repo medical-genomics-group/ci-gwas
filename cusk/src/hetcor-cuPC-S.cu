@@ -7,6 +7,7 @@
 
 #include <iostream>
 
+
 /** @brief Computes the skeleton using hetcor correlations and estimates of effective sample sizes.
  *
  * @param[in]  C  Pointer to full, square, correlation matrix
@@ -65,7 +66,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(1, 1, 1);
                 THREADS_PER_BLOCK = dim3(32, 32, 1);
                 cal_Indepl0_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
-                    C_cuda, G_cuda, N_cuda, th, n
+                    C_cuda, G_cuda, N_cuda, n, th
                 );
                 CudaCheckError();
             }
@@ -74,7 +75,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(ceil(((float)(n)) / 32.0), ceil(((float)(n)) / 32.0), 1);
                 THREADS_PER_BLOCK = dim3(32, 32, 1);
                 cal_Indepl0_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
-                    C_cuda, G_cuda, N_cuda, th, n
+                    C_cuda, G_cuda, N_cuda, n, th
                 );
                 CudaCheckError();
             }
@@ -280,7 +281,7 @@ void hetcor_skeleton(
     HANDLE_ERROR(cudaFree(mutex_cuda));
 }  // Skeleton
 
-__global__ void cal_Indepl0_ess(float *C, int *G, float *N, float th, int n)
+__global__ void cal_Indepl0_ess(float *C, int *G, float *N, int n, float th)
 {
     int row = blockDim.x * bx + tx;
     int col = blockDim.y * by + ty;
@@ -288,7 +289,7 @@ __global__ void cal_Indepl0_ess(float *C, int *G, float *N, float th, int n)
     {
         float res = C[row * n + col];
         res = abs(0.5 * log(abs((1 + res) / (1 - res))));
-        float loc_th = th / sqrt(N[row * n + col] - 3);
+        float loc_th = th / sqrt(N[row * n + col] - 3.0);
         if (res < loc_th)
         {
             G[row * n + col] = 0;
@@ -308,7 +309,7 @@ __global__ void cal_Indepl0_ess(float *C, int *G, float *N, float th, int n)
 }
 
 __global__ void cal_Indepl1_ess(
-    float *C, int *G, float *N, int *GPrime, int *mutex, float th, int n
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
 )
 {
     float loc_th;
@@ -2916,13 +2917,16 @@ __device__ float mean_ess(float *N, int var_ixs[], int l, int n)
     float s = 0.0;
     int ix_a;
     int ix_b;
+    int num_s = 0;
     for (int i = 0; i < l; i++)
     {
         ix_a = var_ixs[i];
         for (int j = 0; j < i; j++) {
             ix_b = var_ixs[j];
             s += N[ix_a * n + ix_b];
+            num_s += 1;
         }
     }
-    return s / (float)l;
+    float res = s / (float)num_s;
+    return res;
 }

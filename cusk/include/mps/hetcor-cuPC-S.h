@@ -1,6 +1,6 @@
-__global__ void cal_Indepl0_ess(float *C, int *G, float *N, float th, int n);
+__global__ void cal_Indepl0_ess(float *C, int *G, float *N, int n, float th);
 __global__ void cal_Indepl1_ess(
-    float *C, int *G, float *N, int *GPrime, int *mutex, float th, int n
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
 );
 __global__ void cal_Indepl3_ess(
     float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th

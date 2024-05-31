@@ -68,17 +68,17 @@ TEST(hetcor_cuPC, expected_skeleton_n10)
     int max_level = 14;
     int p = N_N10;
     float threshold = hetcor_threshold(ALPHA_N10);
-    std::vector<float> N(p * p, SAMPLE_SIZE_N10);
+    std::vector<float> N(p * p, (float)SAMPLE_SIZE_N10);
     const size_t g_size = p * p;
     std::vector<int> G(g_size, 1);
     int l = 0;
     hetcor_skeleton(C_N10.data(), &p, G.data(), N.data(), &threshold, &l, &max_level);
 
-    printf("ix | obs | exp \n");
-    for (size_t i = 0; i < CUPCT1_ADJSIZE; ++i)
-    {
-        printf("%i | %i | %i \n", i, G[i], cupct1_g[i]);
-    }
+    // printf("ix | obs | exp \n");
+    // for (size_t i = 0; i < g_size; ++i)
+    // {
+    //     printf("%i | %i | %i \n", i, G[i], A_N10[i]);
+    // }
 
     for (size_t i = 0; i < p * p; ++i)
     {
