@@ -4,7 +4,7 @@ import argparse
 import os
 import sys
 import subprocess
-from cusk_postporcessing.check_mr_assumptions import check_ivs
+from cusk_postprocessing.check_mr_assumptions import check_ivs
 from cusk_postprocessing.sepselect import sepselect_merged
 from cusk_postprocessing.merge_blocks import (
     merge_block_outputs,
@@ -389,7 +389,7 @@ def main():
         type=str,
         help="output directory of cusk or cuskss",
     )
-    cuskss_merged_parser.add_argument(
+    iv_check_parser.add_argument(
         "alpha",
         type=TypeCheck(float, "alpha", 0.0, 1.0),
         help="significance level for conditional independence tests",
@@ -408,11 +408,11 @@ def main():
         "mvivw",
         help="Run multivariable inverse-variance weighted mendelian randomization between all adjacent traits, using cusk-identified markers as intrumental variables",
     )
-   sepselect_parser.add_argument(
-        "cusk_result_stem",
-        metavar="cusk-result-stem",
-        help="outdir + stem of cusk results",
+    mvivw_parser.add_argument(
+        "cusk_output_dir",
+        metavar="cusk-output-dir",
         type=str,
+        help="output directory of cusk or cuskss",
     )
     mvivw_parser.add_argument(
         "num_samples",
