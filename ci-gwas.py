@@ -4,6 +4,7 @@ import argparse
 import os
 import sys
 import subprocess
+from cusk_postporcessing.check_mr_assumptions import check_ivs
 from cusk_postprocessing.sepselect import sepselect_merged
 from cusk_postprocessing.merge_blocks import (
     merge_block_outputs,
@@ -377,16 +378,41 @@ def main():
     )
     merge_blocks_parser.set_defaults(func=merge_blocks)
 
+    # iv-check
+    iv_check_parser = subparsers.add_parser(
+        "iv-check",
+        help="Check MR assumptions regarding instrument variables and exposures in cusk output graph"
+    )
+    iv_check_parser.add_argument(
+        "cusk_output_dir",
+        metavar="cusk-output-dir",
+        type=str,
+        help="output directory of cusk or cuskss",
+    )
+    cuskss_merged_parser.add_argument(
+        "alpha",
+        type=TypeCheck(float, "alpha", 0.0, 1.0),
+        help="significance level for conditional independence tests",
+        default=10**-4,
+    )
+    iv_check_parser.add_argument(
+        "num_samples",
+        metavar="num-samples",
+        type=TypeCheck(int, "num-samples", 1, None),
+        help="number of samples used for computing correlations",
+    )
+    iv_check_parser.set_defaults(func=iv_check)
+
     # mvivw
     mvivw_parser = subparsers.add_parser(
         "mvivw",
         help="Run multivariable inverse-variance weighted mendelian randomization between all adjacent traits, using cusk-identified markers as intrumental variables",
     )
-    mvivw_parser.add_argument(
-        "cusk_output_dir",
-        metavar="cusk-output-dir",
+   sepselect_parser.add_argument(
+        "cusk_result_stem",
+        metavar="cusk-result-stem",
+        help="outdir + stem of cusk results",
         type=str,
-        help="output directory of cusk or cuskss",
     )
     mvivw_parser.add_argument(
         "num_samples",
@@ -600,6 +626,14 @@ def cuskss_merged(args):
     reformat_cuskss_merged_output(cusk_dir=args.outdir).write_mm(
         basepath=f"{args.outdir}/cuskss_merged"
     )
+
+
+def iv_check(args):
+    iv_df = check_ivs(
+        result_basename=args.cusk_result_stem,
+        sample_size=args.sample_size,
+        alpha=args.alpha)
+    iv_df.to_csv(f"{args.cusk_result_stem}_filtered_ivs.csv", index=False)
 
 
 def merge_blocks(args):
