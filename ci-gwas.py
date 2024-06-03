@@ -220,6 +220,78 @@ def main():
     )
     cuskss_parser.set_defaults(func=cuskss)
 
+    # cuskss-het
+    cuskss_het_parser = subparsers.add_parser(
+        "cuskss-het",
+        help="Infer skeleton with markers and traits as nodes, using heterogeneous correlations and sample sizes (requires GPU)",
+    )
+    cuskss_het_parser.add_argument(
+        "mxm",
+        type=str,
+        help="Correlations between markers in block. Binary of floats, lower triangular, with diagonal, row major.",
+    )
+    cuskss_het_parser.add_argument(
+        "mxp",
+        type=str,
+        help="Correlations between markers in all blocks and all traits. Textfile, whitespace separated, with columns: [chr, snp, ref, ...<trait names>], rectangular.",
+    )
+    cuskss_het_parser.add_argument(
+        "pxp",
+        type=str,
+        help="Correlations between all traits. Textfile, whitespace separated, rectangular, only upper triangle is used. With trait names as column and row names. Order of traits has to be same as in the mxp file.",
+    )
+    cuskss_het_parser.add_argument(
+        "block_index",
+        metavar="block-index",
+        type=TypeCheck(int, "block-index", 0, None),
+        help="0-based index of the block to run cusk on",
+    )
+    cuskss_het_parser.add_argument(
+        "blocks",
+        help="file with genomic block definitions (output of ci-gwas block)",
+        type=str,
+    )
+    cuskss_het_parser.add_argument(
+        "alpha",
+        type=TypeCheck(float, "alpha", 0.0, 1.0),
+        help="significance level for conditional independence tests",
+        default=10**-4,
+    )
+    cuskss_het_parser.add_argument(
+        "max_level",
+        metavar="max-level",
+        type=TypeCheck(int, "max-level", 1, 14),
+        help="maximal size of separation sets in the first round of cuPC (<= 14)",
+        default=3,
+    )
+    cuskss_het_parser.add_argument(
+        "max_level_two",
+        metavar="max-level-two",
+        type=TypeCheck(int, "max-level", 1, 14),
+        help="maximal size of separation sets in the second round of cuPC (<= 14)",
+        default=14,
+    )
+    cuskss_het_parser.add_argument(
+        "max_depth",
+        metavar="max-depth",
+        type=TypeCheck(int, "max-depth", 1, None),
+        help="max depth at which marker variables are kept as ancestors (>= 1)",
+        default=1,
+    )
+    cuskss_het_parser.add_argument(
+        "num_samples",
+        metavar="num-samples",
+        type=str,
+        help="effective sample sizes (num_var x num_var matrix of floats in binary format)",
+    )
+    cuskss_het_parser.add_argument(
+        "outdir",
+        type=str,
+        help="directory for output",
+        default="./",
+    )
+    cuskss_het_parser.set_defaults(func=cuskss_het)
+
     # cuskss-merged
     cuskss_merged_parser = subparsers.add_parser(
         "cuskss-merged",
@@ -469,6 +541,27 @@ def cuskss(args):
         [
             MPS_PATH,
             "cuskss",
+            args.mxm,
+            args.mxp,
+            args.pxp,
+            str(args.block_index),
+            args.blocks,
+            str(args.alpha),
+            str(args.max_level),
+            str(args.max_level_two),
+            str(args.max_depth),
+            str(args.num_samples),
+            args.outdir,
+        ],
+        check=True,
+    )
+
+
+def cuskss_het(args):
+    subprocess.run(
+        [
+            MPS_PATH,
+            "cuskss-het",
             args.mxm,
             args.mxp,
             args.pxp,

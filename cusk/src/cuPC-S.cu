@@ -34,6 +34,30 @@ void print_degree_distribution(int *GPrime_cuda, int n)
     fflush(stdout);
 }
 
+__global__ void print_adj_mat(int *G_cuda, int n)
+{
+    printf("adj_mat:\n");
+    for (int i = 0; i < n; i++) {
+        printf("[");
+        for (int j = 0; j < n; j++) {
+            printf("%i, ", G_cuda[i * n + j]);
+        }
+        printf("]\n");
+    }
+}
+
+__device__ void print_adj_mat_device(int *G_cuda, int n)
+{
+    printf("adj_mat:\n");
+    for (int i = 0; i < n; i++) {
+        printf("[");
+        for (int j = 0; j < n; j++) {
+            printf("%i, ", G_cuda[i * n + j]);
+        }
+        printf("]\n");
+    }
+}
+
 void Skeleton(
     float *C, int *P, int *G, float *Th, int *l, const int *maxlevel, float *pMax, int *SepSet
 )

@@ -51,6 +51,10 @@
 #define PCORR_MAX_DEGREE 100
 
 //==========================> Function Declaration <==========================
+__global__ void print_adj_mat(int *G_cuda, int n);
+__device__ void print_adj_mat_device(int *G_cuda, int n);
+void print_degree_distribution(int *GPrime_cuda, int n);
+
 __global__ void cal_Indepl0(float *C, int *G, float th, float *pMax, int n);
 __global__ void cal_Indepl1(
     float *C, int *G, int *GPrime, int *mutex, int *Sepset, float *pMax, float th, int n
