@@ -237,6 +237,17 @@ def main():
         help="Correlations between all traits. Textfile, whitespace separated, rectangular, only upper triangle is used. With trait names as column and row names. Order of traits has to be same as in the mxp file.",
     )
     cuskss_het_parser.add_argument(
+        "mxp_se",
+        type=str,
+        help="Standard errors of the correlations between markers in all blocks and all traits. Textfile, whitespace separated, with columns: [chr, snp, ref, ...<trait names>], rectangular.",
+    )
+    cuskss_het_parser.add_argument(
+        "num_samples",
+        metavar="num-samples",
+        type=float,
+        help="sample size for calculation of pearson correlations",
+    )
+    cuskss_het_parser.add_argument(
         "block_index",
         metavar="block-index",
         type=TypeCheck(int, "block-index", 0, None),
@@ -273,12 +284,6 @@ def main():
         type=TypeCheck(int, "max-depth", 1, None),
         help="max depth at which marker variables are kept as ancestors (>= 1)",
         default=1,
-    )
-    cuskss_het_parser.add_argument(
-        "num_samples",
-        metavar="num-samples",
-        type=str,
-        help="effective sample sizes (num_var x num_var matrix of floats in binary format)",
     )
     cuskss_het_parser.add_argument(
         "outdir",
@@ -537,13 +542,14 @@ def cuskss_het(args):
             args.mxm,
             args.mxp,
             args.pxp,
+            args.mxp_se,
+            str(args.num_samples),
             str(args.block_index),
             args.blocks,
             str(args.alpha),
             str(args.max_level),
             str(args.max_level_two),
             str(args.max_depth),
-            str(args.num_samples),
             args.outdir,
         ],
         check=True,
