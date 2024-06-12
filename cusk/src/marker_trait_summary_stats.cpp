@@ -141,7 +141,6 @@ MarkerTraitSummaryStats::MarkerTraitSummaryStats(
         line_num += 1;
     }
 
-    std::string line;
     std::ifstream se_file(se_path);
 
     // read header
