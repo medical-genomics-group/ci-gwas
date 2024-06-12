@@ -14,13 +14,14 @@ from cusk_postprocessing.merge_blocks import (
 script_dir = os.path.dirname(os.path.realpath(__file__))
 MPS_PATH = f"{script_dir}/cusk/build/apps/mps"
 MVIVW_PATH = f"{script_dir}/mvivw/cig_mvivw.R"
+MVIVW_FLT_PATH = f"{script_dir}/mvivw/cig_mvivw_filtered.R"
 RFCI_PATH = f"{script_dir}/srfci/CIGWAS_est_PAG.R"
 DAVS_PATH = f"{script_dir}/sdavs/CIGWAS_est_ACE.R"
 
 
 class MyParser(argparse.ArgumentParser):
     def error(self, message):
-        sys.stderr.write("error: %s\n" % message)
+        sys.stderr.write(f"error: {message}\n")
         self.print_help()
         sys.exit(2)
 
@@ -384,10 +385,10 @@ def main():
         help="Check MR assumptions regarding instrument variables and exposures in cusk output graph"
     )
     iv_check_parser.add_argument(
-        "cusk_output_dir",
-        metavar="cusk-output-dir",
+        "cusk_result_stem",
+        metavar="cusk-result-stem",
         type=str,
-        help="output directory of cusk or cuskss",
+        help="directory + stem of cusk output files",
     )
     iv_check_parser.add_argument(
         "alpha",
@@ -401,7 +402,53 @@ def main():
         type=TypeCheck(int, "num-samples", 1, None),
         help="number of samples used for computing correlations",
     )
+    iv_check_parser.add_argument(
+        '-r',
+        action='store_true',
+        help="relax local faithfulness requirement: marker needs to be independent of outcome given the exposures, but not necessarily be dependent on the outcome given the empty set"
+    )
+    iv_check_parser.add_argument(
+        '-c',
+        action='store_true',
+        help="filter exposures by checking evidence for reverse causality"
+    )
     iv_check_parser.set_defaults(func=iv_check)
+
+    # mvivw-filtered
+    mvivw_filtered_parser = subparsers.add_parser(
+        "mvivw-filtered",
+        help=("Run multivariable inverse-variance weighted mendelian randomization between all adjacent traits, using cusk-identified markers as intrumental variables."
+              "Check that MR assumptions for IVs anad exposures hold.")
+    )
+    mvivw_filtered_parser.add_argument(
+        "cusk_output_dir",
+        metavar="cusk-output-dir",
+        type=str,
+        help="output directory of cusk or cuskss",
+    )
+    mvivw_filtered_parser.add_argument(
+        "alpha",
+        type=TypeCheck(float, "alpha", 0.0, 1.0),
+        help="significance level for conditional independence tests",
+        default=10**-4,
+    )
+    mvivw_filtered_parser.add_argument(
+        "num_samples",
+        metavar="num-samples",
+        type=TypeCheck(int, "num-samples", 1, None),
+        help="number of samples used for computing correlations",
+    )
+    mvivw_filtered_parser.add_argument(
+        '-r',
+        action='store_true',
+        help="relax local faithfulness requirement: marker needs to be independent of outcome given the exposures, but not necessarily be dependent on the outcome given the empty set"
+    )
+    mvivw_filtered_parser.add_argument(
+        '-c',
+        action='store_true',
+        help="filter exposures by checking evidence for reverse causality"
+    )
+    mvivw_filtered_parser.set_defaults(func=run_mvivw_filtered)
 
     # mvivw
     mvivw_parser = subparsers.add_parser(
@@ -631,9 +678,34 @@ def cuskss_merged(args):
 def iv_check(args):
     iv_df = check_ivs(
         result_basename=args.cusk_result_stem,
-        sample_size=args.sample_size,
-        alpha=args.alpha)
+        sample_size=args.num_samples,
+        alpha=args.alpha,
+        relaxed_local_faithfulness=args.r,
+        check_reverse_causality=args.c
+)
     iv_df.to_csv(f"{args.cusk_result_stem}_filtered_ivs.csv", index=False)
+
+
+def run_mvivw_filtered(args):
+    args.cusk_result_stem = f"{args.cusk_output_dir}/cuskss_merged"
+    iv_check(args)
+    iv_path = f"{args.cusk_result_stem}_filtered_ivs.csv"
+    filename_mod = ""
+    if args.r:
+        filename_mod += "_relaxed"
+    if args.c:
+        filename_mod += "_no_rev_cause"
+    output_path = f"{args.cusk_output_dir}/mvivw_filtered{filename_mod}_results.tsv"
+    subprocess.run(
+        [
+            MVIVW_FLT_PATH,
+            args.cusk_output_dir,
+            str(args.num_samples),
+            iv_path,
+            output_path,
+        ],
+        check=True,
+    )
 
 
 def merge_blocks(args):
