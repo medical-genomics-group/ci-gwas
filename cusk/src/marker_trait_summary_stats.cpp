@@ -162,7 +162,7 @@ MarkerTraitSummaryStats::MarkerTraitSummaryStats(
     num_markers = 0;
     sample_sizes = {};
 
-    size_t line_num = 0;
+    line_num = 0;
     while (std::getline(se_file, line))
     {
         if (line_num > block.get_last_marker_global_ix())
