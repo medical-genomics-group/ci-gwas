@@ -34,7 +34,13 @@ def _load_mdim(basepath: str):
         fields = fin.readline().strip().split("\t")
     return [int(f) for f in fields]
 
-def check_ivs(result_basename: str, sample_size: int, alpha: float) -> pd.DataFrame:
+def check_ivs(
+    result_basename: str,
+    sample_size: int,
+    alpha: float,
+    relaxed_local_faithfulness=False,
+    check_reverse_causality=False,
+) -> pd.DataFrame:
     # get correlation files
     adj = mmread(f"{result_basename}_sam.mtx").toarray()
     pearson_corr = mmread(f"{result_basename}_scm.mtx").toarray()
@@ -47,16 +53,17 @@ def check_ivs(result_basename: str, sample_size: int, alpha: float) -> pd.DataFr
     # where do we have evidence for reverse causation?
     # outcome -> exposures
     rev_cause = {trait_ix: set() for trait_ix in trait_ixs}
-    for outcome in trait_ixs:
-        for exposure in trait_ixs:
-            if exposure == outcome:
-                continue
-            for snp in iv_candidates[outcome]:
-                marginal_dep = not _indep(snp, exposure, [], pearson_corr, sample_size, alpha)
-                cond_indep = _indep(snp, exposure, [outcome], pearson_corr, sample_size, alpha)
-                if marginal_dep and cond_indep:
-                    rev_cause[outcome].add(exposure)
-    
+    if check_reverse_causality:
+        for outcome in trait_ixs:
+            for exposure in trait_ixs:
+                if exposure == outcome:
+                    continue
+                for snp in iv_candidates[outcome]:
+                    marginal_dep = not _indep(snp, exposure, [], pearson_corr, sample_size, alpha)
+                    cond_indep = _indep(snp, exposure, [outcome], pearson_corr, sample_size, alpha)
+                    if marginal_dep and cond_indep:
+                        rev_cause[outcome].add(exposure)
+
     trait_ixs_set = set(trait_ixs)
     valid_exposures = {trait_ix: trait_ixs_set - (rev_cause[trait_ix] | set([trait_ix])) for trait_ix in trait_ixs}
 
@@ -65,11 +72,15 @@ def check_ivs(result_basename: str, sample_size: int, alpha: float) -> pd.DataFr
     for outcome in trait_ixs:
         for exposure in valid_exposures[outcome]:
             for snp in iv_candidates[exposure]:
-                marginal_dep = not _indep(snp, outcome, [], pearson_corr, sample_size, alpha)
+                if relaxed_local_faithfulness:
+                    # by assumption
+                    marginal_dep = True
+                else:
+                    marginal_dep = not _indep(snp, outcome, [], pearson_corr, sample_size, alpha)
                 cond_indep = _indep(snp, outcome, list(valid_exposures[outcome]), pearson_corr, sample_size, alpha)
                 if cond_indep and marginal_dep:
                     iv_snps[(exposure, outcome)].add(snp)
-    
+
     rows = []
     for (e_ix, o_ix), ivs in iv_snps.items():
         for snp_ix in ivs:
@@ -79,5 +90,5 @@ def check_ivs(result_basename: str, sample_size: int, alpha: float) -> pd.DataFr
                 "Outcome": o_ix + 1,
                 "IV": snp_ix + 1 - num_traits,
             })
-    
+
     return pd.DataFrame(rows)

@@ -10,7 +10,6 @@ output_file = args[4]
 
 iv_df = read.csv(iv_df_path)
 
-merged_blocks_adj = sprintf("%s/merged_blocks_sam.mtx", cusk_output_path)
 corr_path = sprintf("%s/cuskss_merged_scm.mtx", cusk_output_path)
 adj_path = sprintf("%s/cuskss_merged_sam.mtx", cusk_output_path)
 mdim_path = sprintf("%s/cuskss_merged.mdim", cusk_output_path)
@@ -21,10 +20,9 @@ num_var = mdim[1, 1]
 num_snp = num_var - num_trait
 corrs = Matrix::readMM(corr_path)
 adj = Matrix::readMM(adj_path)
-mb_adj = Matrix::readMM(merged_blocks_adj)
 
 full_ld_mat = data.matrix(corrs[(num_trait + 1):num_var, (num_trait + 1):num_var])
-pxp_adj = mb_adj[1:num_trait, 1:num_trait]
+pxp_adj = adj[1:num_trait, 1:num_trait]
 mxp_adj = data.matrix(t(adj[1:num_trait, (num_trait+1):num_var]))
 B = data.matrix(t(corrs[1:num_trait, (num_trait+1):num_var]))
 SE = (1 - B * B) / sqrt(num_samples - 2)
@@ -52,7 +50,18 @@ for (outcome_ix in 1:num_trait) {
     sufficient_ivs = dim(bx)[1] > dim(bx)[2]
     if ((length(exposures) > 0) && (sufficient_ivs)) {
         input = MendelianRandomization::mr_mvinput(bx=bx, bxse=bxse, by=by, byse=byse)
-        res = MendelianRandomization::mr_mvivw(input, robust=TRUE)
+        # res = MendelianRandomization::mr_mvivw(input, robust=TRUE)
+        res = tryCatch(
+            MendelianRandomization::mr_mvivw(input, robust=TRUE),
+            warning = function(w) {
+                print("Got a warning!")
+                print(w)
+                print(outcome_ix)
+                res = MendelianRandomization::mr_mvivw(input, robust=TRUE)
+                print(res)
+                return(res)
+            }
+        )
     }
     for (exposure_ix in 1:num_trait) {
         if (exposure_ix == outcome_ix) {
