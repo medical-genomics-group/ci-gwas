@@ -11,7 +11,7 @@ rm_non_adjacent = as.logical(args[3])
 use_ld = as.logical(args[4])
 output_file = args[5]
 
-merged_blocks_adj = sprintf("%s/merged_blocks_sam.mtx", cusk_output_path)
+#merged_blocks_adj = sprintf("%s/merged_blocks_sam.mtx", cusk_output_path)
 corr_path = sprintf("%s/cuskss_merged_scm.mtx", cusk_output_path)
 adj_path = sprintf("%s/cuskss_merged_sam.mtx", cusk_output_path)
 mdim_path = sprintf("%s/cuskss_merged.mdim", cusk_output_path)
@@ -22,10 +22,11 @@ num_var = mdim[1, 1]
 num_snp = num_var - num_trait
 corrs = Matrix::readMM(corr_path)
 adj = Matrix::readMM(adj_path)
-mb_adj = Matrix::readMM(merged_blocks_adj)
+#mb_adj = Matrix::readMM(merged_blocks_adj)
 
 full_ld_mat = data.matrix(corrs[(num_trait + 1):num_var, (num_trait + 1):num_var])
-pxp_adj = mb_adj[1:num_trait, 1:num_trait]
+#pxp_adj = mb_adj[1:num_trait, 1:num_trait]
+pxp_adj = adj[1:num_trait, 1:num_trait]
 mxp_adj = data.matrix(t(adj[1:num_trait, (num_trait+1):num_var]))
 B = data.matrix(t(corrs[1:num_trait, (num_trait+1):num_var]))
 SE = (1 - B * B) / sqrt(num_samples - 2)
