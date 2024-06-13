@@ -2925,7 +2925,7 @@ __device__ float mean_ess(float *N, int var_ixs[], int l, int n)
         for (int j = 0; j < i; j++) {
             ix_b = var_ixs[j];
             loc_val = N[ix_a * n + ix_b];
-            if !isnan(loc_val) {
+            if (!isnan(loc_val)) {
                 s += loc_val;
                 num_s += 1;
             }
