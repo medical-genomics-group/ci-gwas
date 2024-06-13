@@ -8,6 +8,7 @@ target_compile_features(cuPC PUBLIC cxx_std_20)
 target_compile_options(cuPC PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
     -dc
     -O3
+    --expt-relaxed-constexpr
     -lineinfo
     --use_fast_math
     --shared
