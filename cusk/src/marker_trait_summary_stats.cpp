@@ -1,3 +1,4 @@
+#include <math.h>
 #include <mps/io.h>
 #include <mps/marker_trait_summary_stats.h>
 
@@ -90,8 +91,7 @@ MarkerTraitSummaryStats::MarkerTraitSummaryStats(const std::string path, const M
 MarkerTraitSummaryStats::MarkerTraitSummaryStats(
     const std::string corr_path,
     const std::string se_path,
-    const MarkerBlock block,
-    const float nan_sample_size_fill_val)
+    const MarkerBlock block)
 {
     float rho;
     float ss_sqrt;
@@ -144,7 +144,7 @@ MarkerTraitSummaryStats::MarkerTraitSummaryStats(
                 if ((fields_corr[j] == "NA") || (fields_corr[j] == "NaN") || (fields_corr[j] == "nan"))
                 {
                     corrs.push_back(0.0);
-                    sample_sizes.push_back(nan_sample_size_fill_val);
+                    sample_sizes.push_back(NAN);
                 }
                 else
                 {

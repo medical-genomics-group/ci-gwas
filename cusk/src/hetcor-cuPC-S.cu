@@ -2917,14 +2917,18 @@ __device__ float mean_ess(float *N, int var_ixs[], int l, int n)
     float s = 0.0;
     int ix_a;
     int ix_b;
+    int loc_val;
     int num_s = 0;
     for (int i = 0; i < l; i++)
     {
         ix_a = var_ixs[i];
         for (int j = 0; j < i; j++) {
             ix_b = var_ixs[j];
-            s += N[ix_a * n + ix_b];
-            num_s += 1;
+            loc_val = N[ix_a * n + ix_b];
+            if !isnan(loc_val) {
+                s += loc_val;
+                num_s += 1;
+            }
         }
     }
     float res = s / (float)num_s;

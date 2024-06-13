@@ -970,7 +970,7 @@ void cuda_skeleton_summary_stats_hetcor(int argc, char *argv[])
     std::cout << "Loading mxm" << std::endl;
     MarkerSummaryStats mxm = MarkerSummaryStats(mxm_path);
     std::cout << "Loading mxp summary stats" << std::endl;
-    MarkerTraitSummaryStats mxp = MarkerTraitSummaryStats(mxp_path, se_path, block, pearson_sample_size);
+    MarkerTraitSummaryStats mxp = MarkerTraitSummaryStats(mxp_path, se_path, block);
 
     // check if all dims check out
     if (pxp.get_num_phen() != mxp.get_num_phen())
