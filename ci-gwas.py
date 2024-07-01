@@ -688,19 +688,24 @@ def iv_check(args):
         alpha=args.alpha,
         relaxed_local_faithfulness=args.r,
         check_reverse_causality=args.c
-)
-    iv_df.to_csv(f"{args.cusk_result_stem}_filtered_ivs.csv", index=False)
-
-
-def run_mvivw_filtered(args):
-    args.cusk_result_stem = f"{args.cusk_output_dir}/cuskss_merged"
-    iv_check(args)
-    iv_path = f"{args.cusk_result_stem}_filtered_ivs.csv"
+    )
     filename_mod = ""
     if args.r:
         filename_mod += "_relaxed"
     if args.c:
         filename_mod += "_no_rev_cause"
+    iv_df.to_csv(f"{args.cusk_result_stem}_filtered{filename_mod}_ivs.csv", index=False)
+
+
+def run_mvivw_filtered(args):
+    args.cusk_result_stem = f"{args.cusk_output_dir}/cuskss_merged"
+    iv_check(args)
+    filename_mod = ""
+    if args.r:
+        filename_mod += "_relaxed"
+    if args.c:
+        filename_mod += "_no_rev_cause"
+    iv_path = f"{args.cusk_result_stem}_filtered{filename_mod}_ivs.csv"
     output_path = f"{args.cusk_output_dir}/mvivw_filtered{filename_mod}_results.tsv"
     subprocess.run(
         [
