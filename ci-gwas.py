@@ -248,6 +248,11 @@ def main():
         help="Standard errors of the correlations between markers in all blocks and all traits. Textfile, whitespace separated, with columns: [chr, snp, ref, ...<trait names>], rectangular.",
     )
     cuskss_het_parser.add_argument(
+        "pxp_se",
+        type=str,
+        help="Standard errors of the correlations between all traits. Textfile, whitespace separated, rectangular, only upper triangle is used. With trait names as column and row names. Order of traits has to be same as in the mxp file.",
+    )
+    cuskss_het_parser.add_argument(
         "num_samples",
         metavar="num-samples",
         type=float,
@@ -644,6 +649,7 @@ def cuskss_het(args):
             args.mxp,
             args.pxp,
             args.mxp_se,
+            args.pxp_se,
             str(args.num_samples),
             str(args.block_index),
             args.blocks,

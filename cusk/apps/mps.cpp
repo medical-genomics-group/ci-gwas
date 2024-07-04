@@ -924,6 +924,7 @@ arguments:
     mxp                     correlations between markers in all blocks and all traits. Text format, rectangular.
     pxp                     correlations between all traits. Text format, rectangular, only upper triangle is used.
     mxp-se                  standard errors of mxp correlations in same format as mxp
+    pxp-se                  standard errors of pxp correlations in same format as pxp
     sample-size             sample size of pearson correlations
     block-ix                0-based index of the marker block in the .blocks file
     .blocks                 file with genomic block definitions
@@ -934,7 +935,7 @@ arguments:
     outdir                  outdir
 )";
 
-const int CUSKSS_HET_NARGS = 13;
+const int CUSKSS_HET_NARGS = 14;
 
 void cuda_skeleton_summary_stats_hetcor(int argc, char *argv[])
 {
@@ -943,20 +944,22 @@ void cuda_skeleton_summary_stats_hetcor(int argc, char *argv[])
     std::string mxm_path = argv[2];
     std::string mxp_path = argv[3];
     std::string pxp_path = argv[4];
-    std::string se_path = argv[5];
-    float pearson_sample_size = std::stof(argv[6]);
-    int block_ix = std::stoi(argv[7]);
-    std::string block_path = argv[8];
-    float alpha = std::stof(argv[9]);
-    int max_level = std::stoi(argv[10]);
-    int max_level_two = std::stoi(argv[11]);
-    int depth = std::stoi(argv[12]);
-    std::string outdir = (std::string)argv[13];
+    std::string mxp_se_path = argv[5];
+    std::string pxp_se_path = argv[6];
+    float pearson_sample_size = std::stof(argv[7]);
+    int block_ix = std::stoi(argv[8]);
+    std::string block_path = argv[9];
+    float alpha = std::stof(argv[10]);
+    int max_level = std::stoi(argv[11]);
+    int max_level_two = std::stoi(argv[12]);
+    int depth = std::stoi(argv[13]);
+    std::string outdir = (std::string)argv[14];
 
     check_path(mxm_path);
     check_path(mxp_path);
     check_path(pxp_path);
-    check_path(se_path);
+    check_path(mxp_se_path);
+    check_path(pxp_se_path);
     check_path(block_path);
     check_path(outdir);
 
@@ -966,11 +969,11 @@ void cuda_skeleton_summary_stats_hetcor(int argc, char *argv[])
     std::vector<MarkerBlock> blocks = read_blocks_from_file(block_path);
     MarkerBlock block = blocks[block_ix];
     std::cout << "Loading pxp" << std::endl;
-    TraitSummaryStats pxp = TraitSummaryStats(pxp_path);
+    TraitSummaryStats pxp = TraitSummaryStats(pxp_path, pxp_se_path);
     std::cout << "Loading mxm" << std::endl;
     MarkerSummaryStats mxm = MarkerSummaryStats(mxm_path);
     std::cout << "Loading mxp summary stats" << std::endl;
-    MarkerTraitSummaryStats mxp = MarkerTraitSummaryStats(mxp_path, se_path, block);
+    MarkerTraitSummaryStats mxp = MarkerTraitSummaryStats(mxp_path, mxp_se_path, block);
 
     // check if all dims check out
     if (pxp.get_num_phen() != mxp.get_num_phen())
@@ -1039,11 +1042,13 @@ void cuda_skeleton_summary_stats_hetcor(int argc, char *argv[])
     }
 
     std::vector<float> phen_corr = pxp.get_corrs();
+    std::vector<float> phen_sample_sizes = pxp.get_sample_sizes();
     sq_row_ix = num_markers;
     sq_col_ix = num_markers;
     for (size_t i = 0; i < phen_corr.size(); ++i)
     {
         sq_corrs[num_var * sq_row_ix + sq_col_ix] = (float)phen_corr[i];
+        sq_ess[num_var * sq_row_ix + sq_col_ix] = (float)phen_sample_sizes[i];
         if (sq_col_ix == (num_var - 1))
         {
             ++sq_row_ix;
