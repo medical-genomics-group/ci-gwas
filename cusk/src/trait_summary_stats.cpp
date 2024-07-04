@@ -56,7 +56,7 @@ TraitSummaryStats::TraitSummaryStats(
     float ss_sqrt;
     std::string corr_line;
     std::string se_line;
-    std::ifstream corr_file(path);
+    std::ifstream corr_file(corr_path);
     std::ifstream se_file(se_path);
 
     // read header
@@ -86,9 +86,9 @@ TraitSummaryStats::TraitSummaryStats(
 
     while (std::getline(corr_file, corr_line))
     {
-        std::getline(se_file, line_se);
-        std::vector<std::string> fields_corr = split_line(line_corr);
-        std::vector<std::string> fields_se = split_line(line_se);
+        std::getline(se_file, se_line);
+        std::vector<std::string> fields_corr = split_line(corr_line);
+        std::vector<std::string> fields_se = split_line(se_line);
 
         if (fields_corr.empty())
         {
@@ -100,7 +100,7 @@ TraitSummaryStats::TraitSummaryStats(
             corr_val = std::stof(fields_corr[j]);
             if (std::isnan(corr_val)) {
                 corr_val = 0.0;
-                sample_size = NAN:
+                sample_size = NAN;
             } else {
                 se = std::stof(fields_se[j]);
                 ss_sqrt = (1.0 - (corr_val * corr_val)) / se;
