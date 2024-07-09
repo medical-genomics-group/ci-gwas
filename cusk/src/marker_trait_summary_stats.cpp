@@ -155,7 +155,7 @@ MarkerTraitSummaryStats::MarkerTraitSummaryStats(
                     catch (...)
                     {
                         std::cout << "Error in stof with arg: " << fields_corr[j] << std::endl;
-                        std::cout << "When reading line: " << fields_corr << std::endl;
+                        std::cout << "When reading line: " << line_corr << std::endl;
                     }
                     
                     se = std::stof(fields_se[j]);
