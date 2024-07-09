@@ -97,9 +97,7 @@ TraitSummaryStats::TraitSummaryStats(
 
         for (size_t j = 1; j <= num_phen; j++)
         {
-            std::cout << "Loading: " << fields_corr[j] << std::endl;
             corr_val = std::stof(fields_corr[j]);
-            std::cout << "Loaded corr var" << std::endl;
             if (std::isnan(corr_val)) {
                 corr_val = 0.0;
                 sample_size = NAN;
