@@ -141,14 +141,22 @@ MarkerTraitSummaryStats::MarkerTraitSummaryStats(
             std::vector<std::string> fields_se = split_line(line_se);
             for (size_t j = 3; j < num_phen + 3; j++)
             {
-                if ((fields_corr[j] == "NA") || (fields_corr[j] == "NaN") || (fields_corr[j] == "nan"))
+                if ((fields_corr[j] == "NA") || (fields_corr[j] == "NaN") || (fields_corr[j] == "nan") || (fields_corr[j] == "NAN"))
                 {
                     corrs.push_back(0.0);
                     sample_sizes.push_back(NAN);
                 }
                 else
                 {
-                    rho = std::stof(fields_corr[j]);
+                    try
+                    {
+                        rho = std::stof(fields_corr[j]);
+                    }
+                    catch
+                    {
+                        std::cout << "Error in stof with arg: " << fields_corr[j] << std::endl;
+                    }
+                    
                     se = std::stof(fields_se[j]);
                     ss_sqrt = (1.0 - (rho * rho)) / se;
                     corrs.push_back(rho);
