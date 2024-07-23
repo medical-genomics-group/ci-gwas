@@ -401,10 +401,16 @@ def main():
         help="directory + stem of cusk output files",
     )
     iv_check_parser.add_argument(
-        "alpha",
+        "accept_alpha",
         type=TypeCheck(float, "alpha", 0.0, 1.0),
-        help="significance level for conditional independence tests",
-        default=10**-4,
+        help="significance level for conditional independence tests, when acceptance of H0 is condition for IV validity",
+        default=10**-8,
+    )
+    iv_check_parser.add_argument(
+        "reject_alpha",
+        type=TypeCheck(float, "alpha", 0.0, 1.0),
+        help="significance level for conditional independence tests, when rejection of H0 is condition for IV validity",
+        default=10**-2,
     )
     iv_check_parser.add_argument(
         "num_samples",
@@ -437,10 +443,16 @@ def main():
         help="output directory of cusk or cuskss",
     )
     mvivw_filtered_parser.add_argument(
-        "alpha",
+        "accept_alpha",
         type=TypeCheck(float, "alpha", 0.0, 1.0),
-        help="significance level for conditional independence tests",
-        default=10**-4,
+        help="significance level for conditional independence tests, when acceptance of H0 is condition for IV validity",
+        default=10**-8,
+    )
+    mvivw_filtered_parser.add_argument(
+        "reject_alpha",
+        type=TypeCheck(float, "alpha", 0.0, 1.0),
+        help="significance level for conditional independence tests, when rejection of H0 is condition for IV validity",
+        default=10**-2,
     )
     mvivw_filtered_parser.add_argument(
         "num_samples",
@@ -691,7 +703,8 @@ def iv_check(args):
     iv_df = check_ivs(
         result_basename=args.cusk_result_stem,
         sample_size=args.num_samples,
-        alpha=args.alpha,
+        accept_alpha=args.accept_alpha,
+        reject_alpha=args.reject_alpha,
         relaxed_local_faithfulness=args.r,
         check_reverse_causality=args.c
     )
@@ -700,7 +713,7 @@ def iv_check(args):
         filename_mod += "_relaxed"
     if args.c:
         filename_mod += "_no_rev_cause"
-    iv_df.to_csv(f"{args.cusk_result_stem}_filtered{filename_mod}_ivs.csv", index=False)
+    iv_df.to_csv(f"{args.cusk_result_stem}_filtered{filename_mod}_ivs_acc_alpha{args.accept_alpha}_rej_alpha{args.reject_alpha}.csv", index=False)
 
 
 def run_mvivw_filtered(args):
@@ -711,8 +724,8 @@ def run_mvivw_filtered(args):
         filename_mod += "_relaxed"
     if args.c:
         filename_mod += "_no_rev_cause"
-    iv_path = f"{args.cusk_result_stem}_filtered{filename_mod}_ivs.csv"
-    output_path = f"{args.cusk_output_dir}/mvivw_filtered{filename_mod}_results.tsv"
+    iv_path = f"{args.cusk_result_stem}_filtered{filename_mod}_ivs_acc_alpha{args.accept_alpha}_rej_alpha{args.reject_alpha}.csv"
+    output_path = f"{args.cusk_output_dir}/mvivw_filtered{filename_mod}_results_acc_alpha{args.accept_alpha}_rej_alpha{args.reject_alpha}.tsv"
     subprocess.run(
         [
             MVIVW_FLT_PATH,
