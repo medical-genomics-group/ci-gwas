@@ -5283,9 +5283,9 @@ def plot_simulation_results_sup(alpha=10 ** (-8)):
 
 def plot_block_size_experiment_results():
     num_phen = 17
-    block_sizes = np.arange(1, 13) * 10**3
+    block_sizes = np.arange(1, 11) * 10**3
     basepath = "/nfs/scistore17/robingrp/human_data/causality/block_size_effect/"
-    bim_path = basepath + "ukb22828_UKB_EST_v3_ldp08.bim"
+    bim_path = "/nfs/scistore17/robingrp/human_data/geno/ldp08/ukb22828_UKB_EST_v3_ldp08.bim"
     bim = pd.read_csv(bim_path, sep="\t", header=None)
 
     bps = {}
