@@ -4,7 +4,7 @@ import argparse
 import os
 import sys
 import subprocess
-from cusk_postprocessing.check_mr_assumptions import check_ivs
+from cusk_postprocessing.check_mr_assumptions import check_ivs, get_iv_candidates
 from cusk_postprocessing.sepselect import sepselect_merged
 from cusk_postprocessing.merge_blocks import (
     merge_block_outputs,
@@ -749,9 +749,12 @@ def merge_blocks(args):
 def run_sepselect(args):
     merged_cusk = sepselect_merged(args.cusk_result_stem, args.alpha, args.num_samples)
     merged_cusk.to_file(f"{os.path.dirname(args.cusk_result_stem)}/max_sep_min_pc")
+    print("Sepselect done.")
 
 
 def run_mvivw(args):
+    iv_df = get_iv_candidates(f"{args.cusk_output_dir}/cuskss_merged")
+    iv_df.to_csv(f"{args.cusk_output_dir}/cuskss_merged_iv_candidates.csv", index=False)
     if args.s:
         use_skeleton = "TRUE"
     else:
