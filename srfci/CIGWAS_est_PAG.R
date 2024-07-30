@@ -40,7 +40,6 @@ if (srfci_mode == "mpu") {
     force_marker_to_trait_before_R1 <- FALSE
     force_marker_to_trait_in_the_end <- TRUE
     external_ambiguous_triples <- TRUE
-} else if (srfci_mode == "cusk2") {
 } else {
     print("mode has to be one of [mpu, mpd, std, cusk2]")
     exit()
