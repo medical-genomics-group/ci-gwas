@@ -34,6 +34,26 @@ def _load_mdim(basepath: str):
         fields = fin.readline().strip().split("\t")
     return [int(f) for f in fields]
 
+
+def get_iv_candidates(result_basename: str) -> pd.DataFrame:
+    # get correlation files
+    adj = mmread(f"{result_basename}_sam.mtx").toarray()
+    _, num_traits, _ = _load_mdim(result_basename)
+    trait_ixs = np.arange(0, num_traits)
+    iv_candidates = {trait_ix: set(_get_snp_parents(trait_ix, adj, num_traits)) for trait_ix in trait_ixs}
+    iv_snps = {(e, o): iv_candidates[e] for e in trait_ixs for o in trait_ixs if e != o}
+    rows = []
+    for (e_ix, o_ix), ivs in iv_snps.items():
+        for snp_ix in ivs:
+            # +1 for 1-based indexing in R
+            rows.append({
+                "Exposure": e_ix + 1,
+                "Outcome": o_ix + 1,
+                "IV": snp_ix + 1 - num_traits,
+            })
+    return pd.DataFrame(rows)
+
+
 def check_ivs(
     result_basename: str,
     sample_size: int,
@@ -45,6 +65,7 @@ def check_ivs(
     # get correlation files
     adj = mmread(f"{result_basename}_sam.mtx").toarray()
     pearson_corr = mmread(f"{result_basename}_scm.mtx").toarray()
+    np.fill_diagonal(pearson_corr, 1)
     _, num_traits, _ = _load_mdim(result_basename)
     # num_snp = num_var - num_traits
     trait_ixs = np.arange(0, num_traits)
