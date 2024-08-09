@@ -14,9 +14,7 @@ from cusk_postprocessing.merge_blocks import (
 script_dir = os.path.dirname(os.path.realpath(__file__))
 MPS_PATH = f"{script_dir}/cusk/build/apps/mps"
 MVIVW_PATH = f"{script_dir}/mvivw/cig_mvivw.R"
-MVIVW_FLT_PATH = f"{script_dir}/mvivw/cig_mvivw_filtered.R"
 RFCI_PATH = f"{script_dir}/srfci/CIGWAS_est_PAG.R"
-DAVS_PATH = f"{script_dir}/sdavs/CIGWAS_est_ACE.R"
 
 
 class MyParser(argparse.ArgumentParser):
@@ -389,89 +387,6 @@ def main():
     )
     merge_blocks_parser.set_defaults(func=merge_blocks)
 
-    # iv-check
-    iv_check_parser = subparsers.add_parser(
-        "iv-check",
-        help="Check MR assumptions regarding instrument variables and exposures in cusk output graph"
-    )
-    iv_check_parser.add_argument(
-        "cusk_result_stem",
-        metavar="cusk-result-stem",
-        type=str,
-        help="directory + stem of cusk output files",
-    )
-    iv_check_parser.add_argument(
-        "accept_alpha",
-        type=TypeCheck(float, "alpha", 0.0, 1.0),
-        help="significance level for conditional independence tests, when acceptance of H0 is condition for IV validity",
-        default=10**-8,
-    )
-    iv_check_parser.add_argument(
-        "reject_alpha",
-        type=TypeCheck(float, "alpha", 0.0, 1.0),
-        help="significance level for conditional independence tests, when rejection of H0 is condition for IV validity",
-        default=10**-2,
-    )
-    iv_check_parser.add_argument(
-        "num_samples",
-        metavar="num-samples",
-        type=TypeCheck(int, "num-samples", 1, None),
-        help="number of samples used for computing correlations",
-    )
-    iv_check_parser.add_argument(
-        '-r',
-        action='store_true',
-        help="relax local faithfulness requirement: marker needs to be independent of outcome given the exposures, but not necessarily be dependent on the outcome given the empty set"
-    )
-    iv_check_parser.add_argument(
-        '-c',
-        action='store_true',
-        help="filter exposures by checking evidence for reverse causality"
-    )
-    iv_check_parser.set_defaults(func=iv_check)
-
-    # mvivw-filtered
-    mvivw_filtered_parser = subparsers.add_parser(
-        "mvivw-filtered",
-        help=("Run multivariable inverse-variance weighted mendelian randomization between all adjacent traits, using cusk-identified markers as intrumental variables."
-              "Check that MR assumptions for IVs anad exposures hold.")
-    )
-    mvivw_filtered_parser.add_argument(
-        "cusk_output_dir",
-        metavar="cusk-output-dir",
-        type=str,
-        help="output directory of cusk or cuskss",
-    )
-    mvivw_filtered_parser.add_argument(
-        "accept_alpha",
-        type=TypeCheck(float, "alpha", 0.0, 1.0),
-        help="significance level for conditional independence tests, when acceptance of H0 is condition for IV validity",
-        default=10**-8,
-    )
-    mvivw_filtered_parser.add_argument(
-        "reject_alpha",
-        type=TypeCheck(float, "alpha", 0.0, 1.0),
-        help="significance level for conditional independence tests, when rejection of H0 is condition for IV validity",
-        default=10**-2,
-    )
-    mvivw_filtered_parser.add_argument(
-        "num_samples",
-        metavar="num-samples",
-        type=TypeCheck(int, "num-samples", 1, None),
-        help="number of samples used for computing correlations",
-    )
-    mvivw_filtered_parser.add_argument(
-        '-r',
-        action='store_true',
-        help="relax local faithfulness requirement: marker needs to be independent of outcome given the exposures, but not necessarily be dependent on the outcome given the empty set"
-    )
-    mvivw_filtered_parser.add_argument(
-        '-c',
-        action='store_true',
-        help="filter exposures by checking evidence for reverse causality"
-    )
-    mvivw_filtered_parser.set_defaults(func=run_mvivw_filtered)
-
     # mvivw
     mvivw_parser = subparsers.add_parser(
         "mvivw",
@@ -542,52 +457,6 @@ def main():
         help="number of samples used for computing correlations",
     )
     srfci_parser.set_defaults(func=srfci)
-
-    # sDAVS
-    sdavs_parser = subparsers.add_parser(
-        "sdavs", help="Run sDAVS on a pair of traits to infer the ACE"
-    )
-    sdavs_parser.add_argument(
-        "exposure",
-        help="1-based index of exposure trait",
-        type=TypeCheck(int, "exposure", 1, None),
-    )
-    sdavs_parser.add_argument(
-        "outcome",
-        help="1-based index of outcome trait",
-        type=TypeCheck(int, "outcome", 1, None),
-    )
-    sdavs_parser.add_argument(
-        "pag_path",
-        metavar="pag-path",
-        help="path to pag estimated with srfci",
-        type=str,
-    )
-    sdavs_parser.add_argument(
-        "output_file",
-        metavar="output-file",
-        help="output filename",
-        type=str,
-    )
-    sdavs_parser.add_argument(
-        "sepselect_result_stem",
-        metavar="sepselect-result-stem",
-        help="outdir + stem of sepselect",
-        type=str,
-    )
-    sdavs_parser.add_argument(
-        "alpha",
-        type=TypeCheck(float, "alpha", 0.0, 1.0),
-        help="significance level for conditional independence tests",
-        default=10**-4,
-    )
-    sdavs_parser.add_argument(
-        "num_samples",
-        metavar="num-samples",
-        type=TypeCheck(int, "num-samples", 1, None),
-        help="number of samples used for computing correlations",
-    )
-    sdavs_parser.set_defaults(func=sdavs)
 
     args = ci_gwas_parser.parse_args()
     args.func(args)
@@ -699,45 +568,6 @@ def cuskss_merged(args):
     )
 
 
-def iv_check(args):
-    iv_df = check_ivs(
-        result_basename=args.cusk_result_stem,
-        sample_size=args.num_samples,
-        accept_alpha=args.accept_alpha,
-        reject_alpha=args.reject_alpha,
-        relaxed_local_faithfulness=args.r,
-        check_reverse_causality=args.c
-    )
-    filename_mod = ""
-    if args.r:
-        filename_mod += "_relaxed"
-    if args.c:
-        filename_mod += "_no_rev_cause"
-    iv_df.to_csv(f"{args.cusk_result_stem}_filtered{filename_mod}_ivs_acc_alpha{args.accept_alpha}_rej_alpha{args.reject_alpha}.csv", index=False)
-
-
-def run_mvivw_filtered(args):
-    args.cusk_result_stem = f"{args.cusk_output_dir}/cuskss_merged"
-    iv_check(args)
-    filename_mod = ""
-    if args.r:
-        filename_mod += "_relaxed"
-    if args.c:
-        filename_mod += "_no_rev_cause"
-    iv_path = f"{args.cusk_result_stem}_filtered{filename_mod}_ivs_acc_alpha{args.accept_alpha}_rej_alpha{args.reject_alpha}.csv"
-    output_path = f"{args.cusk_output_dir}/mvivw_filtered{filename_mod}_results_acc_alpha{args.accept_alpha}_rej_alpha{args.reject_alpha}.tsv"
-    subprocess.run(
-        [
-            MVIVW_FLT_PATH,
-            args.cusk_output_dir,
-            str(args.num_samples),
-            iv_path,
-            output_path,
-        ],
-        check=True,
-    )
-
-
 def merge_blocks(args):
     out_dir = args.cusk_output_dir
     if not out_dir.endswith("/"):
@@ -781,23 +611,6 @@ def srfci(args):
             str(args.alpha),
             str(args.num_samples),
             "cusk2",
-        ],
-        check=True,
-    )
-
-
-def sdavs(args):
-    subprocess.run(
-        [
-            "Rscript",
-            DAVS_PATH,
-            str(args.exposure),
-            str(args.outcome),
-            str(args.num_samples),
-            str(args.alpha),
-            args.pag_path,
-            args.sepselect_result_stem,
-            args.output_file,
         ],
         check=True,
     )
