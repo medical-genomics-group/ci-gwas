@@ -34,16 +34,38 @@ def _load_mdim(basepath: str):
         fields = fin.readline().strip().split("\t")
     return [int(f) for f in fields]
 
+
+def get_iv_candidates(result_basename: str) -> pd.DataFrame:
+    # get correlation files
+    adj = mmread(f"{result_basename}_sam.mtx").toarray()
+    _, num_traits, _ = _load_mdim(result_basename)
+    trait_ixs = np.arange(0, num_traits)
+    iv_candidates = {trait_ix: set(_get_snp_parents(trait_ix, adj, num_traits)) for trait_ix in trait_ixs}
+    iv_snps = {(e, o): iv_candidates[e] for e in trait_ixs for o in trait_ixs if e != o}
+    rows = []
+    for (e_ix, o_ix), ivs in iv_snps.items():
+        for snp_ix in ivs:
+            # +1 for 1-based indexing in R
+            rows.append({
+                "Exposure": e_ix + 1,
+                "Outcome": o_ix + 1,
+                "IV": snp_ix + 1 - num_traits,
+            })
+    return pd.DataFrame(rows)
+
+
 def check_ivs(
     result_basename: str,
     sample_size: int,
-    alpha: float,
+    accept_alpha: float,
+    reject_alpha: float,
     relaxed_local_faithfulness=False,
     check_reverse_causality=False,
 ) -> pd.DataFrame:
     # get correlation files
     adj = mmread(f"{result_basename}_sam.mtx").toarray()
     pearson_corr = mmread(f"{result_basename}_scm.mtx").toarray()
+    np.fill_diagonal(pearson_corr, 1)
     _, num_traits, _ = _load_mdim(result_basename)
     # num_snp = num_var - num_traits
     trait_ixs = np.arange(0, num_traits)
@@ -59,8 +81,8 @@ def check_ivs(
                 if exposure == outcome:
                     continue
                 for snp in iv_candidates[outcome]:
-                    marginal_dep = not _indep(snp, exposure, [], pearson_corr, sample_size, alpha)
-                    cond_indep = _indep(snp, exposure, [outcome], pearson_corr, sample_size, alpha)
+                    marginal_dep = not _indep(snp, exposure, [], pearson_corr, sample_size, accept_alpha)
+                    cond_indep = _indep(snp, exposure, [outcome], pearson_corr, sample_size, reject_alpha)
                     if marginal_dep and cond_indep:
                         rev_cause[outcome].add(exposure)
 
@@ -76,8 +98,8 @@ def check_ivs(
                     # by assumption
                     marginal_dep = True
                 else:
-                    marginal_dep = not _indep(snp, outcome, [], pearson_corr, sample_size, alpha)
-                cond_indep = _indep(snp, outcome, list(valid_exposures[outcome]), pearson_corr, sample_size, alpha)
+                    marginal_dep = not _indep(snp, outcome, [], pearson_corr, sample_size, accept_alpha)
+                cond_indep = _indep(snp, outcome, list(valid_exposures[outcome]), pearson_corr, sample_size, reject_alpha)
                 if cond_indep and marginal_dep:
                     iv_snps[(exposure, outcome)].add(snp)
 

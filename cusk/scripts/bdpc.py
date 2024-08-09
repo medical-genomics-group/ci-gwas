@@ -18,7 +18,7 @@ from glob import glob
 # plt.style.use('nature')
 
 
-from adjustText import adjust_text
+# from adjustText import adjust_text
 
 from sklearn.linear_model import LinearRegression
 import itertools
@@ -1048,7 +1048,7 @@ def heatmap(
     ax.set_xticks(np.arange(data.shape[1] + 1) - 0.5, minor=True)
     ax.set_yticks(np.arange(data.shape[0] + 1) - 0.5, minor=True)
     # ax.grid(which="minor", color="w", linestyle="-", linewidth=3)
-    ax.grid(which="minor", color="#d8dcd6", linestyle="-", linewidth=3)
+    ax.grid(which="minor", color="#d8dcd6", linestyle="-", linewidth=1)
     ax.tick_params(which="minor", bottom=False, left=False)
     ax.set_ylabel(ylabel)
     ax.set_xlabel(xlabel)
@@ -5283,9 +5283,9 @@ def plot_simulation_results_sup(alpha=10 ** (-8)):
 
 def plot_block_size_experiment_results():
     num_phen = 17
-    block_sizes = np.arange(1, 13) * 10**3
+    block_sizes = np.arange(1, 11) * 10**3
     basepath = "/nfs/scistore17/robingrp/human_data/causality/block_size_effect/"
-    bim_path = basepath + "ukb22828_UKB_EST_v3_ldp08.bim"
+    bim_path = "/nfs/scistore17/robingrp/human_data/geno/ldp08/ukb22828_UKB_EST_v3_ldp08.bim"
     bim = pd.read_csv(bim_path, sep="\t", header=None)
 
     bps = {}

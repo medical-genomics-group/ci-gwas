@@ -4,7 +4,7 @@ import argparse
 import os
 import sys
 import subprocess
-from cusk_postprocessing.check_mr_assumptions import check_ivs
+from cusk_postprocessing.check_mr_assumptions import check_ivs, get_iv_candidates
 from cusk_postprocessing.sepselect import sepselect_merged
 from cusk_postprocessing.merge_blocks import (
     merge_block_outputs,
@@ -243,6 +243,22 @@ def main():
         help="Correlations between all traits. Textfile, whitespace separated, rectangular, only upper triangle is used. With trait names as column and row names. Order of traits has to be same as in the mxp file.",
     )
     cuskss_het_parser.add_argument(
+        "mxp_se",
+        type=str,
+        help="Standard errors of the correlations between markers in all blocks and all traits. Textfile, whitespace separated, with columns: [chr, snp, ref, ...<trait names>], rectangular.",
+    )
+    cuskss_het_parser.add_argument(
+        "pxp_se",
+        type=str,
+        help="Standard errors of the correlations between all traits. Textfile, whitespace separated, rectangular, only upper triangle is used. With trait names as column and row names. Order of traits has to be same as in the mxp file.",
+    )
+    cuskss_het_parser.add_argument(
+        "num_samples",
+        metavar="num-samples",
+        type=float,
+        help="sample size for calculation of pearson correlations",
+    )
+    cuskss_het_parser.add_argument(
         "block_index",
         metavar="block-index",
         type=TypeCheck(int, "block-index", 0, None),
@@ -279,12 +295,6 @@ def main():
         type=TypeCheck(int, "max-depth", 1, None),
         help="max depth at which marker variables are kept as ancestors (>= 1)",
         default=1,
-    )
-    cuskss_het_parser.add_argument(
-        "num_samples",
-        metavar="num-samples",
-        type=str,
-        help="effective sample sizes (num_var x num_var matrix of floats in binary format)",
     )
     cuskss_het_parser.add_argument(
         "outdir",
@@ -391,10 +401,16 @@ def main():
         help="directory + stem of cusk output files",
     )
     iv_check_parser.add_argument(
-        "alpha",
+        "accept_alpha",
         type=TypeCheck(float, "alpha", 0.0, 1.0),
-        help="significance level for conditional independence tests",
-        default=10**-4,
+        help="significance level for conditional independence tests, when acceptance of H0 is condition for IV validity",
+        default=10**-8,
+    )
+    iv_check_parser.add_argument(
+        "reject_alpha",
+        type=TypeCheck(float, "alpha", 0.0, 1.0),
+        help="significance level for conditional independence tests, when rejection of H0 is condition for IV validity",
+        default=10**-2,
     )
     iv_check_parser.add_argument(
         "num_samples",
@@ -427,10 +443,16 @@ def main():
         help="output directory of cusk or cuskss",
     )
     mvivw_filtered_parser.add_argument(
-        "alpha",
+        "accept_alpha",
         type=TypeCheck(float, "alpha", 0.0, 1.0),
-        help="significance level for conditional independence tests",
-        default=10**-4,
+        help="significance level for conditional independence tests, when acceptance of H0 is condition for IV validity",
+        default=10**-8,
+    )
+    mvivw_filtered_parser.add_argument(
+        "reject_alpha",
+        type=TypeCheck(float, "alpha", 0.0, 1.0),
+        help="significance level for conditional independence tests, when rejection of H0 is condition for IV validity",
+        default=10**-2,
     )
     mvivw_filtered_parser.add_argument(
         "num_samples",
@@ -638,13 +660,15 @@ def cuskss_het(args):
             args.mxm,
             args.mxp,
             args.pxp,
+            args.mxp_se,
+            args.pxp_se,
+            str(args.num_samples),
             str(args.block_index),
             args.blocks,
             str(args.alpha),
             str(args.max_level),
             str(args.max_level_two),
             str(args.max_depth),
-            str(args.num_samples),
             args.outdir,
         ],
         check=True,
@@ -679,23 +703,29 @@ def iv_check(args):
     iv_df = check_ivs(
         result_basename=args.cusk_result_stem,
         sample_size=args.num_samples,
-        alpha=args.alpha,
+        accept_alpha=args.accept_alpha,
+        reject_alpha=args.reject_alpha,
         relaxed_local_faithfulness=args.r,
         check_reverse_causality=args.c
-)
-    iv_df.to_csv(f"{args.cusk_result_stem}_filtered_ivs.csv", index=False)
-
-
-def run_mvivw_filtered(args):
-    args.cusk_result_stem = f"{args.cusk_output_dir}/cuskss_merged"
-    iv_check(args)
-    iv_path = f"{args.cusk_result_stem}_filtered_ivs.csv"
+    )
     filename_mod = ""
     if args.r:
         filename_mod += "_relaxed"
     if args.c:
         filename_mod += "_no_rev_cause"
-    output_path = f"{args.cusk_output_dir}/mvivw_filtered{filename_mod}_results.tsv"
+    iv_df.to_csv(f"{args.cusk_result_stem}_filtered{filename_mod}_ivs_acc_alpha{args.accept_alpha}_rej_alpha{args.reject_alpha}.csv", index=False)
+
+
+def run_mvivw_filtered(args):
+    args.cusk_result_stem = f"{args.cusk_output_dir}/cuskss_merged"
+    iv_check(args)
+    filename_mod = ""
+    if args.r:
+        filename_mod += "_relaxed"
+    if args.c:
+        filename_mod += "_no_rev_cause"
+    iv_path = f"{args.cusk_result_stem}_filtered{filename_mod}_ivs_acc_alpha{args.accept_alpha}_rej_alpha{args.reject_alpha}.csv"
+    output_path = f"{args.cusk_output_dir}/mvivw_filtered{filename_mod}_results_acc_alpha{args.accept_alpha}_rej_alpha{args.reject_alpha}.tsv"
     subprocess.run(
         [
             MVIVW_FLT_PATH,
@@ -719,9 +749,12 @@ def merge_blocks(args):
 def run_sepselect(args):
     merged_cusk = sepselect_merged(args.cusk_result_stem, args.alpha, args.num_samples)
     merged_cusk.to_file(f"{os.path.dirname(args.cusk_result_stem)}/max_sep_min_pc")
+    print("Sepselect done.")
 
 
 def run_mvivw(args):
+    iv_df = get_iv_candidates(f"{args.cusk_output_dir}/cuskss_merged")
+    iv_df.to_csv(f"{args.cusk_output_dir}/cuskss_merged_iv_candidates.csv", index=False)
     if args.s:
         use_skeleton = "TRUE"
     else:
