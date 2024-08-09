@@ -1,6 +1,6 @@
 # CI-GWAS: Causal inference for multiple risk factors and diseases from genomics data
 
-This is the official implementation of CI-GWAS as described in our paper: [Causal inference for multiple risk factors and diseases from genomics data](https://www.biorxiv.org/content/10.1101/2023.12.06.570392v1)
+This is the official implementation of CI-GWAS as described in our paper: [Causal inference for multiple risk factors and diseases from genomics data](https://www.biorxiv.org/content/10.1101/2023.12.06.570392v3)
 
 ## Prerequisites
 
