@@ -18,7 +18,7 @@ from glob import glob
 # plt.style.use('nature')
 
 
-from adjustText import adjust_text
+# from adjustText import adjust_text
 
 from sklearn.linear_model import LinearRegression
 import itertools
