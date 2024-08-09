@@ -2,10 +2,12 @@ import numpy as np
 import scipy
 from scipy.stats import norm
 from scipy.io import mmread, mmwrite
+import sys
 
 
 def pcorr(corr: np.array, var: list[int]):
     try:
+        # return np.linalg.inv(corr[np.ix_(var, var)])
         return np.linalg.inv(corr[np.ix_(var, var)])
     except np.linalg.LinAlgError as err:
         print(f"vars: {var}")
@@ -13,7 +15,7 @@ def pcorr(corr: np.array, var: list[int]):
         m = np.linalg.pinv(corr[np.ix_(var, var)])
         print(f"pcorr pinv: {fisher_z(-(m[0, 1] / np.sqrt(m[0, 0] * m[1, 1])))}")
         print(err)
-        exit()
+        sys.exit()
 
 
 def fisher_z(v):
@@ -47,6 +49,7 @@ class CuskResults:
             self.num_var, self.num_var, self.max_level
         )
         self.ixs = np.fromfile(f"{stem}.ixs", dtype=np.int32)
+        self.marker_ixs = set(self.ixs[: self.num_m])
         self.adj = np.fromfile(f"{stem}.adj", dtype=np.int32).reshape(
             self.num_var, self.num_var
         )
@@ -63,9 +66,32 @@ class CuskResults:
         self.minimal_pcorr_sepset_arr = None
         self.unshielded_triples = None
         self.ambiguous_triples = None
+        self.rfci_relevant_unshielded_triples = None
 
-    def marker_ixs(self):
-        return self.ixs[: self.num_m]
+    def get_rfci_relevant_unshielded_triples(self):
+        """Only unshielded triples with two or more traits,
+        where the middle variable is always a trait
+
+        Without duplicates, and always coded x, y, z, s
+        s.t. x < z
+        """
+        if self.rfci_relevant_unshielded_triples is None:
+            self.rfci_relevant_unshielded_triples = []
+            for (x, y, z) in self.get_unshielded_triples():
+                if not self.is_marker(y) and x < z and sum(self.is_marker(e) for e in [x, y, z]) < 2:
+                    self.rfci_relevant_unshielded_triples.append([x, y, z])
+            self.rfci_relevant_unshielded_triples = np.array(self.rfci_relevant_unshielded_triples, dtype=np.int32)
+        return self.rfci_relevant_unshielded_triples
+
+    def get_rfci_relevant_unshielded_triples_outer_pairs(self):
+        res = set()
+        for t in self.get_rfci_relevant_unshielded_triples():
+            res.add((t[0], t[2]))
+            res.add((t[2], t[0]))
+        return res
+
+    def is_marker(self, variable_ix: int) -> bool:
+        return variable_ix < self.num_m
 
     def mark_ambiguous_triples(self):
         if self.maximal_sepset_arr is None or self.minimal_pcorr_sepset_arr is None:
@@ -83,13 +109,14 @@ class CuskResults:
     def to_file(self, stem: str):
         with open(stem + ".mdim", "w") as fout:
             fout.write(
-                f"{self.num_var}\t{self.num_phen}\t{self.max_level_maximal_sepsets}\t{self.ambiguous_triples.shape[0]}\n"
+                f"{self.num_var}\t{self.num_phen}\t{self.max_level_maximal_sepsets}\t{self.ambiguous_triples.shape[0]}\t{self.get_rfci_relevant_unshielded_triples.shape[0]}\n"
             )
         self.ixs.tofile(f"{stem}.ixs")
         self.adj.astype(np.int32).tofile(f"{stem}.adj")
         self.corr.tofile(f"{stem}.corr")
         self.maximal_sepset_arr.flatten().tofile(f"{stem}.sep")
         self.ambiguous_triples.tofile(f"{stem}.atr")
+        self.get_rfci_relevant_unshielded_triples().tofile(f"{stem}.ut")
 
     def sepset_sizes(self) -> list[int]:
         sepset_sizes = []
@@ -97,6 +124,10 @@ class CuskResults:
             for j in range(self.num_var):
                 sepset_sizes.append(np.sum(self.sepset_arr[i, j] != -1))
         return sepset_sizes
+
+    def trait_neighbors(self, node_ix: int) -> np.array:
+        neighbors = self.neighbors(node_ix)
+        return neighbors[neighbors >= self.num_m]
 
     def neighbors(self, parent_ix: int):
         return np.where(self.adj[parent_ix, :])[0]
@@ -139,7 +170,7 @@ class CuskResults:
         """
         sepsets = {}
 
-        for i, j in self.get_unshielded_triples_outer_pairs():
+        for i, j in remaining_pairs:
             neighbors_i = list(self.neighbors(i))
             ref_pc = self.partial_correlation([i, j])
             candidate_sepset = []
@@ -162,9 +193,8 @@ class CuskResults:
 
                 if add_neighbor is None:
                     break
-                else:
-                    candidate_sepset.append(add_neighbor)
-                    remaining_neighbors.remove(add_neighbor)
+                candidate_sepset.append(add_neighbor)
+                remaining_neighbors.remove(add_neighbor)
                 if not found_sepset:
                     found_sepset = independent(
                         loc_ref_pc, alpha, num_samples, sepset_size
@@ -233,22 +263,40 @@ class CuskResults:
         max_sepsets = {}
         min_pcorr_sepsets = {}
 
-        for i, j in self.get_unshielded_triples_outer_pairs():
-            neighbors_i = list(self.neighbors(i))
+        # n_removed = 0
+        # remaining_pairs = set()
+        # # for triples i-k-j where i and j are markers,
+        # # we don't put anything in the sepset.
+        # for i, j in self.get_unshielded_triples_outer_pairs():
+        #     if self.is_marker(i) and self.is_marker(j):
+        #         n_removed += 1
+        #     else:
+        #         remaining_pairs.add((i, j))
+
+        # print(f"Skipped {n_removed} triples with markers as outer variables", flush=True)
+
+        remaining_pairs = self.get_rfci_relevant_unshielded_triples_outer_pairs()
+
+        for (count, (i, j)) in enumerate(remaining_pairs):
+            if count % 1000 == 0:
+                print(f"Processing unshielded triple #{count + 1} out of {len(remaining_pairs)}", flush=True)
+            # neighbors_i = set(self.neighbors(i))
+            remaining_neighbors = set(self.trait_neighbors(i))
+            max_sepset_size = len(remaining_neighbors)
             candidate_sepset = []
             found_sepset = independent(
                 self.partial_correlation([i, j]), alpha, num_samples, 0
             )
             found_minimum = False
-            remaining_neighbors = neighbors_i.copy()
             last_ref_pc = np.inf
 
-            for sepset_size in range(len(neighbors_i)):
+            for sepset_size in range(1, max_sepset_size + 1):
                 add_neighbor = None
                 ref_pc = np.inf
+                sepset = candidate_sepset.copy()
+                sepset.append(None)
                 for neighbor in remaining_neighbors:
-                    sepset = candidate_sepset.copy()
-                    sepset.append(neighbor)
+                    sepset[-1] = neighbor
                     loc_pc = self.partial_correlation([i, j] + sepset)
                     if loc_pc <= ref_pc:
                         ref_pc = loc_pc
@@ -397,7 +445,7 @@ class MergedCuskResults(CuskResults):
             ]
         self.num_m = self.num_var - self.num_phen
         self.sepset_arr = None
-        self.ixs = None
+        self.ixs = np.fromfile(f"{stem}.ixs", dtype=np.int32)
         self.adj = mmread(f"{stem}_sam.mtx").toarray()
         self.adj = self.adj.astype(bool)
         self.corr = mmread(f"{stem}_scm.mtx").toarray()
@@ -412,13 +460,39 @@ class MergedCuskResults(CuskResults):
         self.minimal_pcorr_sepset_arr = None
         self.unshielded_triples = None
         self.ambiguous_triples = None
+        self.rfci_relevant_unshielded_triples = None
+        self.rm_collinear_markers()
+
+    def rm_collinear_markers(self):
+        n_rm = 0
+        curr_i = self.num_phen
+        while curr_i < self.num_var:
+            if np.sum(self.corr[curr_i, :] == 1) > 1:
+                self.corr = np.delete(self.corr, curr_i, 0)
+                self.corr = np.delete(self.corr, curr_i, 1)
+                self.adj = np.delete(self.adj, curr_i, 0)
+                self.adj = np.delete(self.adj, curr_i, 1)
+                self.ixs = np.delete(self.ixs, curr_i - self.num_phen)
+                self.num_var -= 1
+                n_rm += 1
+            else:
+                curr_i += 1
+        print(f"Removed {n_rm} collinear markers")
+
+    def trait_neighbors(self, node_ix: int) -> np.array:
+        neighbors = self.neighbors(node_ix)
+        return neighbors[neighbors < self.num_phen]
+
+    def is_marker(self, variable_ix: int) -> bool:
+        return variable_ix > self.num_phen
 
     def to_file(self, stem: str):
-        num_triples = self.ambiguous_triples.shape[0]
+        num_ambiguous_triples = self.ambiguous_triples.shape[0]
+        num_triples = self.get_rfci_relevant_unshielded_triples().shape[0]
 
         with open(stem + ".mdim", "w") as fout:
             fout.write(
-                f"{self.num_var}\t{self.num_phen}\t{self.max_level_maximal_sepsets}\t{num_triples}\n"
+                f"{self.num_var}\t{self.num_phen}\t{self.max_level_maximal_sepsets}\t{num_ambiguous_triples}\t{num_triples}\n"
             )
 
         mmwrite(f"{stem}_sam.mtx", scipy.sparse.coo_matrix(self.adj.astype(np.int32)))
@@ -427,6 +501,7 @@ class MergedCuskResults(CuskResults):
         # self.adj.astype(np.int32).tofile(f"{stem}.adj")
         # self.corr.tofile(f"{stem}.corr")
         self.ambiguous_triples.tofile(f"{stem}.atr")
+        self.get_rfci_relevant_unshielded_triples().tofile(f"{stem}.ut")
         self.max_sepset_to_file(stem)
 
     def max_sepset_to_file(self, stem):
@@ -458,6 +533,7 @@ def sepselect_merged(
     cusk1_result_stem: str, alpha: float, num_samples: int
 ) -> MergedCuskResults:
     cr = MergedCuskResults(cusk1_result_stem)
+    print("Starting sepselect")
     cr.find_maximal_and_min_pcorr_sepsets_incr(alpha, num_samples)
     cr.mark_ambiguous_triples()
     return cr

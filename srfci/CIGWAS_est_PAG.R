@@ -25,21 +25,25 @@ if (srfci_mode == "mpu") {
     force_marker_to_trait_before_R1 <- FALSE
     force_marker_to_trait_in_the_end <- TRUE
     external_ambiguous_triples <- FALSE
+    external_unshielded_triples <- FALSE
 } else if (srfci_mode == "mpd") {
     unsh_triple_pheno_only <- TRUE
     force_marker_to_trait_before_R1 <- TRUE
     force_marker_to_trait_in_the_end <- FALSE
     external_ambiguous_triples <- FALSE
+    external_unshielded_triples <- FALSE
 } else if (srfci_mode == "std") {
     unsh_triple_pheno_only <- FALSE
     force_marker_to_trait_before_R1 <- FALSE
     force_marker_to_trait_in_the_end <- FALSE
     external_ambiguous_triples <- FALSE
+    external_unshielded_triples <- FALSE
 } else if (srfci_mode == "cusk2") {
     unsh_triple_pheno_only <- FALSE
     force_marker_to_trait_before_R1 <- FALSE
     force_marker_to_trait_in_the_end <- TRUE
     external_ambiguous_triples <- TRUE
+    external_unshielded_triples <- TRUE
 } else {
     print("mode has to be one of [mpu, mpd, std, cusk2]")
     exit()
@@ -66,12 +70,14 @@ mdim_path <- paste0(input_filestem, ".mdim")
 # separation set
 sep_path <- paste0(input_filestem, ".ssm")
 atr_path <- paste0(input_filestem, ".atr")
+ut_path <- paste0(input_filestem, ".ut")
 
 x <- read.csv(mdim_path, sep = "\t", header = FALSE)
 num_var <- as.numeric(x[1])
 num_phen <- as.numeric(x[2])
 max_level <- as.numeric(x[3])
 num_atr <- as.numeric(x[4])
+num_ut <- as.numeric(x[5])
 sepset <- load_sparse_sepsets(sep_path, num_var)
 
 # adjmat <- readMM(paste0(input_filestem, "_sam.mtx"))
@@ -88,11 +94,29 @@ indepTest <- gaussCItest
 conservative <- FALSE
 maj.rule <- FALSE
 
-print("Searching for unshielded triples")
-if (unsh_triple_pheno_only) {
-    u.t <- find.unsh.triple(adjmat[1:num_phen, 1:num_phen], check = FALSE)
+if (external_unshielded_triples) {
+    ut_file <- file(ut_path, "rb")
+    ut <- readBin(ut_file, integer(), size = 4, n = num_ut * 3)
+    utmat <- matrix(ut, ncol = 3, byrow = TRUE)
+    unshTripl <- matrix(integer(), nrow=3, ncol=num_ut)
+    p <- num_var
+    for (i in 1:nrow(utmat)) {
+        # increment because of one based indexing
+        unshTripl[1, i] = utmat[i, 1] + 1
+        unshTripl[2, i] = utmat[i, 2] + 1
+        unshTripl[3, i] = utmat[i, 3] + 1
+    }
+    unshVect <- vapply(num_ut, function(k)
+                       triple2numb(p, unshTripl[1,k], unshTripl[2,k], unshTripl[3,k]),
+                       numeric(1))
+    u.t <- list(unshTripl = unshTripl, unshVect = unshVect)
 } else {
-    u.t <- find.unsh.triple(adjmat, check = FALSE)
+    print("Searching for unshielded triples")
+    if (unsh_triple_pheno_only) {
+        u.t <- find.unsh.triple(adjmat[1:num_phen, 1:num_phen], check = FALSE)
+    } else {
+        u.t <- find.unsh.triple(adjmat, check = FALSE)
+    }
 }
 
 print("Orienting v-structures")
