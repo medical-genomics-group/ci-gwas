@@ -65,12 +65,14 @@ A standard analysis, if you have data at the individual-level available, consist
 5. `ci-gwas.py cuskss-merged` to run another of cuda-skeleton using only the selected markers. This is optional, but can help to reduce the marker-trait FDR.
 6. `ci-gwas.py sepselect` to find separation sets
 7. `ci-gwas.py srfci` to infer a PAG
-8. `ci-gwas.py srfci` to infer ACEs
+8. `ci-gwas.py mvivw` to run mvivw with the IVs inferred in the skeleton construction
 
 Alternatively, if you have correlations from summarized data, you can start at step 3) with `cuskss` instead of `cusk`. In that case it is important that
 
 - the traits have the same order in the `mxp` and `pxp` files
 - the markers have the same order in the `mxm` and `mxp` files
+
+In addition, when including binary or ordinal traits, `cuskss-het` should be used with heterologous correlations instead of `cusk` or `cuskss`.
 
 ## Common Errors
 
