@@ -262,25 +262,9 @@ class CuskResults:
     def find_maximal_and_min_pcorr_sepsets_incr(self, alpha: float, num_samples: int):
         max_sepsets = {}
         min_pcorr_sepsets = {}
-
-        # n_removed = 0
-        # remaining_pairs = set()
-        # # for triples i-k-j where i and j are markers,
-        # # we don't put anything in the sepset.
-        # for i, j in self.get_unshielded_triples_outer_pairs():
-        #     if self.is_marker(i) and self.is_marker(j):
-        #         n_removed += 1
-        #     else:
-        #         remaining_pairs.add((i, j))
-
-        # print(f"Skipped {n_removed} triples with markers as outer variables", flush=True)
-
-        remaining_pairs = self.get_rfci_relevant_unshielded_triples_outer_pairs()
-
-        for (count, (i, j)) in enumerate(remaining_pairs):
+        for (count, (i, j)) in enumerate(self.get_rfci_relevant_unshielded_triples_outer_pairs()):
             if count % 1000 == 0:
                 print(f"Processing unshielded triple #{count + 1} out of {len(remaining_pairs)}", flush=True)
-            # neighbors_i = set(self.neighbors(i))
             remaining_neighbors = set(self.trait_neighbors(i))
             max_sepset_size = len(remaining_neighbors)
             candidate_sepset = []
@@ -319,6 +303,7 @@ class CuskResults:
 
             max_sepsets[(i, j)] = candidate_sepset
 
+        self.max_sepsets = max_sepsets
         self.max_level_maximal_sepsets = max(len(v) for v in max_sepsets.values())
         self.maximal_sepset_arr = np.full(
             (self.num_var, self.num_var, self.max_level_maximal_sepsets),
@@ -329,6 +314,7 @@ class CuskResults:
             for k, e in enumerate(v):
                 self.maximal_sepset_arr[i, j, k] = e
 
+        self.min_sepsets = min_sepsets
         self.max_level_minimal_pcorr_sepsets = max(
             len(v) for v in min_pcorr_sepsets.values()
         )
@@ -438,7 +424,7 @@ class CuskResults:
 
 
 class MergedCuskResults(CuskResults):
-    def __init__(self, stem):
+    def __init__(self, stem, orientation_prior_file=None):
         with open(f"{stem}.mdim", "r") as fin:
             self.num_var, self.num_phen, self.max_level = [
                 int(e) for e in next(fin).split()
@@ -452,8 +438,10 @@ class MergedCuskResults(CuskResults):
         # make sure that diagonal is 1
         np.fill_diagonal(self.corr, 1.0)
         self.selected_markers = None
+        self.max_sepsets = None
         self.max_level_maximal_sepsets = None
         self.maximal_sepset_arr = None
+        self.min_sepsets = None
         self.max_level_minimal_sepsets = None
         self.minimal_sepset_arr = None
         self.max_level_minimal_pcorr_sepsets = None
@@ -462,6 +450,14 @@ class MergedCuskResults(CuskResults):
         self.ambiguous_triples = None
         self.rfci_relevant_unshielded_triples = None
         self.rm_collinear_markers()
+        self.orientation_prior = np.zeros_like(self.adj)
+        # marker -> trait
+        self.orient_v_structures[num_phen:, :num_phen] = self.adj[num_phen:, :num_phen]
+        self.pag = None
+        if orientation_prior_file is not None:
+            orientation_prior = np.fromfile(orientation_prior_file, dtype=np.int32)
+            assert orientation_prior.shape[0] == self.num_phen ** 2, "orientation prior has to have n_trait * n_trait entries"
+            self.orientation_prior[:num_phen, :num_phen] = self.orientation_prior.reshape(self.num_phen, self.num_phen)
 
     def rm_collinear_markers(self):
         n_rm = 0
@@ -478,6 +474,22 @@ class MergedCuskResults(CuskResults):
             else:
                 curr_i += 1
         print(f"Removed {n_rm} collinear markers")
+
+    def orient_v_structures(self, alpha: float, num_samples: int):
+        self.pag = np.zeros_like(self.adj)
+        self.pag[self.adj] = 1
+        if self.max_sepsets is None:
+            self.find_maximal_and_min_pcorr_sepsets_incr(alpha, num_samples)
+        for (x, y, z) in self.get_rfci_relevant_unshielded_triples():
+            orient = y not in self.max_sepsets[(x, z)] and y not in self.max_sepsets[(z, x)]
+            if self.orientation_prior[x, y] == 1:
+                self.pag[x, y] = 2
+            elif orient:
+                self.pag[x, y] = 2
+            if self.orientation_prior[z, y] == 1:
+                self.pag[z, y] = 2
+            elif orient:
+                self.pag[z, y] = 2
 
     def trait_neighbors(self, node_ix: int) -> np.array:
         neighbors = self.neighbors(node_ix)
@@ -497,9 +509,8 @@ class MergedCuskResults(CuskResults):
 
         mmwrite(f"{stem}_sam.mtx", scipy.sparse.coo_matrix(self.adj.astype(np.int32)))
         mmwrite(f"{stem}_scm.mtx", scipy.sparse.coo_matrix(self.corr))
+        mmwrite(f"{stem}_spm.mtx", scipy.sparse.coo_matrix(self.pag))
 
-        # self.adj.astype(np.int32).tofile(f"{stem}.adj")
-        # self.corr.tofile(f"{stem}.corr")
         self.ambiguous_triples.tofile(f"{stem}.atr")
         self.get_rfci_relevant_unshielded_triples().tofile(f"{stem}.ut")
         self.max_sepset_to_file(stem)
@@ -516,17 +527,14 @@ class MergedCuskResults(CuskResults):
                     fout.write(" ".join([str(e) for e in row]) + "\n")
 
 
-class CustomCuskResults(CuskResults):
-    def __init__(self, num_var, num_m, adj, corr, ixs):
-        self.num_var = num_var
-        self.num_m = num_m
-        self.num_phen = self.num_var - self.num_m
-        self.adj = adj.astype(bool)
-        self.corr = corr.astype(np.float32)
-        self.sepset_arr = None
-        self.ixs = ixs
-        self.selected_markers = None
-        self.unshielded_triples = None
+def orient_v_structures_merged(
+    cusk1_result_stem: str, alpha: float, num_samples: int, orientation_prior_file=None
+) -> MergedCuskResults:
+    cr = MergedCuskResults(cusk1_result_stem, orientation_prior_file=orientation_prior_file)
+    print("Orienting v-structures")
+    cr.orient_v_structures(alpha=alpha, num_samples=num_samples)
+    cr.mark_ambiguous_triples()
+    return cr
 
 
 def sepselect_merged(
