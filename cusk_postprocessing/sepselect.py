@@ -452,12 +452,12 @@ class MergedCuskResults(CuskResults):
         self.rm_collinear_markers()
         self.orientation_prior = np.zeros_like(self.adj)
         # marker -> trait
-        self.orient_v_structures[num_phen:, :num_phen] = self.adj[num_phen:, :num_phen]
+        self.orient_v_structures[self.num_phen:, :self.num_phen] = self.adj[self.num_phen:, :self.num_phen]
         self.pag = None
         if orientation_prior_file is not None:
             orientation_prior = np.fromfile(orientation_prior_file, dtype=np.int32)
-            assert orientation_prior.shape[0] == self.num_phen ** 2, "orientation prior has to have n_trait * n_trait entries"
-            self.orientation_prior[:num_phen, :num_phen] = self.orientation_prior.reshape(self.num_phen, self.num_phen)
+            assert orientation_prior.shape[0] == self.self.num_phen ** 2, "orientation prior has to have n_trait * n_trait entries"
+            self.orientation_prior[:self.num_phen, :self.num_phen] = self.orientation_prior.reshape(self.self.num_phen, self.self.num_phen)
 
     def rm_collinear_markers(self):
         n_rm = 0
