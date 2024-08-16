@@ -72,7 +72,7 @@ for (i in 1:nrow(atrmat)) {
 }
 
 print("Applying R1-R10")
-res <- udag2apag_ci_gwas(A[1:num_phen,1:num_phen], sepset, rules=rep(TRUE, 10), unfVect=unfTripl)
+res <- udag2apag_ci_gwas(A[1:num_phen,1:num_phen], sepset, rules=rep(TRUE, 10), unfVect=unfTrip)
 tmp_graph <- A
 tmp_graph[1:num_phen, 1:num_phen] <- res$graph
 res$graph <- tmp_graph
