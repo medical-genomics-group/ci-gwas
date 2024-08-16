@@ -454,6 +454,7 @@ class MergedCuskResults(CuskResults):
         self.orientation_prior = np.zeros_like(self.adj)
         # marker -> trait
         self.orientation_prior[self.num_phen:, :self.num_phen] = self.adj[self.num_phen:, :self.num_phen]
+        self.orientation_prior = self.orientation_prior.astype(np.int32)
         self.pag = None
         if orientation_prior_file is not None:
             orientation_prior = np.fromfile(orientation_prior_file, dtype=np.int32)
@@ -477,7 +478,7 @@ class MergedCuskResults(CuskResults):
         print(f"Removed {n_rm} collinear markers")
 
     def orient_v_structures(self, alpha: float, num_samples: int):
-        self.pag = np.zeros_like(self.adj)
+        self.pag = np.zeros_like(self.adj, dtype=np.int32)
         self.pag[self.adj] = 1
         if self.max_sepsets is None:
             self.find_maximal_and_min_pcorr_sepsets_incr(alpha, num_samples)
