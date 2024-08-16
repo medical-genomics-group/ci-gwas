@@ -265,7 +265,7 @@ class CuskResults:
         pairs = self.get_rfci_relevant_unshielded_triples_outer_pairs()
         for (count, (i, j)) in enumerate(pairs):
             if count % 1000 == 0:
-                print(f"Processing outer pair #{count + 1} out of {len(remaining_pairs)}", flush=True)
+                print(f"Processing outer pair #{count + 1} out of {len(pairs)}", flush=True)
             remaining_neighbors = set(self.trait_neighbors(i))
             max_sepset_size = len(remaining_neighbors)
             candidate_sepset = []
