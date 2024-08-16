@@ -262,9 +262,10 @@ class CuskResults:
     def find_maximal_and_min_pcorr_sepsets_incr(self, alpha: float, num_samples: int):
         max_sepsets = {}
         min_pcorr_sepsets = {}
-        for (count, (i, j)) in enumerate(self.get_rfci_relevant_unshielded_triples_outer_pairs()):
+        pairs = self.get_rfci_relevant_unshielded_triples_outer_pairs()
+        for (count, (i, j)) in enumerate(pairs):
             if count % 1000 == 0:
-                print(f"Processing unshielded triple #{count + 1} out of {len(remaining_pairs)}", flush=True)
+                print(f"Processing outer pair #{count + 1} out of {len(remaining_pairs)}", flush=True)
             remaining_neighbors = set(self.trait_neighbors(i))
             max_sepset_size = len(remaining_neighbors)
             candidate_sepset = []
