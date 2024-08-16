@@ -315,7 +315,7 @@ class CuskResults:
             for k, e in enumerate(v):
                 self.maximal_sepset_arr[i, j, k] = e
 
-        self.min_sepsets = min_sepsets
+        self.min_sepsets = min_pcorr_sepsets
         self.max_level_minimal_pcorr_sepsets = max(
             len(v) for v in min_pcorr_sepsets.values()
         )
