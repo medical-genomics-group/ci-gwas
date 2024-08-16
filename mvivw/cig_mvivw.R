@@ -3,7 +3,7 @@ library("MendelianRandomization")
 library("Matrix")
 
 args = commandArgs(trailingOnly=TRUE)
-cusk_output_path = args[1]
+cusk_output_stem = args[1]
 num_samples = as.numeric(args[2])
 # expecting FALSE, TRUE input here
 rm_non_adjacent = as.logical(args[3])
@@ -11,10 +11,9 @@ rm_non_adjacent = as.logical(args[3])
 use_ld = as.logical(args[4])
 output_file = args[5]
 
-#merged_blocks_adj = sprintf("%s/merged_blocks_sam.mtx", cusk_output_path)
-corr_path = sprintf("%s/cuskss_merged_scm.mtx", cusk_output_path)
-adj_path = sprintf("%s/cuskss_merged_sam.mtx", cusk_output_path)
-mdim_path = sprintf("%s/cuskss_merged.mdim", cusk_output_path)
+corr_path = sprintf("%s_scm.mtx", cusk_output_stem)
+adj_path = sprintf("%s_sam.mtx", cusk_output_stem)
+mdim_path = sprintf("%s.mdim", cusk_output_stem)
 
 mdim = read.table(mdim_path, sep="\t")
 num_trait = mdim[1, 2]

@@ -393,10 +393,10 @@ def main():
         help="Run multivariable inverse-variance weighted mendelian randomization between all adjacent traits, using cusk-identified markers as intrumental variables",
     )
     mvivw_parser.add_argument(
-        "cusk_output_dir",
-        metavar="cusk-output-dir",
+        "cusk_output_stem",
+        metavar="cusk-output-stem",
         type=str,
-        help="output directory of cusk or cuskss",
+        help="output stem of cusk or cuskss result files",
     )
     mvivw_parser.add_argument(
         "num_samples",
@@ -621,8 +621,8 @@ def run_v_struct(args):
 
 
 def run_mvivw(args):
-    iv_df = get_iv_candidates(f"{args.cusk_output_dir}/cuskss_merged")
-    iv_df.to_csv(f"{args.cusk_output_dir}/cuskss_merged_iv_candidates.csv", index=False)
+    iv_df = get_iv_candidates(args.cusk_output_stem)
+    iv_df.to_csv(f"{args.cusk_output_stem}_iv_candidates.csv", index=False)
     if args.s:
         use_skeleton = "TRUE"
     else:
@@ -630,11 +630,11 @@ def run_mvivw(args):
     subprocess.run(
         [
             MVIVW_PATH,
-            args.cusk_output_dir,
+            args.cusk_output_stem,
             str(args.num_samples),
             use_skeleton, # rm exposures that have been identified as non-adjacent in cusk
             "FALSE", # use ld matrix
-            f"{args.cusk_output_dir}/mvivw_results.tsv", # output dir
+            f"{args.cusk_output_stem}_mvivw_results.tsv", # output dir
         ],
         check=True,
     )
