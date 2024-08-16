@@ -5,7 +5,7 @@ import os
 import sys
 import subprocess
 from cusk_postprocessing.check_mr_assumptions import check_ivs, get_iv_candidates
-from cusk_postprocessing.sepselect import sepselect_merged
+from cusk_postprocessing.sepselect import sepselect_merged, orient_v_structures_merged
 from cusk_postprocessing.merge_blocks import (
     merge_block_outputs,
     reformat_cuskss_merged_output,
@@ -411,6 +411,38 @@ def main():
     )
     mvivw_parser.set_defaults(func=run_mvivw)
 
+    # v_struct
+    v_struct_parser = subparsers.add_parser(
+        "orient-v-structs",
+        help="Orient v-structures using maximal separation sets on merged cusk skeletons.",
+    )
+    v_struct_parser.add_argument(
+        "cusk_result_stem",
+        metavar="cusk-result-stem",
+        help="outdir + stem of merged cusk results",
+        type=str,
+    )
+    v_struct_parser.add_argument(
+        "alpha",
+        type=TypeCheck(float, "alpha", 0.0, 1.0),
+        help="significance level for conditional independence tests",
+        default=10**-4,
+    )
+    v_struct_parser.add_argument(
+        "num_samples",
+        metavar="num-samples",
+        type=TypeCheck(int, "num-samples", 1, None),
+        help="number of samples used for computing correlations",
+    )
+    v_struct_parser.add_argument(
+        "--orientation-prior",
+        metavar="orientation-prior",
+        type=str,
+        default=None,
+        help="matrix of (0, 1) (32 bit integers, binary) of dims (n_trait, n_trait) indicating directions to be forced. ",
+    )
+    v_struct_parser.set_defaults(func=run_v_struct)
+
     # sepselect
     sepselect_parser = subparsers.add_parser(
         "sepselect",
@@ -580,6 +612,12 @@ def run_sepselect(args):
     merged_cusk = sepselect_merged(args.cusk_result_stem, args.alpha, args.num_samples)
     merged_cusk.to_file(f"{os.path.dirname(args.cusk_result_stem)}/max_sep_min_pc")
     print("Sepselect done.")
+
+
+def run_v_struct(args):
+    merged_cusk = orient_v_structures_merged(args.cusk_result_stem, args.alpha, args.num_samples, args.orientation_prior)
+    merged_cusk.to_file(f"{os.path.dirname(args.cusk_result_stem)}/max_sep_min_pc")
+    print("Sepselect / v-structs done.")
 
 
 def run_mvivw(args):

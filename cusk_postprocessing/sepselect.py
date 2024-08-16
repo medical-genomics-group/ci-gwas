@@ -482,12 +482,22 @@ class MergedCuskResults(CuskResults):
             self.find_maximal_and_min_pcorr_sepsets_incr(alpha, num_samples)
         for (x, y, z) in self.get_rfci_relevant_unshielded_triples():
             orient = y not in self.max_sepsets[(x, z)] and y not in self.max_sepsets[(z, x)]
+            # x-y edge:
             if self.orientation_prior[x, y] == 1:
                 self.pag[x, y] = 2
+                self.pag[y, x] = 3
+            elif self.orientation_prior[y, x] == 1:
+                self.pag[y, x] = 2
+                self.pag[x, y] = 3
             elif orient:
                 self.pag[x, y] = 2
+            # z-y edge:
             if self.orientation_prior[z, y] == 1:
                 self.pag[z, y] = 2
+                self.pag[y, z] = 3
+            elif self.orientation_prior[y, z] == 1:
+                self.pag[y, z] = 2
+                self.pag[z, y] = 3
             elif orient:
                 self.pag[z, y] = 2
 
