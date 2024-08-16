@@ -9,45 +9,16 @@ print(myargs)
 input_filestem <- myargs[1]
 alpha <- as.numeric(myargs[2])
 num_individuals <- as.numeric(myargs[3])
-srfci_mode <- myargs[4] # one of [mpu, mpd, std]
-# sRFCI can be run in three different modes:
-# mpu: limit unshielded triples to traits, leave marker-trait links undirected, run all subsequent steps as in original RFCI, orient marker-trait edges in the end as marker -> trait
-# mpd: limit unshielded triples to traits, then direct marker-trait links as marker -> trait, then orient v-structures and run all subsequent steps
-# std: run standard RFCI on the whole graph, without any modifications.
 
 print(paste0("input_filestem: ", input_filestem))
 print(paste0("num_individuals: ", num_individuals))
 print(paste0("alpha: ", alpha))
-print(paste0("mode: ", srfci_mode))
 
-if (srfci_mode == "mpu") {
-    unsh_triple_pheno_only <- TRUE
-    force_marker_to_trait_before_R1 <- FALSE
-    force_marker_to_trait_in_the_end <- TRUE
-    external_ambiguous_triples <- FALSE
-    external_unshielded_triples <- FALSE
-} else if (srfci_mode == "mpd") {
-    unsh_triple_pheno_only <- TRUE
-    force_marker_to_trait_before_R1 <- TRUE
-    force_marker_to_trait_in_the_end <- FALSE
-    external_ambiguous_triples <- FALSE
-    external_unshielded_triples <- FALSE
-} else if (srfci_mode == "std") {
-    unsh_triple_pheno_only <- FALSE
-    force_marker_to_trait_before_R1 <- FALSE
-    force_marker_to_trait_in_the_end <- FALSE
-    external_ambiguous_triples <- FALSE
-    external_unshielded_triples <- FALSE
-} else if (srfci_mode == "cusk2") {
-    unsh_triple_pheno_only <- FALSE
-    force_marker_to_trait_before_R1 <- FALSE
-    force_marker_to_trait_in_the_end <- TRUE
-    external_ambiguous_triples <- TRUE
-    external_unshielded_triples <- TRUE
-} else {
-    print("mode has to be one of [mpu, mpd, std, cusk2]")
-    exit()
-}
+unsh_triple_pheno_only <- FALSE
+force_marker_to_trait_before_R1 <- FALSE
+force_marker_to_trait_in_the_end <- TRUE
+external_ambiguous_triples <- TRUE
+external_unshielded_triples <- TRUE
 
 load_sparse_sepsets <- function(filepath, nvar) {
     res <- rep(list(rep(list(NULL), times = nvar)), nvar)
@@ -80,104 +51,37 @@ num_atr <- as.numeric(x[4])
 num_ut <- as.numeric(x[5])
 sepset <- load_sparse_sepsets(sep_path, num_var)
 
-# adjmat <- readMM(paste0(input_filestem, "_sam.mtx"))
-# cormat <- readMM(paste0(input_filestem, "_scm.mtx"))
 adjmat <- as.matrix(readMM(paste0(input_filestem, "_sam.mtx")))
 cormat <- as.matrix(readMM(paste0(input_filestem, "_scm.mtx")))
+A <- as.matrix(readMM(paste0(input_filestem, "_spm.mtx")))
 
 atr_file <- file(atr_path, "rb")
 atr <- readBin(atr_file, integer(), size = 4, n = num_atr * 3)
 atrmat <- matrix(atr, ncol = 3, byrow = TRUE)
 
-suffStat <- list(C = cormat, n = num_individuals)
-indepTest <- gaussCItest
-conservative <- FALSE
-maj.rule <- FALSE
-
-if (external_unshielded_triples) {
-    ut_file <- file(ut_path, "rb")
-    ut <- readBin(ut_file, integer(), size = 4, n = num_ut * 3)
-    utmat <- matrix(ut, ncol = 3, byrow = TRUE)
-    unshTripl <- matrix(integer(), nrow=3, ncol=num_ut)
-    p <- num_var
-    for (i in 1:nrow(utmat)) {
-        # increment because of one based indexing
-        unshTripl[1, i] = utmat[i, 1] + 1
-        unshTripl[2, i] = utmat[i, 2] + 1
-        unshTripl[3, i] = utmat[i, 3] + 1
-    }
-    unshVect <- vapply(num_ut, function(k)
-                       triple2numb(p, unshTripl[1,k], unshTripl[2,k], unshTripl[3,k]),
-                       numeric(1))
-    u.t <- list(unshTripl = unshTripl, unshVect = unshVect)
-} else {
-    print("Searching for unshielded triples")
-    if (unsh_triple_pheno_only) {
-        u.t <- find.unsh.triple(adjmat[1:num_phen, 1:num_phen], check = FALSE)
-    } else {
-        u.t <- find.unsh.triple(adjmat, check = FALSE)
-    }
-}
-
-print("Orienting v-structures")
-r.v. <- rfci.vStruc(
-    suffStat = suffStat,
-    indepTest = gaussCItest,
-    alpha,
-    sepset,
-    adjmat,
-    unshTripl = u.t$unshTripl,
-    unshVect = u.t$unshVect,
-    conservative = (conservative || maj.rule),
-    version.unf = c(1, 1),
-    maj.rule = maj.rule,
-    verbose = FALSE
-)
-A <- r.v.$amat
-sepset <- r.v.$sepset
-if (force_marker_to_trait_before_R1) {
-    A[1:num_phen, (num_phen + 1):num_var][A[1:num_phen, (num_phen + 1):num_var] != 0] <- 3
-    A[(num_phen + 1):num_var, 1:num_phen][A[(num_phen + 1):num_var, 1:num_phen] != 0] <- 2
-}
-
-# optionally mark unshielded triples a-b-c as unfaithful / ambiguous,
+# mark unshielded triples a-b-c as unfaithful / ambiguous,
 # if b is in maximal sepset, but not in minimal sepset.
-if (external_ambiguous_triples) {
-    p <- num_var
-    for (i in 1:nrow(atrmat)) {
-        # increment because of one based indexing
-        x <- atrmat[i, 1] + 1
-        y <- atrmat[i, 2] + 1
-        z <- atrmat[i, 3] + 1
-        r.v.$unfTripl <- c(r.v.$unfTripl, triple2numb(p, x, y, z))
-    }
+p <- num_var
+unfTrip = c()
+for (i in 1:nrow(atrmat)) {
+    # increment because of one based indexing
+    x <- atrmat[i, 1] + 1
+    y <- atrmat[i, 2] + 1
+    z <- atrmat[i, 3] + 1
+    c(unfTrip, triple2numb(p, x, y, z))
 }
-
-writeMM(as(A, "sparseMatrix"), file = paste0(input_filestem, sprintf("_estimated_vStruc_%s.mtx", srfci_mode)))
-print("Done")
 
 print("Applying R1-R10")
-estimate_pag_with_traits_only <- TRUE
-if (estimate_pag_with_traits_only) {
-    res <- udag2apag_ci_gwas(A[1:num_phen,1:num_phen], sepset, rules=rep(TRUE, 10), unfVect = r.v.$unfTripl)
-    tmp_graph <- A
-    tmp_graph[1:num_phen, 1:num_phen] <- res$graph
-    res$graph <- tmp_graph
-} else {
-    res <- udag2apag(A,
-        suffStat = suffStat, indepTest = gaussCItest, alpha, sepset, rules = rep(TRUE, 10),
-        unfVect = r.v.$unfTripl, verbose = FALSE
-    )
-}
+res <- udag2apag_ci_gwas(A[1:num_phen,1:num_phen], sepset, rules=rep(TRUE, 10), unfVect=unfTripl)
+tmp_graph <- A
+tmp_graph[1:num_phen, 1:num_phen] <- res$graph
+res$graph <- tmp_graph
 
 Amat <- res$graph
 
-if (force_marker_to_trait_in_the_end) {
-    Amat[1:num_phen, (num_phen + 1):num_var][Amat[1:num_phen, (num_phen + 1):num_var] != 0] <- 3
-    Amat[(num_phen + 1):num_var, 1:num_phen][Amat[(num_phen + 1):num_var, 1:num_phen] != 0] <- 2
-}
+# force marker -> trait
+Amat[1:num_phen, (num_phen + 1):num_var][Amat[1:num_phen, (num_phen + 1):num_var] != 0] <- 3
+Amat[(num_phen + 1):num_var, 1:num_phen][Amat[(num_phen + 1):num_var, 1:num_phen] != 0] <- 2
 
-
-# writeMM(Amat, file=paste0(input_filestem, sprintf("_estimated_pag_%s.mtx", srfci_mode)))
-writeMM(as(Amat, "sparseMatrix"), file = paste0(input_filestem, sprintf("_estimated_pag_%s.mtx", srfci_mode)))
+writeMM(as(Amat, "sparseMatrix"), file = paste0(input_filestem, "_estimated_pag.mtx"))
 print("Done")
