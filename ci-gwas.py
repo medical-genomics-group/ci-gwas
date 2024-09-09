@@ -409,6 +409,13 @@ def main():
         action='store_true',
         help="use cusk inferred trait-trait skeleton to select exposures"
     )
+    mvivw_parser.add_argument(
+        "--orientation-prior",
+        metavar="orientation-prior",
+        type=str,
+        default=None,
+        help="matrix of (0, 1) (32 bit integers, binary) of dims (n_trait, n_trait) indicating directions to be forced. ",
+    )
     mvivw_parser.set_defaults(func=run_mvivw)
 
     # v_struct
@@ -627,6 +634,10 @@ def run_mvivw(args):
         use_skeleton = "TRUE"
     else:
         use_skeleton = "FALSE"
+    if args.orientation_prior is not None:
+        rm_counterfactuals = "TRUE"
+    else:
+        rm_counterfactuals = "FALSE"
     subprocess.run(
         [
             MVIVW_PATH,
@@ -634,6 +645,8 @@ def run_mvivw(args):
             str(args.num_samples),
             use_skeleton, # rm exposures that have been identified as non-adjacent in cusk
             "FALSE", # use ld matrix
+            rm_counterfactuals,
+            args.orientation_prior,
             f"{args.cusk_output_stem}_mvivw_results.tsv", # output dir
         ],
         check=True,

@@ -9,7 +9,9 @@ num_samples = as.numeric(args[2])
 rm_non_adjacent = as.logical(args[3])
 # expecting FALSE, TRUE input here
 use_ld = as.logical(args[4])
-output_file = args[5]
+rm_counterfactual = as.logical(args[5])
+fixed_links_path = args[6]
+output_file = args[7]
 
 corr_path = sprintf("%s_scm.mtx", cusk_output_stem)
 adj_path = sprintf("%s_sam.mtx", cusk_output_stem)
@@ -21,10 +23,14 @@ num_var = mdim[1, 1]
 num_snp = num_var - num_trait
 corrs = Matrix::readMM(corr_path)
 adj = Matrix::readMM(adj_path)
-#mb_adj = Matrix::readMM(merged_blocks_adj)
+
+if (rm_counterfactual) {
+    fixed_links_file <- file(fixed_links_path, "rb")
+    fixed_links <- readBin(fixed_links_file, integer(), size = 4, n = num_trait * num_trait)
+    fixed_links <- matrix(fixed_links, ncol = num_trait, byrow = TRUE)
+}
 
 full_ld_mat = data.matrix(corrs[(num_trait + 1):num_var, (num_trait + 1):num_var])
-#pxp_adj = mb_adj[1:num_trait, 1:num_trait]
 pxp_adj = adj[1:num_trait, 1:num_trait]
 mxp_adj = data.matrix(t(adj[1:num_trait, (num_trait+1):num_var]))
 B = data.matrix(t(corrs[1:num_trait, (num_trait+1):num_var]))
@@ -50,6 +56,17 @@ for (outcome_ix in 1:num_trait) {
         for (rm_trait_ix in which(pxp_adj[, outcome_ix] != 1)) {
             rm_rows = c(rm_rows, which(mxp_adj[, rm_trait_ix] == 1))
         }
+        bx = B[-rm_rows, tested_traits, drop=FALSE]
+        bxse = B[-rm_rows, tested_traits, drop=FALSE]
+        by = B[-rm_rows, outcome_ix]
+        byse = SE[-rm_rows, outcome_ix]
+    } else if (rm_counterfactual) {
+        # rm traits which are definitely downstream of outcome
+        rm_rows = which(fixed_links[outcome_ix, ] == 1)
+        rm_rows = c(rm_rows, outcome_ix)
+        rm_rows = c(rm_rows, outcome_eff_rows)
+        tested_traits = which(fixed_links[outcome_ix, ] != 1)
+        tested_traits = tested_traits[-outcome_ix]
         bx = B[-rm_rows, tested_traits, drop=FALSE]
         bxse = B[-rm_rows, tested_traits, drop=FALSE]
         by = B[-rm_rows, outcome_ix]
