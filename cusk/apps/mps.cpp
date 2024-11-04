@@ -1236,7 +1236,7 @@ void cuda_skeleton_summary_stats_hetcor_merged_blocks(int argc, char *argv[])
         write_floats_to_binary(
             sq_corrs.data(),
             sq_corrs.size(),
-            make_path(outdir, block.to_file_string(), ".all_corrs")
+            make_path(outdir, "cuskss_merged", ".all_corrs")
         );
     }
 
@@ -1257,7 +1257,7 @@ void cuda_skeleton_summary_stats_hetcor_merged_blocks(int argc, char *argv[])
     std::cout << "Starting second cusk stage" << std::endl;
     gc = reduced_gc_cusk(gc, sq_ess, th, depth, max_level_two);
     std::cout << "Retained " << gc.num_markers() << " markers" << std::endl;
-    gc.to_file(make_path(outdir, block.to_file_string(), ""));
+    gc.to_file(make_path(outdir, "cuskss_merged", ""));
 }
 
 
