@@ -503,6 +503,35 @@ class MergedCuskResults(CuskResults):
             elif orient:
                 self.pag[z, y] = 2
 
+    def orient_v_structures_rfci(self, alpha: float, num_samples: int):
+        self.pag = np.zeros_like(self.adj, dtype=np.int32)
+        self.pag[self.adj] = 1
+        if self.max_sepsets is None:
+            self.find_maximal_and_min_pcorr_sepsets_incr(alpha, num_samples)
+        for (x, y, z) in self.get_rfci_relevant_unshielded_triples():
+            # check if the edges x-y or y-z are dependent if conditioning on sepset(x, z) \ y
+            # if yes, then the stuff below should be executed,
+            # else some magic with a minimal sepset has to be done
+            orient = y not in self.max_sepsets[(x, z)] and y not in self.max_sepsets[(z, x)]
+            # x-y edge:
+            if self.orientation_prior[x, y] == 1:
+                self.pag[x, y] = 2
+                self.pag[y, x] = 3
+            elif self.orientation_prior[y, x] == 1:
+                self.pag[y, x] = 2
+                self.pag[x, y] = 3
+            elif orient:
+                self.pag[x, y] = 2
+            # z-y edge:
+            if self.orientation_prior[z, y] == 1:
+                self.pag[z, y] = 2
+                self.pag[y, z] = 3
+            elif self.orientation_prior[y, z] == 1:
+                self.pag[y, z] = 2
+                self.pag[z, y] = 3
+            elif orient:
+                self.pag[z, y] = 2
+
     def trait_neighbors(self, node_ix: int) -> np.array:
         neighbors = self.neighbors(node_ix)
         return neighbors[neighbors < self.num_phen]
