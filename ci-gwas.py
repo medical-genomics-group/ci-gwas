@@ -660,7 +660,7 @@ def cuskss_het(args):
     )
 
 
-def cuskss_het(args):
+def cuskss_het_merged(args):
     subprocess.run(
         [
             MPS_PATH,
