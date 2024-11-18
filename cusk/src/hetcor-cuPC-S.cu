@@ -17,10 +17,11 @@
  * @param[in]  Th  Pointer to alpha / 2 percentile
  * @param[in]  l  Pointer to current level
  * @param[in]  maxlevel  Pointer to maximal level
+ * @param[in]  time_index  Pointer to time indices of all variables
  * @return return_name return description
  */
 void hetcor_skeleton(
-    float *C, int *P, int *G, float *N, float *Th, int *l, const int *maxlevel
+    float *C, int *P, int *G, float *N, float *Th, int *l, const int *maxlevel, const int *time_index
 )
 {
     float *C_cuda;  // Copy of C array in GPU
@@ -29,6 +30,7 @@ void hetcor_skeleton(
     int *nprime_cuda;
     int *GPrime_cuda;
     int *mutex_cuda;
+    int *time_index_cuda;
 
     int n = *P;
     float th = *Th;
@@ -44,10 +46,13 @@ void hetcor_skeleton(
     HANDLE_ERROR(cudaMalloc((void **)&C_cuda, n * n * sizeof(float)));
     HANDLE_ERROR(cudaMalloc((void **)&G_cuda, n * n * sizeof(int)));
     HANDLE_ERROR(cudaMalloc((void **)&N_cuda, n * n * sizeof(float)));
+    HANDLE_ERROR(cudaMalloc((void **)&time_index_cuda, n * sizeof(int)));
     // copy correlation matrix from CPU to GPU
     HANDLE_ERROR(cudaMemcpy(C_cuda, C, n * n * sizeof(float), cudaMemcpyHostToDevice));
     // copy effective sample size matrix from CPU to GPU
     HANDLE_ERROR(cudaMemcpy(N_cuda, N, n * n * sizeof(float), cudaMemcpyHostToDevice));
+    // copy time indices from host to device
+    HANDLE_ERROR(cudaMemcpy(time_index_cuda, time_index, n * sizeof(int), cudaMemcpyHostToDevice));
     // initialize a 0 matrix
     HANDLE_ERROR(cudaMemset(mutex_cuda, 0, n * n * sizeof(int)));
 
@@ -115,7 +120,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL1, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL1, 1, 1);
                 cal_Indepl1_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda
                 );
                 CudaCheckError();
             }
@@ -126,7 +131,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL2, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL2, 1, 1);
                 cal_Indepl2_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda
                 );
                 CudaCheckError();
             }
@@ -137,7 +142,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL3, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL3, 1, 1);
                 cal_Indepl3_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda
                 );
                 CudaCheckError();
             }
@@ -148,7 +153,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL4, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL4, 1, 1);
                 cal_Indepl4_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda
                 );
                 CudaCheckError();
             }
@@ -160,7 +165,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL5, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL5, 1, 1);
                 cal_Indepl5_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda
                 );
                 CudaCheckError();
             }
@@ -172,7 +177,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL6, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL6, 1, 1);
                 cal_Indepl6_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda
                 );
                 CudaCheckError();
                 CudaCheckError();
@@ -184,7 +189,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL7, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL7, 1, 1);
                 cal_Indepl7_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda
                 );
                 CudaCheckError();
             }
@@ -195,7 +200,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL8, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL8, 1, 1);
                 cal_Indepl8_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda
                 );
                 CudaCheckError();
             }
@@ -206,7 +211,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL9, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL9, 1, 1);
                 cal_Indepl9_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda
                 );
                 CudaCheckError();
             }
@@ -217,7 +222,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL10, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL10, 1, 1);
                 cal_Indepl10_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda
                 );
                 CudaCheckError();
             }
@@ -228,7 +233,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL11, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL11, 1, 1);
                 cal_Indepl11_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda
                 );
                 CudaCheckError();
             }
@@ -239,7 +244,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL12, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL12, 1, 1);
                 cal_Indepl12_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda
                 );
                 CudaCheckError();
             }
@@ -250,7 +255,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL13, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL13, 1, 1);
                 cal_Indepl13_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda
                 );
                 CudaCheckError();
             }
@@ -261,7 +266,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL14, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL14, 1, 1);
                 cal_Indepl14_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda
                 );
                 CudaCheckError();
             }
@@ -309,9 +314,10 @@ __global__ void cal_Indepl0_ess(float *C, int *G, float *N, int n, float th)
 }
 
 __global__ void cal_Indepl1_ess(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index, int *time_index
 )
 {
+    int level = 1;
     float loc_th;
     int YIdx;
     int XIdx = by;
@@ -379,12 +385,9 @@ __global__ void cal_Indepl1_ess(
                     continue;
                 }
                 YIdx = G_Chunk[d2];
-                if (G[XIdx * n + YIdx] == 1)
-                {
-                    NoEdgeFlag = 0;
-                    M0 = C[XIdx * n + YIdx];
-                    M1[1] = C[YIdx * n + NbrIdx];
-
+                if (!valid_time_conditioning(XIdx, YIdx, NbrIdx, time_index, level)) {
+                    continue;
+                }
                     H[0][0] = 1 - (M1[0] * M1[0]);
                     H[0][1] = M0 - (M1[0] * M1[1]);
                     H[1][1] = 1 - (M1[1] * M1[1]);
@@ -412,9 +415,10 @@ __global__ void cal_Indepl1_ess(
 }
 
 __global__ void cal_Indepl2_ess(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index
 )
 {
+    int level = 2;
     float loc_th;
     int YIdx;
     int XIdx = by;
@@ -507,6 +511,10 @@ __global__ void cal_Indepl2_ess(
                     continue;
                 }
                 YIdx = G_Chunk[d2];
+                if (!valid_time_conditioning(XIdx, YIdx, NbrIdx, time_index, level))
+                {
+                    continue;
+                }
                 if (G[XIdx * n + YIdx] == 1)
                 {
                     NoEdgeFlag = 0;
@@ -550,9 +558,10 @@ __global__ void cal_Indepl2_ess(
 }
 
 __global__ void cal_Indepl3_ess(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index
 )
 {
+    int level = 3;
     float loc_th;
     int YIdx;
     int XIdx = by;
@@ -652,6 +661,9 @@ __global__ void cal_Indepl3_ess(
                     continue;
                 }
                 YIdx = G_Chunk[d2];
+                if (!valid_time_conditioning(XIdx, YIdx, NbrIdx, time_index, level)) {
+                    continue;
+                }
                 if (G[XIdx * n + YIdx] == 1)
                 {
                     NoEdgeFlag = 0;
@@ -709,9 +721,10 @@ __global__ void cal_Indepl3_ess(
 }
 
 __global__ void cal_Indepl4_ess(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index
 )
 {
+    int level = 4;
     float loc_th;
     int YIdx;
     int XIdx = by;
@@ -828,6 +841,9 @@ __global__ void cal_Indepl4_ess(
                     continue;
                 }
                 YIdx = G_Chunk[d2];
+                if (!valid_time_conditioning(XIdx, YIdx, NbrIdx, time_index, level)) {
+                    continue;
+                }
                 if (G[XIdx * n + YIdx] == 1)
                 {
                     NoEdgeFlag = 0;
@@ -887,9 +903,10 @@ __global__ void cal_Indepl4_ess(
 }
 
 __global__ void cal_Indepl5_ess(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index
 )
 {
+    int level = 5;
     float loc_th;
     int YIdx;
     int XIdx = by;
@@ -1018,6 +1035,9 @@ __global__ void cal_Indepl5_ess(
                     continue;
                 }
                 YIdx = G_Chunk[d2];
+                if (!valid_time_conditioning(XIdx, YIdx, NbrIdx, time_index, level)) {
+                    continue;
+                }
                 if (G[XIdx * n + YIdx] == 1)
                 {
                     NoEdgeFlag = 0;
@@ -1080,9 +1100,10 @@ __global__ void cal_Indepl5_ess(
 }
 
 __global__ void cal_Indepl6_ess(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index
 )
 {
+    int level = 6;
     float loc_th;
     int YIdx;
     int XIdx = by;
@@ -1226,6 +1247,9 @@ __global__ void cal_Indepl6_ess(
                     continue;
                 }
                 YIdx = G_Chunk[d2];
+                if (!valid_time_conditioning(XIdx, YIdx, NbrIdx, time_index, level)) {
+                    continue;
+                }
                 if (G[XIdx * n + YIdx] == 1)
                 {
                     NoEdgeFlag = 0;
@@ -1289,9 +1313,10 @@ __global__ void cal_Indepl6_ess(
 }
 
 __global__ void cal_Indepl7_ess(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index
 )
 {
+    int level = 7;
     float loc_th;
     int YIdx;
     int XIdx = by;
@@ -1452,6 +1477,9 @@ __global__ void cal_Indepl7_ess(
                     continue;
                 }
                 YIdx = G_Chunk[d2];
+                if (!valid_time_conditioning(XIdx, YIdx, NbrIdx, time_index, level)) {
+                    continue;
+                }
                 if (G[XIdx * n + YIdx] == 1)
                 {
                     NoEdgeFlag = 0;
@@ -1518,9 +1546,10 @@ __global__ void cal_Indepl7_ess(
 }
 
 __global__ void cal_Indepl8_ess(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index
 )
 {
+    int level = 8;
     float loc_th;
     int YIdx;
     int XIdx = by;
@@ -1697,6 +1726,9 @@ __global__ void cal_Indepl8_ess(
                     continue;
                 }
                 YIdx = G_Chunk[d2];
+                if (!valid_time_conditioning(XIdx, YIdx, NbrIdx, time_index, level)) {
+                    continue;
+                }
                 if (G[XIdx * n + YIdx] == 1)
                 {
                     NoEdgeFlag = 0;
@@ -1764,9 +1796,10 @@ __global__ void cal_Indepl8_ess(
 }
 
 __global__ void cal_Indepl9_ess(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index
 )
 {
+    int level = 9;
     float loc_th;
     int YIdx;
     int XIdx = by;
@@ -1887,6 +1920,9 @@ __global__ void cal_Indepl9_ess(
                     continue;
                 }
                 YIdx = G_Chunk[d2];
+                if (!valid_time_conditioning(XIdx, YIdx, NbrIdx, time_index, level)) {
+                    continue;
+                }
                 if (G[XIdx * n + YIdx] == 1)
                 {
                     NoEdgeFlag = 0;
@@ -1951,9 +1987,10 @@ __global__ void cal_Indepl9_ess(
 }
 
 __global__ void cal_Indepl10_ess(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index
 )
 {
+    int level = 10;
     float loc_th;
     int YIdx;
     int XIdx = by;
@@ -2075,6 +2112,9 @@ __global__ void cal_Indepl10_ess(
                     continue;
                 }
                 YIdx = G_Chunk[d2];
+                if (!valid_time_conditioning(XIdx, YIdx, NbrIdx, time_index, level)) {
+                    continue;
+                }
                 if (G[XIdx * n + YIdx] == 1)
                 {
                     NoEdgeFlag = 0;
@@ -2140,9 +2180,10 @@ __global__ void cal_Indepl10_ess(
 }
 
 __global__ void cal_Indepl11_ess(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index
 )
 {
+    int level = 11;
     float loc_th;
     int YIdx;
     int XIdx = by;
@@ -2265,6 +2306,9 @@ __global__ void cal_Indepl11_ess(
                     continue;
                 }
                 YIdx = G_Chunk[d2];
+                if (!valid_time_conditioning(XIdx, YIdx, NbrIdx, time_index, level)) {
+                    continue;
+                }
                 if (G[XIdx * n + YIdx] == 1)
                 {
                     NoEdgeFlag = 0;
@@ -2331,9 +2375,10 @@ __global__ void cal_Indepl11_ess(
 }
 
 __global__ void cal_Indepl12_ess(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index
 )
 {
+    int level = 12;
     float loc_th;
     int YIdx;
     int XIdx = by;
@@ -2456,6 +2501,9 @@ __global__ void cal_Indepl12_ess(
                     continue;
                 }
                 YIdx = G_Chunk[d2];
+                if (!valid_time_conditioning(XIdx, YIdx, NbrIdx, time_index, level)) {
+                    continue;
+                }
                 if (G[XIdx * n + YIdx] == 1)
                 {
                     NoEdgeFlag = 0;
@@ -2523,9 +2571,10 @@ __global__ void cal_Indepl12_ess(
 }
 
 __global__ void cal_Indepl13_ess(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index
 )
 {
+    int level = 13;
     float loc_th;
     int YIdx;
     int XIdx = by;
@@ -2649,6 +2698,9 @@ __global__ void cal_Indepl13_ess(
                     continue;
                 }
                 YIdx = G_Chunk[d2];
+                if (!valid_time_conditioning(XIdx, YIdx, NbrIdx, time_index, level)) {
+                    continue;
+                }
                 if (G[XIdx * n + YIdx] == 1)
                 {
                     NoEdgeFlag = 0;
@@ -2717,9 +2769,10 @@ __global__ void cal_Indepl13_ess(
 }
 
 __global__ void cal_Indepl14_ess(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index
 )
 {
+    int level = 14;
     float loc_th;
     int YIdx;
     int XIdx = by;
@@ -2843,6 +2896,9 @@ __global__ void cal_Indepl14_ess(
                     continue;
                 }
                 YIdx = G_Chunk[d2];
+                if (!valid_time_conditioning(XIdx, YIdx, NbrIdx, time_index, level)) {
+                    continue;
+                }
                 if (G[XIdx * n + YIdx] == 1)
                 {
                     NoEdgeFlag = 0;
@@ -2909,6 +2965,19 @@ __global__ void cal_Indepl14_ess(
             }
         }
     }
+}
+
+
+__device__ bool valid_time_conditioning(int a, int b, int *S, int *time_index, int l)
+{
+    int maxtime = max(time_index[a], time_index[b]);
+    for (int nix = 0; nix < l; nix++) {
+        if (time_index[S[nix]] > maxtime)
+        {
+            return false;
+        }    
+    }
+    return true;
 }
 
 
