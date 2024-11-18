@@ -314,7 +314,7 @@ __global__ void cal_Indepl0_ess(float *C, int *G, float *N, int n, float th)
 }
 
 __global__ void cal_Indepl1_ess(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index,
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index
 )
 {
     int level = 1;
