@@ -955,7 +955,7 @@ void cuda_skeleton_summary_stats_hetcor(int argc, char *argv[])
     int max_level = std::stoi(argv[11]);
     int max_level_two = std::stoi(argv[12]);
     int depth = std::stoi(argv[13]);
-    std::string time_index_path = argv[14]
+    std::string time_index_path = argv[14];
     std::string outdir = (std::string)argv[15];
 
     check_path(mxm_path);
@@ -1087,7 +1087,7 @@ void cuda_skeleton_summary_stats_hetcor(int argc, char *argv[])
     int init_level = 0;
     std::vector<int> time_index(num_var, 0);
     int read_ix = num_markers;
-    for (i = num_markers; i < num_var; i++) {
+    for (int i = num_markers; i < num_var; i++) {
         time_index[i] = time_index_traits[read_ix];
         read_ix++;
     }
@@ -1096,8 +1096,9 @@ void cuda_skeleton_summary_stats_hetcor(int argc, char *argv[])
     std::unordered_set<int> variable_subset = subset_variables(G, num_var, num_markers, depth);
     ReducedGC gc = reduce_gc(G, sq_corrs, variable_subset, num_var, num_phen, max_level);
     std::vector<int> time_index_gc(gc.num_var, 0);
-    int read_ix = gc.num_markers();
-    for (i = num_markers; i < gc.num_var; i++) {
+    read_ix = gc.num_markers();
+    int gc_num_var = gc.num_var;
+    for (int i = num_markers; i < gc_num_var; i++) {
         time_index_gc[i] = time_index_traits[read_ix];
         read_ix++;
     }
