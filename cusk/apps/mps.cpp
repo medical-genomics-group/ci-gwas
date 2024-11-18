@@ -617,7 +617,7 @@ void cuda_skeleton_summary_stats_merged_blocks(int argc, char *argv[])
 
     // load everything
     std::cout << "Loading input files" << std::endl;
-    std::cout << "Loading blocks" << std::endl;
+    std::cout << "Loading marker ixs" << std::endl;
     std::vector<int> marker_ixs = read_ints_from_binary(marker_ixs_path);
     std::cout << "Loading pxp" << std::endl;
     TraitSummaryStats pxp = TraitSummaryStats(pxp_path);
@@ -1088,6 +1088,178 @@ void cuda_skeleton_summary_stats_hetcor(int argc, char *argv[])
     std::cout << "Retained " << gc.num_markers() << " markers" << std::endl;
     gc.to_file(make_path(outdir, block.to_file_string(), ""));
 }
+
+
+const std::string CUSKSS_HET_MERGED_USAGE = R"(
+Run cuda-skeleton on pre-selected markers and traits with pre-computed heterogeneous correlations.
+
+arguments:
+    mxm                     correlations between markers in block. Binary of floats, lower triangular, with diagonal, row major.
+    mxp                     correlations between markers in all blocks and all traits. Text format, rectangular.
+    pxp                     correlations between all traits. Text format, rectangular, only upper triangle is used.
+    mxp-se                  standard errors of mxp correlations in same format as mxp
+    pxp-se                  standard errors of pxp correlations in same format as pxp
+    sample-size             sample size of pearson correlations
+    marker-ixs              binary file of ints giving the row indices of the selected markers in the mxp file.
+    alpha                   significance level
+    max-level-stage-one     maximal size of seperation sets in cuPC round one ( <= 14)
+    max-level-stage-two     maximal size of seperation sets in cuPC round two ( <= 14)
+    depth                   max depth at which marker variables are kept as ancestors
+    outdir                  outdir
+)";
+
+const int CUSKSS_HET_MERGED_NARGS = 14;
+
+void cuda_skeleton_summary_stats_hetcor_merged_blocks(int argc, char *argv[])
+{
+    check_nargs(argc, CUSKSS_HET_MERGED_NARGS, CUSKSS_HET_MERGED_USAGE);
+
+    std::string mxm_path = argv[2];
+    std::string mxp_path = argv[3];
+    std::string pxp_path = argv[4];
+    std::string mxp_se_path = argv[5];
+    std::string pxp_se_path = argv[6];
+    float pearson_sample_size = std::stof(argv[7]);
+    std::string marker_ixs_path = argv[8];
+    float alpha = std::stof(argv[9]);
+    int max_level = std::stoi(argv[10]);
+    int max_level_two = std::stoi(argv[11]);
+    int depth = std::stoi(argv[12]);
+    std::string outdir = (std::string)argv[13];
+
+    check_path(mxm_path);
+    check_path(mxp_path);
+    check_path(pxp_path);
+    check_path(mxp_se_path);
+    check_path(pxp_se_path);
+    check_path(marker_ixs_path);
+    check_path(outdir);
+
+    // load everything
+    std::cout << "Loading input files" << std::endl;
+    std::cout << "Loading marker ixs" << std::endl;
+    std::vector<int> marker_ixs = read_ints_from_binary(marker_ixs_path);
+    std::cout << "Loading pxp" << std::endl;
+    TraitSummaryStats pxp = TraitSummaryStats(pxp_path, pxp_se_path);
+    std::cout << "Loading mxm" << std::endl;
+    MarkerSummaryStats mxm = MarkerSummaryStats(mxm_path);
+    std::cout << "Loading mxp summary stats" << std::endl;
+    MarkerTraitSummaryStats mxp = MarkerTraitSummaryStats(mxp_path, mxp_se_path, marker_ixs);
+
+    // check if all dims check out
+    if (pxp.get_num_phen() != mxp.get_num_phen())
+    {
+        std::cout << "Numbers of traits seem to differ between pxp and mxp" << std::endl;
+        exit(1);
+    }
+    if (mxm.get_num_markers() != mxp.get_num_markers())
+    {
+        std::cout << "Numbers of markers seem to differ between mxm and mxp" << std::endl;
+        std::cout << "mxp: " << mxp.get_num_markers() << " x " << mxp.get_num_phen() << std::endl;
+        std::cout << "mxm: " << mxm.get_num_markers() << " x " << mxm.get_num_markers()
+                  << std::endl;
+        exit(1);
+    }
+
+    // dims ok, now merge them all into one matrix.
+
+    std::cout << "Merging correlations into single matrix" << std::endl;
+
+    // make n2 matrix to please cuPC
+    size_t num_phen = pxp.get_num_phen();
+    size_t num_markers = mxm.get_num_markers();
+    size_t num_var = num_markers + num_phen;
+    std::vector<float> sq_corrs(num_var * num_var, 1.0);
+    std::vector<float> sq_ess(num_var * num_var, pearson_sample_size);
+    std::vector<float> marker_corr = mxm.get_corrs();
+
+    size_t sq_row_ix = 0;
+    size_t sq_col_ix = 0;
+    for (size_t i = 0; i < marker_corr.size(); ++i)
+    {
+        sq_corrs[num_var * sq_row_ix + sq_col_ix] = (float)marker_corr[i];
+        if (sq_col_ix == num_markers - 1)
+        {
+            ++sq_row_ix;
+            // marker_corr is square
+            sq_col_ix = 0;
+        }
+        else
+        {
+            ++sq_col_ix;
+        }
+    }
+
+    std::vector<float> marker_phen_corr = mxp.get_corrs();
+    std::vector<float> marker_phen_sample_sizes = mxp.get_sample_sizes();
+    sq_row_ix = 0;
+    sq_col_ix = num_markers;
+    for (size_t i = 0; i < marker_phen_corr.size(); ++i)
+    {
+        sq_corrs[num_var * sq_row_ix + sq_col_ix] = (float)marker_phen_corr[i];
+        sq_corrs[num_var * sq_col_ix + sq_row_ix] = (float)marker_phen_corr[i];
+        sq_ess[num_var * sq_row_ix + sq_col_ix] = (float)marker_phen_sample_sizes[i];
+        sq_ess[num_var * sq_col_ix + sq_row_ix] = (float)marker_phen_sample_sizes[i];
+
+        if (sq_col_ix == (num_var - 1))
+        {
+            sq_col_ix = num_markers;
+            ++sq_row_ix;
+        }
+        else
+        {
+            ++sq_col_ix;
+        }
+    }
+
+    std::vector<float> phen_corr = pxp.get_corrs();
+    std::vector<float> phen_sample_sizes = pxp.get_sample_sizes();
+    sq_row_ix = num_markers;
+    sq_col_ix = num_markers;
+    for (size_t i = 0; i < phen_corr.size(); ++i)
+    {
+        sq_corrs[num_var * sq_row_ix + sq_col_ix] = (float)phen_corr[i];
+        sq_ess[num_var * sq_row_ix + sq_col_ix] = (float)phen_sample_sizes[i];
+        if (sq_col_ix == (num_var - 1))
+        {
+            ++sq_row_ix;
+            sq_col_ix = num_markers;
+        }
+        else
+        {
+            ++sq_col_ix;
+        }
+    }
+
+    if (WRITE_FULL_CORRMATS)
+    {
+        write_floats_to_binary(
+            sq_corrs.data(),
+            sq_corrs.size(),
+            make_path(outdir, "cuskss_merged", ".all_corrs")
+        );
+    }
+
+
+    float th = hetcor_threshold(alpha);
+
+    std::cout << "Running cuPC" << std::endl;
+
+    // call cuPC
+    int p = num_var;
+    const size_t g_size = num_var * num_var;
+    std::vector<int> G(g_size, 1);
+    int init_level = 0;
+    hetcor_skeleton(sq_corrs.data(), &p, G.data(), sq_ess.data(), &th, &init_level, &max_level);
+
+    std::unordered_set<int> variable_subset = subset_variables(G, num_var, num_markers, depth);
+    ReducedGC gc = reduce_gc(G, sq_corrs, variable_subset, num_var, num_phen, max_level);
+    std::cout << "Starting second cusk stage" << std::endl;
+    gc = reduced_gc_cusk(gc, sq_ess, th, depth, max_level_two);
+    std::cout << "Retained " << gc.num_markers() << " markers" << std::endl;
+    gc.to_file(make_path(outdir, "cuskss_merged", ""));
+}
+
 
 const std::string CUSK_USAGE = R"(
 Run cuPC on block diagonal genomic covariance matrix.
@@ -2335,6 +2507,8 @@ commands:
     cusk-single             Run cuda-skeleton on a single block of block diagonal genomic covariance matrix
     cuskss                  Run cuda-skeleton on a block of markers and traits with pre-computed correlations.
     cuskss-merged           Run cuda-skeleton on pre-selected markers and traits with pre-computed correlations.
+    cuskss-het              Run cuda-skeleton on a block of markers and traits with pre-computed heterologous correlations.
+    cuskss-het-merged       Run cuda-skeleton on pres-elected markers and traits with pre-computed heterologous correlations.
     cuskss-trait-only       Run cuda-skeleton on a set of pre-computed trait-trait correlations.
     cusk-sim                Run cuda-skeleton on single simulated block
     cusk-phen               Run cuda-skeleton on phenotypes only
@@ -2364,6 +2538,10 @@ auto main(int argc, char *argv[]) -> int
     else if (cmd == "cuskss-het")
     {
         cuda_skeleton_summary_stats_hetcor(argc, argv);
+    }
+    else if (cmd == "cuskss-het-merged")
+    {
+        cuda_skeleton_summary_stats_hetcor_merged_blocks(argc, argv);
     }
     else if (cmd == "cuskss-merged")
     {
