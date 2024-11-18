@@ -572,7 +572,7 @@ def cuskss_het(args):
             num_traits = len(next(fin).split())
         with open(args.time_index, 'w') as fout:
             for _ in range(num_traits):
-                fout.write(f"0\n")
+                fout.write(f"1\n")
     subprocess.run(
         [
             MPS_PATH,
