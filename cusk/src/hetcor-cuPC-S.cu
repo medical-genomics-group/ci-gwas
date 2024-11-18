@@ -385,9 +385,16 @@ __global__ void cal_Indepl1_ess(
                     continue;
                 }
                 YIdx = G_Chunk[d2];
-                if (!valid_time_conditioning(XIdx, YIdx, NbrIdx, time_index, level)) {
+                if (time_index[NbrIdx] > max(time_index[XIdx], time_index[YIdx]))
+                {
                     continue;
                 }
+                if (G[XIdx * n + YIdx] == 1)
+                {
+                    NoEdgeFlag = 0;
+                    M0 = C[XIdx * n + YIdx];
+                    M1[1] = C[YIdx * n + NbrIdx];
+                    
                     H[0][0] = 1 - (M1[0] * M1[0]);
                     H[0][1] = M0 - (M1[0] * M1[1]);
                     H[1][1] = 1 - (M1[1] * M1[1]);
