@@ -300,6 +300,11 @@ def main():
         help="directory for output",
         default="./",
     )
+    cuskss_het_parser.add_argument(
+        "--time-index",
+        type=str,
+        help="path to time index for file traits. Textfile, one line per trait, in same order as in pxp. Markers are put at index 0.",
+    )
     cuskss_het_parser.set_defaults(func=cuskss_het)
 
     # cuskss-merged
@@ -561,6 +566,13 @@ def cuskss(args):
 
 
 def cuskss_het(args):
+    if args.time_index is None:
+        args.time_index = f"{args.outdir}/time_index.txt"
+        with open(args.pxp, 'r') as fin:
+            num_traits = len(next(fin).split())
+        with open(args.time_index, 'w') as fout:
+            for _ in range(num_traits):
+                fout.write(f"0\n")
     subprocess.run(
         [
             MPS_PATH,
