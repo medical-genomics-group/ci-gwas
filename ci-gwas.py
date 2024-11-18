@@ -589,6 +589,7 @@ def cuskss_het(args):
             str(args.max_level),
             str(args.max_level_two),
             str(args.max_depth),
+            args.time_index,
             args.outdir,
         ],
         check=True,
