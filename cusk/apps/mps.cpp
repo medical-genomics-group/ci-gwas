@@ -933,10 +933,11 @@ arguments:
     max-level-stage-one     maximal size of seperation sets in cuPC round one ( <= 14)
     max-level-stage-two     maximal size of seperation sets in cuPC round two ( <= 14)
     depth                   max depth at which marker variables are kept as ancestors
+    time-index              file with time indices of traits (markers are at 0), in order of their appearance, one index per line
     outdir                  outdir
 )";
 
-const int CUSKSS_HET_NARGS = 14;
+const int CUSKSS_HET_NARGS = 15;
 
 void cuda_skeleton_summary_stats_hetcor(int argc, char *argv[])
 {
@@ -954,7 +955,8 @@ void cuda_skeleton_summary_stats_hetcor(int argc, char *argv[])
     int max_level = std::stoi(argv[11]);
     int max_level_two = std::stoi(argv[12]);
     int depth = std::stoi(argv[13]);
-    std::string outdir = (std::string)argv[14];
+    std::string time_index_path = argv[14]
+    std::string outdir = (std::string)argv[15];
 
     check_path(mxm_path);
     check_path(mxp_path);
@@ -962,6 +964,7 @@ void cuda_skeleton_summary_stats_hetcor(int argc, char *argv[])
     check_path(mxp_se_path);
     check_path(pxp_se_path);
     check_path(block_path);
+    check_path(time_index_path);
     check_path(outdir);
 
     // load everything
@@ -975,6 +978,8 @@ void cuda_skeleton_summary_stats_hetcor(int argc, char *argv[])
     MarkerSummaryStats mxm = MarkerSummaryStats(mxm_path);
     std::cout << "Loading mxp summary stats" << std::endl;
     MarkerTraitSummaryStats mxp = MarkerTraitSummaryStats(mxp_path, mxp_se_path, block);
+    std::cout << "Loading time_indices" << std::endl;
+    std::vector<int> time_index_traits = read_ints_from_lines(time_index_path);
 
     // check if all dims check out
     if (pxp.get_num_phen() != mxp.get_num_phen())
@@ -1080,13 +1085,22 @@ void cuda_skeleton_summary_stats_hetcor(int argc, char *argv[])
     const size_t g_size = num_var * num_var;
     std::vector<int> G(g_size, 1);
     int init_level = 0;
-    // todo: add time index info for traits!
     std::vector<int> time_index(num_var, 0);
+    int read_ix = num_markers;
+    for (i = num_markers; i < num_var; i++) {
+        time_index[i] = time_index_traits[read_ix];
+        read_ix++;
+    }
     hetcor_skeleton(sq_corrs.data(), &p, G.data(), sq_ess.data(), &th, &init_level, &max_level, time_index.data());
 
     std::unordered_set<int> variable_subset = subset_variables(G, num_var, num_markers, depth);
     ReducedGC gc = reduce_gc(G, sq_corrs, variable_subset, num_var, num_phen, max_level);
     std::vector<int> time_index_gc(gc.num_var, 0);
+    int read_ix = gc.num_markers();
+    for (i = num_markers; i < gc.num_var; i++) {
+        time_index_gc[i] = time_index_traits[read_ix];
+        read_ix++;
+    }
     std::cout << "Starting second cusk stage" << std::endl;
     gc = reduced_gc_cusk(gc, sq_ess, th, depth, max_level_two, time_index_gc);
     std::cout << "Retained " << gc.num_markers() << " markers" << std::endl;
