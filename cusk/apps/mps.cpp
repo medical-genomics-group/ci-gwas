@@ -1095,7 +1095,7 @@ void cuda_skeleton_summary_stats_hetcor(int argc, char *argv[])
     int init_level = 0;
     std::vector<int> time_index(num_var, 0);
 
-    int read_ix = num_markers;
+    int read_ix = 0;
     for (int i = num_markers; i < num_var; i++) {
         time_index[i] = time_index_traits[read_ix];
         read_ix++;
