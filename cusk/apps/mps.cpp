@@ -981,6 +981,15 @@ void cuda_skeleton_summary_stats_hetcor(int argc, char *argv[])
     std::cout << "Loading time_indices" << std::endl;
     std::vector<int> time_index_traits = read_ints_from_lines(time_index_path);
 
+    if (WRITE_FULL_CORRMATS)
+    {
+        std::cout << "Read the following time indices:" << std::endl;
+        for (int i: time_index_traits) {
+            std::cout << i << ' ';
+        }
+            
+    }
+
     // check if all dims check out
     if (pxp.get_num_phen() != mxp.get_num_phen())
     {
@@ -1115,7 +1124,7 @@ void cuda_skeleton_summary_stats_hetcor(int argc, char *argv[])
     std::unordered_set<int> variable_subset = subset_variables(G, num_var, num_markers, depth);
     ReducedGC gc = reduce_gc(G, sq_corrs, variable_subset, num_var, num_phen, max_level);
     std::vector<int> time_index_gc(gc.num_var, 0);
-    read_ix = gc.num_markers();
+    int read_ix = 0;
     int gc_num_var = gc.num_var;
     for (int i = num_markers; i < gc_num_var; i++) {
         time_index_gc[i] = time_index_traits[read_ix];
