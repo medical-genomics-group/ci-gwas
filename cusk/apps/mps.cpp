@@ -1124,7 +1124,7 @@ void cuda_skeleton_summary_stats_hetcor(int argc, char *argv[])
     std::unordered_set<int> variable_subset = subset_variables(G, num_var, num_markers, depth);
     ReducedGC gc = reduce_gc(G, sq_corrs, variable_subset, num_var, num_phen, max_level);
     std::vector<int> time_index_gc(gc.num_var, 0);
-    int read_ix = 0;
+    read_ix = 0;
     int gc_num_var = gc.num_var;
     for (int i = num_markers; i < gc_num_var; i++) {
         time_index_gc[i] = time_index_traits[read_ix];
