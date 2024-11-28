@@ -22,7 +22,7 @@
 #include <string>
 #include <vector>
 
-bool WRITE_FULL_CORRMATS = false;
+bool WRITE_FULL_CORRMATS = true;
 
 /**
  * @brief Compute number of variables from upper triangular matrix (diag excluded)
@@ -1075,6 +1075,14 @@ void cuda_skeleton_summary_stats_hetcor(int argc, char *argv[])
         );
     }
 
+   if (WRITE_FULL_CORRMATS)
+    {
+        write_ints_to_binary(
+            sq_ess.data(),
+            sq_ess.size(),
+            make_path(outdir, block.to_file_string(), ".all_ses")
+        );
+    }
 
     float th = hetcor_threshold(alpha);
 
@@ -1086,11 +1094,22 @@ void cuda_skeleton_summary_stats_hetcor(int argc, char *argv[])
     std::vector<int> G(g_size, 1);
     int init_level = 0;
     std::vector<int> time_index(num_var, 0);
+
     int read_ix = num_markers;
     for (int i = num_markers; i < num_var; i++) {
         time_index[i] = time_index_traits[read_ix];
         read_ix++;
     }
+
+   if (WRITE_FULL_CORRMATS)
+    {
+        write_ints_to_binary(
+            time_index.data(),
+            time_index.size(),
+            make_path(outdir, block.to_file_string(), ".time_index")
+        );
+    }
+
     hetcor_skeleton(sq_corrs.data(), &p, G.data(), sq_ess.data(), &th, &init_level, &max_level, time_index.data());
 
     std::unordered_set<int> variable_subset = subset_variables(G, num_var, num_markers, depth);
