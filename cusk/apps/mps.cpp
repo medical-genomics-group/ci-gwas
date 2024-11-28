@@ -987,6 +987,7 @@ void cuda_skeleton_summary_stats_hetcor(int argc, char *argv[])
         for (int i: time_index_traits) {
             std::cout << i << ' ';
         }
+        std::cout << << std::endl;
             
     }
 
@@ -1107,6 +1108,9 @@ void cuda_skeleton_summary_stats_hetcor(int argc, char *argv[])
     int read_ix = 0;
     for (int i = num_markers; i < num_var; i++) {
         time_index[i] = time_index_traits[read_ix];
+        if (WRITE_FULL_CORRMATS) {
+            std::cout << "Putting into time index: " << time_index_traits[read_ix] << std::endl;
+        }
         read_ix++;
     }
 
