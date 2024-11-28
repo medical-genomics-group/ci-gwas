@@ -1077,7 +1077,7 @@ void cuda_skeleton_summary_stats_hetcor(int argc, char *argv[])
 
    if (WRITE_FULL_CORRMATS)
     {
-        write_ints_to_binary(
+        write_floats_to_binary(
             sq_ess.data(),
             sq_ess.size(),
             make_path(outdir, block.to_file_string(), ".all_ses")
