@@ -987,7 +987,7 @@ void cuda_skeleton_summary_stats_hetcor(int argc, char *argv[])
         for (int i: time_index_traits) {
             std::cout << i << ' ';
         }
-        std::cout << << std::endl;
+        std::cout << std::endl;
             
     }
 
