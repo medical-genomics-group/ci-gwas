@@ -9,6 +9,8 @@
 
 __device__ void print_sepset(int *var_ixs, int *time_index, int l)
 {
+    int a = var_ixs[0];
+    int b = var_ixs[1];
     if (l == 1) {
         printf("(%d, %d) || removed at ti (%d, %d): %d", a, b,
         time_index[a], time_index[b], var_ixs[2]);
