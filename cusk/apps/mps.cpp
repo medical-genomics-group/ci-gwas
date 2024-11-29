@@ -22,7 +22,7 @@
 #include <string>
 #include <vector>
 
-bool WRITE_FULL_CORRMATS = false;
+bool WRITE_FULL_CORRMATS = true;
 
 /**
  * @brief Compute number of variables from upper triangular matrix (diag excluded)
