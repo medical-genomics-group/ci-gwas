@@ -351,6 +351,12 @@ __global__ void cal_Indepl0_ess(float *C, int *G, float *N, int n, float th)
         {
             G[row * n + col] = 0;
             G[col * n + row] = 0;
+            int var_ixs[2];
+            var_ixs[0] = row;
+            var_ixs[1] = col;
+            int time_index[1];
+            int level = 0;
+            print_sepset(var_ixs, time_index, level);
         }
         else
         {
@@ -362,12 +368,6 @@ __global__ void cal_Indepl0_ess(float *C, int *G, float *N, int n, float th)
     {
         G[row * n + col] = 0;
         G[col * n + row] = 0;
-        int var_ixs[2];
-        var_ixs[0] = row;
-        var_ixs[1] = col;
-        int time_index[1];
-        int level = 0;
-        print_sepset(var_ixs, time_index, level);
     }
 }
 
