@@ -11,10 +11,10 @@ __device__ void print_sepset(int *var_ixs, int *time_index, int l)
 {
     int a = var_ixs[0];
     int b = var_ixs[1];
-    if ((time_index[a] > 0) || (time_index[b] > 0)) {
-        if (l == 0) {
-            printf("(%d, %d) || removed at ti (%d, %d) \n", a, b, time_index[a], time_index[b]);        
-        } else if (l == 1) {
+    if (l == 0) {
+        printf("(%d, %d) || removed) \n", a, b);
+    } else if ((time_index[a] > 0) || (time_index[b] > 0)) {
+        if (l == 1) {
             printf("(%d, %d) || removed at ti (%d, %d): %d \n", a, b, time_index[a], time_index[b],
             var_ixs[2]);
         } else if (l == 2 ) {
