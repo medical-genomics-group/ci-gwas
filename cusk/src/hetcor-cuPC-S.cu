@@ -7,16 +7,6 @@
 
 #include <iostream>
 
-__device__ void print_sepset(int *var_ixs, int *time_index, int l)
-{
-    int a = var_ixs[0];
-    int b = var_ixs[1];
-    printf("Removed (%d, %d) at ti (%d, %d) with sepset: \n", a, b, time_index[a], time_index[b]);
-    for (int nix = 2; nix < l + 2; nix++) {
-        printf("%d at ti %d \n", var_ixs[nix], time_index[var_ixs[nix]]);
-    }
-}
-
 /** @brief Computes the skeleton using hetcor correlations and estimates of effective sample sizes.
  *
  * @param[in]  C  Pointer to full, square, correlation matrix
@@ -422,7 +412,13 @@ __global__ void cal_Indepl1_ess(
                         {
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            print_sepset(var_ixs, time_index, level);
+                            int a = var_ixs[0];
+                            int b = var_ixs[1];
+                            printf("Removed (%d, %d) at ti (%d, %d) with sepset: \n", a, b, time_index[a], time_index[b]);
+                            for (int nix = 2; nix < l + 2; nix++) {
+                                printf("%d at ti %d \n", var_ixs[nix], time_index[var_ixs[nix]]);
+                            }
+                            fflush(stdout);
                         }
                     }
                 }
@@ -566,7 +562,13 @@ __global__ void cal_Indepl2_ess(
                         {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            print_sepset(var_ixs, time_index, level);
+                            int a = var_ixs[0];
+                            int b = var_ixs[1];
+                            printf("Removed (%d, %d) at ti (%d, %d) with sepset: \n", a, b, time_index[a], time_index[b]);
+                            for (int nix = 2; nix < l + 2; nix++) {
+                                printf("%d at ti %d \n", var_ixs[nix], time_index[var_ixs[nix]]);
+                            }
+                            fflush(stdout);
                         }
                     }
                 }
@@ -730,7 +732,13 @@ __global__ void cal_Indepl3_ess(
                         {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            print_sepset(var_ixs, time_index, level);
+                            int a = var_ixs[0];
+                            int b = var_ixs[1];
+                            printf("Removed (%d, %d) at ti (%d, %d) with sepset: \n", a, b, time_index[a], time_index[b]);
+                            for (int nix = 2; nix < l + 2; nix++) {
+                                printf("%d at ti %d \n", var_ixs[nix], time_index[var_ixs[nix]]);
+                            }
+                            fflush(stdout);
                         }
                     }
                 }
@@ -913,7 +921,13 @@ __global__ void cal_Indepl4_ess(
                         {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            print_sepset(var_ixs, time_index, level);
+                            int a = var_ixs[0];
+                            int b = var_ixs[1];
+                            printf("Removed (%d, %d) at ti (%d, %d) with sepset: \n", a, b, time_index[a], time_index[b]);
+                            for (int nix = 2; nix < l + 2; nix++) {
+                                printf("%d at ti %d \n", var_ixs[nix], time_index[var_ixs[nix]]);
+                            }
+                            fflush(stdout);
                         }
                     }
                 }
@@ -1111,7 +1125,13 @@ __global__ void cal_Indepl5_ess(
                         {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            print_sepset(var_ixs, time_index, level);
+                            int a = var_ixs[0];
+                            int b = var_ixs[1];
+                            printf("Removed (%d, %d) at ti (%d, %d) with sepset: \n", a, b, time_index[a], time_index[b]);
+                            for (int nix = 2; nix < l + 2; nix++) {
+                                printf("%d at ti %d \n", var_ixs[nix], time_index[var_ixs[nix]]);
+                            }
+                            fflush(stdout);
                         }
                     }
                 }
@@ -1325,7 +1345,13 @@ __global__ void cal_Indepl6_ess(
                         {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            print_sepset(var_ixs, time_index, level);
+                            int a = var_ixs[0];
+                            int b = var_ixs[1];
+                            printf("Removed (%d, %d) at ti (%d, %d) with sepset: \n", a, b, time_index[a], time_index[b]);
+                            for (int nix = 2; nix < l + 2; nix++) {
+                                printf("%d at ti %d \n", var_ixs[nix], time_index[var_ixs[nix]]);
+                            }
+                            fflush(stdout);
                         }
                     }
                 }
@@ -1559,7 +1585,13 @@ __global__ void cal_Indepl7_ess(
                         {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            print_sepset(var_ixs, time_index, level);
+                            int a = var_ixs[0];
+                            int b = var_ixs[1];
+                            printf("Removed (%d, %d) at ti (%d, %d) with sepset: \n", a, b, time_index[a], time_index[b]);
+                            for (int nix = 2; nix < l + 2; nix++) {
+                                printf("%d at ti %d \n", var_ixs[nix], time_index[var_ixs[nix]]);
+                            }
+                            fflush(stdout);
                         }
                     }
                 }
@@ -1810,7 +1842,13 @@ __global__ void cal_Indepl8_ess(
                         {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            print_sepset(var_ixs, time_index, level);
+                            int a = var_ixs[0];
+                            int b = var_ixs[1];
+                            printf("Removed (%d, %d) at ti (%d, %d) with sepset: \n", a, b, time_index[a], time_index[b]);
+                            for (int nix = 2; nix < l + 2; nix++) {
+                                printf("%d at ti %d \n", var_ixs[nix], time_index[var_ixs[nix]]);
+                            }
+                            fflush(stdout);
                         }
                     }
                 }
@@ -2002,7 +2040,13 @@ __global__ void cal_Indepl9_ess(
                         {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            print_sepset(var_ixs, time_index, level);
+                            int a = var_ixs[0];
+                            int b = var_ixs[1];
+                            printf("Removed (%d, %d) at ti (%d, %d) with sepset: \n", a, b, time_index[a], time_index[b]);
+                            for (int nix = 2; nix < l + 2; nix++) {
+                                printf("%d at ti %d \n", var_ixs[nix], time_index[var_ixs[nix]]);
+                            }
+                            fflush(stdout);
                         }
                     }
                 }
@@ -2196,7 +2240,13 @@ __global__ void cal_Indepl10_ess(
                         {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            print_sepset(var_ixs, time_index, level);
+                            int a = var_ixs[0];
+                            int b = var_ixs[1];
+                            printf("Removed (%d, %d) at ti (%d, %d) with sepset: \n", a, b, time_index[a], time_index[b]);
+                            for (int nix = 2; nix < l + 2; nix++) {
+                                printf("%d at ti %d \n", var_ixs[nix], time_index[var_ixs[nix]]);
+                            }
+                            fflush(stdout);
                         }
                     }
                 }
@@ -2392,7 +2442,13 @@ __global__ void cal_Indepl11_ess(
                         {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            print_sepset(var_ixs, time_index, level);
+                            int a = var_ixs[0];
+                            int b = var_ixs[1];
+                            printf("Removed (%d, %d) at ti (%d, %d) with sepset: \n", a, b, time_index[a], time_index[b]);
+                            for (int nix = 2; nix < l + 2; nix++) {
+                                printf("%d at ti %d \n", var_ixs[nix], time_index[var_ixs[nix]]);
+                            }
+                            fflush(stdout);
                         }
                     }
                 }
@@ -2589,7 +2645,13 @@ __global__ void cal_Indepl12_ess(
                         {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            print_sepset(var_ixs, time_index, level);
+                            int a = var_ixs[0];
+                            int b = var_ixs[1];
+                            printf("Removed (%d, %d) at ti (%d, %d) with sepset: \n", a, b, time_index[a], time_index[b]);
+                            for (int nix = 2; nix < l + 2; nix++) {
+                                printf("%d at ti %d \n", var_ixs[nix], time_index[var_ixs[nix]]);
+                            }
+                            fflush(stdout);
                         }
                     }
                 }
@@ -2788,7 +2850,13 @@ __global__ void cal_Indepl13_ess(
                         {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            print_sepset(var_ixs, time_index, level);
+                            int a = var_ixs[0];
+                            int b = var_ixs[1];
+                            printf("Removed (%d, %d) at ti (%d, %d) with sepset: \n", a, b, time_index[a], time_index[b]);
+                            for (int nix = 2; nix < l + 2; nix++) {
+                                printf("%d at ti %d \n", var_ixs[nix], time_index[var_ixs[nix]]);
+                            }
+                            fflush(stdout);
                         }
                     }
                 }
@@ -2988,7 +3056,13 @@ __global__ void cal_Indepl14_ess(
                         {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            print_sepset(var_ixs, time_index, level);
+                            int a = var_ixs[0];
+                            int b = var_ixs[1];
+                            printf("Removed (%d, %d) at ti (%d, %d) with sepset: \n", a, b, time_index[a], time_index[b]);
+                            for (int nix = 2; nix < l + 2; nix++) {
+                                printf("%d at ti %d \n", var_ixs[nix], time_index[var_ixs[nix]]);
+                            }
+                            fflush(stdout);
                         }
                     }
                 }
