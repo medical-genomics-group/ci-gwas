@@ -12,25 +12,25 @@ __device__ void print_sepset(int *var_ixs, int *time_index, int l)
     int a = var_ixs[0];
     int b = var_ixs[1];
     if ((time_index[a] > 0) || (time_index[b] > 0)) {
-        if (l == 1) {
-            printf("(%d, %d) || removed at ti (%d, %d): %d \n", a, b,
-            time_index[a], time_index[b], var_ixs[2]);
+        if (l == 0) {
+            printf("(%d, %d) || removed at ti (%d, %d) \n", a, b, time_index[a], time_index[b]);        
+        } else if (l == 1) {
+            printf("(%d, %d) || removed at ti (%d, %d): %d \n", a, b, time_index[a], time_index[b],
+            var_ixs[2]);
         } else if (l == 2 ) {
-            printf("(%d, %d) || removed at ti (%d, %d): %d, %d \n", a, b,
-            time_index[a], time_index[b], var_ixs[2], var_ixs[3]);
+            printf("(%d, %d) || removed at ti (%d, %d): %d, %d \n", a, b, time_index[a], time_index[b],
+            var_ixs[2], var_ixs[3]);
         } else if (l == 3) {
-            printf("(%d, %d) || removed at ti (%d, %d): %d, %d, %d \n", a, b,
-            time_index[a], time_index[b], var_ixs[2], var_ixs[3], var_ixs[4]);
+            printf("(%d, %d) || removed at ti (%d, %d): %d, %d, %d \n", a, b, time_index[a], time_index[b],
+            var_ixs[2], var_ixs[3], var_ixs[4]);
         } else if (l == 4) {
-            printf("(%d, %d) || removed at ti (%d, %d): %d, %d, %d, %d \n", a, b,
-            time_index[a], time_index[b], var_ixs[2], var_ixs[3], var_ixs[4], var_ixs[5]);
+            printf("(%d, %d) || removed at ti (%d, %d): %d, %d, %d, %d \n", a, b, time_index[a], time_index[b],
+            var_ixs[2], var_ixs[3], var_ixs[4], var_ixs[5]);
         } else if (l == 5) {
-            printf("(%d, %d) || removed at ti (%d, %d): %d, %d, %d, %d, %d \n", a, b,
-            time_index[a], time_index[b],
+            printf("(%d, %d) || removed at ti (%d, %d): %d, %d, %d, %d, %d \n", a, b, time_index[a], time_index[b],
             var_ixs[2], var_ixs[3], var_ixs[4], var_ixs[5], var_ixs[6]);
         } else if (l == 6) {
-            printf("(%d, %d) || removed at ti (%d, %d): %d, %d, %d, %d, %d, %d \n", a, b,
-            time_index[a], time_index[b],
+            printf("(%d, %d) || removed at ti (%d, %d): %d, %d, %d, %d, %d, %d \n", a, b, time_index[a], time_index[b],
             var_ixs[2], var_ixs[3], var_ixs[4], var_ixs[5], var_ixs[6], var_ixs[7]);
         } else if (l == 7) {
             printf("(%d, %d) || removed at ti (%d, %d): %d, %d, %d, %d, %d, %d, %d \n", a, b, time_index[a], time_index[b],
@@ -362,6 +362,12 @@ __global__ void cal_Indepl0_ess(float *C, int *G, float *N, int n, float th)
     {
         G[row * n + col] = 0;
         G[col * n + row] = 0;
+        int var_ixs[2];
+        var_ixs[0] = row;
+        var_ixs[1] = col;
+        int time_index[1];
+        int level = 0;
+        print_sepset(var_ixs, time_index, level);
     }
 }
 
