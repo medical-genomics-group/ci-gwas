@@ -15,7 +15,6 @@ __device__ void print_sepset(int *var_ixs, int *time_index, int l)
     for (int nix = 2; nix < l + 2; nix++) {
         printf("%d at ti %d \n", var_ixs[nix], time_index[var_ixs[nix]]);
     }
-    fflush(stdout);
 }
 
 /** @brief Computes the skeleton using hetcor correlations and estimates of effective sample sizes.
