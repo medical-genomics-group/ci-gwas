@@ -415,7 +415,7 @@ __global__ void cal_Indepl1_ess(
                             int a = var_ixs[0];
                             int b = var_ixs[1];
                             printf("Removed (%d, %d) at ti (%d, %d) with sepset: \n", a, b, time_index[a], time_index[b]);
-                            for (int nix = 2; nix < l + 2; nix++) {
+                            for (int nix = 2; nix < level + 2; nix++) {
                                 printf("%d at ti %d \n", var_ixs[nix], time_index[var_ixs[nix]]);
                             }
                             fflush(stdout);
@@ -565,7 +565,7 @@ __global__ void cal_Indepl2_ess(
                             int a = var_ixs[0];
                             int b = var_ixs[1];
                             printf("Removed (%d, %d) at ti (%d, %d) with sepset: \n", a, b, time_index[a], time_index[b]);
-                            for (int nix = 2; nix < l + 2; nix++) {
+                            for (int nix = 2; nix < level + 2; nix++) {
                                 printf("%d at ti %d \n", var_ixs[nix], time_index[var_ixs[nix]]);
                             }
                             fflush(stdout);
@@ -735,7 +735,7 @@ __global__ void cal_Indepl3_ess(
                             int a = var_ixs[0];
                             int b = var_ixs[1];
                             printf("Removed (%d, %d) at ti (%d, %d) with sepset: \n", a, b, time_index[a], time_index[b]);
-                            for (int nix = 2; nix < l + 2; nix++) {
+                            for (int nix = 2; nix < level + 2; nix++) {
                                 printf("%d at ti %d \n", var_ixs[nix], time_index[var_ixs[nix]]);
                             }
                             fflush(stdout);
@@ -924,7 +924,7 @@ __global__ void cal_Indepl4_ess(
                             int a = var_ixs[0];
                             int b = var_ixs[1];
                             printf("Removed (%d, %d) at ti (%d, %d) with sepset: \n", a, b, time_index[a], time_index[b]);
-                            for (int nix = 2; nix < l + 2; nix++) {
+                            for (int nix = 2; nix < level + 2; nix++) {
                                 printf("%d at ti %d \n", var_ixs[nix], time_index[var_ixs[nix]]);
                             }
                             fflush(stdout);
@@ -1128,7 +1128,7 @@ __global__ void cal_Indepl5_ess(
                             int a = var_ixs[0];
                             int b = var_ixs[1];
                             printf("Removed (%d, %d) at ti (%d, %d) with sepset: \n", a, b, time_index[a], time_index[b]);
-                            for (int nix = 2; nix < l + 2; nix++) {
+                            for (int nix = 2; nix < level + 2; nix++) {
                                 printf("%d at ti %d \n", var_ixs[nix], time_index[var_ixs[nix]]);
                             }
                             fflush(stdout);
@@ -1348,7 +1348,7 @@ __global__ void cal_Indepl6_ess(
                             int a = var_ixs[0];
                             int b = var_ixs[1];
                             printf("Removed (%d, %d) at ti (%d, %d) with sepset: \n", a, b, time_index[a], time_index[b]);
-                            for (int nix = 2; nix < l + 2; nix++) {
+                            for (int nix = 2; nix < level + 2; nix++) {
                                 printf("%d at ti %d \n", var_ixs[nix], time_index[var_ixs[nix]]);
                             }
                             fflush(stdout);
@@ -1588,7 +1588,7 @@ __global__ void cal_Indepl7_ess(
                             int a = var_ixs[0];
                             int b = var_ixs[1];
                             printf("Removed (%d, %d) at ti (%d, %d) with sepset: \n", a, b, time_index[a], time_index[b]);
-                            for (int nix = 2; nix < l + 2; nix++) {
+                            for (int nix = 2; nix < level + 2; nix++) {
                                 printf("%d at ti %d \n", var_ixs[nix], time_index[var_ixs[nix]]);
                             }
                             fflush(stdout);
@@ -1845,7 +1845,7 @@ __global__ void cal_Indepl8_ess(
                             int a = var_ixs[0];
                             int b = var_ixs[1];
                             printf("Removed (%d, %d) at ti (%d, %d) with sepset: \n", a, b, time_index[a], time_index[b]);
-                            for (int nix = 2; nix < l + 2; nix++) {
+                            for (int nix = 2; nix < level + 2; nix++) {
                                 printf("%d at ti %d \n", var_ixs[nix], time_index[var_ixs[nix]]);
                             }
                             fflush(stdout);
@@ -2043,7 +2043,7 @@ __global__ void cal_Indepl9_ess(
                             int a = var_ixs[0];
                             int b = var_ixs[1];
                             printf("Removed (%d, %d) at ti (%d, %d) with sepset: \n", a, b, time_index[a], time_index[b]);
-                            for (int nix = 2; nix < l + 2; nix++) {
+                            for (int nix = 2; nix < level + 2; nix++) {
                                 printf("%d at ti %d \n", var_ixs[nix], time_index[var_ixs[nix]]);
                             }
                             fflush(stdout);
@@ -2243,7 +2243,7 @@ __global__ void cal_Indepl10_ess(
                             int a = var_ixs[0];
                             int b = var_ixs[1];
                             printf("Removed (%d, %d) at ti (%d, %d) with sepset: \n", a, b, time_index[a], time_index[b]);
-                            for (int nix = 2; nix < l + 2; nix++) {
+                            for (int nix = 2; nix < level + 2; nix++) {
                                 printf("%d at ti %d \n", var_ixs[nix], time_index[var_ixs[nix]]);
                             }
                             fflush(stdout);
@@ -2445,7 +2445,7 @@ __global__ void cal_Indepl11_ess(
                             int a = var_ixs[0];
                             int b = var_ixs[1];
                             printf("Removed (%d, %d) at ti (%d, %d) with sepset: \n", a, b, time_index[a], time_index[b]);
-                            for (int nix = 2; nix < l + 2; nix++) {
+                            for (int nix = 2; nix < level + 2; nix++) {
                                 printf("%d at ti %d \n", var_ixs[nix], time_index[var_ixs[nix]]);
                             }
                             fflush(stdout);
@@ -2648,7 +2648,7 @@ __global__ void cal_Indepl12_ess(
                             int a = var_ixs[0];
                             int b = var_ixs[1];
                             printf("Removed (%d, %d) at ti (%d, %d) with sepset: \n", a, b, time_index[a], time_index[b]);
-                            for (int nix = 2; nix < l + 2; nix++) {
+                            for (int nix = 2; nix < level + 2; nix++) {
                                 printf("%d at ti %d \n", var_ixs[nix], time_index[var_ixs[nix]]);
                             }
                             fflush(stdout);
@@ -2853,7 +2853,7 @@ __global__ void cal_Indepl13_ess(
                             int a = var_ixs[0];
                             int b = var_ixs[1];
                             printf("Removed (%d, %d) at ti (%d, %d) with sepset: \n", a, b, time_index[a], time_index[b]);
-                            for (int nix = 2; nix < l + 2; nix++) {
+                            for (int nix = 2; nix < level + 2; nix++) {
                                 printf("%d at ti %d \n", var_ixs[nix], time_index[var_ixs[nix]]);
                             }
                             fflush(stdout);
@@ -3059,7 +3059,7 @@ __global__ void cal_Indepl14_ess(
                             int a = var_ixs[0];
                             int b = var_ixs[1];
                             printf("Removed (%d, %d) at ti (%d, %d) with sepset: \n", a, b, time_index[a], time_index[b]);
-                            for (int nix = 2; nix < l + 2; nix++) {
+                            for (int nix = 2; nix < level + 2; nix++) {
                                 printf("%d at ti %d \n", var_ixs[nix], time_index[var_ixs[nix]]);
                             }
                             fflush(stdout);
