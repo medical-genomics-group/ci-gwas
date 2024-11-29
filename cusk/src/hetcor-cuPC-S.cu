@@ -12,48 +12,48 @@ __device__ void print_sepset(int *var_ixs, int *time_index, int l)
     int a = var_ixs[0];
     int b = var_ixs[1];
     if (l == 1) {
-        printf("(%d, %d) || removed at ti (%d, %d): %d", a, b,
+        printf("(%d, %d) || removed at ti (%d, %d): %d \n", a, b,
         time_index[a], time_index[b], var_ixs[2]);
     } else if (l == 2 ) {
-        printf("(%d, %d) || removed at ti (%d, %d): %d, %d", a, b,
+        printf("(%d, %d) || removed at ti (%d, %d): %d, %d \n", a, b,
         time_index[a], time_index[b], var_ixs[2], var_ixs[3]);
     } else if (l == 3) {
-        printf("(%d, %d) || removed at ti (%d, %d): %d, %d, %d", a, b,
+        printf("(%d, %d) || removed at ti (%d, %d): %d, %d, %d \n", a, b,
         time_index[a], time_index[b], var_ixs[2], var_ixs[3], var_ixs[4]);
     } else if (l == 4) {
-        printf("(%d, %d) || removed at ti (%d, %d): %d, %d, %d, %d", a, b,
+        printf("(%d, %d) || removed at ti (%d, %d): %d, %d, %d, %d \n", a, b,
         time_index[a], time_index[b], var_ixs[2], var_ixs[3], var_ixs[4], var_ixs[5]);
     } else if (l == 5) {
-        printf("(%d, %d) || removed at ti (%d, %d): %d, %d, %d, %d, %d", a, b,
+        printf("(%d, %d) || removed at ti (%d, %d): %d, %d, %d, %d, %d \n", a, b,
         time_index[a], time_index[b],
         var_ixs[2], var_ixs[3], var_ixs[4], var_ixs[5], var_ixs[6]);
     } else if (l == 6) {
-        printf("(%d, %d) || removed at ti (%d, %d): %d, %d, %d, %d, %d, %d", a, b,
+        printf("(%d, %d) || removed at ti (%d, %d): %d, %d, %d, %d, %d, %d \n", a, b,
         time_index[a], time_index[b],
         var_ixs[2], var_ixs[3], var_ixs[4], var_ixs[5], var_ixs[6], var_ixs[7]);
     } else if (l == 7) {
-        printf("(%d, %d) || removed at ti (%d, %d): %d, %d, %d, %d, %d, %d, %d", a, b, time_index[a], time_index[b],
+        printf("(%d, %d) || removed at ti (%d, %d): %d, %d, %d, %d, %d, %d, %d \n", a, b, time_index[a], time_index[b],
         var_ixs[2], var_ixs[3], var_ixs[4], var_ixs[5], var_ixs[6], var_ixs[7], var_ixs[8]);
     } else if (l == 8) {
-        printf("(%d, %d) || removed at ti (%d, %d): %d, %d, %d, %d, %d, %d, %d, %d", a, b, time_index[a], time_index[b],
+        printf("(%d, %d) || removed at ti (%d, %d): %d, %d, %d, %d, %d, %d, %d, %d \n", a, b, time_index[a], time_index[b],
         var_ixs[2], var_ixs[3], var_ixs[4], var_ixs[5], var_ixs[6], var_ixs[7], var_ixs[8], var_ixs[9]);
     } else if (l == 9) {
-        printf("(%d, %d) || removed at ti (%d, %d): %d, %d, %d, %d, %d, %d, %d, %d, %d", a, b, time_index[a], time_index[b],
+        printf("(%d, %d) || removed at ti (%d, %d): %d, %d, %d, %d, %d, %d, %d, %d, %d \n", a, b, time_index[a], time_index[b],
         var_ixs[2], var_ixs[3], var_ixs[4], var_ixs[5], var_ixs[6], var_ixs[7], var_ixs[8], var_ixs[9], var_ixs[10]);
     } else if (l == 10) {
-        printf("(%d, %d) || removed at ti (%d, %d): %d, %d, %d, %d, %d, %d, %d, %d, %d, %d", a, b, time_index[a], time_index[b],
+        printf("(%d, %d) || removed at ti (%d, %d): %d, %d, %d, %d, %d, %d, %d, %d, %d, %d \n", a, b, time_index[a], time_index[b],
         var_ixs[2], var_ixs[3], var_ixs[4], var_ixs[5], var_ixs[6], var_ixs[7], var_ixs[8], var_ixs[9], var_ixs[10], var_ixs[11]);
     } else if (l == 11) {
-        printf("(%d, %d) || removed at ti (%d, %d): %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d", a, b, time_index[a], time_index[b],
+        printf("(%d, %d) || removed at ti (%d, %d): %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d \n", a, b, time_index[a], time_index[b],
         var_ixs[2], var_ixs[3], var_ixs[4], var_ixs[5], var_ixs[6], var_ixs[7], var_ixs[8], var_ixs[9], var_ixs[10], var_ixs[11], var_ixs[12]);
     } else if (l == 12) {
-        printf("(%d, %d) || removed at ti (%d, %d): %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d", a, b, time_index[a], time_index[b],
+        printf("(%d, %d) || removed at ti (%d, %d): %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d \n", a, b, time_index[a], time_index[b],
         var_ixs[2], var_ixs[3], var_ixs[4], var_ixs[5], var_ixs[6], var_ixs[7], var_ixs[8], var_ixs[9], var_ixs[10], var_ixs[11], var_ixs[12], var_ixs[13]);
     } else if (l == 13) {
-        printf("(%d, %d) || removed at ti (%d, %d): %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d", a, b, time_index[a], time_index[b],
+        printf("(%d, %d) || removed at ti (%d, %d): %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d \n", a, b, time_index[a], time_index[b],
         var_ixs[2], var_ixs[3], var_ixs[4], var_ixs[5], var_ixs[6], var_ixs[7], var_ixs[8], var_ixs[9], var_ixs[10], var_ixs[11], var_ixs[12], var_ixs[13], var_ixs[14]);
     } else if (l == 14) {
-        printf("(%d, %d) || removed at ti (%d, %d): %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d", a, b, time_index[a], time_index[b],
+        printf("(%d, %d) || removed at ti (%d, %d): %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d \n", a, b, time_index[a], time_index[b],
         var_ixs[2], var_ixs[3], var_ixs[4], var_ixs[5], var_ixs[6], var_ixs[7], var_ixs[8], var_ixs[9], var_ixs[10], var_ixs[11], var_ixs[12], var_ixs[13], var_ixs[14], var_ixs[15]);
     }
 }
