@@ -11,7 +11,7 @@ __device__ void print_sepset(int *var_ixs, int *time_index, int l)
 {
     int a = var_ixs[0];
     int b = var_ixs[1];
-    printf("(%d, %d): Removed (%d, %d) at ti (%d, %d) with sepset: \n", a, b, time_index[a], time_index[b]);
+    printf("(%d, %d): Removed (%d, %d) at ti (%d, %d) with sepset: \n", a, b, a, b, time_index[a], time_index[b]);
     for (int nix = 2; nix < l + 2; nix++) {
         printf("(%d, %d): %d at ti %d \n", a, b, var_ixs[nix], time_index[var_ixs[nix]]);
     }
