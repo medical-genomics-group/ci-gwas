@@ -1125,6 +1125,15 @@ void cuda_skeleton_summary_stats_hetcor(int argc, char *argv[])
 
     hetcor_skeleton(sq_corrs.data(), &p, G.data(), sq_ess.data(), &th, &init_level, &max_level, time_index.data());
 
+   if (WRITE_FULL_CORRMATS)
+    {
+        write_floats_to_binary(
+            G.data(),
+            G.size(),
+            make_path(outdir, block.to_file_string(), ".full_adj_after_first_round")
+        );
+    }
+
     std::unordered_set<int> variable_subset = subset_variables(G, num_var, num_markers, depth);
     ReducedGC gc = reduce_gc(G, sq_corrs, variable_subset, num_var, num_phen, max_level);
 
