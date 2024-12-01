@@ -122,14 +122,14 @@ def main():
     cusk_parser.add_argument(
         "max_level",
         metavar="max-level",
-        type=TypeCheck(int, "max-level", 1, 14),
+        type=TypeCheck(int, "max-level", 0, 14),
         help="maximal size of separation sets in cuPC (<= 14)",
         default=3,
     )
     cusk_parser.add_argument(
         "max_level_two",
         metavar="max-level-two",
-        type=TypeCheck(int, "max-level", 1, 14),
+        type=TypeCheck(int, "max-level", 0, 14),
         help="maximal size of separation sets in the second round of cuPC (<= 14)",
         default=14,
     )
@@ -188,14 +188,14 @@ def main():
     cuskss_parser.add_argument(
         "max_level",
         metavar="max-level",
-        type=TypeCheck(int, "max-level", 1, 14),
+        type=TypeCheck(int, "max-level", 0, 14),
         help="maximal size of separation sets in the first round of cuPC (<= 14)",
         default=3,
     )
     cuskss_parser.add_argument(
         "max_level_two",
         metavar="max-level-two",
-        type=TypeCheck(int, "max-level", 1, 14),
+        type=TypeCheck(int, "max-level", 0, 14),
         help="maximal size of separation sets in the second round of cuPC (<= 14)",
         default=14,
     )
@@ -276,14 +276,14 @@ def main():
     cuskss_het_parser.add_argument(
         "max_level",
         metavar="max-level",
-        type=TypeCheck(int, "max-level", 1, 14),
+        type=TypeCheck(int, "max-level", 0, 14),
         help="maximal size of separation sets in the first round of cuPC (<= 14)",
         default=3,
     )
     cuskss_het_parser.add_argument(
         "max_level_two",
         metavar="max-level-two",
-        type=TypeCheck(int, "max-level", 1, 14),
+        type=TypeCheck(int, "max-level", 0, 14),
         help="maximal size of separation sets in the second round of cuPC (<= 14)",
         default=14,
     )
@@ -342,14 +342,14 @@ def main():
     cuskss_merged_parser.add_argument(
         "max_level",
         metavar="max-level",
-        type=TypeCheck(int, "max-level", 1, 14),
+        type=TypeCheck(int, "max-level", 0, 14),
         help="maximal size of separation sets in the first round of cuPC (<= 14)",
         default=3,
     )
     cuskss_merged_parser.add_argument(
         "max_level_two",
         metavar="max-level-two",
-        type=TypeCheck(int, "max-level", 1, 14),
+        type=TypeCheck(int, "max-level", 0, 14),
         help="maximal size of separation sets in the second round of cuPC (<= 14)",
         default=14,
     )
