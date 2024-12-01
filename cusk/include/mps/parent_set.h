@@ -92,6 +92,7 @@ struct ReducedGC
     std::vector<int> new_to_old_indices;
     std::vector<int> G;
     std::vector<float> C;
+    std::vector<float> S;
 
     size_t num_markers() { return num_var - num_phen; }
 
@@ -108,10 +109,11 @@ struct ReducedGC
 };
 
 /**
- * @brief Removes everything but ancestral and phenotype nodes from adajcency matrix and corr matrix
+ * @brief Removes everything but ancestral and phenotype nodes from adajcency matrix, corr matrix and sample size matrix
  *
  * @param G         n*n adjacency matrix
  * @param C         n*n correlation matrix
+ * @param S         n*n sample size matrix
  * @param P         set of indices of nodes to be retained
  * @param num_var   number of variables in G, C, S
  * @param max_level max size of a separation set
@@ -119,6 +121,7 @@ struct ReducedGC
 ReducedGC reduce_gc(
     const std::vector<int> &G,
     const std::vector<float> &C,
+    const std::vector<float> &S,
     const std::unordered_set<int> &P,
     const size_t num_var,
     const size_t num_phen,
@@ -128,6 +131,7 @@ ReducedGC reduce_gc(
 ReducedGC reduce_gc(
     const std::vector<int> &G,
     const std::vector<float> &C,
+    const std::vector<float> &S,
     const std::unordered_set<int> &P,
     const size_t num_var,
     const size_t num_phen,

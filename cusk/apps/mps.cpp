@@ -44,7 +44,7 @@ void check_nargs(const int argc, const int nargs, const std::string usage)
 }
 
 ReducedGC reduced_gc_cusk(
-    ReducedGC gc, std::vector<float> &sample_sizes, float threshold, int max_depth, int max_level, std::vector<int> &time_index
+    ReducedGC gc, float threshold, int max_depth, int max_level, std::vector<int> &time_index
 )
 {
     int num_var = gc.num_var;
@@ -53,7 +53,7 @@ ReducedGC reduced_gc_cusk(
         gc.C.data(),
         &num_var,
         gc.G.data(),
-        sample_sizes.data(),
+        gc.S.data(),
         &threshold,
         &start_level,
         &max_level,
@@ -62,7 +62,7 @@ ReducedGC reduced_gc_cusk(
     std::unordered_set<int> variable_subset =
         subset_variables(gc.G, gc.num_var, gc.num_markers(), max_depth);
     return reduce_gc(
-        gc.G, gc.C, variable_subset, gc.num_var, gc.num_phen, ML, gc.new_to_old_indices
+        gc.G, gc.C, gc.S, variable_subset, gc.num_var, gc.num_phen, ML, gc.new_to_old_indices
     );
 }
 
@@ -1135,7 +1135,7 @@ void cuda_skeleton_summary_stats_hetcor(int argc, char *argv[])
     }
 
     std::unordered_set<int> variable_subset = subset_variables(G, num_var, num_markers, depth);
-    ReducedGC gc = reduce_gc(G, sq_corrs, variable_subset, num_var, num_phen, max_level);
+    ReducedGC gc = reduce_gc(G, sq_corrs, sq_ess, variable_subset, num_var, num_phen, max_level);
 
     if (WRITE_FULL_CORRMATS) {
         gc.to_file(make_path(outdir, block.to_file_string(), "_first_round"));
@@ -1149,7 +1149,7 @@ void cuda_skeleton_summary_stats_hetcor(int argc, char *argv[])
         read_ix++;
     }
     std::cout << "Starting second cusk stage" << std::endl;
-    gc = reduced_gc_cusk(gc, sq_ess, th, depth, max_level_two, time_index_gc);
+    gc = reduced_gc_cusk(gc, th, depth, max_level_two, time_index_gc);
     std::cout << "Retained " << gc.num_markers() << " markers" << std::endl;
     gc.to_file(make_path(outdir, block.to_file_string(), ""));
 }
