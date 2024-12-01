@@ -7,7 +7,7 @@
 
 #include <iostream>
 
-// __device__ void print_sepset(int *var_ixs, int *time_index, int l)
+__device__ void print_sepset(int *var_ixs, int *time_index, int l)
 {
     int a = var_ixs[0];
     int b = var_ixs[1];
