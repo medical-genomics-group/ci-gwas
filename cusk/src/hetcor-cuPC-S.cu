@@ -356,7 +356,7 @@ __global__ void cal_Indepl0_ess(float *C, int *G, float *N, int n, float th)
             var_ixs[1] = col;
             int time_index[1];
             int level = 0;
-            // print_sepset(var_ixs, time_index, level);
+            print_sepset(var_ixs, time_index, level);
         }
         else
         {
@@ -471,7 +471,7 @@ __global__ void cal_Indepl1_ess(
                         {
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            // print_sepset(var_ixs, time_index, level);
+                            print_sepset(var_ixs, time_index, level);
                         }
                     }
                 }
@@ -615,7 +615,7 @@ __global__ void cal_Indepl2_ess(
                         {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            // print_sepset(var_ixs, time_index, level);
+                            print_sepset(var_ixs, time_index, level);
                         }
                     }
                 }
@@ -779,7 +779,7 @@ __global__ void cal_Indepl3_ess(
                         {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            // print_sepset(var_ixs, time_index, level);
+                            print_sepset(var_ixs, time_index, level);
                         }
                     }
                 }
@@ -962,7 +962,7 @@ __global__ void cal_Indepl4_ess(
                         {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            // print_sepset(var_ixs, time_index, level);
+                            print_sepset(var_ixs, time_index, level);
                         }
                     }
                 }
@@ -1160,7 +1160,7 @@ __global__ void cal_Indepl5_ess(
                         {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            // print_sepset(var_ixs, time_index, level);
+                            print_sepset(var_ixs, time_index, level);
                         }
                     }
                 }
@@ -1374,7 +1374,7 @@ __global__ void cal_Indepl6_ess(
                         {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            // print_sepset(var_ixs, time_index, level);
+                            print_sepset(var_ixs, time_index, level);
                         }
                     }
                 }
@@ -1608,7 +1608,7 @@ __global__ void cal_Indepl7_ess(
                         {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            // print_sepset(var_ixs, time_index, level);
+                            print_sepset(var_ixs, time_index, level);
                         }
                     }
                 }
@@ -1859,7 +1859,7 @@ __global__ void cal_Indepl8_ess(
                         {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            // print_sepset(var_ixs, time_index, level);
+                            print_sepset(var_ixs, time_index, level);
                         }
                     }
                 }
@@ -2051,7 +2051,7 @@ __global__ void cal_Indepl9_ess(
                         {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            // print_sepset(var_ixs, time_index, level);
+                            print_sepset(var_ixs, time_index, level);
                         }
                     }
                 }
@@ -2245,7 +2245,7 @@ __global__ void cal_Indepl10_ess(
                         {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            // print_sepset(var_ixs, time_index, level);
+                            print_sepset(var_ixs, time_index, level);
                         }
                     }
                 }
@@ -2441,7 +2441,7 @@ __global__ void cal_Indepl11_ess(
                         {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            // print_sepset(var_ixs, time_index, level);
+                            print_sepset(var_ixs, time_index, level);
                         }
                     }
                 }
@@ -2638,7 +2638,7 @@ __global__ void cal_Indepl12_ess(
                         {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            // print_sepset(var_ixs, time_index, level);
+                            print_sepset(var_ixs, time_index, level);
                         }
                     }
                 }
@@ -2837,7 +2837,7 @@ __global__ void cal_Indepl13_ess(
                         {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            // print_sepset(var_ixs, time_index, level);
+                            print_sepset(var_ixs, time_index, level);
                         }
                     }
                 }
@@ -3037,7 +3037,7 @@ __global__ void cal_Indepl14_ess(
                         {  // lock
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            // print_sepset(var_ixs, time_index, level);
+                            print_sepset(var_ixs, time_index, level);
                         }
                     }
                 }
