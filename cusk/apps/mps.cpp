@@ -1127,7 +1127,7 @@ void cuda_skeleton_summary_stats_hetcor(int argc, char *argv[])
 
    if (WRITE_FULL_CORRMATS)
     {
-        write_floats_to_binary(
+        write_ints_to_binary(
             G.data(),
             G.size(),
             make_path(outdir, block.to_file_string(), ".full_adj_after_first_round")
