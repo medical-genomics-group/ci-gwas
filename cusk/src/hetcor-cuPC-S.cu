@@ -99,6 +99,8 @@ void hetcor_skeleton(
     HANDLE_ERROR(cudaMalloc((void **)&G_cuda, n * n * sizeof(int)));
     HANDLE_ERROR(cudaMalloc((void **)&N_cuda, n * n * sizeof(float)));
     HANDLE_ERROR(cudaMalloc((void **)&time_index_cuda, n * sizeof(int)));
+    // copy adj matrix from CPU to GPU
+    HANDLE_ERROR(cudaMemcpy(G_cuda, G, n * n * sizeof(int), cudaMemcpyHostToDevice));
     // copy correlation matrix from CPU to GPU
     HANDLE_ERROR(cudaMemcpy(C_cuda, C, n * n * sizeof(float), cudaMemcpyHostToDevice));
     // copy effective sample size matrix from CPU to GPU
