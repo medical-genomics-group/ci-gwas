@@ -22,7 +22,98 @@
 #include <string>
 #include <vector>
 
-bool WRITE_FULL_CORRMATS = true;
+bool WRITE_FULL_CORRMATS = false;
+
+
+struct CuskssSquareInputs {
+    std::vector<float> correlations;
+    std::vector<float> sample_sizes;
+};
+
+
+CuskssSquareInputs make_square_cuskss_inputs(
+    const MarkerSummaryStats &mxm,
+    const MarkerTraitSummaryStats &mxp,
+    const TraitSummaryStats &pxp,
+    const float pearson_sample_size,
+    const bool heterogeneous_sample_sizes
+){
+    // make n2 matrix to please cuPC
+    size_t num_phen = pxp.get_num_phen();
+    size_t num_markers = mxm.get_num_markers();
+    size_t num_var = num_markers + num_phen;
+    std::vector<float> sq_corrs(num_var * num_var, 1.0);
+    std::vector<float> sq_ess(num_var * num_var, pearson_sample_size);
+    std::vector<float> marker_corr = mxm.get_corrs();
+
+    size_t sq_row_ix = 0;
+    size_t sq_col_ix = 0;
+    for (size_t i = 0; i < marker_corr.size(); ++i)
+    {
+        sq_corrs[num_var * sq_row_ix + sq_col_ix] = (float)marker_corr[i];
+        if (sq_col_ix == num_markers - 1)
+        {
+            ++sq_row_ix;
+            // marker_corr is square
+            sq_col_ix = 0;
+        }
+        else
+        {
+            ++sq_col_ix;
+        }
+    }
+
+    std::vector<float> marker_phen_corr = mxp.get_corrs();
+    if (heterogeneous_sample_sizes) {
+        std::vector<float> marker_phen_sample_sizes = mxp.get_sample_sizes();
+    }
+    sq_row_ix = 0;
+    sq_col_ix = num_markers;
+    for (size_t i = 0; i < marker_phen_corr.size(); ++i)
+    {
+        sq_corrs[num_var * sq_row_ix + sq_col_ix] = (float)marker_phen_corr[i];
+        sq_corrs[num_var * sq_col_ix + sq_row_ix] = (float)marker_phen_corr[i];
+        if (heterogeneous_sample_sizes) {
+            sq_ess[num_var * sq_row_ix + sq_col_ix] = (float)marker_phen_sample_sizes[i];
+            sq_ess[num_var * sq_col_ix + sq_row_ix] = (float)marker_phen_sample_sizes[i];
+        }
+        if (sq_col_ix == (num_var - 1))
+        {
+            sq_col_ix = num_markers;
+            ++sq_row_ix;
+        }
+        else
+        {
+            ++sq_col_ix;
+        }
+    }
+
+    if (heterogeneous_sample_sizes) {
+        std::vector<float> phen_sample_sizes = pxp.get_sample_sizes();
+    }
+    std::vector<float> phen_corr = pxp.get_corrs();
+    sq_row_ix = num_markers;
+    sq_col_ix = num_markers;
+    for (size_t i = 0; i < phen_corr.size(); ++i)
+    {
+        sq_corrs[num_var * sq_row_ix + sq_col_ix] = (float)phen_corr[i];
+        if (heterogeneous_sample_sizes) {
+            sq_ess[num_var * sq_row_ix + sq_col_ix] = (float)phen_sample_sizes[i];
+        }
+        if (sq_col_ix == (num_var - 1))
+        {
+            ++sq_row_ix;
+            sq_col_ix = num_markers;
+        }
+        else
+        {
+            ++sq_col_ix;
+        }
+    }
+
+    CuskssSquareInputs result = {sq_corrs, sq_ess};
+    return result;
+}
 
 /**
  * @brief Compute number of variables from upper triangular matrix (diag excluded)
@@ -368,151 +459,6 @@ void sim_pc(int argc, char *argv[])
     gcs.to_file(make_path(outdir, "skeleton", ""));
 }
 
-const std::string MP_CORR_DIST_USAGE = R"(
-Compute all marker-phenotype and phenotype-phenotype correlations.
-
-usage: mps bdpc <.phen> <bfiles> <.blocks> <outdir>
-
-arguments:
-    .phen           path to standardized phenotype tsv
-    bfiles          stem of .bed, .means, .stds, .dim files
-    .blocks         file with genomic block definitions
-    outdir          outdir
-)";
-
-const int MP_CORR_DIST_NARGS = 6;
-
-void marker_pheno_corr_dist(int argc, char *argv[])
-{
-    check_nargs(argc, MP_CORR_DIST_NARGS, MP_CORR_DIST_USAGE);
-
-    std::string phen_path = argv[2];
-    std::string bed_base_path = argv[3];
-    std::string block_path = argv[4];
-    std::string outdir = (std::string)argv[5];
-
-    std::cout << "Checking paths" << std::endl;
-
-    check_prepped_bed_path(bed_base_path);
-    check_path(phen_path);
-    check_path(block_path);
-    check_path(outdir);
-
-    Phen phen = load_phen(phen_path);
-    BfilesBase bfiles(bed_base_path);
-    BedDims dims(bfiles.dim());
-
-    if (phen.get_num_samples() != dims.get_num_samples())
-    {
-        std::cerr << "different num samples in phen and dims" << std::endl;
-        exit(1);
-    }
-
-    BimInfo bim(bfiles.bim());
-    size_t num_individuals = dims.get_num_samples();
-    size_t num_phen = phen.get_num_phen();
-    size_t phen_corr_mat_size = num_phen * (num_phen - 1) / 2;
-    std::vector<float> phen_corr(phen_corr_mat_size, 0.0);
-    std::cout << "Found " << num_phen << " phenotypes" << std::endl;
-
-    std::cout << "Loading blocks" << std::endl;
-    std::vector<MarkerBlock> blocks = read_blocks_from_file(block_path);
-
-    std::cout << "Found " << blocks.size() << " blocks" << std::endl;
-
-    std::cout << "Computing phenotype correlations" << std::endl;
-    cu_phen_corr_pearson_npn(
-        phen.data.data(), phen.get_num_samples(), phen.get_num_phen(), phen_corr.data()
-    );
-
-    std::cout << "Reformating corrs to n2 format" << std::endl;
-    std::vector<float> sq_corrs(num_phen * num_phen, 1.0);
-
-    size_t sq_row_ix = 0;
-    size_t sq_col_ix = 1;
-    for (size_t i = 0; i < phen_corr_mat_size; ++i)
-    {
-        sq_corrs[num_phen * sq_row_ix + sq_col_ix] = phen_corr[i];
-        sq_corrs[num_phen * sq_col_ix + sq_row_ix] = phen_corr[i];
-        if (sq_col_ix == num_phen - 1)
-        {
-            ++sq_row_ix;
-            sq_col_ix = sq_row_ix + 1;
-        }
-        else
-        {
-            ++sq_col_ix;
-        }
-    }
-
-    write_floats_to_binary(sq_corrs.data(), num_phen * num_phen, make_path(outdir, "pxp", ".corr"));
-
-    for (auto b : blocks)
-    {
-        if (b.get_first_marker_ix() >= bim.get_num_markers_on_chr(b.get_chr_id()) ||
-            (b.get_last_marker_ix() >= bim.get_num_markers_on_chr(b.get_chr_id())))
-        {
-            std::cerr << "block out of bounds with first_ix: " << b.get_first_marker_ix()
-                      << " last_ix: " << b.get_last_marker_ix() << std::endl;
-            exit(1);
-        }
-    }
-
-    for (size_t bid = 0; bid < blocks.size(); bid++)
-    {
-        std::cout << std::endl;
-        std::cout << "Processing block " << bid + 1 << " / " << blocks.size() << std::endl;
-
-        MarkerBlock block = blocks[bid];
-
-        size_t num_markers = block.block_size();
-
-        std::cout << "Block size: " << num_markers << std::endl;
-
-        std::cout << "Loading bed data" << std::endl;
-
-        // load block data
-        std::vector<unsigned char> bedblock = read_block_from_bed(bfiles.bed(), block, dims, bim);
-
-        size_t chr_start = bim.get_global_chr_start(block.get_chr_id());
-        std::vector<float> means = read_floats_from_line_range(
-            bfiles.means(),
-            chr_start + block.get_first_marker_ix(),
-            chr_start + block.get_last_marker_ix()
-        );
-        std::vector<float> stds = read_floats_from_line_range(
-            bfiles.stds(),
-            chr_start + block.get_first_marker_ix(),
-            chr_start + block.get_last_marker_ix()
-        );
-
-        if ((means.size() != block.block_size()) || (stds.size() != block.block_size()))
-        {
-            std::cout << "block size and number of means or stds differ" << std::endl;
-            exit(1);
-        }
-
-        size_t marker_phen_corr_mat_size = num_markers * num_phen;
-        std::vector<float> marker_phen_corr(marker_phen_corr_mat_size, 0.0);
-
-        std::cout << "Computing marker - phen correlations" << std::endl;
-
-        cu_marker_phen_corr_pearson(
-            bedblock.data(),
-            phen.data.data(),
-            num_markers,
-            num_individuals,
-            num_phen,
-            means.data(),
-            stds.data(),
-            marker_phen_corr.data()
-        );
-
-        append_floats_to_binary(
-            marker_phen_corr.data(), marker_phen_corr_mat_size, make_path(outdir, "mxp", ".corr")
-        );
-    }
-}
 
 const std::string CUSKSS_TRAIT_ONLY_USAGE = R"(
 Run cuda-skeleton on precomputed trait-trait correlations.
@@ -650,60 +596,15 @@ void cuda_skeleton_summary_stats_merged_blocks(int argc, char *argv[])
     size_t num_phen = pxp.get_num_phen();
     size_t num_markers = mxm.get_num_markers();
     size_t num_var = num_markers + num_phen;
-    std::vector<float> sq_corrs(num_var * num_var, 1.0);
-    std::vector<float> marker_corr = mxm.get_corrs();
 
-    size_t sq_row_ix = 0;
-    size_t sq_col_ix = 0;
-    for (size_t i = 0; i < marker_corr.size(); ++i)
-    {
-        sq_corrs[num_var * sq_row_ix + sq_col_ix] = (float)marker_corr[i];
-        if (sq_col_ix == num_markers - 1)
-        {
-            ++sq_row_ix;
-            // marker_corr is square
-            sq_col_ix = 0;
-        }
-        else
-        {
-            ++sq_col_ix;
-        }
-    }
-
-    std::vector<float> marker_phen_corr = mxp.get_corrs();
-    sq_row_ix = 0;
-    sq_col_ix = num_markers;
-    for (size_t i = 0; i < marker_phen_corr.size(); ++i)
-    {
-        sq_corrs[num_var * sq_row_ix + sq_col_ix] = (float)marker_phen_corr[i];
-        sq_corrs[num_var * sq_col_ix + sq_row_ix] = (float)marker_phen_corr[i];
-        if (sq_col_ix == (num_var - 1))
-        {
-            sq_col_ix = num_markers;
-            ++sq_row_ix;
-        }
-        else
-        {
-            ++sq_col_ix;
-        }
-    }
-
-    std::vector<float> phen_corr = pxp.get_corrs();
-    sq_row_ix = num_markers;
-    sq_col_ix = num_markers;
-    for (size_t i = 0; i < phen_corr.size(); ++i)
-    {
-        sq_corrs[num_var * sq_row_ix + sq_col_ix] = (float)phen_corr[i];
-        if (sq_col_ix == (num_var - 1))
-        {
-            ++sq_row_ix;
-            sq_col_ix = num_markers;
-        }
-        else
-        {
-            ++sq_col_ix;
-        }
-    }
+    CuskssSquareInputs csi = make_square_mxm_mxp_pxp_corrmat(
+        mxm,
+        mxp,
+        pxp,
+        num_individuals,
+        false // heterogoneous_sample_size ?
+    );
+    std::vector<float> sq_corrs = sci.correlations;
 
     if (WRITE_FULL_CORRMATS)
     {
@@ -820,60 +721,14 @@ void cuda_skeleton_summary_stats(int argc, char *argv[])
     size_t num_phen = pxp.get_num_phen();
     size_t num_markers = mxm.get_num_markers();
     size_t num_var = num_markers + num_phen;
-    std::vector<float> sq_corrs(num_var * num_var, 1.0);
-    std::vector<float> marker_corr = mxm.get_corrs();
-
-    size_t sq_row_ix = 0;
-    size_t sq_col_ix = 0;
-    for (size_t i = 0; i < marker_corr.size(); ++i)
-    {
-        sq_corrs[num_var * sq_row_ix + sq_col_ix] = (float)marker_corr[i];
-        if (sq_col_ix == num_markers - 1)
-        {
-            ++sq_row_ix;
-            // marker_corr is square
-            sq_col_ix = 0;
-        }
-        else
-        {
-            ++sq_col_ix;
-        }
-    }
-
-    std::vector<float> marker_phen_corr = mxp.get_corrs();
-    sq_row_ix = 0;
-    sq_col_ix = num_markers;
-    for (size_t i = 0; i < marker_phen_corr.size(); ++i)
-    {
-        sq_corrs[num_var * sq_row_ix + sq_col_ix] = (float)marker_phen_corr[i];
-        sq_corrs[num_var * sq_col_ix + sq_row_ix] = (float)marker_phen_corr[i];
-        if (sq_col_ix == (num_var - 1))
-        {
-            sq_col_ix = num_markers;
-            ++sq_row_ix;
-        }
-        else
-        {
-            ++sq_col_ix;
-        }
-    }
-
-    std::vector<float> phen_corr = pxp.get_corrs();
-    sq_row_ix = num_markers;
-    sq_col_ix = num_markers;
-    for (size_t i = 0; i < phen_corr.size(); ++i)
-    {
-        sq_corrs[num_var * sq_row_ix + sq_col_ix] = (float)phen_corr[i];
-        if (sq_col_ix == (num_var - 1))
-        {
-            ++sq_row_ix;
-            sq_col_ix = num_markers;
-        }
-        else
-        {
-            ++sq_col_ix;
-        }
-    }
+    CuskssSquareInputs csi = make_square_mxm_mxp_pxp_corrmat(
+        mxm,
+        mxp,
+        pxp,
+        num_individuals,
+        false // heterogoneous_sample_size ?
+    );
+    std::vector<float> sq_corrs = sci.correlations;
 
     if (WRITE_FULL_CORRMATS)
     {
@@ -884,18 +739,7 @@ void cuda_skeleton_summary_stats(int argc, char *argv[])
         );
     }
 
-    std::cout << "Number of levels: " << max_level << std::endl;
-
-    std::vector<float> Th = threshold_array(num_individuals, alpha);
-
-    std::cout << "Setting level thr for cuPC: " << std::endl;
-    for (int i = 0; i <= max_level; ++i)
-    {
-        std::cout << "\t Level: " << i << " thr: " << Th[i] << std::endl;
-    }
-
     std::cout << "Running cuPC" << std::endl;
-
     // call cuPC
     int p = num_var;
     const size_t sepset_size = p * p * ML;
@@ -1014,68 +858,16 @@ void cuda_skeleton_summary_stats_hetcor(int argc, char *argv[])
     size_t num_phen = pxp.get_num_phen();
     size_t num_markers = mxm.get_num_markers();
     size_t num_var = num_markers + num_phen;
-    std::vector<float> sq_corrs(num_var * num_var, 1.0);
-    std::vector<float> sq_ess(num_var * num_var, pearson_sample_size);
-    std::vector<float> marker_corr = mxm.get_corrs();
-
-    size_t sq_row_ix = 0;
-    size_t sq_col_ix = 0;
-    for (size_t i = 0; i < marker_corr.size(); ++i)
-    {
-        sq_corrs[num_var * sq_row_ix + sq_col_ix] = (float)marker_corr[i];
-        if (sq_col_ix == num_markers - 1)
-        {
-            ++sq_row_ix;
-            // marker_corr is square
-            sq_col_ix = 0;
-        }
-        else
-        {
-            ++sq_col_ix;
-        }
-    }
-
-    std::vector<float> marker_phen_corr = mxp.get_corrs();
-    std::vector<float> marker_phen_sample_sizes = mxp.get_sample_sizes();
-    sq_row_ix = 0;
-    sq_col_ix = num_markers;
-    for (size_t i = 0; i < marker_phen_corr.size(); ++i)
-    {
-        sq_corrs[num_var * sq_row_ix + sq_col_ix] = (float)marker_phen_corr[i];
-        sq_corrs[num_var * sq_col_ix + sq_row_ix] = (float)marker_phen_corr[i];
-        sq_ess[num_var * sq_row_ix + sq_col_ix] = (float)marker_phen_sample_sizes[i];
-        sq_ess[num_var * sq_col_ix + sq_row_ix] = (float)marker_phen_sample_sizes[i];
-
-        if (sq_col_ix == (num_var - 1))
-        {
-            sq_col_ix = num_markers;
-            ++sq_row_ix;
-        }
-        else
-        {
-            ++sq_col_ix;
-        }
-    }
-
-    std::vector<float> phen_corr = pxp.get_corrs();
-    std::vector<float> phen_sample_sizes = pxp.get_sample_sizes();
-    sq_row_ix = num_markers;
-    sq_col_ix = num_markers;
-    for (size_t i = 0; i < phen_corr.size(); ++i)
-    {
-        sq_corrs[num_var * sq_row_ix + sq_col_ix] = (float)phen_corr[i];
-        sq_ess[num_var * sq_row_ix + sq_col_ix] = (float)phen_sample_sizes[i];
-        if (sq_col_ix == (num_var - 1))
-        {
-            ++sq_row_ix;
-            sq_col_ix = num_markers;
-        }
-        else
-        {
-            ++sq_col_ix;
-        }
-    }
-
+    CuskssSquareInputs csi = make_square_mxm_mxp_pxp_corrmat(
+        mxm,
+        mxp,
+        pxp,
+        pearson_sample_size,
+        true // heterogoneous_sample_size ?
+    );
+    std::vector<float> sq_corrs = csi.correlations;
+    std::vector<float> sq_ess = csi.sample_sizes;
+    
     if (WRITE_FULL_CORRMATS)
     {
         write_floats_to_binary(
@@ -1095,7 +887,7 @@ void cuda_skeleton_summary_stats_hetcor(int argc, char *argv[])
     }
 
     float th = hetcor_threshold(alpha);
-
+    
     std::cout << "Running cuPC" << std::endl;
 
     // call cuPC
