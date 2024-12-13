@@ -18,6 +18,7 @@ class TraitSummaryStats
    public:
     TraitSummaryStats(const std::string corr_path);
     TraitSummaryStats(const std::string corr_path, const std::string se_path);
+    TraitSummaryStats(const std::string corr_path, const float sample_size);
     std::vector<std::string> get_header() { return header; };
     std::vector<float> get_sample_sizes() { return sample_sizes; };
     std::vector<float> get_corrs() { return corrs; };

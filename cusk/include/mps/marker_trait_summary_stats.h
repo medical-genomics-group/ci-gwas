@@ -21,6 +21,7 @@ class MarkerTraitSummaryStats
     MarkerTraitSummaryStats(const std::string path, const MarkerBlock block);
     MarkerTraitSummaryStats(const std::string corr_path, const std::string se_path, const MarkerBlock block);
     MarkerTraitSummaryStats(const std::string path, const std::vector<int> marker_ixs);
+    MarkerTraitSummaryStats(const std::string corr_path, const std::string se_path, const std::vector<int> marker_ixs);
     std::vector<std::string> get_header() { return header; };
     std::vector<float> get_corrs() { return corrs; };
     std::vector<float> get_sample_sizes() { return sample_sizes; };
