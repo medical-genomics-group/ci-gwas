@@ -157,11 +157,13 @@ def main():
         "--mxm",
         type=str,
         help="Correlations between markers in block. Binary of floats, lower triangular, with diagonal, row major.",
+        default='NULL'
     )
     cuskss_parser.add_argument(
         "--mxp",
         type=str,
         help="Correlations between markers in all blocks and all traits. Textfile, whitespace separated, with columns: [chr, snp, ref, ...<trait names>], rectangular.",
+        default='NULL'
     )
     cuskss_parser.add_argument(
         "--pxp",
@@ -173,28 +175,33 @@ def main():
         "--mxp-se",
         type=str,
         help="Standard errors of the correlations between markers in all blocks and all traits. Textfile, whitespace separated, with columns: [chr, snp, ref, ...<trait names>], rectangular.",
+        default='NULL'
     )
     cuskss_het_parser.add_argument(
         "--pxp-se",
         type=str,
         help="Standard errors of the correlations between all traits. Textfile, whitespace separated, rectangular, only upper triangle is used. With trait names as column and row names. Order of traits has to be same as in the mxp file.",
+        default='NULL'
     )
     cuskss_parser.add_argument(
         "--block-index",
         metavar="block-index",
         type=TypeCheck(int, "block-index", 0, None),
-        help="0-based index of the block to run cusk on",
+        help="0-based index of the block to run cusk on. Ignored if marker-indices are given.",
+        default=0,
     )
     cuskss_parser.add_argument(
         "--blocks",
-        help="file with genomic block definitions (output of ci-gwas block)",
+        help="file with genomic block definitions (output of ci-gwas block). Ignored if marker-indices are given.",
         type=str,
+        default='NULL'
     )
     cuskss_parser.add_argument(
         "--marker-indices",
         metavar="marker-indices",
         type=str,
         help="Row indices of markers in mxp file. E.g. the .ixs file produced by `ci-gwas merge-block-outputs`. Binary of 32 bit ints.",
+        default='NULL'
     )
     cuskss_parser.add_argument(
         "--alpha",
@@ -227,6 +234,7 @@ def main():
         "--time-index",
         type=str,
         help="path to time index for file traits. Textfile, one line per trait, in same order as in pxp. Markers are put at index 0.",
+        default='NULL'
     )
     cuskss_parser.add_argument(
         "--num-samples",
@@ -414,68 +422,27 @@ def cusk(args):
 
 
 def cuskss(args):
+    if args.blockfile == 'NULL' and args.marker_indices == 'NULL':
+        exit("Either blockfile + block index or marker indices into the mxp file have to be provided for cuskss.")
+    if sum([args.mxp_se == 'NULL', args.pxp_se == 'NULL']) == 1:
+        exit("Please provide no or both pxp and mxp standard error files.")
+    if sum([args.mxp == 'NULL', args.mxm == 'NULL']) == 1:
+        exit("Please provide no or both mxp and mxm correlation files.")
     subprocess.run(
         [
             MPS_PATH,
             "cuskss",
             args.mxm,
             args.mxp,
-            args.pxp,
-            str(args.block_index),
-            args.blocks,
-            str(args.alpha),
-            str(args.max_level),
-            str(args.max_level_two),
-            str(args.max_depth),
-            str(args.num_samples),
-            args.outdir,
-        ],
-        check=True,
-    )
-
-
-def cuskss_het(args):
-    if args.time_index is None:
-        args.time_index = f"{args.outdir}/time_index.txt"
-        with open(args.pxp, 'r') as fin:
-            num_traits = len(next(fin).split())
-        with open(args.time_index, 'w') as fout:
-            for _ in range(num_traits):
-                fout.write(f"1\n")
-    subprocess.run(
-        [
-            MPS_PATH,
-            "cuskss-het",
-            args.mxm,
-            args.mxp,
-            args.pxp,
             args.mxp_se,
+            args.pxp,
             args.pxp_se,
-            str(args.num_samples),
+            args.time_index,
             str(args.block_index),
             args.blocks,
-            str(args.alpha),
-            str(args.max_level),
-            str(args.max_level_two),
-            str(args.max_depth),
-            args.time_index,
-            args.outdir,
-        ],
-        check=True,
-    )
-
-
-def cuskss_merged(args):
-    subprocess.run(
-        [
-            MPS_PATH,
-            "cuskss-merged",
-            args.mxm,
-            args.mxp,
-            args.pxp,
             args.marker_indices,
             str(args.alpha),
-            str(args.max_level),
+            str(args.max_level_one),
             str(args.max_level_two),
             str(args.max_depth),
             str(args.num_samples),
@@ -483,10 +450,11 @@ def cuskss_merged(args):
         ],
         check=True,
     )
-    # reformat the output to conform with the merge_blocks format
-    reformat_cuskss_merged_output(cusk_dir=args.outdir).write_mm(
-        basepath=f"{args.outdir}/cuskss_merged"
-    )
+    if args.marker_indices != 'NULL':
+        # reformat the output to conform with the merge_blocks format
+        reformat_cuskss_merged_output(cusk_dir=args.outdir).write_mm(
+            basepath=f"{args.outdir}/cuskss_merged"
+        )
 
 
 def merge_blocks(args):

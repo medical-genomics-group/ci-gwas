@@ -173,7 +173,7 @@ struct CuskssArgs {
     bool time_indexed;
     float alpha;
     float pearson_sample_size;
-    int max_level;
+    int max_level_one;
     int max_level_two;
     int depth;
     int block_ix;
@@ -233,7 +233,7 @@ void cuskss(const CuskssArgs args)
         ReducedGC gc = {
             num_var,
             num_phen,
-            args.max_level,
+            args.max_level_one,
             nto_ixs, // new_to_old_indices
             G,
             sq_corrs,
@@ -246,7 +246,7 @@ void cuskss(const CuskssArgs args)
             gc,
             th,
             args.depth,
-            args.max_level,
+            args.max_level_one,
             time_index_traits
         );
         gc.to_file(make_path(outdir, "trait_only", ""));
@@ -304,7 +304,7 @@ void cuskss(const CuskssArgs args)
         ReducedGC gc = {
             num_var,
             num_phen,
-            args.max_level,
+            args.max_level_one,
             nto_ixs, // new_to_old_indices
             G,
             sq_corrs,
@@ -317,7 +317,7 @@ void cuskss(const CuskssArgs args)
             gc,
             th,
             args.depth,
-            args.max_level,
+            args.max_level_one,
             time_index_traits
         );
 
@@ -711,10 +711,6 @@ commands:
     block                   Tile marker x marker correlation matrix
     cusk                    Run cuda-skeleton on a single block of block diagonal genomic covariance matrix
     cuskss                  Run cuda-skeleton on a block of markers and traits with pre-computed correlations.
-    cuskss-merged           Run cuda-skeleton on pre-selected markers and traits with pre-computed correlations.
-    cuskss-trait-only       Run cuda-skeleton on a set of pre-computed trait-trait correlations.
-    cusk-sim                Run cuda-skeleton on single simulated block
-    cusk-phen               Run cuda-skeleton on phenotypes only
 
 contact:
     nick.machnik@gmail.com
@@ -736,26 +732,71 @@ auto main(int argc, char *argv[]) -> int
     }
     else if (cmd == "cuskss")
     {
+        std::string mxm_path = argv[2];
+        std::string mxp_path = argv[3];
+        std::string mxp_se_path = argv[4];
+        std::string pxp_path = argv[5];
+        std::string pxp_se_path = argv[6];
+        std::string time_index_path = argv[7];
+        int block_index = std::stoi(argv[8]);
+        std::string blockfile_path = argv[9];
+        std::string marker_index_path = argv[10];
+        float alpha = std::stof(argv[11]);
+        int max_level_one = std::stoi(argv[12]);
+        int max_level_two = std::stoi(argv[13]);
+        int max_depth = std::stoi(argv[14]);
+        int num_samples = std::stoi(argv[15]);
+        std::string outdir_path = argv[16];
+
+        bool merged = marker_index_path != "NULL";
+        bool hetcor = mxp_se_path != "NULL";
+        bool trait_only = mxm_path != "NULL";
+        bool two_stage = max_level_two > 0;
+        bool time_indexed = time_index_path != "NULL";
+
+        // required args
+        check_path(pxp_path);
+        check_path(block_path);
+        check_path(outdir);
+
+        if (hetcor || merged || !trait_only) {
+            check_path(mxm_path);
+            check_path(mxp_path);
+        }
+
+        if (hetcor) {
+            check_path(mxp_se_path);
+            check_path(pxp_se_path);
+        }
+
+        if (time_indexed) {
+            check_path(time_index_path);
+        }
+
         CuskssArgs args = {
-            false, // merged
-            false, // hetcor
-            false, // trait_only
-            true, // two_stage
-            
+            merged,             // merged
+            hetcor,             // hetcor
+            trait_only,         // trait_only
+            two_stage,          // two_stage
+            time_indexed,       // time_indexed
+            alpha,              // alpha
+            num_samples,        // pearson_sample_size
+            max_level_one,      // max_level
+            max_level_two,      // max_level_two
+            max_depth,          // depth
+            block_index,        // block_ix
+            block_path,         // block_path
+            marker_index_path,  // marker_ixs_path
+            mxm_path,           // mxm_path
+            mxp_path,           // mxp_path
+            mxp_se_path,        // mxp_se_path
+            pxp_path,           // pxp_path
+            pxp_se_path,        // pxp_se_path
+            blockfile_path,     // block_path
+            time_index_path,    // time_index_path
+            outdir_path         // outdir
         };
-        cuda_skeleton_summary_stats(argc, argv);
-    }
-    else if (cmd == "cuskss-het")
-    {
-        cuda_skeleton_summary_stats_hetcor(argc, argv);
-    }
-    else if (cmd == "cuskss-merged")
-    {
-        cuda_skeleton_summary_stats_merged_blocks(argc, argv);
-    }
-    else if (cmd == "cuskss-trait-only")
-    {
-        cuskss_trait_only(argc, argv);
+        cuskss(args);
     }
     else if (cmd == "prep")
     {
@@ -768,14 +809,6 @@ auto main(int argc, char *argv[]) -> int
     else if (cmd == "block")
     {
         make_blocks(argc, argv);
-    }
-    else if (cmd == "cusk-phen")
-    {
-        phenotype_pc(argc, argv);
-    }
-    else if (cmd == "cusk-sim")
-    {
-        sim_pc(argc, argv);
     }
     else
     {
