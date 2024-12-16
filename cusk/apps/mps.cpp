@@ -170,6 +170,7 @@ struct CuskssArgs {
     bool hetcor;
     bool trait_only;
     bool two_stage;
+    bool time_indexed;
     float alpha;
     float pearson_sample_size;
     int max_level;
@@ -202,18 +203,23 @@ void cuskss(const CuskssArgs args)
         MarkerBlock block = blocks[block_ix];
     }
 
-    std::cout << "Loading time_indices" << std::endl;
-    std::vector<int> time_index_traits = read_ints_from_lines(args.time_index_path);
-
     std::cout << "Loading pxp" << std::endl;
     if (args.hetcor) {
         TraitSummaryStats pxp = TraitSummaryStats(args.pxp_path, args.pxp_se_path);
     } else {
         TraitSummaryStats pxp = TraitSummaryStats(args.pxp_path, pearson_sample_size);
     }
+    size_t num_phen = pxp.get_num_phen();
+
+    if (args.time_indexed) {
+        std::cout << "Loading time_indices" << std::endl;
+        std::vector<int> time_index_traits = read_ints_from_lines(args.time_index_path);
+    } else {
+        // there is no time index file to load, just put all traits at time 1
+        std::vector<int> time_index_traits(num_phen, 1);
+    }
     
     if (args.trait_only) {
-        size_t num_phen = pxp.get_num_phen();
         size_t num_markers = 0;
         size_t num_var = num_markers + num_phen;
         std::vector<float> sq_corrs = pxp.get_corrs();
@@ -330,7 +336,8 @@ void cuskss(const CuskssArgs args)
             gc.to_file(make_path(outdir, "cuskss_merged", ""))
         } else {
             gc.to_file(make_path(outdir, block.to_file_string(), ""))
-        }       
+        }
+    }
 }
 
 const std::string BLOCK_USAGE = R"(
@@ -729,6 +736,13 @@ auto main(int argc, char *argv[]) -> int
     }
     else if (cmd == "cuskss")
     {
+        CuskssArgs args = {
+            false, // merged
+            false, // hetcor
+            false, // trait_only
+            true, // two_stage
+            
+        };
         cuda_skeleton_summary_stats(argc, argv);
     }
     else if (cmd == "cuskss-het")
