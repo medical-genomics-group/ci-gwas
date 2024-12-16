@@ -154,225 +154,94 @@ def main():
         help="Infer skeleton with markers and traits as nodes, using summary statistic data (requires GPU)",
     )
     cuskss_parser.add_argument(
-        "mxm",
+        "--mxm",
         type=str,
         help="Correlations between markers in block. Binary of floats, lower triangular, with diagonal, row major.",
     )
     cuskss_parser.add_argument(
-        "mxp",
+        "--mxp",
         type=str,
         help="Correlations between markers in all blocks and all traits. Textfile, whitespace separated, with columns: [chr, snp, ref, ...<trait names>], rectangular.",
     )
     cuskss_parser.add_argument(
-        "pxp",
+        "--pxp",
         type=str,
         help="Correlations between all traits. Textfile, whitespace separated, rectangular, only upper triangle is used. With trait names as column and row names. Order of traits has to be same as in the mxp file.",
+        required=True
+    )
+    cuskss_het_parser.add_argument(
+        "--mxp-se",
+        type=str,
+        help="Standard errors of the correlations between markers in all blocks and all traits. Textfile, whitespace separated, with columns: [chr, snp, ref, ...<trait names>], rectangular.",
+    )
+    cuskss_het_parser.add_argument(
+        "--pxp-se",
+        type=str,
+        help="Standard errors of the correlations between all traits. Textfile, whitespace separated, rectangular, only upper triangle is used. With trait names as column and row names. Order of traits has to be same as in the mxp file.",
     )
     cuskss_parser.add_argument(
-        "block_index",
+        "--block-index",
         metavar="block-index",
         type=TypeCheck(int, "block-index", 0, None),
         help="0-based index of the block to run cusk on",
     )
     cuskss_parser.add_argument(
-        "blocks",
+        "--blocks",
         help="file with genomic block definitions (output of ci-gwas block)",
         type=str,
     )
     cuskss_parser.add_argument(
-        "alpha",
-        type=TypeCheck(float, "alpha", 0.0, 1.0),
-        help="significance level for conditional independence tests",
-        default=10**-4,
+        "--marker-indices",
+        metavar="marker-indices",
+        type=str,
+        help="Row indices of markers in mxp file. E.g. the .ixs file produced by `ci-gwas merge-block-outputs`. Binary of 32 bit ints.",
     )
     cuskss_parser.add_argument(
-        "max_level",
+        "--alpha",
+        type=TypeCheck(float, "alpha", 0.0, 1.0),
+        help="significance level for conditional independence tests",
+        required=True,
+    )
+    cuskss_parser.add_argument(
+        "--max-level-one",
         metavar="max-level",
         type=TypeCheck(int, "max-level", 0, 14),
         help="maximal size of separation sets in the first round of cuPC (<= 14)",
         default=3,
     )
     cuskss_parser.add_argument(
-        "max_level_two",
+        "--max-level-two",
         metavar="max-level-two",
         type=TypeCheck(int, "max-level", 0, 14),
         help="maximal size of separation sets in the second round of cuPC (<= 14)",
         default=14,
     )
     cuskss_parser.add_argument(
-        "max_depth",
+        "--max-depth",
         metavar="max-depth",
         type=TypeCheck(int, "max-depth", 1, None),
         help="max depth at which marker variables are kept as ancestors (>= 1)",
         default=1,
     )
     cuskss_parser.add_argument(
-        "num_samples",
-        metavar="num-samples",
-        type=TypeCheck(int, "num-samples", 1, None),
-        help="number of samples used for computing correlations",
+        "--time-index",
+        type=str,
+        help="path to time index for file traits. Textfile, one line per trait, in same order as in pxp. Markers are put at index 0.",
     )
     cuskss_parser.add_argument(
-        "outdir",
+        "--num-samples",
+        metavar="num-samples",
+        type=TypeCheck(int, "num-samples", 1, None),
+        help="number of samples used for computing pearson correlations",
+        required=True
+    )
+    cuskss_parser.add_argument(
+        "--outdir",
         type=str,
         help="directory for output",
         default="./",
     )
     cuskss_parser.set_defaults(func=cuskss)
-
-    # cuskss-het
-    cuskss_het_parser = subparsers.add_parser(
-        "cuskss-het",
-        help="Infer skeleton with markers and traits as nodes, using heterogeneous correlations and sample sizes (requires GPU)",
-    )
-    cuskss_het_parser.add_argument(
-        "mxm",
-        type=str,
-        help="Correlations between markers in block. Binary of floats, lower triangular, with diagonal, row major.",
-    )
-    cuskss_het_parser.add_argument(
-        "mxp",
-        type=str,
-        help="Correlations between markers in all blocks and all traits. Textfile, whitespace separated, with columns: [chr, snp, ref, ...<trait names>], rectangular.",
-    )
-    cuskss_het_parser.add_argument(
-        "pxp",
-        type=str,
-        help="Correlations between all traits. Textfile, whitespace separated, rectangular, only upper triangle is used. With trait names as column and row names. Order of traits has to be same as in the mxp file.",
-    )
-    cuskss_het_parser.add_argument(
-        "mxp_se",
-        type=str,
-        help="Standard errors of the correlations between markers in all blocks and all traits. Textfile, whitespace separated, with columns: [chr, snp, ref, ...<trait names>], rectangular.",
-    )
-    cuskss_het_parser.add_argument(
-        "pxp_se",
-        type=str,
-        help="Standard errors of the correlations between all traits. Textfile, whitespace separated, rectangular, only upper triangle is used. With trait names as column and row names. Order of traits has to be same as in the mxp file.",
-    )
-    cuskss_het_parser.add_argument(
-        "num_samples",
-        metavar="num-samples",
-        type=float,
-        help="sample size for calculation of pearson correlations",
-    )
-    cuskss_het_parser.add_argument(
-        "block_index",
-        metavar="block-index",
-        type=TypeCheck(int, "block-index", 0, None),
-        help="0-based index of the block to run cusk on",
-    )
-    cuskss_het_parser.add_argument(
-        "blocks",
-        help="file with genomic block definitions (output of ci-gwas block)",
-        type=str,
-    )
-    cuskss_het_parser.add_argument(
-        "alpha",
-        type=TypeCheck(float, "alpha", 0.0, 1.0),
-        help="significance level for conditional independence tests",
-        default=10**-4,
-    )
-    cuskss_het_parser.add_argument(
-        "max_level",
-        metavar="max-level",
-        type=TypeCheck(int, "max-level", 0, 14),
-        help="maximal size of separation sets in the first round of cuPC (<= 14)",
-        default=3,
-    )
-    cuskss_het_parser.add_argument(
-        "max_level_two",
-        metavar="max-level-two",
-        type=TypeCheck(int, "max-level", 0, 14),
-        help="maximal size of separation sets in the second round of cuPC (<= 14)",
-        default=14,
-    )
-    cuskss_het_parser.add_argument(
-        "max_depth",
-        metavar="max-depth",
-        type=TypeCheck(int, "max-depth", 1, None),
-        help="max depth at which marker variables are kept as ancestors (>= 1)",
-        default=1,
-    )
-    cuskss_het_parser.add_argument(
-        "outdir",
-        type=str,
-        help="directory for output",
-        default="./",
-    )
-    cuskss_het_parser.add_argument(
-        "--time-index",
-        type=str,
-        help="path to time index for file traits. Textfile, one line per trait, in same order as in pxp. Markers are put at index 0.",
-    )
-    cuskss_het_parser.set_defaults(func=cuskss_het)
-
-    # cuskss-merged
-    cuskss_merged_parser = subparsers.add_parser(
-        "cuskss-merged",
-        help="Infer skeleton with markers and traits as nodes, using summary statistic data (requires GPU)",
-    )
-    cuskss_merged_parser.add_argument(
-        "mxm",
-        type=str,
-        help="Correlations between selected markers. Binary of floats, lower triangular, with diagonal, row major.",
-    )
-    cuskss_merged_parser.add_argument(
-        "mxp",
-        type=str,
-        help="Correlations between markers in all blocks and all traits. Textfile, whitespace separated, with columns: [chr, snp, ref, ...<trait names>], rectangular.",
-    )
-    cuskss_merged_parser.add_argument(
-        "pxp",
-        type=str,
-        help="Correlations between all traits. Textfile, whitespace separated, rectangular, only upper triangle is used. With trait names as column and row names. Order of traits has to be same as in the mxp file.",
-    )
-    cuskss_merged_parser.add_argument(
-        "marker_indices",
-        metavar="marker-indices",
-        type=str,
-        help="Row indices if selected markers in mxp file. E.g. the .ixs file produced by `ci-gwas merge-block-outputs`. Binary of 32 bit ints.",
-    )
-    cuskss_merged_parser.add_argument(
-        "alpha",
-        type=TypeCheck(float, "alpha", 0.0, 1.0),
-        help="significance level for conditional independence tests",
-        default=10**-4,
-    )
-    cuskss_merged_parser.add_argument(
-        "max_level",
-        metavar="max-level",
-        type=TypeCheck(int, "max-level", 0, 14),
-        help="maximal size of separation sets in the first round of cuPC (<= 14)",
-        default=3,
-    )
-    cuskss_merged_parser.add_argument(
-        "max_level_two",
-        metavar="max-level-two",
-        type=TypeCheck(int, "max-level", 0, 14),
-        help="maximal size of separation sets in the second round of cuPC (<= 14)",
-        default=14,
-    )
-    cuskss_merged_parser.add_argument(
-        "max_depth",
-        metavar="max-depth",
-        type=TypeCheck(int, "max-depth", 1, None),
-        help="max depth at which marker variables are kept as ancestors (>= 1)",
-        default=1,
-    )
-    cuskss_merged_parser.add_argument(
-        "num_samples",
-        metavar="num-samples",
-        type=TypeCheck(int, "num-samples", 1, None),
-        help="number of samples used for computing correlations",
-    )
-    cuskss_merged_parser.add_argument(
-        "outdir",
-        type=str,
-        help="directory for output",
-        default="./",
-    )
-    cuskss_merged_parser.set_defaults(func=cuskss_merged)
 
     # merge block outputs
     merge_blocks_parser = subparsers.add_parser(
