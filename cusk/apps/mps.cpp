@@ -95,10 +95,9 @@ CuskssSquareInputs make_square_cuskss_inputs(
     }
 
     std::vector<float> marker_phen_corr = mxp.get_corrs();
+    std::vector<float> marker_phen_sample_sizes;
     if (heterogeneous_sample_sizes) {
         std::vector<float> marker_phen_sample_sizes = mxp.get_sample_sizes();
-    } else {
-        std::vector<float> marker_phen_sample_sizes(0, 1);
     }
     sq_row_ix = 0;
     sq_col_ix = num_markers;
@@ -121,10 +120,9 @@ CuskssSquareInputs make_square_cuskss_inputs(
         }
     }
 
+    std::vector<float> phen_sample_sizes;
     if (heterogeneous_sample_sizes) {
         std::vector<float> phen_sample_sizes = pxp.get_sample_sizes();
-    } else {
-        std::vector<float> phen_sample_sizes(0, 1);
     }
     std::vector<float> phen_corr = pxp.get_corrs();
     sq_row_ix = num_markers;
