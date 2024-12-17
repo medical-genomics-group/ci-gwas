@@ -25,6 +25,6 @@ class MarkerTraitSummaryStats
     std::vector<std::string> get_header() { return header; };
     std::vector<float> get_corrs() { return corrs; };
     std::vector<float> get_sample_sizes() { return sample_sizes; };
-    int get_num_phen() { return num_phen; };
-    int get_num_markers() { return num_markers; };
+    int get_num_phen() const { return num_phen; };
+    int get_num_markers() const { return num_markers; };
 };

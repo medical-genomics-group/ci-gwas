@@ -33,7 +33,7 @@ ReducedGC run_cusk(
 )
 {
     std::vector<int> time_index_gc(gc.num_var, 0);
-    read_ix = 0;
+    int read_ix = 0;
     for (int i = gc.num_markers(); i < gc.num_var; i++) {
         time_index_gc[i] = time_index_traits[read_ix];
         read_ix++;
