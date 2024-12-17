@@ -171,13 +171,13 @@ def main():
         help="Correlations between all traits. Textfile, whitespace separated, rectangular, only upper triangle is used. With trait names as column and row names. Order of traits has to be same as in the mxp file.",
         required=True
     )
-    cuskss_het_parser.add_argument(
+    cuskss_parser.add_argument(
         "--mxp-se",
         type=str,
         help="Standard errors of the correlations between markers in all blocks and all traits. Textfile, whitespace separated, with columns: [chr, snp, ref, ...<trait names>], rectangular.",
         default='NULL'
     )
-    cuskss_het_parser.add_argument(
+    cuskss_parser.add_argument(
         "--pxp-se",
         type=str,
         help="Standard errors of the correlations between all traits. Textfile, whitespace separated, rectangular, only upper triangle is used. With trait names as column and row names. Order of traits has to be same as in the mxp file.",
