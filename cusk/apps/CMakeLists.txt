@@ -8,7 +8,7 @@ set_source_files_properties(mps.cpp PROPERTIES LANGUAGE CUDA)
 target_compile_features(mps PRIVATE cxx_std_20)
 
 # target_link_libraries(mps PRIVATE corr prep io cuPCsparse)
-target_link_libraries(mps PRIVATE corr prep io cuPC parents block)
+target_link_libraries(mps PRIVATE corr prep io cuPC parents block cli)
 
 target_compile_options(mps PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
     -O3
