@@ -17,6 +17,8 @@ class MarkerTraitSummaryStats
     int num_markers;
 
    public:
+    MarkerTraitSummaryStats() {}
+
     MarkerTraitSummaryStats(const std::string path);
     MarkerTraitSummaryStats(const std::string path, const MarkerBlock block);
     MarkerTraitSummaryStats(const std::string corr_path, const std::string se_path, const MarkerBlock block);
