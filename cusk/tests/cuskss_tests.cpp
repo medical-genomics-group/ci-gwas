@@ -40,7 +40,7 @@ TEST(cuskss_pearson, expected_results)
         "NULL",             // time_index_path
         temp_dir            // outdir
     };
-    for (const auto & entry : fs::directory_iterator(temp_dir))
+    for (const auto & entry : std::filesystem::directory_iterator(temp_dir))
         std::cout << entry.path() << std::endl;
     // which files do we expect?
     // what file contents do we expect?
