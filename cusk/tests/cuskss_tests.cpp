@@ -4,7 +4,7 @@
 #include <mps/marker_summary_stats.h>
 #include <mps/marker_trait_summary_stats.h>
 #include <mps/trait_summary_stats.h>
-#include <mps/mps.h>
+#include <mps/cli.h>
 
 #include <filesystem>
 #include <string>
