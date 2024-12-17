@@ -58,6 +58,33 @@ ReducedGC run_cusk(
     );
 }
 
+ReducedGCS reduced_gcs_cusk(
+    ReducedGCS gcs, std::vector<float> &thresholds, int max_depth, int max_level
+)
+{
+    int num_var = gcs.num_var;
+    int start_level = 0;
+    const size_t sepset_size = gcs.num_var * gcs.num_var * ML;
+    std::vector<int> sepset(sepset_size, 0);
+    const size_t g_size = gcs.num_var * gcs.num_var;
+    std::vector<float> pmax(g_size, 0.0);
+    Skeleton(
+        gcs.C.data(),
+        &num_var,
+        gcs.G.data(),
+        thresholds.data(),
+        &start_level,
+        &max_level,
+        pmax.data(),
+        sepset.data()
+    );
+    std::unordered_set<int> variable_subset =
+        subset_variables(gcs.G, gcs.num_var, gcs.num_markers(), max_depth);
+    return reduce_gcs(
+        gcs.G, gcs.C, sepset, variable_subset, gcs.num_var, gcs.num_phen, ML, gcs.new_to_old_indices
+    );
+}
+
 struct CuskssSquareInputs {
     std::vector<float> correlations;
     std::vector<float> sample_sizes;
@@ -290,7 +317,7 @@ void cuskss(const CuskssArgs args)
         size_t num_phen = pxp.get_num_phen();
         size_t num_markers = mxm.get_num_markers();
         size_t num_var = num_markers + num_phen;
-        CuskssSquareInputs csi = make_square_mxm_mxp_pxp_corrmat(
+        CuskssSquareInputs csi = make_square_cuskss_inputs(
             mxm,
             mxp,
             pxp,
@@ -302,7 +329,7 @@ void cuskss(const CuskssArgs args)
 
         // init new-to-old indices for initial gc
         std::vector<int> nto_ixs(num_var);
-        std::iota(v.begin(), v.end(), 0);
+        std::iota(nto_ixs.begin(), nto_ixs.end(), 0);
         const size_t g_size = num_var * num_var;
         std::vector<int> G(g_size, 1);
         ReducedGC gc = {
@@ -314,7 +341,7 @@ void cuskss(const CuskssArgs args)
             sq_corrs,
             sq_ess
         };
-        float th = hetcor_threshold(alpha);
+        float th = hetcor_threshold(args.alpha);
 
         std::cout << "Starting first cusk stage" << std::endl;
         gc = run_cusk(
@@ -333,13 +360,13 @@ void cuskss(const CuskssArgs args)
                 args.depth,
                 args.max_level_two,
                 time_index_traits
-            )
+            );
         }
         std::cout << "Retained " << gc.num_markers() << " markers" << std::endl;
         if (args.merged) {
-            gc.to_file(make_path(outdir, "cuskss_merged", ""))
+            gc.to_file(make_path(args.outdir, "cuskss_merged", ""));
         } else {
-            gc.to_file(make_path(outdir, block.to_file_string(), ""))
+            gc.to_file(make_path(args.outdir, block.to_file_string(), ""));
         }
     }
 }
