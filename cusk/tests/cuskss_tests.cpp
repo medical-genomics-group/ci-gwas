@@ -12,6 +12,7 @@
 
 TEST(cuskss_pearson, expected_results)
 {
+    std::cout << "TESTPRINT" << std::endl;
     std::filesystem::path temp_dir = std::filesystem::temp_directory_path() / "cuskss_test_files";
     std::filesystem::create_directories(temp_dir);
     std::string marker_ixs_path = "../../tests/test_files/marker_indices.bin";
@@ -40,6 +41,7 @@ TEST(cuskss_pearson, expected_results)
         "NULL",             // time_index_path
         temp_dir            // outdir
     };
+    cuskss(args);
     for (const auto & entry : std::filesystem::directory_iterator(temp_dir))
         std::cout << entry.path() << std::endl;
     // which files do we expect?
