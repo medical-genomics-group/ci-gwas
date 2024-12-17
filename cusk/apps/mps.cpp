@@ -230,7 +230,7 @@ void cuskss(const CuskssArgs args)
 
         // init new-to-old indices for initial gc
         std::vector<int> nto_ixs(num_var);
-        std::iota(v.begin(), v.end(), 0);
+        std::iota(nto_ixs.begin(), nto_ixs.end(), 0);
         const size_t g_size = num_var * num_var;
         std::vector<int> G(g_size, 1);
         ReducedGC gc = {

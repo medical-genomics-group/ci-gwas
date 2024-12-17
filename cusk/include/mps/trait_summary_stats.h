@@ -16,6 +16,8 @@ class TraitSummaryStats
     int num_phen;
 
    public:
+    TraitSummaryStats() {}
+
     TraitSummaryStats(const std::string corr_path);
     TraitSummaryStats(const std::string corr_path, const std::string se_path);
     TraitSummaryStats(const std::string corr_path, const float sample_size);

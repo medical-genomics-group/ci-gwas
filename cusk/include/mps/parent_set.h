@@ -88,7 +88,7 @@ struct ReducedGC
 {
     size_t num_var;
     size_t num_phen;
-    size_t max_level;
+    int max_level;
     std::vector<int> new_to_old_indices;
     std::vector<int> G;
     std::vector<float> C;
