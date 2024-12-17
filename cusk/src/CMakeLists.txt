@@ -47,6 +47,7 @@ target_compile_features(parents PUBLIC cxx_std_20)
 add_library(cli STATIC cli.cpp ${HEADER_LIST})
 target_include_directories(cli PUBLIC ../include)
 target_compile_features(cli PUBLIC cxx_std_20)
+set_source_files_properties(cli PROPERTIES LANGUAGE CUDA)
 target_compile_options(cli PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
     -O3
     -lineinfo
