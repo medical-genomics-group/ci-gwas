@@ -43,3 +43,7 @@ target_compile_features(block PUBLIC cxx_std_20)
 add_library(parents STATIC parent_set.cpp ${HEADER_LIST})
 target_include_directories(parents PUBLIC ../include)
 target_compile_features(parents PUBLIC cxx_std_20)
+
+add_library(cli STATIC cli.cpp ${HEADER_LIST})
+target_include_directories(cli PUBLIC ../include)
+target_compile_features(cli PUBLIC cxx_std_20)

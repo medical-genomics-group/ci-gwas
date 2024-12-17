@@ -44,3 +44,9 @@ CuskssSquareInputs make_square_cuskss_inputs(
 ReducedGC run_cusk(ReducedGC gc, float threshold, int max_depth, int max_level, std::vector<int> &time_index_traits);
 
 void cuskss(const CuskssArgs args);
+
+void cusk(int argc, char *argv[]);
+
+void prep_bed(int argc, char *argv[]);
+
+void make_blocks(int argc, char *argv[]);
