@@ -776,7 +776,7 @@ auto main(int argc, char *argv[]) -> int
         int max_level_one = std::stoi(argv[12]);
         int max_level_two = std::stoi(argv[13]);
         int max_depth = std::stoi(argv[14]);
-        int num_samples = std::stoi(argv[15]);
+        float num_samples = (float)std::stoi(argv[15]);
         std::string outdir_path = argv[16];
 
         bool merged = marker_index_path != "NULL";
@@ -787,8 +787,8 @@ auto main(int argc, char *argv[]) -> int
 
         // required args
         check_path(pxp_path);
-        check_path(block_path);
-        check_path(outdir);
+        check_path(blockfile_path);
+        check_path(outdir_path);
 
         if (hetcor || merged || !trait_only) {
             check_path(mxm_path);
