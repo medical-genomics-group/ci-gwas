@@ -62,10 +62,13 @@ TEST(read_marker_trait_summary_stats, expected_results)
         0.00178306833327991,
         0.00399935678478479,
         -0.00115459573691031,
+        0.0005,
+        0.0001,
+        -0.01
     };
 
     int exp_num_phen = 3;
-    int exp_num_markers = 2;
+    int exp_num_markers = 3;
 
     MarkerTraitSummaryStats obs =
         MarkerTraitSummaryStats("../../tests/test_files/marker_trait_summary_stats.txt");

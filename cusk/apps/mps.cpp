@@ -14,6 +14,7 @@
 #include <mps/prep.h>
 #include <mps/trait_summary_stats.h>
 #include <sys/stat.h>
+#include <mps/mps.h>
 
 #include <numeric>
 #include <array>
@@ -84,11 +85,6 @@ ReducedGCS reduced_gcs_cusk(
         gcs.G, gcs.C, sepset, variable_subset, gcs.num_var, gcs.num_phen, ML, gcs.new_to_old_indices
     );
 }
-
-struct CuskssSquareInputs {
-    std::vector<float> correlations;
-    std::vector<float> sample_sizes;
-};
 
 CuskssSquareInputs make_square_cuskss_inputs(
     const MarkerSummaryStats &mxm,
@@ -194,29 +190,6 @@ void check_nargs(const int argc, const int nargs, const std::string usage)
         exit(1);
     }
 }
-
-struct CuskssArgs {
-    bool merged;
-    bool hetcor;
-    bool trait_only;
-    bool two_stage;
-    bool time_indexed;
-    float alpha;
-    float pearson_sample_size;
-    int max_level_one;
-    int max_level_two;
-    int depth;
-    int block_ix;
-    std::string block_path;
-    std::string marker_ixs_path;
-    std::string mxm_path;
-    std::string mxp_path;
-    std::string mxp_se_path;
-    std::string pxp_path;
-    std::string pxp_se_path;
-    std::string time_index_path;
-    std::string outdir;
-};
 
 void cuskss(const CuskssArgs args)
 {
