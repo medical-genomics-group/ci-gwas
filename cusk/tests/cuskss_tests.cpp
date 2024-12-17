@@ -25,7 +25,7 @@ TEST(cuskss_pearson, expected_results)
         false,              // two_stage
         false,              // time_indexed
         0.0001,             // alpha
-        500000f,            // pearson_sample_size
+        500000.f,           // pearson_sample_size
         3,                  // max_level
         0,                  // max_level_two
         1,                  // depth
@@ -38,7 +38,7 @@ TEST(cuskss_pearson, expected_results)
         pxp_path,           // pxp_path
         "NULL",             // pxp_se_path
         "NULL",             // time_index_path
-        outdir_path         // outdir
+        temp_dir            // outdir
     };
     // which files do we expect?
     // what file contents do we expect?
