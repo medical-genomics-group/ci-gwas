@@ -14,6 +14,8 @@ class MarkerBlock
     size_t chr_global_offset;
 
    public:
+    MarkerBlock() {}
+
     MarkerBlock(std::string chr, size_t ix1, size_t ix2, size_t offset)
         : chr_id(chr), first_marker_ix(ix1), last_marker_ix(ix2), chr_global_offset(offset)
     {

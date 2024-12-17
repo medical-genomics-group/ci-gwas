@@ -98,7 +98,7 @@ CuskssSquareInputs make_square_cuskss_inputs(
     std::vector<float> marker_phen_corr = mxp.get_corrs();
     std::vector<float> marker_phen_sample_sizes;
     if (heterogeneous_sample_sizes) {
-        std::vector<float> marker_phen_sample_sizes = mxp.get_sample_sizes();
+        marker_phen_sample_sizes = mxp.get_sample_sizes();
     }
     sq_row_ix = 0;
     sq_col_ix = num_markers;
@@ -123,7 +123,7 @@ CuskssSquareInputs make_square_cuskss_inputs(
 
     std::vector<float> phen_sample_sizes;
     if (heterogeneous_sample_sizes) {
-        std::vector<float> phen_sample_sizes = pxp.get_sample_sizes();
+        phen_sample_sizes = pxp.get_sample_sizes();
     }
     std::vector<float> phen_corr = pxp.get_corrs();
     sq_row_ix = num_markers;
@@ -196,30 +196,30 @@ void cuskss(const CuskssArgs args)
     // load input data
     std::cout << "Loading input files" << std::endl;
     
+    MarkerBlock block;
+    std::vector<int> marker_ixs;
     if (args.merged) {
         std::cout << "Loading marker indices" << std::endl;
-        std::vector<int> marker_ixs = read_ints_from_binary(args.marker_ixs_path);
+        marker_ixs = read_ints_from_binary(args.marker_ixs_path);
     } else {
         std::cout << "Loading block file" << std::endl;
         std::vector<MarkerBlock> blocks = read_blocks_from_file(args.block_path);
-        MarkerBlock block = blocks[args.block_ix];
+        block = blocks[args.block_ix];
     }
 
     TraitSummaryStats pxp;
     std::cout << "Loading pxp" << std::endl;
     if (args.hetcor) {
-        TraitSummaryStats pxp = TraitSummaryStats(args.pxp_path, args.pxp_se_path);
+        pxp = TraitSummaryStats(args.pxp_path, args.pxp_se_path);
     } else {
-        TraitSummaryStats pxp = TraitSummaryStats(args.pxp_path, args.pearson_sample_size);
+        pxp = TraitSummaryStats(args.pxp_path, args.pearson_sample_size);
     }
     size_t num_phen = pxp.get_num_phen();
 
+    std::vector<int> time_index_traits(num_phen, 1);
     if (args.time_indexed) {
         std::cout << "Loading time_indices" << std::endl;
-        std::vector<int> time_index_traits = read_ints_from_lines(args.time_index_path);
-    } else {
-        // there is no time index file to load, just put all traits at time 1
-        std::vector<int> time_index_traits(num_phen, 1);
+        time_index_traits = read_ints_from_lines(args.time_index_path);
     }
     
     if (args.trait_only) {
@@ -252,21 +252,22 @@ void cuskss(const CuskssArgs args)
             args.max_level_one,
             time_index_traits
         );
-        gc.to_file(make_path(outdir, "trait_only", ""));
+        gc.to_file(make_path(args.outdir, "trait_only", ""));
     } else {
         std::cout << "Loading mxm" << std::endl;
-        MarkerSummaryStats mxm = MarkerSummaryStats(mxm_path);
+        MarkerSummaryStats mxm = MarkerSummaryStats(args.mxm_path);
         
         std::cout << "Loading mxp summary stats" << std::endl;
 
+        MarkerSummaryStats mxp;
         if (args.hetcor && args.merged) {
-            MarkerTraitSummaryStats mxp = MarkerTraitSummaryStats(mxp_path, mxp_se_path, marker_ixs);
+            mxp = MarkerTraitSummaryStats(args.mxp_path, args.mxp_se_path, marker_ixs);
         } else if (args.hetcor) {
-            MarkerTraitSummaryStats mxp = MarkerTraitSummaryStats(mxp_path, mxp_se_path, block);
+            mxp = MarkerTraitSummaryStats(args.mxp_path, args.mxp_se_path, block);
         } else if (args.merged) {
-            MarkerTraitSummaryStats mxp = MarkerTraitSummaryStats(mxp_path, marker_ixs);
+            mxp = MarkerTraitSummaryStats(args.mxp_path, marker_ixs);
         } else {
-            MarkerTraitSummaryStats mxp = MarkerTraitSummaryStats(mxp_path, block);
+            mxp = MarkerTraitSummaryStats(args.mxp_path, block);
         }
 
         // check if all dims check out
