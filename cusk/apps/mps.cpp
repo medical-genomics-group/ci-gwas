@@ -259,7 +259,7 @@ void cuskss(const CuskssArgs args)
         
         std::cout << "Loading mxp summary stats" << std::endl;
 
-        MarkerSummaryStats mxp;
+        MarkerTraitSummaryStats mxp;
         if (args.hetcor && args.merged) {
             mxp = MarkerTraitSummaryStats(args.mxp_path, args.mxp_se_path, marker_ixs);
         } else if (args.hetcor) {
