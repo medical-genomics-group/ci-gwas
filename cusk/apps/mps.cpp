@@ -15,6 +15,7 @@
 #include <mps/trait_summary_stats.h>
 #include <sys/stat.h>
 
+#include <numeric>
 #include <array>
 #include <cassert>
 #include <filesystem>
@@ -186,10 +187,9 @@ struct CuskssArgs {
     std::string mxp_se_path;
     std::string pxp_path;
     std::string pxp_se_path;
-    std::string block_path;
     std::string time_index_path;
     std::string outdir;
-}
+};
 
 void cuskss(const CuskssArgs args)
 {
@@ -198,18 +198,19 @@ void cuskss(const CuskssArgs args)
     
     if (args.merged) {
         std::cout << "Loading marker indices" << std::endl;
-        std::vector<int> marker_ixs = read_ints_from_binary(marker_ixs_path);
+        std::vector<int> marker_ixs = read_ints_from_binary(args.marker_ixs_path);
     } else {
         std::cout << "Loading block file" << std::endl;
         std::vector<MarkerBlock> blocks = read_blocks_from_file(args.block_path);
-        MarkerBlock block = blocks[block_ix];
+        MarkerBlock block = blocks[args.block_ix];
     }
 
+    TraitSummaryStats pxp;
     std::cout << "Loading pxp" << std::endl;
     if (args.hetcor) {
         TraitSummaryStats pxp = TraitSummaryStats(args.pxp_path, args.pxp_se_path);
     } else {
-        TraitSummaryStats pxp = TraitSummaryStats(args.pxp_path, pearson_sample_size);
+        TraitSummaryStats pxp = TraitSummaryStats(args.pxp_path, args.pearson_sample_size);
     }
     size_t num_phen = pxp.get_num_phen();
 
@@ -787,14 +788,13 @@ auto main(int argc, char *argv[]) -> int
             max_level_two,      // max_level_two
             max_depth,          // depth
             block_index,        // block_ix
-            block_path,         // block_path
+            blockfile_path,         // block_path
             marker_index_path,  // marker_ixs_path
             mxm_path,           // mxm_path
             mxp_path,           // mxp_path
             mxp_se_path,        // mxp_se_path
             pxp_path,           // pxp_path
             pxp_se_path,        // pxp_se_path
-            blockfile_path,     // block_path
             time_index_path,    // time_index_path
             outdir_path         // outdir
         };
