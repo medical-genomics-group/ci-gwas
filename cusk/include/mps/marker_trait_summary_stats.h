@@ -23,8 +23,8 @@ class MarkerTraitSummaryStats
     MarkerTraitSummaryStats(const std::string path, const std::vector<int> marker_ixs);
     MarkerTraitSummaryStats(const std::string corr_path, const std::string se_path, const std::vector<int> marker_ixs);
     std::vector<std::string> get_header() { return header; };
-    std::vector<float> get_corrs() { return corrs; };
-    std::vector<float> get_sample_sizes() { return sample_sizes; };
+    std::vector<float> get_corrs() const { return corrs; };
+    std::vector<float> get_sample_sizes() const { return sample_sizes; };
     int get_num_phen() const { return num_phen; };
     int get_num_markers() const { return num_markers; };
 };
