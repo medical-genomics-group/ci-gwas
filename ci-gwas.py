@@ -191,7 +191,7 @@ def main():
         default=0,
     )
     cuskss_parser.add_argument(
-        "--blocks",
+        "--blockfile",
         help="file with genomic block definitions (output of ci-gwas block). Ignored if marker-indices are given.",
         type=str,
         default='NULL'
@@ -439,7 +439,7 @@ def cuskss(args):
             args.pxp_se,
             args.time_index,
             str(args.block_index),
-            args.blocks,
+            args.blockfile,
             args.marker_indices,
             str(args.alpha),
             str(args.max_level_one),
