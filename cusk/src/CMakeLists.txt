@@ -10,7 +10,10 @@ add_library(cuPC STATIC
     cuPC-S-second-stage.cu
     cuPC_call_prep.cpp
 )
-set_target_properties(cuPC PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+set_target_properties(cuPC PROPERTIES 
+    CUDA_SEPARABLE_COMPILATION ON
+    LINKER_LANGUAGE CUDA
+)
 target_link_libraries(cuPC PUBLIC mps_headers)
 target_compile_features(cuPC PUBLIC cxx_std_20)
 target_compile_options(cuPC PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
@@ -29,6 +32,10 @@ add_library(corr STATIC
     corr_kernels.cu
 )
 target_link_libraries(corr PUBLIC mps_headers)
+set_target_properties(corr PROPERTIES 
+    CUDA_SEPARABLE_COMPILATION ON
+    LINKER_LANGUAGE CUDA
+)
 target_compile_features(corr PUBLIC cxx_std_20)
 target_compile_options(corr PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
     -O3
@@ -70,6 +77,9 @@ target_compile_features(parents PUBLIC cxx_std_20)
 
 add_library(cli STATIC
     cli.cpp
+)
+set_target_properties(cli PROPERTIES 
+    LINKER_LANGUAGE CUDA  # This is key
 )
 target_link_libraries(cli PUBLIC mps_headers io corr)
 target_compile_features(cli PUBLIC cxx_std_20)
