@@ -165,7 +165,7 @@ TEST(cuskss, pearson_two_stage_block_expected_results)
         3,                  // max_level
         1,                  // max_level_two
         1,                  // depth
-        1,                  // block_ix
+        0,                  // block_ix
         block_path,         // block_path
         marker_ixs_path,    // marker_ixs_path
         mxm_path,           // mxm_path
@@ -183,7 +183,7 @@ TEST(cuskss, pearson_two_stage_block_expected_results)
 
    // selected markers as expected
     std::vector<int> exp_ixs = {2, 3, 4, 5};
-    std::vector<int> obs_ixs = read_ints_from_binary(temp_dir / "1_2_2.ixs");
+    std::vector<int> obs_ixs = read_ints_from_binary(temp_dir / "1_0_2.ixs");
     expect_eq_vec(exp_ixs, obs_ixs);
     
     // output adjacency matrix as expected
@@ -193,7 +193,7 @@ TEST(cuskss, pearson_two_stage_block_expected_results)
         0, 1, 0, 1,
         1, 1, 1, 0,
     };
-    std::vector<int> obs_adj = read_ints_from_binary(temp_dir / "1_2_2.adj");
+    std::vector<int> obs_adj = read_ints_from_binary(temp_dir / "1_0_2.adj");
     expect_eq_vec(exp_adj, obs_adj);
 
     // output adjacency matrix as expected
@@ -204,7 +204,7 @@ TEST(cuskss, pearson_two_stage_block_expected_results)
         -0.01, 0.074239793758568, 0.0675875270156859, 1.0,
         
     };
-    std::vector<float> obs_corr = read_floats_from_binary(temp_dir / "1_2_2.corr");
+    std::vector<float> obs_corr = read_floats_from_binary(temp_dir / "1_0_2.corr");
     expect_near_vec(exp_corr, obs_corr);
     std::filesystem::remove_all(temp_dir);
 }
