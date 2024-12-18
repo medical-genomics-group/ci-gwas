@@ -120,8 +120,8 @@ TEST(cuskss, pearson_two_stage_merged_expected_results)
     
    // selected markers as expected
     std::vector<int> exp_ixs = {2};
-    std::vector<int> obs_adj = read_ints_from_binary(temp_dir / "cuskss_merged.adj");
-    expect_eq_vec(exp_adj, obs_adj);
+    std::vector<int> obs_ixs = read_ints_from_binary(temp_dir / "cuskss_merged.ixs");
+    expect_eq_vec(exp_ixs, obs_ixs);
     
     // output adjacency matrix as expected
     std::vector<int> exp_adj = {
