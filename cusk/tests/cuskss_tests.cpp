@@ -10,6 +10,24 @@
 #include <string>
 #include <vector>
 
+void expect_near_vec(std::vector<float> exp, std::vector<float> obs)
+{
+    EXPECT_EQ(exp.size(), obs.size());
+    for (size_t i = 0; i < exp.size(); i++)
+    {
+        EXPECT_NEAR(exp[i], obs[i], 0.001);
+    }
+}
+
+void expect_eq_vec(std::vector<std::string> exp, std::vector<std::string> obs)
+{
+    EXPECT_EQ(exp.size(), obs.size());
+    for (size_t i = 0; i < exp.size(); i++)
+    {
+        EXPECT_EQ(exp[i], obs[i]);
+    }
+}
+
 TEST(cuskss_pearson, expected_results)
 {
     std::cout << "TESTPRINT" << std::endl;
@@ -43,9 +61,22 @@ TEST(cuskss_pearson, expected_results)
         temp_dir            // outdir
     };
     cuskss(args);
-    for (const auto & entry : std::filesystem::directory_iterator(temp_dir))
-        std::cout << entry.path() << std::endl;
+    
+    std::vector<int> exp_adj = {
+        1, 1, 1,
+        1, 1, 1,
+        1, 1, 1
+    };
+    std::vector<int> obs_adj = read_ints_from_binary(temp_dir / "trait_only.adj");
+
+    expect_eq_vec(exp_adj, obs_adj);
+    // "/tmp/cuskss_test_files/trait_only.corr"
+    // "/tmp/cuskss_test_files/trait_only.ixs"
+    // "/tmp/cuskss_test_files/trait_only.adj"
+    // "/tmp/cuskss_test_files/trait_only.mdim"
+    // for (const auto & entry : std::filesystem::directory_iterator(temp_dir))
+    //     std::cout << entry.path() << std::endl;
     // which files do we expect?
     // what file contents do we expect?
-    std::filesystem::remove(temp_dir);
+    std::filesystem::remove_all(temp_dir);
 }

@@ -253,6 +253,7 @@ void cuskss(const CuskssArgs args)
             time_index_traits
         );
         gc.to_file(make_path(args.outdir, "trait_only", ""));
+        std::cout << "Retained " << gc.num_markers() << " markers" << std::endl;
     } else {
         std::cout << "Loading mxm" << std::endl;
         MarkerSummaryStats mxm = MarkerSummaryStats(args.mxm_path);
