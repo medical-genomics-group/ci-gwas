@@ -119,24 +119,26 @@ TEST(cuskss, pearson_two_stage_merged_expected_results)
     //     std::cout << entry.path() << std::endl;
     
    // selected markers as expected
-    std::vector<int> exp_ixs = {2};
+    std::vector<int> exp_ixs = {0, 0, 0, 0, 2};
     std::vector<int> obs_ixs = read_ints_from_binary(temp_dir / "cuskss_merged.ixs");
     expect_eq_vec(exp_ixs, obs_ixs);
     
     // output adjacency matrix as expected
     std::vector<int> exp_adj = {
-        0, 1, 1,
-        1, 0, 1,
-        1, 1, 0
+        0, 1, 1, 0,
+        1, 0, 1, 0,
+        1, 1, 0, 1,
+        0, 0, 1, 0,
     };
     std::vector<int> obs_adj = read_ints_from_binary(temp_dir / "cuskss_merged.adj");
     expect_eq_vec(exp_adj, obs_adj);
 
     // output adjacency matrix as expected
     std::vector<float> exp_corr = {
-        1.0, 0.0608594558771734, 0.074239793758568,
-        0.0608594558771734, 1.0, 0.0675875270156859,
-        0.074239793758568, 0.0675875270156859, 1.0
+        1.0, 0.0608594558771734, 0.074239793758568, 0.0005,
+        0.0608594558771734, 1.0, 0.0675875270156859, 0.0001,
+        0.074239793758568, 0.0675875270156859, 1.0, -0.01,
+        0.0005, 0.0001, -0.01, 1.0
     };
     std::vector<float> obs_corr = read_floats_from_binary(temp_dir / "cuskss_merged.corr");
     expect_near_vec(exp_corr, obs_corr);
