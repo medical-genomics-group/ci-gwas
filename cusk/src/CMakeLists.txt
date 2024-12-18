@@ -87,9 +87,9 @@ target_compile_features(parents PUBLIC cxx_std_20)
 add_library(cli STATIC
     cli.cpp
 )
-# set_target_properties(cli PROPERTIES 
-#     LINKER_LANGUAGE CUDA  # This is key
-# )
+set_target_properties(cli PROPERTIES 
+    LINKER_LANGUAGE CUDA  # This is key
+)
 target_link_libraries(cli PUBLIC mps_headers corr cuPC io prep block parents)
 target_compile_features(cli PUBLIC cxx_std_20)
 target_compile_options(cuPC PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
