@@ -90,5 +90,5 @@ add_library(cli STATIC
 # set_target_properties(cli PROPERTIES 
 #     LINKER_LANGUAGE CUDA  # This is key
 # )
-target_link_libraries(cli PUBLIC mps_headers io corr)
+target_link_libraries(cli PUBLIC mps_headers corr cuPC io prep block parents)
 target_compile_features(cli PUBLIC cxx_std_20)
