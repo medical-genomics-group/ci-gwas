@@ -1,8 +1,17 @@
 file(GLOB HEADER_LIST CONFIGURE_DEPENDS "${MPS_SOURCE_DIR}/include/mps/*.h")
 
 add_library(mps_headers INTERFACE)
-target_include_directories(mps_headers INTERFACE ../include)
+target_include_directories(mps_headers INTERFACE 
+    ../include
+    ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}  # Important: Add CUDA include path
+)
 target_sources(mps_headers INTERFACE ${HEADER_LIST})
+
+# Force CUDA compilation for files with CUDA headers
+set_source_files_properties(
+    cli.cpp io.cpp prep.cpp block.cpp parents.cpp
+    PROPERTIES LANGUAGE CUDA
+)
 
 add_library(cuPC STATIC
     cuPC-S.cu
