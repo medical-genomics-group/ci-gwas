@@ -63,9 +63,9 @@ TEST(cuskss_pearson, expected_results)
     cuskss(args);
     
     std::vector<int> exp_adj = {
-        1, 1, 1,
-        1, 1, 1,
-        1, 1, 1
+        0, 1, 1,
+        1, 0, 1,
+        1, 1, 0
     };
     std::vector<int> obs_adj = read_ints_from_binary(temp_dir / "trait_only.adj");
 
