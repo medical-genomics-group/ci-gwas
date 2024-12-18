@@ -177,7 +177,10 @@ TEST(cuskss, pearson_two_stage_block_expected_results)
         temp_dir            // outdir
     };
     cuskss(args);
-        
+
+    for (const auto & entry : std::filesystem::directory_iterator(temp_dir))
+        std::cout << entry.path() << std::endl;
+
    // selected markers as expected
     std::vector<int> exp_ixs = {2, 3, 4, 5};
     std::vector<int> obs_ixs = read_ints_from_binary(temp_dir / "1_2_2.ixs");
