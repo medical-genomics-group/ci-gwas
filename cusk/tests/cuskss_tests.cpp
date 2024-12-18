@@ -19,6 +19,7 @@ TEST(cuskss_pearson, expected_results)
     std::string mxm_path = "../../tests/test_files/small_mxm.bin";
     std::string mxp_path = "../../tests/test_files/marker_trait_summary_stats.txt";
     std::string pxp_path = "../../tests/test_files/trait_summary_stats.txt";
+    check_path(pxp_path);
     CuskssArgs args = {
         true,               // merged
         false,              // hetcor
