@@ -48,7 +48,7 @@ auto main(int argc, char *argv[]) -> int
 
         bool merged = marker_index_path != "NULL";
         bool hetcor = mxp_se_path != "NULL";
-        bool trait_only = mxm_path != "NULL";
+        bool trait_only = mxm_path == "NULL";
         bool two_stage = max_level_two > 0;
         bool time_indexed = time_index_path != "NULL";
 
