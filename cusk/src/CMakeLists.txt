@@ -8,10 +8,10 @@ target_include_directories(mps_headers INTERFACE
 target_sources(mps_headers INTERFACE ${HEADER_LIST})
 
 # # Force CUDA compilation for files with CUDA headers
-# set_source_files_properties(
-#     cli.cpp io.cpp prep.cpp block.cpp parents.cpp
-#     PROPERTIES LANGUAGE CUDA
-# )
+set_source_files_properties(
+    cli.cpp
+    PROPERTIES LANGUAGE CUDA
+)
 
 add_library(cuPC STATIC
     cuPC-S.cu
