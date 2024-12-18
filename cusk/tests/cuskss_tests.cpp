@@ -77,7 +77,7 @@ TEST(cuskss, trait_only_merged_expected_results)
         0.074239793758568, 0.0675875270156859, 1.0
     };
     std::vector<float> obs_corr = read_floats_from_binary(temp_dir / "trait_only.corr");
-    expect_eq_vec_near(exp_corr, obs_corr);
+    expect_near_vec(exp_corr, obs_corr);
     
     std::filesystem::remove_all(temp_dir);
 }
@@ -139,7 +139,7 @@ TEST(cuskss, pearson_two_stage_merged_expected_results)
         0.074239793758568, 0.0675875270156859, 1.0
     };
     std::vector<float> obs_corr = read_floats_from_binary(temp_dir / "cuskss_merged.corr");
-    expect_eq_vec_near(exp_corr, obs_corr);
+    expect_near_vec(exp_corr, obs_corr);
 
     // "/tmp/cuskss_test_files/trait_only.corr"
     // "/tmp/cuskss_test_files/trait_only.ixs"
