@@ -1,6 +1,6 @@
 add_executable(mps mps.cpp)
 target_compile_features(mps PRIVATE cxx_std_20)
-target_link_libraries(mps PRIVATE io cli)
+# target_link_libraries(mps PRIVATE io cli)
 
 # add_executable(main main.cpp)
 # set_source_files_properties(main.cpp PROPERTIES LANGUAGE CUDA)
