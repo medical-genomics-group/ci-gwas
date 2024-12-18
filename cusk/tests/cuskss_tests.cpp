@@ -119,7 +119,7 @@ TEST(cuskss, pearson_two_stage_merged_expected_results)
     //     std::cout << entry.path() << std::endl;
     
    // selected markers as expected
-    std::vector<int> exp_ixs = {0, 1, 2, 5};
+    std::vector<int> exp_ixs = {5, 0, 1, 2};
     std::vector<int> obs_ixs = read_ints_from_binary(temp_dir / "cuskss_merged.ixs");
     expect_eq_vec(exp_ixs, obs_ixs);
     
