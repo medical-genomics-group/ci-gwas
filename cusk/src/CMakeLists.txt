@@ -92,3 +92,13 @@ add_library(cli STATIC
 # )
 target_link_libraries(cli PUBLIC mps_headers corr cuPC io prep block parents)
 target_compile_features(cli PUBLIC cxx_std_20)
+target_compile_options(cuPC PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
+    -dc
+    -O3
+    --expt-relaxed-constexpr
+    -lineinfo
+    --use_fast_math
+    --shared
+    -Xcompiler
+    -fPIC
+    >)
