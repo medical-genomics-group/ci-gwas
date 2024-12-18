@@ -20,7 +20,7 @@ TEST(cuskss_pearson, expected_results)
     std::string mxp_path = "../../tests/test_files/marker_trait_summary_stats.txt";
     std::string pxp_path = "../../tests/test_files/trait_summary_stats.txt";
     CuskssArgs args = {
-        false,              // merged
+        true,               // merged
         false,              // hetcor
         true,               // trait_only
         false,              // two_stage
