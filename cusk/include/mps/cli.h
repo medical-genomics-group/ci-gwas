@@ -5,7 +5,7 @@
 #include <mps/trait_summary_stats.h>
 #include <mps/parent_set.h>
 
-bool WRITE_FULL_CORRMATS = false;
+extern bool WRITE_FULL_CORRMATS;
 
 struct CuskssArgs {
     bool merged;

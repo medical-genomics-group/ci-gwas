@@ -24,6 +24,8 @@
 #include <string>
 #include <vector>
 
+bool WRITE_FULL_CORRMATS = false;
+
 ReducedGC run_cusk(
     ReducedGC gc,
     float threshold,
