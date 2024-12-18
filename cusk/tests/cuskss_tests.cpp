@@ -19,7 +19,7 @@ void expect_near_vec(std::vector<float> exp, std::vector<float> obs)
     }
 }
 
-void expect_eq_vec(std::vector<std::int> exp, std::vector<std::int> obs)
+void expect_eq_vec(std::vector<int> exp, std::vector<int> obs)
 {
     EXPECT_EQ(exp.size(), obs.size());
     for (size_t i = 0; i < exp.size(); i++)
