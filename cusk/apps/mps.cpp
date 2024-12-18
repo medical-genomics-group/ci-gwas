@@ -54,8 +54,13 @@ auto main(int argc, char *argv[]) -> int
 
         // required args
         check_path(pxp_path);
-        check_path(blockfile_path);
         check_path(outdir_path);
+        
+        if (merged) {
+            check_path(marker_index_path);
+        } else {
+            check_path(blockfile_path);
+        }
 
         if (hetcor || merged || !trait_only) {
             check_path(mxm_path);
