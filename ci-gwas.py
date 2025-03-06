@@ -496,7 +496,7 @@ def run_mvivw(args):
             use_skeleton, # rm exposures that have been identified as non-adjacent in cusk
             "FALSE", # use ld matrix
             rm_counterfactuals,
-            args.orientation_prior,
+            str(args.orientation_prior),
             f"{args.cusk_output_stem}_mvivw_results.tsv", # output dir
         ],
         check=True,
