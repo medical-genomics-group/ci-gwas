@@ -23,17 +23,17 @@ from glob import glob
 from sklearn.linear_model import LinearRegression
 import itertools
 
-SMALL_SIZE = 12
-MEDIUM_SIZE = 14
-BIGGER_SIZE = 16
+# SMALL_SIZE = 12
+# MEDIUM_SIZE = 14
+# BIGGER_SIZE = 16
 
-plt.rc("font", size=SMALL_SIZE)  # controls default text sizes
-plt.rc("axes", titlesize=MEDIUM_SIZE)  # fontsize of the axes title
-plt.rc("axes", labelsize=MEDIUM_SIZE)  # fontsize of the x and y labels
-plt.rc("xtick", labelsize=MEDIUM_SIZE)  # fontsize of the tick labels
-plt.rc("ytick", labelsize=MEDIUM_SIZE)  # fontsize of the tick labels
-plt.rc("legend", fontsize=SMALL_SIZE)  # legend fontsize
-plt.rc("figure", titlesize=BIGGER_SIZE)  # fontsize of the figure title
+# plt.rc("font", size=SMALL_SIZE)  # controls default text sizes
+# plt.rc("axes", titlesize=MEDIUM_SIZE)  # fontsize of the axes title
+# plt.rc("axes", labelsize=MEDIUM_SIZE)  # fontsize of the x and y labels
+# plt.rc("xtick", labelsize=MEDIUM_SIZE)  # fontsize of the tick labels
+# plt.rc("ytick", labelsize=MEDIUM_SIZE)  # fontsize of the tick labels
+# plt.rc("legend", fontsize=SMALL_SIZE)  # legend fontsize
+# plt.rc("figure", titlesize=BIGGER_SIZE)  # fontsize of the figure title
 
 rng = np.random.default_rng()
 
@@ -968,6 +968,8 @@ def heatmap(
     title_kw=dict(),
     cbarlabel_rotation=0,
     label_interspacing=False,
+    rotation=XLABEL_ROTATION,
+    grid=True,
     **kwargs,
 ):
     """
@@ -1038,7 +1040,7 @@ def heatmap(
     # Rotate the tick labels and set their alignment.
     plt.setp(
         ax.get_xticklabels(),
-        rotation=XLABEL_ROTATION,
+        rotation=rotation,
         ha="right",
         rotation_mode="anchor",
     )
@@ -1048,7 +1050,10 @@ def heatmap(
     ax.set_xticks(np.arange(data.shape[1] + 1) - 0.5, minor=True)
     ax.set_yticks(np.arange(data.shape[0] + 1) - 0.5, minor=True)
     # ax.grid(which="minor", color="w", linestyle="-", linewidth=3)
-    ax.grid(which="minor", color="#d8dcd6", linestyle="-", linewidth=1)
+
+    if grid:
+        ax.grid(which="minor", color="#d8dcd6", linestyle="-", linewidth=1)
+    
     ax.tick_params(which="minor", bottom=False, left=False)
     ax.set_ylabel(ylabel)
     ax.set_xlabel(xlabel)
