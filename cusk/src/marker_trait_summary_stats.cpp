@@ -219,11 +219,11 @@ MarkerTraitSummaryStats::MarkerTraitSummaryStats(
     }
 }
 
+
 MarkerTraitSummaryStats::MarkerTraitSummaryStats(
     const std::string corr_path,
     const std::string se_path,
-    const std::vector<int> marker_ixs
-)
+    const std::vector<int> marker_ixs)
 {
     float rho;
     float ss_sqrt;

@@ -12,7 +12,7 @@ macro(package_add_test_cuda TESTNAME)
 
     # link the Google test infrastructure, mocking library, and a default main function to
     # the test executable.  Remove g_test_main if writing your own main function.
-    target_link_libraries(${TESTNAME} cuPC gtest gmock gtest_main corr prep io)
+    target_link_libraries(${TESTNAME} cuPC gtest gmock gtest_main corr prep io cli)
     target_include_directories(${TESTNAME} PRIVATE ../include)
     set_source_files_properties(${TESTNAME} PROPERTIES LANGUAGE CUDA)
 
@@ -53,3 +53,4 @@ package_add_test(io_tests io_tests.cpp)
 package_add_test(blocking_tests blocking_tests.cpp)
 package_add_test(parents_tests parents_tests.cpp)
 package_add_test_cuda(cupc_tests cupc_tests.cpp)
+package_add_test_cuda(cuskss_tests cuskss_tests.cpp)
