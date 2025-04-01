@@ -402,11 +402,10 @@ def block(args):
 
 
 def cusk(args):
-    # check that everything is standardized, and that all files exist
     subprocess.run(
         [
             MPS_PATH,
-            "cusk-single",
+            "cusk",
             args.phen,
             args.bfiles,
             args.blocks,
