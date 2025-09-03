@@ -7,6 +7,20 @@
 
 #include <iostream>
 
+// float atomicMin
+// from https://github.com/treecode/Bonsai/blob/master/runtime/profiling/derived_atomic_functions.h
+__device__ __forceinline__ float atomicMin(float *address, float val)
+{
+    int ret = __float_as_int(*address);
+    while(val < __int_as_float(ret))
+    {
+        int old = ret;
+        if((ret = atomicCAS((int *)address, old, __float_as_int(val))) == old)
+            break;
+    }
+    return __int_as_float(ret);
+}
+
 __device__ void print_sepset(int *var_ixs, int *time_index, int l)
 {
     int a = var_ixs[0];
@@ -356,7 +370,7 @@ __global__ void cal_Indepl0_ess(float *C, int *G, float *N, int n, float th, flo
     if (row < col && col < n)
     {
         float Z = C[row * n + col];
-        Z = abs(0.5 * log(abs((1 + res) / (1 - res))));
+        Z = abs(0.5 * log(abs((1 + Z) / (1 - Z))));
         float loc_th = th / sqrt(N[row * n + col] - 3.0);
         
         if (Z >= th) {
@@ -472,8 +486,8 @@ __global__ void cal_Indepl1_ess(
 
                     if (Z >= loc_th) {
                         // Edge survives - update minZ with atomic operation
-                        atomicMin(&minZ[row * n + col], Z);
-                        atomicMin(&minZ[col * n + row], Z);
+                        atomicMin(&minZ[XIdx * n + YIdx], Z);
+                        atomicMin(&minZ[YIdx * n + XIdx], Z);
                     } else {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
                         {
@@ -618,8 +632,8 @@ __global__ void cal_Indepl2_ess(
 
                     if (Z >= loc_th) {
                         // Edge survives - update minZ with atomic operation
-                        atomicMin(&minZ[row * n + col], Z);
-                        atomicMin(&minZ[col * n + row], Z);
+                        atomicMin(&minZ[XIdx * n + YIdx], Z);
+                        atomicMin(&minZ[YIdx * n + XIdx], Z);
                     } else {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
                         {
@@ -784,8 +798,8 @@ __global__ void cal_Indepl3_ess(
 
                     if (Z >= loc_th) {
                         // Edge survives - update minZ with atomic operation
-                        atomicMin(&minZ[row * n + col], Z);
-                        atomicMin(&minZ[col * n + row], Z);
+                        atomicMin(&minZ[XIdx * n + YIdx], Z);
+                        atomicMin(&minZ[YIdx * n + XIdx], Z);
                     } else {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
                         {
@@ -968,8 +982,8 @@ __global__ void cal_Indepl4_ess(
                     Z = abs(0.5 * log(abs((1 + rho) / (1 - rho))));
 
                     if (Z >= loc_th) {
-                        atomicMin(&minZ[row * n + col], Z);
-                        atomicMin(&minZ[col * n + row], Z);
+                        atomicMin(&minZ[XIdx * n + YIdx], Z);
+                        atomicMin(&minZ[YIdx * n + XIdx], Z);
                     } else {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
                         {
@@ -1167,8 +1181,8 @@ __global__ void cal_Indepl5_ess(
                     Z = abs(0.5 * log(abs((1 + rho) / (1 - rho))));
 
                     if (Z >= loc_th) {
-                        atomicMin(&minZ[row * n + col], Z);
-                        atomicMin(&minZ[col * n + row], Z);
+                        atomicMin(&minZ[XIdx * n + YIdx], Z);
+                        atomicMin(&minZ[YIdx * n + XIdx], Z);
                     } else {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
                         {
@@ -1382,8 +1396,8 @@ __global__ void cal_Indepl6_ess(
                     Z = abs(0.5 * log(abs((1 + rho) / (1 - rho))));
 
                     if (Z >= loc_th) {
-                        atomicMin(&minZ[row * n + col], Z);
-                        atomicMin(&minZ[col * n + row], Z);
+                        atomicMin(&minZ[XIdx * n + YIdx], Z);
+                        atomicMin(&minZ[YIdx * n + XIdx], Z);
                     } else {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
                         {
@@ -1617,8 +1631,8 @@ __global__ void cal_Indepl7_ess(
                     Z = abs(0.5 * log(abs((1 + rho) / (1 - rho))));
 
                     if (Z >= loc_th) {
-                        atomicMin(&minZ[row * n + col], Z);
-                        atomicMin(&minZ[col * n + row], Z);
+                        atomicMin(&minZ[XIdx * n + YIdx], Z);
+                        atomicMin(&minZ[YIdx * n + XIdx], Z);
                     } else {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
                         {
@@ -1869,8 +1883,8 @@ __global__ void cal_Indepl8_ess(
                     Z = abs(0.5 * log(abs((1 + rho) / (1 - rho))));
 
                     if (Z >= loc_th) {
-                        atomicMin(&minZ[row * n + col], Z);
-                        atomicMin(&minZ[col * n + row], Z);
+                        atomicMin(&minZ[XIdx * n + YIdx], Z);
+                        atomicMin(&minZ[YIdx * n + XIdx], Z);
                     } else {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
                         {
@@ -2062,8 +2076,8 @@ __global__ void cal_Indepl9_ess(
                     Z = abs(0.5 * log(abs((1 + rho) / (1 - rho))));
 
                     if (Z >= loc_th) {
-                        atomicMin(&minZ[row * n + col], Z);
-                        atomicMin(&minZ[col * n + row], Z);
+                        atomicMin(&minZ[XIdx * n + YIdx], Z);
+                        atomicMin(&minZ[YIdx * n + XIdx], Z);
                     } else {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
                         {
@@ -2257,8 +2271,8 @@ __global__ void cal_Indepl10_ess(
                     Z = abs(0.5 * log(abs((1 + rho) / (1 - rho))));
 
                     if (Z >= loc_th) {
-                        atomicMin(&minZ[row * n + col], Z);
-                        atomicMin(&minZ[col * n + row], Z);
+                        atomicMin(&minZ[XIdx * n + YIdx], Z);
+                        atomicMin(&minZ[YIdx * n + XIdx], Z);
                     } else {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
                         {
@@ -2454,8 +2468,8 @@ __global__ void cal_Indepl11_ess(
                     Z = abs(0.5 * log(abs((1 + rho) / (1 - rho))));
 
                     if (Z >= loc_th) {
-                        atomicMin(&minZ[row * n + col], Z);
-                        atomicMin(&minZ[col * n + row], Z);
+                        atomicMin(&minZ[XIdx * n + YIdx], Z);
+                        atomicMin(&minZ[YIdx * n + XIdx], Z);
                     } else {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
                         {
@@ -2652,8 +2666,8 @@ __global__ void cal_Indepl12_ess(
                     Z = abs(0.5 * log(abs((1 + rho) / (1 - rho))));
 
                     if (Z >= loc_th) {
-                        atomicMin(&minZ[row * n + col], Z);
-                        atomicMin(&minZ[col * n + row], Z);
+                        atomicMin(&minZ[XIdx * n + YIdx], Z);
+                        atomicMin(&minZ[YIdx * n + XIdx], Z);
                     } else {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
                         {
@@ -2852,8 +2866,8 @@ __global__ void cal_Indepl13_ess(
                     Z = abs(0.5 * log(abs((1 + rho) / (1 - rho))));
 
                     if (Z >= loc_th) {
-                        atomicMin(&minZ[row * n + col], Z);
-                        atomicMin(&minZ[col * n + row], Z);
+                        atomicMin(&minZ[XIdx * n + YIdx], Z);
+                        atomicMin(&minZ[YIdx * n + XIdx], Z);
                     } else {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
                         {
@@ -3053,8 +3067,8 @@ __global__ void cal_Indepl14_ess(
                     Z = abs(0.5 * log(abs((1 + rho) / (1 - rho))));
 
                     if (Z >= loc_th) {
-                        atomicMin(&minZ[row * n + col], Z);
-                        atomicMin(&minZ[col * n + row], Z);
+                        atomicMin(&minZ[XIdx * n + YIdx], Z);
+                        atomicMin(&minZ[YIdx * n + XIdx], Z);
                     } else {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
                         {

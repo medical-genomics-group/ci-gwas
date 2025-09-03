@@ -1,3 +1,4 @@
+#include <math.h>
 #include <gtest/gtest.h>
 #include <mps/cuPC-S.h>
 #include <mps/hetcor-cuPC-S.h>
@@ -73,7 +74,8 @@ TEST(hetcor_cuPC, expected_skeleton_n10)
     std::vector<int> G(g_size, 1);
     int l = 0;
     std::vector<int> time_index(p, 0);
-    hetcor_skeleton(C_N10.data(), &p, G.data(), N.data(), &threshold, &l, &max_level, time_index.data());
+    std::vector<float> minZ(g_size, INFINITY);
+    hetcor_skeleton(C_N10.data(), &p, G.data(), N.data(), &threshold, &l, &max_level, time_index.data(), minZ.data());
 
     // printf("ix | obs | exp \n");
     // for (size_t i = 0; i < g_size; ++i)

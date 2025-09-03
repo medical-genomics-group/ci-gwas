@@ -1,3 +1,4 @@
+#include <math.h>
 #include <gtest/gtest.h>
 #include <mps/hetcor-cuPC-S.h>
 #include <mps/cuPC_call_prep.h>
@@ -16,8 +17,9 @@ TEST(hetcor_cuPC, expected_skeleton_n10)
     const size_t sepset_size = p * p * ML;
     const size_t g_size = p * p;
     std::vector<int> G(g_size, 1);
+    std::vector<float> minZ(g_size, INFINITY);
     int l = 0;
-    hetcor_skeleton(C_N10.data(), &p, G.data(), N.data(), &th, &l, &max_level);
+    hetcor_skeleton(C_N10.data(), &p, G.data(), N.data(), &th, &l, &max_level, minZ.data());
 
     // printf("ix | obs | exp \n");
     // for (size_t i = 0; i < CUPCT1_ADJSIZE; ++i)
