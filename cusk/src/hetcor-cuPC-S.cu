@@ -70,15 +70,17 @@ __device__ void print_sepset(int *var_ixs, int *time_index, int l)
  * @param[in]  l  Pointer to current level
  * @param[in]  maxlevel  Pointer to maximal level
  * @param[in]  time_index  Pointer to time indices of all variables
+ * @param[in]  minZ  Pointer to minZ (fisher-Z transform of partial corrs) values
  * @return return_name return description
  */
 void hetcor_skeleton(
-    float *C, int *P, int *G, float *N, float *Th, int *l, const int *maxlevel, const int *time_index
+    float *C, int *P, int *G, float *N, float *Th, int *l, const int *maxlevel, const int *time_index, float *minZ
 )
 {
     float *C_cuda;  // Copy of C array in GPU
     int *G_cuda;  // Copy of G Array in GPU
     float *N_cuda; // Copy of N Array in GPU
+    float *minZ_cuda; // Copy of minZ Array in GPU
     int *nprime_cuda;
     int *GPrime_cuda;
     int *mutex_cuda;
@@ -98,6 +100,7 @@ void hetcor_skeleton(
     HANDLE_ERROR(cudaMalloc((void **)&C_cuda, n * n * sizeof(float)));
     HANDLE_ERROR(cudaMalloc((void **)&G_cuda, n * n * sizeof(int)));
     HANDLE_ERROR(cudaMalloc((void **)&N_cuda, n * n * sizeof(float)));
+    HANDLE_ERROR(cudaMalloc((void **)&minZ_cuda, n * n * sizeof(float)));
     HANDLE_ERROR(cudaMalloc((void **)&time_index_cuda, n * sizeof(int)));
     // copy adj matrix from CPU to GPU
     HANDLE_ERROR(cudaMemcpy(G_cuda, G, n * n * sizeof(int), cudaMemcpyHostToDevice));
@@ -105,6 +108,8 @@ void hetcor_skeleton(
     HANDLE_ERROR(cudaMemcpy(C_cuda, C, n * n * sizeof(float), cudaMemcpyHostToDevice));
     // copy effective sample size matrix from CPU to GPU
     HANDLE_ERROR(cudaMemcpy(N_cuda, N, n * n * sizeof(float), cudaMemcpyHostToDevice));
+    // copy minZ matrix from CPU to GPU
+    HANDLE_ERROR(cudaMemcpy(minZ_cuda, minZ, n * n * sizeof(float), cudaMemcpyHostToDevice));
     // copy time indices from host to device
     HANDLE_ERROR(cudaMemcpy(time_index_cuda, time_index, n * sizeof(int), cudaMemcpyHostToDevice));
     // initialize a 0 matrix
@@ -333,10 +338,14 @@ void hetcor_skeleton(
 
     // Copy Graph G from GPU to CPU
     HANDLE_ERROR(cudaMemcpy(G, G_cuda, n * n * sizeof(int), cudaMemcpyDeviceToHost));
+    // Copy minZ from GPU to CPU
+    HANDLE_ERROR(cudaMemcpy(minZ, minZ_cuda, n * n * sizeof(float), cudaMemcpyDeviceToHost));
     // Free allocated space
     HANDLE_ERROR(cudaFree(C_cuda));
     HANDLE_ERROR(cudaFree(GPrime_cuda));
     HANDLE_ERROR(cudaFree(G_cuda));
+    HANDLE_ERROR(cudaFree(N_cuda));
+    HANDLE_ERROR(cudaFree(minZ_cuda));
     HANDLE_ERROR(cudaFree(mutex_cuda));
 }  // Skeleton
 
