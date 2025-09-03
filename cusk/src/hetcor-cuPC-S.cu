@@ -373,7 +373,7 @@ __global__ void cal_Indepl0_ess(float *C, int *G, float *N, int n, float th, flo
         Z = abs(0.5 * log(abs((1 + Z) / (1 - Z))));
         float loc_th = th / sqrt(N[row * n + col] - 3.0);
         
-        if (Z >= th) {
+        if (Z >= loc_th) {
             // Edge survives - update minZ with atomic operation
             atomicMin(&minZ[row * n + col], Z);
             atomicMin(&minZ[col * n + row], Z);
