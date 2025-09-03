@@ -178,6 +178,7 @@ ReducedGC reduce_gc(
     const std::vector<int> &G,
     const std::vector<float> &C,
     const std::vector<float> &S,
+    const std::vector<float> &minZ,
     const std::unordered_set<int> &P,
     const size_t num_var,
     const size_t num_phen,
@@ -199,6 +200,7 @@ ReducedGC reduce_gc(
             res.G.push_back(G[i * num_var + j]);
             res.C.push_back(C[i * num_var + j]);
             res.S.push_back(S[i * num_var + j]);
+            res.minZ.push_back(minZ[i * num_var + j]);
         }
     }
 
@@ -209,6 +211,7 @@ ReducedGC reduce_gc(
     const std::vector<int> &G,
     const std::vector<float> &C,
     const std::vector<float> &S,
+    const std::vector<float> &minZ,
     const std::unordered_set<int> &P,
     const size_t num_var,
     const size_t num_phen,
@@ -231,6 +234,7 @@ ReducedGC reduce_gc(
             res.G.push_back(G[i * num_var + j]);
             res.C.push_back(C[i * num_var + j]);
             res.S.push_back(S[i * num_var + j]);
+            res.minZ.push_back(minZ[i * num_var + j]);
         }
     }
 
