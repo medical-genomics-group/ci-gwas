@@ -51,6 +51,12 @@ def load_skeleton(basepath: str, num_m: int, num_p: int, marker_offset):
     return res
 
 
+def load_float32_mat_sparse(
+    basepath: str, num_m: int, num_p: int, marker_offset, suffix: str
+):
+    return load_mat_sparse(basepath, num_m, num_p, marker_offset, np.float32, suffix)
+
+
 def load_corr_sparse(basepath: str, num_m: int, num_p: int, marker_offset):
     return load_mat_sparse(basepath, num_m, num_p, marker_offset, np.float32, ".corr")
 
@@ -158,6 +164,15 @@ class BlockOutput:
     def scm(self):
         return load_corr_sparse(
             self.basepath, self.num_markers(), self.num_phen(), self.marker_offset
+        )
+
+    def szm(self):
+        return load_float32_mat_sparse(
+            self.basepath,
+            self.num_markers(),
+            self.num_phen(),
+            self.marker_offset,
+            ".minz",
         )
 
     def ssm(self):
@@ -292,6 +307,7 @@ class BlockOutput:
 class GlobalBdpcResult:
     sam: dict
     scm: dict
+    szm: dict
     gmi: dict
     num_var: int
     num_phen: int
@@ -302,7 +318,6 @@ class GlobalBdpcResult:
         with open(basepath + "_sam" + ".mtx", "w") as fout:
             L = len(self.sam)
             N = M = max(t[0] for t in self.sam.keys())
-            # N = M = len(set([t[0] for t in self.sam.keys()]))
             fout.write("%%MatrixMarket matrix coordinate integer general\n")
             fout.write(f"{N}\t{M}\t{L}\n")
             for (t1, t2), v in self.sam.items():
@@ -311,10 +326,17 @@ class GlobalBdpcResult:
         with open(basepath + "_scm" + ".mtx", "w") as fout:
             L = len(self.scm)
             N = M = max(t[0] for t in self.sam.keys())
-            # N = M = len(set([t[0] for t in self.scm.keys()]))
             fout.write("%%MatrixMarket matrix coordinate real general\n")
             fout.write(f"{N}\t{M}\t{L}\n")
             for (t1, t2), v in self.scm.items():
+                fout.write(f"{t1}\t{t2}\t{v}\n")
+
+        with open(basepath + "_szm" + ".mtx", "w") as fout:
+            L = len(self.szm)
+            N = M = max(t[0] for t in self.sam.keys())
+            fout.write("%%MatrixMarket matrix coordinate real general\n")
+            fout.write(f"{N}\t{M}\t{L}\n")
+            for (t1, t2), v in self.szm.items():
                 fout.write(f"{t1}\t{t2}\t{v}\n")
 
         with open(basepath + ".mdim", "w") as fout:
@@ -330,6 +352,10 @@ def add_gmi(a, b):
 
 
 def add_scm(a, b):
+    a.update(b)
+
+
+def add_szm(a, b):
     a.update(b)
 
 
@@ -367,6 +393,7 @@ def merge_block_outputs(blockfile: str, outdir: str):
         global_marker_offset = bo.block_size()
         sam = bo.sam()
         scm = bo.scm()
+        szm = bo.szm()
         gmi = bo.gmi()
     except FileNotFoundError:
         path = basepaths[0]
@@ -375,6 +402,7 @@ def merge_block_outputs(blockfile: str, outdir: str):
         marker_offset = 0
         sam = {}
         scm = {}
+        szm = {}
         gmi = {}
 
     for path in basepaths[1:]:
@@ -386,12 +414,13 @@ def merge_block_outputs(blockfile: str, outdir: str):
             continue
         add_sam(sam, bo.sam(), bo.num_phen())
         add_scm(scm, bo.scm())
+        add_szm(szm, bo.szm())
         add_gmi(gmi, bo.gmi())
         marker_offset += bo.num_markers()
         global_marker_offset += bo.block_size()
 
     return GlobalBdpcResult(
-        sam, scm, gmi, marker_offset + bo.num_phen(), bo.num_phen(), bo.max_level()
+        sam, scm, szm, gmi, marker_offset + bo.num_phen(), bo.num_phen(), bo.max_level()
     )
 
 
@@ -415,11 +444,19 @@ def reformat_cuskss_merged_output(cusk_dir: str) -> GlobalBdpcResult:
         num_p=num_trait,
         marker_offset=0,
     )
+    szm = load_float32_mat_sparse(
+        basepath=f"{cusk_dir}/cuskss_merged",
+        num_m=num_snp,
+        num_p=num_trait,
+        marker_offset=0,
+        suffix=".minz",
+    )
     return GlobalBdpcResult(
         num_var=num_var,
         num_phen=num_trait,
         sam=sam,
         scm=scm,
+        szm=szm,
         max_level=max_level,
         gmi=gmi,
     )
