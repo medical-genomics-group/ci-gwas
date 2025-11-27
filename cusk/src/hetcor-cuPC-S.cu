@@ -74,6 +74,17 @@ __device__ void print_sepset(int *var_ixs, int *time_index, int l)
     }
 }
 
+/*
+TODO:
+    - swap mean_ess out by harmonic_mean_ess or even min_ess for more conservative calculations?
+    - return sample size corresponding to minZ.
+        Can be implemented by adding a int *ess matrix as arg which is modified with
+        atomicCAS(&ess[...], 0, loc_ess) whenever minZ is updated.
+        then compute p-vals with
+        se = 1 / np.sqrt(n - k - 3)
+        z_stat = z / se
+        p_value = 2 * (1 - stats.norm.cdf(abs(z_stat)))
+*/
 /** @brief Computes the skeleton using hetcor correlations and estimates of effective sample sizes.
  *
  * @param[in]  C  Pointer to full, square, correlation matrix
