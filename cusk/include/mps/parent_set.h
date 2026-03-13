@@ -93,6 +93,7 @@ struct ReducedGC
     std::vector<int> G;
     std::vector<float> C;
     std::vector<float> S;
+    std::vector<float> minZ;
 
     size_t num_markers() { return num_var - num_phen; }
 
@@ -105,6 +106,7 @@ struct ReducedGC
         write_ints_to_binary(new_to_old_indices.data(), new_to_old_indices.size(), base + ".ixs");
         write_ints_to_binary(G.data(), G.size(), base + ".adj");
         write_floats_to_binary(C.data(), C.size(), base + ".corr");
+        write_floats_to_binary(minZ.data(), minZ.size(), base + ".minz");
     }
 };
 
@@ -114,6 +116,7 @@ struct ReducedGC
  * @param G         n*n adjacency matrix
  * @param C         n*n correlation matrix
  * @param S         n*n sample size matrix
+ * @param minZ      n*n matrix of minimum fisher-Z transformer partial correlations
  * @param P         set of indices of nodes to be retained
  * @param num_var   number of variables in G, C, S
  * @param max_level max size of a separation set
@@ -122,6 +125,7 @@ ReducedGC reduce_gc(
     const std::vector<int> &G,
     const std::vector<float> &C,
     const std::vector<float> &S,
+    const std::vector<float> &minZ,
     const std::unordered_set<int> &P,
     const size_t num_var,
     const size_t num_phen,
@@ -132,6 +136,7 @@ ReducedGC reduce_gc(
     const std::vector<int> &G,
     const std::vector<float> &C,
     const std::vector<float> &S,
+    const std::vector<float> &minZ,
     const std::unordered_set<int> &P,
     const size_t num_var,
     const size_t num_phen,

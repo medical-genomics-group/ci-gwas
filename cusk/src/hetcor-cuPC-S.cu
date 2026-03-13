@@ -7,6 +7,20 @@
 
 #include <iostream>
 
+// float atomicMin
+// from https://github.com/treecode/Bonsai/blob/master/runtime/profiling/derived_atomic_functions.h
+__device__ __forceinline__ float atomicMin(float *address, float val)
+{
+    int ret = __float_as_int(*address);
+    while(val < __int_as_float(ret))
+    {
+        int old = ret;
+        if((ret = atomicCAS((int *)address, old, __float_as_int(val))) == old)
+            break;
+    }
+    return __int_as_float(ret);
+}
+
 __device__ void print_sepset(int *var_ixs, int *time_index, int l)
 {
     int a = var_ixs[0];
@@ -60,6 +74,17 @@ __device__ void print_sepset(int *var_ixs, int *time_index, int l)
     }
 }
 
+/*
+TODO:
+    - swap mean_ess out by harmonic_mean_ess or even min_ess for more conservative calculations?
+    - return sample size corresponding to minZ.
+        Can be implemented by adding a int *ess matrix as arg which is modified with
+        atomicCAS(&ess[...], 0, loc_ess) whenever minZ is updated.
+        then compute p-vals with
+        se = 1 / np.sqrt(n - k - 3)
+        z_stat = z / se
+        p_value = 2 * (1 - stats.norm.cdf(abs(z_stat)))
+*/
 /** @brief Computes the skeleton using hetcor correlations and estimates of effective sample sizes.
  *
  * @param[in]  C  Pointer to full, square, correlation matrix
@@ -70,15 +95,17 @@ __device__ void print_sepset(int *var_ixs, int *time_index, int l)
  * @param[in]  l  Pointer to current level
  * @param[in]  maxlevel  Pointer to maximal level
  * @param[in]  time_index  Pointer to time indices of all variables
+ * @param[in]  minZ  Pointer to minZ (fisher-Z transform of partial corrs) values
  * @return return_name return description
  */
 void hetcor_skeleton(
-    float *C, int *P, int *G, float *N, float *Th, int *l, const int *maxlevel, const int *time_index
+    float *C, int *P, int *G, float *N, float *Th, int *l, const int *maxlevel, const int *time_index, float *minZ
 )
 {
     float *C_cuda;  // Copy of C array in GPU
     int *G_cuda;  // Copy of G Array in GPU
     float *N_cuda; // Copy of N Array in GPU
+    float *minZ_cuda; // Copy of minZ Array in GPU
     int *nprime_cuda;
     int *GPrime_cuda;
     int *mutex_cuda;
@@ -98,6 +125,7 @@ void hetcor_skeleton(
     HANDLE_ERROR(cudaMalloc((void **)&C_cuda, n * n * sizeof(float)));
     HANDLE_ERROR(cudaMalloc((void **)&G_cuda, n * n * sizeof(int)));
     HANDLE_ERROR(cudaMalloc((void **)&N_cuda, n * n * sizeof(float)));
+    HANDLE_ERROR(cudaMalloc((void **)&minZ_cuda, n * n * sizeof(float)));
     HANDLE_ERROR(cudaMalloc((void **)&time_index_cuda, n * sizeof(int)));
     // copy adj matrix from CPU to GPU
     HANDLE_ERROR(cudaMemcpy(G_cuda, G, n * n * sizeof(int), cudaMemcpyHostToDevice));
@@ -105,6 +133,8 @@ void hetcor_skeleton(
     HANDLE_ERROR(cudaMemcpy(C_cuda, C, n * n * sizeof(float), cudaMemcpyHostToDevice));
     // copy effective sample size matrix from CPU to GPU
     HANDLE_ERROR(cudaMemcpy(N_cuda, N, n * n * sizeof(float), cudaMemcpyHostToDevice));
+    // copy minZ matrix from CPU to GPU
+    HANDLE_ERROR(cudaMemcpy(minZ_cuda, minZ, n * n * sizeof(float), cudaMemcpyHostToDevice));
     // copy time indices from host to device
     HANDLE_ERROR(cudaMemcpy(time_index_cuda, time_index, n * sizeof(int), cudaMemcpyHostToDevice));
     // initialize a 0 matrix
@@ -125,7 +155,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(1, 1, 1);
                 THREADS_PER_BLOCK = dim3(32, 32, 1);
                 cal_Indepl0_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
-                    C_cuda, G_cuda, N_cuda, n, th
+                    C_cuda, G_cuda, N_cuda, n, th, minZ_cuda
                 );
                 CudaCheckError();
             }
@@ -134,7 +164,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(ceil(((float)(n)) / 32.0), ceil(((float)(n)) / 32.0), 1);
                 THREADS_PER_BLOCK = dim3(32, 32, 1);
                 cal_Indepl0_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK>>>(
-                    C_cuda, G_cuda, N_cuda, n, th
+                    C_cuda, G_cuda, N_cuda, n, th, minZ_cuda
                 );
                 CudaCheckError();
             }
@@ -174,7 +204,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL1, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL1, 1, 1);
                 cal_Indepl1_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda, minZ_cuda
                 );
                 CudaCheckError();
             }
@@ -185,7 +215,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL2, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL2, 1, 1);
                 cal_Indepl2_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda, minZ_cuda
                 );
                 CudaCheckError();
             }
@@ -196,7 +226,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL3, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL3, 1, 1);
                 cal_Indepl3_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda, minZ_cuda
                 );
                 CudaCheckError();
             }
@@ -207,7 +237,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL4, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL4, 1, 1);
                 cal_Indepl4_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda, minZ_cuda
                 );
                 CudaCheckError();
             }
@@ -219,7 +249,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL5, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL5, 1, 1);
                 cal_Indepl5_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda, minZ_cuda
                 );
                 CudaCheckError();
             }
@@ -231,7 +261,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL6, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL6, 1, 1);
                 cal_Indepl6_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda, minZ_cuda
                 );
                 CudaCheckError();
                 CudaCheckError();
@@ -243,7 +273,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL7, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL7, 1, 1);
                 cal_Indepl7_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda, minZ_cuda
                 );
                 CudaCheckError();
             }
@@ -254,7 +284,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL8, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL8, 1, 1);
                 cal_Indepl8_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda, minZ_cuda
                 );
                 CudaCheckError();
             }
@@ -265,7 +295,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL9, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL9, 1, 1);
                 cal_Indepl9_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda, minZ_cuda
                 );
                 CudaCheckError();
             }
@@ -276,7 +306,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL10, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL10, 1, 1);
                 cal_Indepl10_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda, minZ_cuda
                 );
                 CudaCheckError();
             }
@@ -287,7 +317,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL11, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL11, 1, 1);
                 cal_Indepl11_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda, minZ_cuda
                 );
                 CudaCheckError();
             }
@@ -298,7 +328,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL12, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL12, 1, 1);
                 cal_Indepl12_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda, minZ_cuda
                 );
                 CudaCheckError();
             }
@@ -309,7 +339,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL13, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL13, 1, 1);
                 cal_Indepl13_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda, minZ_cuda
                 );
                 CudaCheckError();
             }
@@ -320,7 +350,7 @@ void hetcor_skeleton(
                 BLOCKS_PER_GRID = dim3(NumOfBlockForEachNodeL14, n, 1);
                 THREADS_PER_BLOCK = dim3(ParGivenL14, 1, 1);
                 cal_Indepl14_ess<<<BLOCKS_PER_GRID, THREADS_PER_BLOCK, nprime * sizeof(int)>>>(
-                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda
+                    C_cuda, G_cuda, N_cuda, GPrime_cuda, mutex_cuda, n, th, time_index_cuda, minZ_cuda
                 );
                 CudaCheckError();
             }
@@ -333,41 +363,36 @@ void hetcor_skeleton(
 
     // Copy Graph G from GPU to CPU
     HANDLE_ERROR(cudaMemcpy(G, G_cuda, n * n * sizeof(int), cudaMemcpyDeviceToHost));
+    // Copy minZ from GPU to CPU
+    HANDLE_ERROR(cudaMemcpy(minZ, minZ_cuda, n * n * sizeof(float), cudaMemcpyDeviceToHost));
     // Free allocated space
     HANDLE_ERROR(cudaFree(C_cuda));
     HANDLE_ERROR(cudaFree(GPrime_cuda));
     HANDLE_ERROR(cudaFree(G_cuda));
+    HANDLE_ERROR(cudaFree(N_cuda));
+    HANDLE_ERROR(cudaFree(minZ_cuda));
     HANDLE_ERROR(cudaFree(mutex_cuda));
 }  // Skeleton
 
-__global__ void cal_Indepl0_ess(float *C, int *G, float *N, int n, float th)
+__global__ void cal_Indepl0_ess(float *C, int *G, float *N, int n, float th, float *minZ)
 {
     int row = blockDim.x * bx + tx;
     int col = blockDim.y * by + ty;
     if (row < col && col < n)
     {
-        float res = C[row * n + col];
-        res = abs(0.5 * log(abs((1 + res) / (1 - res))));
+        float Z = C[row * n + col];
+        Z = abs(0.5 * log(abs((1 + Z) / (1 - Z))));
         float loc_th = th / sqrt(N[row * n + col] - 3.0);
-        if (res < loc_th)
-        {
+        
+        if (Z >= loc_th) {
+            // Edge survives - update minZ with atomic operation
+            atomicMin(&minZ[row * n + col], Z);
+            atomicMin(&minZ[col * n + row], Z);
+        } else {
+            // Edge is removed
             G[row * n + col] = 0;
             G[col * n + row] = 0;
-            // int var_ixs[2];
-            // var_ixs[0] = row;
-            // var_ixs[1] = col;
-            // int time_index[1];
-            // int level = 0;
-            // print_sepset(var_ixs, time_index, level);
         }
-        // this handles the case when G is not properly initiated, i.e. filled with 1s,
-        // but it causes problems in a multi-stage cusk, when conditioning variables are removed
-        // in previous rounds
-        // else
-        // {
-        //     G[row * n + col] = 1;
-        //     G[col * n + row] = 1;
-        // }
     }
     if (row == col && col < n)
     {
@@ -377,7 +402,7 @@ __global__ void cal_Indepl0_ess(float *C, int *G, float *N, int n, float th)
 }
 
 __global__ void cal_Indepl1_ess(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index, float *minZ
 )
 {
     int level = 1;
@@ -470,13 +495,15 @@ __global__ void cal_Indepl1_ess(
                     var_ixs[2] = NbrIdx;
                     loc_th = th / sqrt(mean_ess(N, var_ixs, 3, n) - 1.0 - 3.0);
 
-                    if (Z < loc_th)
-                    {
+                    if (Z >= loc_th) {
+                        // Edge survives - update minZ with atomic operation
+                        atomicMin(&minZ[XIdx * n + YIdx], Z);
+                        atomicMin(&minZ[YIdx * n + XIdx], Z);
+                    } else {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
                         {
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            // print_sepset(var_ixs, time_index, level);
                         }
                     }
                 }
@@ -486,7 +513,7 @@ __global__ void cal_Indepl1_ess(
 }
 
 __global__ void cal_Indepl2_ess(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index, float *minZ
 )
 {
     int level = 2;
@@ -614,13 +641,15 @@ __global__ void cal_Indepl2_ess(
                     rho = H[0][1] / (sqrt(abs(H[0][0] * H[1][1])));
                     Z = 0.5 * abs(log(abs((1 + rho) / (1 - rho))));
 
-                    if (Z < loc_th)
-                    {
+                    if (Z >= loc_th) {
+                        // Edge survives - update minZ with atomic operation
+                        atomicMin(&minZ[XIdx * n + YIdx], Z);
+                        atomicMin(&minZ[YIdx * n + XIdx], Z);
+                    } else {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
-                        {  // lock
+                        {
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            // print_sepset(var_ixs, time_index, level);
                         }
                     }
                 }
@@ -630,7 +659,7 @@ __global__ void cal_Indepl2_ess(
 }
 
 __global__ void cal_Indepl3_ess(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index, float *minZ
 )
 {
     int level = 3;
@@ -778,13 +807,15 @@ __global__ void cal_Indepl3_ess(
                     rho = H[0][1] / (sqrt(abs(H[0][0] * H[1][1])));
                     Z = abs(0.5 * log(abs((1 + rho) / (1 - rho))));
 
-                    if (Z < loc_th)
-                    {
+                    if (Z >= loc_th) {
+                        // Edge survives - update minZ with atomic operation
+                        atomicMin(&minZ[XIdx * n + YIdx], Z);
+                        atomicMin(&minZ[YIdx * n + XIdx], Z);
+                    } else {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
-                        {  // lock
+                        {
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            // print_sepset(var_ixs, time_index, level);
                         }
                     }
                 }
@@ -794,7 +825,7 @@ __global__ void cal_Indepl3_ess(
 }
 
 __global__ void cal_Indepl4_ess(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index, float *minZ
 )
 {
     int level = 4;
@@ -961,13 +992,14 @@ __global__ void cal_Indepl4_ess(
                     rho = H[0][1] / (sqrt(abs(H[0][0] * H[1][1])));
                     Z = abs(0.5 * log(abs((1 + rho) / (1 - rho))));
 
-                    if (Z < loc_th)
-                    {
+                    if (Z >= loc_th) {
+                        atomicMin(&minZ[XIdx * n + YIdx], Z);
+                        atomicMin(&minZ[YIdx * n + XIdx], Z);
+                    } else {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
-                        {  // lock
+                        {
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            // print_sepset(var_ixs, time_index, level);
                         }
                     }
                 }
@@ -977,7 +1009,7 @@ __global__ void cal_Indepl4_ess(
 }
 
 __global__ void cal_Indepl5_ess(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index, float *minZ
 )
 {
     int level = 5;
@@ -1159,13 +1191,14 @@ __global__ void cal_Indepl5_ess(
                     rho = H[0][1] / (sqrt(abs(H[0][0] * H[1][1])));
                     Z = abs(0.5 * log(abs((1 + rho) / (1 - rho))));
 
-                    if (Z < loc_th)
-                    {
+                    if (Z >= loc_th) {
+                        atomicMin(&minZ[XIdx * n + YIdx], Z);
+                        atomicMin(&minZ[YIdx * n + XIdx], Z);
+                    } else {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
-                        {  // lock
+                        {
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            // print_sepset(var_ixs, time_index, level);
                         }
                     }
                 }
@@ -1175,7 +1208,7 @@ __global__ void cal_Indepl5_ess(
 }
 
 __global__ void cal_Indepl6_ess(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index, float *minZ
 )
 {
     int level = 6;
@@ -1373,13 +1406,14 @@ __global__ void cal_Indepl6_ess(
                     rho = H[0][1] / (sqrt(abs(H[0][0] * H[1][1])));
                     Z = abs(0.5 * log(abs((1 + rho) / (1 - rho))));
 
-                    if (Z < loc_th)
-                    {
+                    if (Z >= loc_th) {
+                        atomicMin(&minZ[XIdx * n + YIdx], Z);
+                        atomicMin(&minZ[YIdx * n + XIdx], Z);
+                    } else {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
-                        {  // lock
+                        {
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            // print_sepset(var_ixs, time_index, level);
                         }
                     }
                 }
@@ -1389,7 +1423,7 @@ __global__ void cal_Indepl6_ess(
 }
 
 __global__ void cal_Indepl7_ess(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index, float *minZ
 )
 {
     int level = 7;
@@ -1607,13 +1641,14 @@ __global__ void cal_Indepl7_ess(
                     rho = H[0][1] / (sqrt(abs(H[0][0] * H[1][1])));
                     Z = abs(0.5 * log(abs((1 + rho) / (1 - rho))));
 
-                    if (Z < loc_th)
-                    {
+                    if (Z >= loc_th) {
+                        atomicMin(&minZ[XIdx * n + YIdx], Z);
+                        atomicMin(&minZ[YIdx * n + XIdx], Z);
+                    } else {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
-                        {  // lock
+                        {
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            // print_sepset(var_ixs, time_index, level);
                         }
                     }
                 }
@@ -1623,7 +1658,7 @@ __global__ void cal_Indepl7_ess(
 }
 
 __global__ void cal_Indepl8_ess(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index, float *minZ
 )
 {
     int level = 8;
@@ -1858,13 +1893,14 @@ __global__ void cal_Indepl8_ess(
                     rho = H[0][1] / (sqrt(abs(H[0][0] * H[1][1])));
                     Z = abs(0.5 * log(abs((1 + rho) / (1 - rho))));
 
-                    if (Z < loc_th)
-                    {
+                    if (Z >= loc_th) {
+                        atomicMin(&minZ[XIdx * n + YIdx], Z);
+                        atomicMin(&minZ[YIdx * n + XIdx], Z);
+                    } else {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
-                        {  // lock
+                        {
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            // print_sepset(var_ixs, time_index, level);
                         }
                     }
                 }
@@ -1874,7 +1910,7 @@ __global__ void cal_Indepl8_ess(
 }
 
 __global__ void cal_Indepl9_ess(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index, float *minZ
 )
 {
     int level = 9;
@@ -2050,13 +2086,14 @@ __global__ void cal_Indepl9_ess(
                     rho = H[0][1] / (sqrt(abs(H[0][0] * H[1][1])));
                     Z = abs(0.5 * log(abs((1 + rho) / (1 - rho))));
 
-                    if (Z < loc_th)
-                    {
+                    if (Z >= loc_th) {
+                        atomicMin(&minZ[XIdx * n + YIdx], Z);
+                        atomicMin(&minZ[YIdx * n + XIdx], Z);
+                    } else {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
-                        {  // lock
+                        {
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            // print_sepset(var_ixs, time_index, level);
                         }
                     }
                 }
@@ -2066,7 +2103,7 @@ __global__ void cal_Indepl9_ess(
 }
 
 __global__ void cal_Indepl10_ess(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index, float *minZ
 )
 {
     int level = 10;
@@ -2244,13 +2281,14 @@ __global__ void cal_Indepl10_ess(
                     rho = H[0][1] / (sqrt(abs(H[0][0] * H[1][1])));
                     Z = abs(0.5 * log(abs((1 + rho) / (1 - rho))));
 
-                    if (Z < loc_th)
-                    {
+                    if (Z >= loc_th) {
+                        atomicMin(&minZ[XIdx * n + YIdx], Z);
+                        atomicMin(&minZ[YIdx * n + XIdx], Z);
+                    } else {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
-                        {  // lock
+                        {
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            // print_sepset(var_ixs, time_index, level);
                         }
                     }
                 }
@@ -2260,7 +2298,7 @@ __global__ void cal_Indepl10_ess(
 }
 
 __global__ void cal_Indepl11_ess(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index, float *minZ
 )
 {
     int level = 11;
@@ -2440,13 +2478,14 @@ __global__ void cal_Indepl11_ess(
                     rho = H[0][1] / (sqrt(abs(H[0][0] * H[1][1])));
                     Z = abs(0.5 * log(abs((1 + rho) / (1 - rho))));
 
-                    if (Z < loc_th)
-                    {
+                    if (Z >= loc_th) {
+                        atomicMin(&minZ[XIdx * n + YIdx], Z);
+                        atomicMin(&minZ[YIdx * n + XIdx], Z);
+                    } else {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
-                        {  // lock
+                        {
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            // print_sepset(var_ixs, time_index, level);
                         }
                     }
                 }
@@ -2456,7 +2495,7 @@ __global__ void cal_Indepl11_ess(
 }
 
 __global__ void cal_Indepl12_ess(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index, float *minZ
 )
 {
     int level = 12;
@@ -2637,13 +2676,14 @@ __global__ void cal_Indepl12_ess(
                     rho = H[0][1] / (sqrt(abs(H[0][0] * H[1][1])));
                     Z = abs(0.5 * log(abs((1 + rho) / (1 - rho))));
 
-                    if (Z < loc_th)
-                    {
+                    if (Z >= loc_th) {
+                        atomicMin(&minZ[XIdx * n + YIdx], Z);
+                        atomicMin(&minZ[YIdx * n + XIdx], Z);
+                    } else {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
-                        {  // lock
+                        {
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            // print_sepset(var_ixs, time_index, level);
                         }
                     }
                 }
@@ -2653,7 +2693,7 @@ __global__ void cal_Indepl12_ess(
 }
 
 __global__ void cal_Indepl13_ess(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index, float *minZ
 )
 {
     int level = 13;
@@ -2836,13 +2876,14 @@ __global__ void cal_Indepl13_ess(
                     rho = H[0][1] / (sqrt(abs(H[0][0] * H[1][1])));
                     Z = abs(0.5 * log(abs((1 + rho) / (1 - rho))));
 
-                    if (Z < loc_th)
-                    {
+                    if (Z >= loc_th) {
+                        atomicMin(&minZ[XIdx * n + YIdx], Z);
+                        atomicMin(&minZ[YIdx * n + XIdx], Z);
+                    } else {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
-                        {  // lock
+                        {
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            // print_sepset(var_ixs, time_index, level);
                         }
                     }
                 }
@@ -2852,7 +2893,7 @@ __global__ void cal_Indepl13_ess(
 }
 
 __global__ void cal_Indepl14_ess(
-    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index
+    float *C, int *G, float *N, int *GPrime, int *mutex, int n, float th, int *time_index, float *minZ
 )
 {
     int level = 14;
@@ -3036,13 +3077,14 @@ __global__ void cal_Indepl14_ess(
                     rho = H[0][1] / (sqrt(abs(H[0][0] * H[1][1])));
                     Z = abs(0.5 * log(abs((1 + rho) / (1 - rho))));
 
-                    if (Z < loc_th)
-                    {
+                    if (Z >= loc_th) {
+                        atomicMin(&minZ[XIdx * n + YIdx], Z);
+                        atomicMin(&minZ[YIdx * n + XIdx], Z);
+                    } else {
                         if (atomicCAS(&mutex[XIdx * n + YIdx], 0, 1) == 0)
-                        {  // lock
+                        {
                             G[XIdx * n + YIdx] = 0;
                             G[YIdx * n + XIdx] = 0;
-                            // print_sepset(var_ixs, time_index, level);
                         }
                     }
                 }

@@ -50,12 +50,13 @@ ReducedGC run_cusk(
         &threshold,
         &start_level,
         &max_level,
-        time_index_gc.data()
+        time_index_gc.data(),
+        gc.minZ.data()
     );
     std::unordered_set<int> variable_subset =
         subset_variables(gc.G, gc.num_var, gc.num_markers(), max_depth);
     return reduce_gc(
-        gc.G, gc.C, gc.S, variable_subset, gc.num_var, gc.num_phen, ML, gc.new_to_old_indices
+        gc.G, gc.C, gc.S, gc.minZ, variable_subset, gc.num_var, gc.num_phen, ML, gc.new_to_old_indices
     );
 }
 
@@ -233,6 +234,7 @@ void cuskss(const CuskssArgs args)
         std::iota(nto_ixs.begin(), nto_ixs.end(), 0);
         const size_t g_size = num_var * num_var;
         std::vector<int> G(g_size, 1);
+        std::vector<float> minZ(g_size, INFINITY);
         ReducedGC gc = {
             num_var,
             num_phen,
@@ -240,7 +242,8 @@ void cuskss(const CuskssArgs args)
             nto_ixs, // new_to_old_indices
             G,
             sq_corrs,
-            sq_ess
+            sq_ess,
+            minZ
         };
         float th = hetcor_threshold(args.alpha);
 
@@ -306,6 +309,7 @@ void cuskss(const CuskssArgs args)
         std::iota(nto_ixs.begin(), nto_ixs.end(), 0);
         const size_t g_size = num_var * num_var;
         std::vector<int> G(g_size, 1);
+        std::vector<float> minZ(g_size, INFINITY);
         ReducedGC gc = {
             num_var,
             num_phen,
@@ -313,7 +317,8 @@ void cuskss(const CuskssArgs args)
             nto_ixs, // new_to_old_indices
             G,
             sq_corrs,
-            sq_ess
+            sq_ess,
+            minZ
         };
         float th = hetcor_threshold(args.alpha);
 
