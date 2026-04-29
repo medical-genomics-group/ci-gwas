@@ -2,7 +2,7 @@ library("Matrix")
 library("pcalg")
 library("fastmatch")
 
-source("/nfs/scistore17/robingrp/nmachnik/dev/ci-gwas/sdavs/DAVS_functions_final.R")
+source("ci-gwas/sdavs/DAVS_functions_final.R")
 
 myargs <- commandArgs(trailingOnly = TRUE)
 exposure <- as.numeric(myargs[1])
